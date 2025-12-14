@@ -1,0 +1,9 @@
+sqlalchemy
+psycopg2-binary
+pika
+requests
+python-dotenv
+tenacity
+pytest
+requests-mock
+

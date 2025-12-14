@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: devops
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: devops_data
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  mq:
+    image: rabbitmq:3-management-alpine
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: devops_collector.scheduler
+    environment:
+      - DB_URI=postgresql://devops:password@db/devops_data
+      - RABBITMQ_URL=amqp://user:password@mq:5672/
+      - GITLAB_PRIVATE_TOKEN=${GITLAB_PRIVATE_TOKEN}
+      - GITLAB_URL=${GITLAB_URL:-https://gitlab.com}
+      # SonarQube config
+      - SONARQUBE_URL=${SONARQUBE_URL:-http://sonarqube:9000}
+      - SONARQUBE_TOKEN=${SONARQUBE_TOKEN}
+    depends_on:
+      - db
+      - mq
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: devops_collector.worker
+    environment:
+      - DB_URI=postgresql://devops:password@db/devops_data
+      - RABBITMQ_URL=amqp://user:password@mq:5672/
+      - GITLAB_PRIVATE_TOKEN=${GITLAB_PRIVATE_TOKEN}
+      - GITLAB_URL=${GITLAB_URL:-https://gitlab.com}
+      # SonarQube config
+      - SONARQUBE_URL=${SONARQUBE_URL:-http://sonarqube:9000}
+      - SONARQUBE_TOKEN=${SONARQUBE_TOKEN}
+    depends_on:
+      - db
+      - mq
+    deploy:
+      replicas: 2
+
+volumes:
+  postgres_data:
