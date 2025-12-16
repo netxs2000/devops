@@ -4,10 +4,11 @@
 
 DevOps Data Collector 采用模块化的**ETL (Extract, Transform, Load)** 架构，旨在实现高扩展性、高可靠性和数据的一致性。
 
-系统由三层组成：
+系统由四层组成：
 1.  **采集层 (Collection Layer)**: 插件化适配器，负责对接不同 API (GitLab, SonarQube)。
 2.  **核心层 (Core Layer)**: 负责数据清洗、实体关联、身份归一化和持久化。
-3.  **存储层 (Storage Layer)**: 关系型数据库 (PostgreSQL) 存储结构化数据。
+3.  **存储层 (Storage Layer)**: 关系型数据库 (PostgreSQL) 存储结构化基础数据 (Fact Tables)。
+4.  **服务层 (Service Layer)**: 数据集市 (Data Mart)，通过 SQL Views 封装复杂的分析逻辑（如 DORA, 战略矩阵），直接对接 BI。
 
 ```mermaid
 graph TD
@@ -29,8 +30,14 @@ graph TD
         end
     end
 
-    subgraph Storage
+    subgraph Storage & Analytics
         DB[(PostgreSQL)]
+        DM[Analytics Views<br>(Data Mart)]
+    end
+
+    subgraph Consumers
+        BI[BI Dashboard]
+        API[Admin API]
     end
 
     GL --> P_GL
@@ -42,35 +49,29 @@ graph TD
     IM --> OM
     OM --> DB_S
     DB_S --> DB
+    
+    DB --> DM
+    DM --> BI
+    DM --> API
 ```
 
 ## 2. 核心设计理念 (Core Concepts)
 
 ### 2.1 统一身份认证 (Unified Identity)
-
 为了解决工具间账号不互通的问题（例如 GitLab 用户名为 `zhangsan`，SonarQube 为 `zs001`），系统引入了 `users` 全局用户表。
-
 *   **机制**: 优先基于 **Email** 进行匹配。
-*   **策略**:
-    *   当采集到用户数据时，首先在 `users` 表查找是否存在相同 Email。
-    *   如果存在，关联该 ID。
-    *   如果不存在，创建新用户记录。
 *   **虚拟用户**: 对于外部贡献者（无公司邮箱），标记 `is_virtual=True`，允许手动维护。
 
 ### 2.2 插件化架构 (Plugin Architecture)
-
 每个数据源作为一个独立的 Plugin 存在，必须实现标准接口：
 *   `collect_projects()`: 发现项目。
 *   `sync_data()`: 执行同步逻辑。
 
-这使得未来扩展 Jenkins, Jira 等新数据源时，无需修改核心代码。
-
-### 2.3 组织架构透视 (Hierarchy Mapping)
-
-系统不简单地平铺项目，而是将其挂载到组织树上。
-*   **来源**: 从 GitLab 的 Group/Subgroup 结构或 Description 字段解析部门信息。
-*   **映射**: 将解析出的部门名称映射到 `organizations` 表的层级节点。
-*   **价值**: 使得“查询某个部门的代码提交量”成为可能，而非仅关注单个项目。
+### 2.3 分析逻辑下沉 (Analytics in Database)
+我们采用 "ELT" 而非传统的 "ETL" 思维处理复杂指标。
+*   **Python 代码** 仅负责将原始数据原样搬运到数据库 (Load)。
+*   **SQL Views** 负责所有的业务逻辑计算（如“计算 DORA 指标”、“识别僵尸项目”）。
+*   **优势**: 修改指标定义无需重新部署代码，且利用数据库引擎聚合性能更高。
 
 ## 3. 数据流设计 (Data Flow)
 
@@ -81,32 +82,28 @@ graph TD
 
 ### 3.2 增量同步阶段 (Incremental Sync)
 1.  **GitLab 采集 (流式 & 分批)**:
-    *   **流式拉取**: 利用 Python Generator 逐页获取数据，避免 huge list 加载导致内存溢出 (OOM)。
-    *   **分批处理**: 每 500 条记录构建一个 Batch 并在内存中进行预处理（如身份匹配、Diff 分析）。
-    *   **幂等写入**: 使用 `batch save` 策略，通过 ID 预检过滤已存在记录，实现 `Upsert` 效果。即使中间中断，再次运行也能安全补全数据。
-    *   **状态更新**: 全部完成后更新项目 `sync_status` 和 `last_synced_at`。
+    *   **流式拉取**: 利用 Python Generator 逐页获取数据。
+    *   **分批处理**: 每 500 条记录构建 Batch。
+    *   **幂等写入**: Upsert 策略，支持随时断点续传。
 2.  **SonarQube 采集**:
-    *   遍历数据库中已存在的 Project。
-    *   根据规则（如 `project.path_with_namespace`）推断 SonarQube Project Key。
-    *   拉取质量指标存入 `sonar_measures`。
+    *   关联 GitLab 项目，拉取 Quality Gate 与 Metrics。
 
 ## 4. 关键技术决策 (Key Decisions)
 
-*   **为什么用 SQLAlchemy ORM？**
-    *   屏蔽数据库差异 (PG/MySQL/SQLite)。
-    *   方便处理复杂的表关联 (Foreign Keys)。
+*   **为什么全用 SQL View 做报表？**
+    *   **性能**: 对于数百万级 Commits 的聚合，数据库（尤其是 PG）比 Python Pandas 更高效，且无需数据搬运。
+    *   **开放性**: 任何该支持 SQL 的 BI 工具 (Superset, Tableau, PowerBI) 都可直接接入，无需开发 API。
+    *   **一致性**: SQL 脚本即文档，指标定义清晰可见 (Single Source of Truth)。
+
 *   **为什么不用 Celery？**
-    *   保持部署简单。目前的脚本模式配合 Crontab/Jenkins 调度已足够满足 T+1 或小时级同步需求，避免引入 Redis/Broker 的运维复杂度。
-*   **大批量数据适配 (Bulk Data Adaptation)**
-    *   **场景**: 面对企业级 Mono-repo (如 10万+ Commits) 或首次全量归档。
-    *   **策略**: 彻底摒弃全量加载。
-        *   **Generator Stream**: 客户端层采用 `yield` 生成器模式，使得内存占用与数据总量无关 (O(1))。
-        *   **Batch Commit**: Worker 层每 accumulation 500 条记录提交一次事务，防止长事务锁表，同时兼顾写入性能。
-        *   **Idempotency**: 写入逻辑内置查重，支持随时中断、随时重跑 (Re-runnable)。
+    *   保持部署简单。目前的脚本模式配合 Crontab/Jenkins 调度已足够。
+
+*   **大批量数据适配**
+    *   **Generator Stream**: 内存占用 O(1)。
+    *   **Batch Commit**: 兼顾写入性能与事务安全。
 
 ## 5. 扩展性设计 (Extensibility)
-
-如需添加新字段（例如统计“代码注释率”）：
-1.  修改 `models/` 下的 Python 类定义。
-2.  利用 Alembic (后续计划引入) 或手动 ALTER TABLE 升级数据库。
-3.  在 Plugin 中补充解析逻辑。
+如需添加新指标（如“代码注释率”）：
+1.  **Schema**: 修改 `models/` 增加字段。
+2.  **Collector**: 修改 Plugin 填充字段。
+3.  **Analytics**: 修改 `sql/PROJECT_OVERVIEW.sql` 视图定义即可生效。

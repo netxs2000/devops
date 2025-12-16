@@ -157,21 +157,57 @@ class SonarQubeWorker(BaseWorker):
         # 获取质量门禁状态
         gate_status = self.client.get_quality_gate_status(project.key)
         
+        # 获取问题严重分布 (新增)
+        issue_dist = self.client.get_issue_severity_distribution(project.key)
+        bug_dist = issue_dist.get('BUG', {})
+        vul_dist = issue_dist.get('VULNERABILITY', {})
+        
+        # 获取安全热点分布 (新增)
+        hotspot_dist = self.client.get_hotspot_distribution(project.key)
+        
         # 创建指标快照
         measure = SonarMeasure(
             project_id=project.id,
             analysis_date=project.last_analysis_date or datetime.now(timezone.utc),
             
             # 代码规模
+            files=self._safe_int(measures_data.get('files')),
+            lines=self._safe_int(measures_data.get('lines')),
             ncloc=self._safe_int(measures_data.get('ncloc')),
+            classes=self._safe_int(measures_data.get('classes')),
+            functions=self._safe_int(measures_data.get('functions')),
+            statements=self._safe_int(measures_data.get('statements')),
             
             # 核心指标
             coverage=self._safe_float(measures_data.get('coverage')),
+            
+            # Bug 分布
             bugs=self._safe_int(measures_data.get('bugs')),
+            bugs_blocker=bug_dist.get('BLOCKER', 0),
+            bugs_critical=bug_dist.get('CRITICAL', 0),
+            bugs_major=bug_dist.get('MAJOR', 0),
+            bugs_minor=bug_dist.get('MINOR', 0),
+            bugs_info=bug_dist.get('INFO', 0),
+            
+            # 漏洞分布
             vulnerabilities=self._safe_int(measures_data.get('vulnerabilities')),
+            vulnerabilities_blocker=vul_dist.get('BLOCKER', 0),
+            vulnerabilities_critical=vul_dist.get('CRITICAL', 0),
+            vulnerabilities_major=vul_dist.get('MAJOR', 0),
+            vulnerabilities_minor=vul_dist.get('MINOR', 0),
+            vulnerabilities_info=vul_dist.get('INFO', 0),
+            
+            # 安全热点分布
+            security_hotspots=self._safe_int(measures_data.get('security_hotspots')),
+            security_hotspots_high=hotspot_dist.get('HIGH', 0),
+            security_hotspots_medium=hotspot_dist.get('MEDIUM', 0),
+            security_hotspots_low=hotspot_dist.get('LOW', 0),
+            
             code_smells=self._safe_int(measures_data.get('code_smells')),
+            comment_lines_density=self._safe_float(measures_data.get('comment_lines_density')),
             duplicated_lines_density=self._safe_float(measures_data.get('duplicated_lines_density')),
             sqale_index=self._safe_int(measures_data.get('sqale_index')),
+            sqale_debt_ratio=self._safe_float(measures_data.get('sqale_debt_ratio')),
             
             # 复杂度
             complexity=self._safe_int(measures_data.get('complexity')),

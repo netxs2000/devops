@@ -65,15 +65,42 @@ class SonarMeasure(Base):
     analysis_date = Column(DateTime(timezone=True), nullable=False)
     
     # 代码规模
+    files = Column(Integer)  # 文件数
+    lines = Column(Integer)  # 总行数
     ncloc = Column(Integer)  # Non-Comment Lines of Code
+    classes = Column(Integer) # 类数量
+    functions = Column(Integer) # 方法数量
+    statements = Column(Integer) # 语句数量
     
     # 代码质量核心指标
     coverage = Column(Float)                 # 代码覆盖率 (%)
-    bugs = Column(Integer)                   # Bug 数
-    vulnerabilities = Column(Integer)        # 漏洞数
+    # Bug 分布
+    bugs = Column(Integer)                   # Bug 数 (总计)
+    bugs_blocker = Column(Integer, default=0)
+    bugs_critical = Column(Integer, default=0)
+    bugs_major = Column(Integer, default=0)
+    bugs_minor = Column(Integer, default=0)
+    bugs_info = Column(Integer, default=0)
+    
+    # 漏洞分布式
+    vulnerabilities = Column(Integer)        # 漏洞数 (总计)
+    vulnerabilities_blocker = Column(Integer, default=0)
+    vulnerabilities_critical = Column(Integer, default=0)
+    vulnerabilities_major = Column(Integer, default=0)
+    vulnerabilities_minor = Column(Integer, default=0)
+    vulnerabilities_info = Column(Integer, default=0)
+    
+    # 安全热点分布
+    security_hotspots = Column(Integer)      # 安全热点 (总计)
+    security_hotspots_high = Column(Integer, default=0)
+    security_hotspots_medium = Column(Integer, default=0)
+    security_hotspots_low = Column(Integer, default=0)
+    
     code_smells = Column(Integer)            # 代码异味
+    comment_lines_density = Column(Float)    # 注释率 (%)
     duplicated_lines_density = Column(Float) # 重复率 (%)
     sqale_index = Column(Integer)            # 技术债务 (分钟)
+    sqale_debt_ratio = Column(Float)         # 技术债务率 (%)
     
     # 复杂度
     complexity = Column(Integer)             # 圈复杂度

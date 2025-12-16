@@ -1,29 +1,33 @@
 # DevOps Data Collector (研发效能数据采集器)
 
+![Version](https://img.shields.io/badge/version-2.3.0-blue)
+![Python](https://img.shields.io/badge/python-3.9+-green)
+![PostgreSQL](https://img.shields.io/badge/postgres-13+-blue)
+
 ## 📖 项目简介 (Introduction)
 
-**DevOps Data Collector** 是一个企业级研发效能数据采集与分析平台。它旨在打破研发工具链（GitLab, SonarQube 等）之间的数据孤岛，通过统一的数据模型和身份认证机制，将分散的研发数据聚合为有价值的资产。
+**DevOps Data Collector** 是一个企业级研发效能数据采集与分析平台。它旨在打破研发工具链（GitLab, SonarQube 等）之间的数据孤岛，将分散的研发数据聚合为有价值的资产。
 
 系统的核心目标是为企业提供：
-*   **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）。
-*   **代码质量透视**: 统一管理技术债务、代码覆盖率和千行代码缺陷率。
+*   **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）和 SPACE 框架指标。
+*   **战略决策支持**: 提供波士顿矩阵（明星/现金牛项目识别）和 ROI 投入产出比分析。
+*   **人才洞察**: 识别高潜人才、技术专家和离职风险。
 *   **组织效能分析**: 依托企业组织架构，透视各部门的人力投入与产出。
 
 ## ✨ 核心特性 (Key Features)
 
-*   **统一身份认证 (Unified Identity)**: 自动关联 GitLab 账号与 SonarQube 账号，识别离职员工和外部贡献者（虚拟账号）。
-*   **多源数据采集 (Multi-Source Collection)**: 插件化架构，目前支持 **GitLab** (代码/MR/流水线/Issue) 和 **SonarQube** (质量/问题)。
-*   **企业级组织架构 (Enterprise Hierarchy)**: 支持 "公司 > 中心 > 部门 > 小组" 四级架构，实现精细化管理。
+*   **统一身份认证 (Unified Identity)**: 自动关联 GitLab 账号与 SonarQube 账号，识别离职员工和外部贡献者。
+*   **多源数据采集 (Multi-Source Collection)**: 支持 **GitLab** (代码/MR/流水线/Issue) 和 **SonarQube** (质量/问题/技术债)。
+*   **数据分析集市 (Analytics Mart)**: 内置丰富的 SQL 视图，直接生成 DORA、部门记分卡、资源热力图等报表。
+*   **合规与风控 (Governance & Risk)**: 监控绕过流程的 Direct Push 和积压的安全漏洞。
 *   **断点续传 (Resumable Sync)**: 针对海量数据同步设计，支持意外中断后自动恢复。
-*   **标准数据模型 (Standard Data Model)**: 基于 SQLAlchemy 的规范化 ORM 设计，便于二次开发和 BI 报表接入。
 
 ## 🛠️ 技术栈 (Tech Stack)
 
 *   **语言**: Python 3.9+
-*   **数据库**: PostgreSQL (推荐)
+*   **数据库**: PostgreSQL (生产环境推荐)
 *   **ORM**: SQLAlchemy
-*   **HTTP 客户端**: Requests (带重试机制)
-*   **调度**: (可选) Crontab 或 Airflow
+*   **架构**: ELT (Extract-Load-Transform)，重度依赖 SQL Views 进行业务逻辑计算。
 
 ## 🚀 快速开始 (Quick Start)
 
@@ -47,12 +51,10 @@ pip install -r requirements.txt
 ```ini
 [database]
 url = postgresql://user:password@localhost:5432/devops_db
-; 如果是 SQLite (仅测试): sqlite:///devops.db
 
 [gitlab]
 url = https://gitlab.example.com
 token = glpat-xxxxxxxxxxxx
-nop_token = glpat-yyyyyyyyyyyy ; (可选) 备用 Token
 
 [sonarqube]
 url = https://sonar.example.com
@@ -62,7 +64,7 @@ token = squ_xxxxxxxxxxxx
 org_name = MyCompany
 ```
 
-### 3. 初始化数据库
+### 3. 初始化系统
 
 运行初始化脚本，自动创建表结构并发现组织架构：
 
@@ -70,56 +72,49 @@ org_name = MyCompany
 python scripts/init_discovery.py
 ```
 
-### 4. 数据采集
+### 4. 部署分析视图 (关键步骤)
 
-运行采集脚本（建议配置为定时任务）：
+将内置的分析模型 (SQL Views) 部署到数据库：
 
 ```bash
-# 采集 GitLab 数据
-python -m devops_collector.main
-
-# 采集 SonarQube 数据 (需先完成 GitLab 采集以建立项目映射)
-python scripts/sonarqube_stat.py
+# 需确保已安装 psql 或通过数据库客户端执行
+psql -d devops_db -f devops_collector/sql/PROJECT_OVERVIEW.sql
+psql -d devops_db -f devops_collector/sql/PMO_ANALYTICS.sql
+psql -d devops_db -f devops_collector/sql/HR_ANALYTICS.sql
 ```
 
-### 5. 数据验证
+### 5. 数据采集
 
-采集完成后，可运行验证脚本检查数据一致性：
+建议配置 Crontab 定时运行：
 
 ```bash
-python scripts/verify_logic.py
+# 启动调度器
+python -m devops_collector.scheduler
+
+# 启动 Worker 执行采集
+python -m devops_collector.worker
 ```
 
 ## 📂 项目结构 (Project Structure)
 
 ```
 devops_collector/
-├── config.ini             # 配置文件
-├── models/                # 公共数据模型
-│   └── base_models.py     # Base, User, Organization, SyncLog
+├── models/                # 基础物理表定义 (Tables)
+├── sql/                   # 分析视图定义 (Views / Data Mart)
+│   ├── PROJECT_OVERVIEW.sql # 项目宽表
+│   ├── PMO_ANALYTICS.sql    # 战略与管理视图
+│   └── HR_ANALYTICS.sql     # 人才与组织视图
 ├── plugins/               # 数据源插件
-│   ├── gitlab/            # GitLab 采集逻辑
-│   └── sonarqube/         # SonarQube 采集逻辑
-├── scripts/               # 工具与分析脚本
-│   ├── init_discovery.py           # 初始化与组织发现
-│   ├── gitlab_user_contributions.py# 个人贡献度计分
-│   └── sonarqube_stat.py           # 质量趋势分析
-└── DATA_DICTIONARY.md     # 数据字典 (核心文档)
+└── scripts/               # 工具脚本
 ```
 
 ## 📚 文档 (Documentation)
 
-*   [**数据字典 (DATA_DICTIONARY.md)**](./DATA_DICTIONARY.md): 详细的数据库表结构与字段说明。
-*   [**架构设计 (ARCHITECTURE.md)**](./ARCHITECTURE.md): 系统架构与设计理念说明。
-
-## 🤝 贡献指南 (Contribution)
-
-1.  Fork 本仓库
-2.  创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3.  提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4.  代码风格检查 (遵循 Google Python Style Guide)
-5.  推送到分支 (`git push origin feature/AmazingFeature`)
-6.  提交 Pull Request
+*   [**用户手册 (PROJECT_SUMMARY_AND_MANUAL.md)**](./PROJECT_SUMMARY_AND_MANUAL.md): 详细的功能说明与操作指南。
+*   [**PMO 分析方案 (PMO_ANALYTICS_PLAN.md)**](./PMO_ANALYTICS_PLAN.md): 战略分析指标的设计思路。
+*   [**数据字典 (DATA_DICTIONARY.md)**](./DATA_DICTIONARY.md): 数据库表结构与字段说明。
+*   [**需求规格 (REQUIREMENTS_SPECIFICATION.md)**](./REQUIREMENTS_SPECIFICATION.md): 详细的功能需求列表。
+*   [**架构设计 (ARCHITECTURE.md)**](./ARCHITECTURE.md): 系统架构说明。
 
 ## 📄 许可证 (License)
 
