@@ -1,8 +1,8 @@
 # DevOps 效能平台需求规格说明书 (SRS)
 
 **项目名称**: DevOps Data Collector & Analytics Platform
-**版本**: 3.0.0
-**日期**: 2025-12-15
+**版本**: 3.1.0 (Analytics Extension)
+**日期**: 2025-12-16
 **密级**: 内部公开
 
 ---
@@ -24,7 +24,7 @@
 
 ### 2.1 产品愿景
 打造企业级研发效能“驾驶舱”，通过数据驱动研发效能提升，实现：
-*   **可度量**: 全面落地 DORA、Scrum 等效能指标体系。
+*   **可度量**: 全面落地 DORA、SPACE、Scrum 等效能指标体系。
 *   **可溯源**: 打通“需求-代码-质量-部署”全链路。
 *   **可洞察**: 识别高危代码、瓶颈环节与人才梯队。
 
@@ -33,7 +33,7 @@
 | :--- | :--- | :--- |
 | **研发工程师** | 代码开发、CR、修复 Bug | 查看个人产出、代码热力图、技术债预警 |
 | **Tech Lead** | 团队管理、技术决策 | 监控项目进度、评审质量、识别架构腐烂、人才培养 |
-| **PMO/管理层** | 效能度量、资源协调 | 查看部门记分卡、DORA 指标、投入产出比 (ROI) |
+| **PMO/管理层** | 效能度量、资源协调 | 查看部门记分卡、战略组合矩阵、投入产出比 (ROI) |
 | **系统管理员** | 运维配置、权限管理 | 数据源配置、任务调度监控、日志审计 |
 
 ### 2.3 系统架构
@@ -74,25 +74,41 @@
 
 #### R-PROCESS-03: 跨部门协作识别 (InnerSource)
 *   **描述**: 识别跨部门的代码提交行为 (InnerSource)。
-*   **验收标准**: 能准确计算出“非本部门项目”的贡献比例。
+*   **验收标准**: 提供 `view_pmo_innovation_metrics`，能准确计算出“非本部门项目”的贡献比例。
 
 ### 3.3 效能洞察与分析 (R-ANALYTICS)
 
 #### R-ANALYTICS-01: DORA 四大指标
 *   **描述**: 计算部署频率、变更前置时间、变更失败率、MTTR。
-*   **验收标准**: 提供 SQL View `view_dora_metrics`，数据误差 < 5%。
+*   **验收标准**: 提供 SQL View `view_pmo_dept_ranking`，数据误差 < 5%。
 
 #### R-ANALYTICS-02: 团队健康度雷达
 *   **描述**: 识别过度加班 (WLB) 和 冲刺后遗症。
-*   **验收标准**: 能输出周末/深夜提交占比 > 30% 的高危人员名单；能关联发布时间与 Bug 激增时段。
+*   **验收标准**: 能通过 `view_hr_retention_risk` 输出周末/深夜提交占比 > 30% 的高危人员名单。
 
 #### R-ANALYTICS-03: 代码评审质量分析
 *   **描述**: 识别“橡皮图章”评审（0交互）与“过度纠结”（>5轮交互）。
-*   **验收标准**: `review_quality.sql` 能正确区分 Review 互动的深度。
+*   **验收标准**: 能正确区分 Review 互动的深度 (Comments Count)。
 
 #### R-ANALYTICS-04: 架构演进分析
 *   **描述**: 识别逻辑耦合（Co-change）与单点依赖（Bus Factor）。
-*   **验收标准**: 能列出“经常一起修改但不在同目录”的模块对；能列出“80%代码由1人独写”的高危文件。
+*   **验收标准**: 识别代码库中的高频修改热点文件。
+
+#### R-ANALYTICS-05: 战略投资组合分析 (Strategic Portfolio)
+*   **描述**: 基于 **DevOps 波士顿矩阵** 模型，综合开发速度与代码质量，自动将项目划分为明星、现金牛、瘦狗、问题儿童四类。
+*   **验收标准**: 提供 `view_pmo_portfolio_matrix`，能正确计算 X/Y 轴坐标及象限归属。
+
+#### R-ANALYTICS-06: 风险与合规治理 (Governance & Risk)
+*   **描述**: 监控研发流程红线（如绕过 CR 直接发布）及安全底线（高危漏洞积压）。
+*   **验收标准**: 提供 `view_pmo_governance_risk`，支持按部门统计违规率和安全债务。
+
+#### R-ANALYTICS-07: 投入产出效能 (ROI Efficiency)
+*   **描述**: 量化研发投入（FTE/工时）与产出（MR/Issue）的比率，回答“钱花得值不值”。
+*   **验收标准**: 提供 `view_pmo_roi_efficiency`，计算 Throughput per FTE 和 Cost per Issue。
+
+#### R-ANALYTICS-08: 人才能力画像 (HR Capability)
+*   **描述**: 多维评估工程师能力（编码/质量/协作），识别技术专家与高潜人才。
+*   **验收标准**: 提供 `view_hr_user_capability_profile` 及 `view_hr_user_tech_stack`。
 
 ---
 
@@ -119,7 +135,8 @@
 ## 5. 接口需求 (Interface Requirements)
 
 ### 5.1 数据库接口
-*   系统对外暴露一系列 **SQL Views** (位于 `devops_collector/plugins/gitlab/sql_views/`) 作为标准数据接口，供 BI 工具（Superset/Grafana）直接连接查询。
+*   系统对外暴露一系列 **SQL Views** (位于 `devops_collector/sql/`) 作为标准数据接口，供 BI 工具（Superset/Grafana）直接连接查询。
+*   包含：`PROJECT_OVERVIEW.sql`, `PMO_ANALYTICS.sql`, `HR_ANALYTICS.sql` 等。
 
 ### 5.2 消息队列接口
 *   采用 **RabbitMQ** 作为任务总线。
@@ -133,9 +150,11 @@
 
 ### 6.1 术语表
 *   **DORA**: DevOps Research and Assessment，业界通用的效能评估标准。
+*   **SPACE**: 开发者生产力框架 (Satisfaction, Performance, Activity, Communication, Efficiency)。
 *   **WLB**: Work-Life Balance，工作生活平衡指数。
 *   **Bus Factor**: 巴士系数/卡车系数，指有多少关键人员被巴士撞了项目就会瘫痪，衡量单点风险。
 
 ### 6.2 参考文献
 *   《DevOps Data Collector 系统架构设计文档 (ARCHITECTURE.md)》
 *   《DevOps Data Dictionary (DATA_DICTIONARY.md)》
+*   《PMO Analytics Plan (PMO_ANALYTICS_PLAN.md)》

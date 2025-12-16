@@ -1,7 +1,7 @@
 # 企业级 DevOps 数据字典 (Enterprise DevOps Data Dictionary)
 
-**版本**: 2.1.0  
-**日期**: 2025-12-14  
+**版本**: 2.2.0 (Analytics Extension)  
+**日期**: 2025-12-16  
 **状态**: 已生效 (Active)  
 **维护人**: DevOps 效能平台团队
 
@@ -105,7 +105,38 @@ erDiagram
 
 覆盖研发全生命周期：计划 -> 编码 -> 构建 -> 部署。
 
-### 3.1 项目 (`projects`)
+### 3.1 群组 (`gitlab_groups`) (New)
+GitLab 的组织单元，用于管理项目和子群组。
+
+| 字段名        | 类型          | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                   |
+|:--------------|:--------------|:----:|:-----:|:-------|:--------------------------|:-------------------------------------------|
+| `id`          | Integer       | PK   | 是    | -      | `99`                      | **GitLab Group ID**                        |
+| `name`        | String(255)   |      | 是    | -      | `"Backend Team"`          | 群组名称                                   |
+| `path`        | String(255)   |      | 是    | -      | `"backend"`               | URL 路径片段                               |
+| `full_path`   | String(500)   | UK   | 是    | -      | `"tech/backend"`          | 完整路径                                   |
+| `description` | Text          |      | 否    | -      | `"后端研发部"`            | 描述信息                                   |
+| `parent_id`   | Integer       | FK   | 否    | NULL   | `88`                      | 父群组 ID (自关联 `gitlab_groups.id`)      |
+| `visibility`  | String(20)    |      | 否    | -      | `"private"`               | 可见性: `public`, `private`, `internal`    |
+| `avatar_url`  | String(500)   |      | 否    | -      | `"http://..."`            | 图标                                       |
+| `web_url`     | String(500)   |      | 否    | -      | `"http://gitlab.../tech"` | Web 地址                                   |
+| `created_at`  | DateTime      |      | 否    | -      | `2024-01-01`              | 创建时间                                   |
+| `updated_at`  | DateTime      |      | 否    | -      | `2024-01-02`              | 更新时间                                   |
+
+### 3.2 群组成员 (`gitlab_group_members`) (New)
+记录用户与群组的关联权限，用于安全审计和人力管理。
+
+| 字段名         | 类型         | 键      | 必填  | 默认值 | 示例数据      | 业务说明                                      |
+|:---------------|:-------------|:-------:|:-----:|:-------|:--------------|:----------------------------------------------|
+| `id`           | Integer      | PK      | 是    | Auto   | `555`         | 记录 ID                                       |
+| `group_id`     | Integer      | FK      | 是    | -      | `99`          | 关联群组 ID (关联 `gitlab_groups.id`)         |
+| `user_id`      | Integer      | FK      | 是    | -      | `10086`       | 关联系统用户 ID (关联 `users.id`)             |
+| `gitlab_uid`   | Integer      |         | 是    | -      | `888`         | 原始 GitLab User ID (用于匹配)                |
+| `access_level` | Integer      |         | 是    | -      | `30`          | 权限值: 10(Guest), 30(Dev), 40(Maintainer), 50(Owner) |
+| `state`        | String(20)   |         | 否    | -      | `"active"`    | 状态: `active`, `awaiting`, `invited`         |
+| `joined_at`    | DateTime     |         | 否    | -      | `2024-01-01`  | 加入时间                                      |
+| `expires_at`   | DateTime     |         | 否    | NULL   | `2024-12-31`  | 权限过期时间 (外包/临时权限常用)              |
+
+### 3.3 项目 (`projects`)
 研发资产的核心容器。
 
 | 字段名                | 类型         | 键   | 必填  | 默认值     | 示例数据                    | 业务说明                                         |
@@ -114,11 +145,14 @@ erDiagram
 | `name`                | String       |      | 否    | -          | `"DevOps Platform"`         | 项目名称                                         |
 | `path_with_namespace` | String       |      | 否    | -          | `"infra/devops-platform"`   | 完整路径 (如 `group/subgroup/project`)           |
 | `department`          | String       |      | 否    | -          | `"效能工具组"`              | 部门 (从顶层 Group 描述字段解析)                 |
+| `group_id`            | Integer      | FK   | 否    | NULL       | `99`                        | **归属群组 ID** (关联 `gitlab_groups.id`)        |
 | `organization_id`     | Integer      | FK   | 否    | NULL       | `1001`                      | 归属组织 (关联 `organizations.id`)               |
 | `sync_status`         | String       |      | 否    | 'PENDING'  | `"COMPLETED"`               | 同步状态机: `PENDING`, `SYNCING`, `COMPLETED`    |
 | `storage_size`        | BigInteger   |      | 否    | -          | `104857600`                 | 仓库物理大小 (Bytes)                             |
 | `star_count`          | Integer      |      | 否    | -          | `56`                        | 关注数                                           |
 | `forks_count`         | Integer      |      | 否    | -          | `12`                        | 复刻数                                           |
+| `visibility`          | String       |      | 否    | -          | `"private"`                 | 可见性 (public/internal/private)                 |
+| `archived`            | Boolean      |      | 否    | False      | `True`                      | 是否归档 (True=已归档)                           |
 
 ### 3.2 提交 (`commits`)
 代码变更的历史记录。
@@ -223,6 +257,18 @@ Git 引用信息。
 | **Branch** | `name`, `last_commit_date`, `is_merged`   | 用于分析分支活跃度和清理僵尸分支 |
 | **Tag**    | `name`, `message`, `commit_sha`           | 用于标记发布版本里程碑           |
 
+### 3.10 里程碑 (`milestones`) (New)
+项目迭代与版本规划。
+
+| 字段名        | 类型      | 键   | 必填  | 默认值 | 示例数据             | 业务说明                     |
+|:--------------|:----------|:----:|:-----:|:-------|:---------------------|:-----------------------------|
+| `id`          | Integer   | PK   | 是    | -      | `6001`               | Milestone ID                 |
+| `project_id`  | Integer   | FK   | 否    | -      | `1010`               | 归属项目                     |
+| `title`       | String    |      | 否    | -      | `"v1.2.0 Sprint"`    | 里程碑标题                   |
+| `state`       | String    |      | 否    | -      | `"active"`           | 状态: `active`, `closed`     |
+| `due_date`    | DateTime  |      | 否    | -      | `2024-04-01`         | **截止日期 (死线)**          |
+| `start_date`  | DateTime  |      | 否    | -      | `2024-03-01`         | 开始日期                     |
+
 ---
 
 ## 📡 4. SonarQube 数据域 (Quality Domain)
@@ -245,29 +291,79 @@ SonarQube 项目映射。
 
 | 字段名                | 类型          | 键   | 必填  | 默认值 | 示例数据          | 业务说明                 |
 |:----------------------|:--------------|:----:|:-----:|:-------|:------------------|:-------------------------|
-| `id`                  | Integer       | PK   | 是    | Auto   | `7001`            | 记录 ID                  |
-| `project_id`          | Integer       | FK   | 是    | -      | `2001`            | 关联 Sonar 项目          |
-| `analysis_date`       | DateTime      |      | 是    | -      | `2024-03-05 10:00`| 快照生成时间             |
-| `ncloc`               | Integer       |      | 否    | -      | `5000`            | 有效代码行数             |
-| `coverage`            | Float         |      | 否    | -      | `85.5`            | **覆盖率 (%)**           |
-| `bugs`                | Integer       |      | 否    | -      | `5`               | **Bug 数量**             |
-| `vulnerabilities`     | Integer       |      | 否    | -      | `0`               | **漏洞数量**             |
-| `sqale_index`         | Integer       |      | 否    | -      | `120`             | **技术债务** (分钟)      |
-| `quality_gate_status` | String        |      | 否    | -      | `"OK"`            | 质量门禁: `OK`, `ERROR`  |
+| `id`                       | Integer       | PK   | 是    | Auto   | `7001`            | 记录 ID                                      |
+| `project_id`               | Integer       | FK   | 是    | -      | `2001`            | 关联 Sonar 项目                              |
+| `analysis_date`            | DateTime      |      | 是    | -      | `2024-03-05 10:00`| 快照生成时间                                 |
+| `files`                    | Integer       |      | 否    | -      | `50`              | 文件数                                       |
+| `lines`                    | Integer       |      | 否    | -      | `6000`            | 总行数                                       |
+| `ncloc`                    | Integer       |      | 否    | -      | `5000`            | 有效代码行数                                 |
+| `classes`                  | Integer       |      | 否    | -      | `20`              | 类数量                                       |
+| `functions`                | Integer       |      | 否    | -      | `100`             | 方法数量                                     |
+| `statements`               | Integer       |      | 否    | -      | `2000`            | 语句数量                                     |
+| `bugs`                     | Integer       |      | 否    | -      | `5`               | **Bug 数量 (总计)**                          |
+| `bugs_blocker`             | Integer       |      | 否    | 0      | `1`               | Bug - 阻塞级别                               |
+| `bugs_critical`            | Integer       |      | 否    | 0      | `1`               | Bug - 严重级别                               |
+| `bugs_major`               | Integer       |      | 否    | 0      | `2`               | Bug - 主要级别                               |
+| `bugs_minor`               | Integer       |      | 否    | 0      | `1`               | Bug - 次要级别                               |
+| `bugs_info`                | Integer       |      | 否    | 0      | `0`               | Bug - 提示级别                               |
+| `vulnerabilities`          | Integer       |      | 否    | -      | `0`               | **漏洞数量 (总计)**                          |
+| `vulnerabilities_blocker`  | Integer       |      | 否    | 0      | `0`               | 漏洞 - 阻塞级别                              |
+| `vulnerabilities_critical` | Integer       |      | 否    | 0      | `0`               | 漏洞 - 严重级别                              |
+| `vulnerabilities_major`    | Integer       |      | 否    | 0      | `0`               | 漏洞 - 主要级别                              |
+| `vulnerabilities_minor`    | Integer       |      | 否    | 0      | `0`               | 漏洞 - 次要级别                              |
+| `vulnerabilities_info`     | Integer       |      | 否    | 0      | `0`               | 漏洞 - 提示级别                              |
+| `security_hotspots`        | Integer       |      | 否    | -      | `2`               | **安全热点 (总计)**                          |
+| `security_hotspots_high`   | Integer       |      | 否    | 0      | `1`               | 安全热点 - 高风险                            |
+| `security_hotspots_medium` | Integer       |      | 否    | 0      | `1`               | 安全热点 - 中风险                            |
+| `security_hotspots_low`    | Integer       |      | 否    | 0      | `0`               | 安全热点 - 低风险                            |
+| `complexity`               | Integer       |      | 否    | -      | `150`             | 圈复杂度                                     |
+| `cognitive_complexity`     | Integer       |      | 否    | -      | `100`             | 认知复杂度                                   |
+| `comment_lines_density`    | Float         |      | 否    | -      | `10.5`            | 注释行密度 (%)                               |
+| `duplicated_lines_density` | Float         |      | 否    | -      | `2.1`             | 重复行密度 (%)                               |
+| `coverage`                 | Float         |      | 否    | -      | `85.5`            | **覆盖率 (%)**                               |
+| `sqale_index`              | Integer       |      | 否    | -      | `120`             | **技术债务** (分钟)                          |
+| `sqale_debt_ratio`         | Float         |      | 否    | -      | `1.2`             | 技术债务率 (%)                               |
+| `quality_gate_status`      | String        |      | 否    | -      | `"OK"`            | 质量门禁: `OK`, `ERROR`                      |
 
 ### 4.3 代码问题 (`sonar_issues`)
 具体的代码违规详情（需要在配置中显式开启同步）。
 
 | 字段名      | 类型      | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                     |
 |:------------|:----------|:----:|:-----:|:-------|:--------------------------|:---------------------------------------------|
-| `id`        | Integer   | PK   | 是    | Auto   | `8888`                    | 记录 ID                                      |
-| `issue_key` | String    | UK   | 是    | -      | `"AX3v4..."`              | 问题唯一标识                                 |
-| `type`      | String    |      | 否    | -      | `"CODE_SMELL"`            | 类型: `BUG`, `VULNERABILITY`, `CODE_SMELL`   |
-| `severity`  | String    |      | 否    | -      | `"MAJOR"`                 | 严重度: `BLOCKER`, `CRITICAL`...             |
-| `status`    | String    |      | 否    | -      | `"OPEN"`                  | 状态: `OPEN`, `RESOLVED`...                  |
-| `component` | String    |      | 否    | -      | `"src/utils.py"`          | 相关文件路径                                 |
-| `line`      | Integer   |      | 否    | -      | `45`                      | 行号                                         |
-| `effort`    | String    |      | 否    | -      | `"10min"`                 | 修复预估时间                                 |
+| `id`            | Integer   | PK   | 是    | Auto   | `8888`                    | 记录 ID                                      |
+| `project_id`    | Integer   | FK   | 是    | -      | `2001`                    | 关联 Sonar 项目                              |
+| `issue_key`     | String    | UK   | 是    | -      | `"AX3v4..."`              | 问题唯一标识                                 |
+| `type`          | String    |      | 否    | -      | `"CODE_SMELL"`            | 类型: `BUG`, `VULNERABILITY`, `CODE_SMELL`   |
+| `severity`      | String    |      | 否    | -      | `"MAJOR"`                 | 严重度: `BLOCKER`, `CRITICAL`...             |
+| `status`        | String    |      | 否    | -      | `"OPEN"`                  | 状态: `OPEN`, `RESOLVED`...                  |
+| `author`        | String    |      | 否    | -      | `"zhangsan"`              | **责任人** (Email 或 Username)               |
+| `creation_date` | DateTime  |      | 否    | -      | `2024-03-01`              | 问题引入时间                                 |
+| `component`     | String    |      | 否    | -      | `"src/utils.py"`          | 相关文件路径                                 |
+| `line`          | Integer   |      | 否    | -      | `45`                      | 行号                                         |
+| `effort`        | String    |      | 否    | -      | `"10min"`                 | 修复预估时间                                 |
 
 ---
 *Generated by DevOps AntiGravity Agent*
+
+## 📊 5. 分析视图 (Analytics Views)
+
+基于基础表构建的高级数据模型 (Data Mart)�?
+
+### 5.1 项目全景 (`view_project_overview`)
+*   **用�?*: 项目维度的全量宽表�?
+*   **关键字段**: `issue_completion_pct`, `time_variance_hours`, `quality_gate`, `active_rate_pct`.
+
+### 5.2 PMO 战略看板 (`view_pmo_*`)
+*   **资源热力�?*: `view_pmo_resource_heatmap` (字段: `resource_share_pct`, `project_tier`)
+*   **部门效能�?*: `view_pmo_dept_ranking` (字段: `rank_speed`, `rank_stability`)
+*   **战略矩阵**: `view_pmo_portfolio_matrix` (字段: `x_axis_velocity`, `y_axis_health`, `quadrant`)
+*   **风险治理**: `view_pmo_governance_risk` (字段: `bypass_rate_pct`, `active_blockers`)
+*   **创新指数**: `view_pmo_innovation_metrics` (字段: `cross_pollination_index`)
+*   **客户满意�?*: `view_pmo_customer_satisfaction` (字段: `satisfaction_prediction`)
+*   **ROI 效能**: `view_pmo_roi_efficiency` (字段: `throughput_per_fte`, `avg_hours_per_issue`)
+
+### 5.3 HR 人才洞察 (`view_hr_*`)
+*   **能力画像**: `view_hr_user_capability_profile`
+*   **技术栈**: `view_hr_user_tech_stack`
+*   **流失风险**: `view_hr_retention_risk` (字段: `burnout_risk_level`)
+*   **质量计分�?*: `view_hr_user_quality_scorecard`

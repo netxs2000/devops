@@ -1,8 +1,4 @@
-"""GitLab 数据采集 Worker
-
-基于 BaseWorker 实现的 GitLab 数据同步逻辑。
-复用原有 worker.py 中的辅助类 (DiffAnalyzer, IdentityMatcher, OrgManager, UserResolver)。
-"""
+"""GitLab 数据采集 Worker"""
 import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
@@ -13,11 +9,10 @@ from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from .client import GitLabClient
 
-# 使用统一的模型架构
 from devops_collector.models import (
     Project, Commit, Issue, MergeRequest, Pipeline, 
     Deployment, Note, Tag, Branch, User, Organization,
-    CommitFileStats, SyncLog
+    CommitFileStats, SyncLog, GitLabGroup, GitLabGroupMember, Milestone
 )
 
 logger = logging.getLogger(__name__)
@@ -27,14 +22,11 @@ class DiffAnalyzer:
     """代码差异分析器，将 Git diff 拆分为代码/注释/空行三类。"""
     
     COMMENT_SYMBOLS = {
-        # 井号注释
         'py': '#', 'rb': '#', 'sh': '#', 'yaml': '#', 'yml': '#', 
         'dockerfile': '#', 'pl': '#', 'r': '#',
-        # 双斜杠注释
         'java': '//', 'js': '//', 'ts': '//', 'c': '//', 'cpp': '//', 
         'cs': '//', 'go': '//', 'rs': '//', 'swift': '//', 'kt': '//', 
         'scala': '//', 'php': '//',
-        # 其他
         'html': '<!--', 'xml': '<!--',
         'css': '/*', 'scss': '/*', 'less': '/*',
         'sql': '--',
@@ -129,17 +121,14 @@ class IdentityMatcher:
     
     def match(self, commit: Commit) -> Optional[int]:
         """匹配 Commit 作者到用户 ID。"""
-        # 1. Email 完全匹配
         if commit.author_email:
             email_lower = commit.author_email.lower()
             if email_lower in self.email_map:
                 return self.email_map[email_lower].id
         
-        # 2. 姓名匹配
         if commit.author_name and commit.author_name.lower() in self.name_map:
             return self.name_map[commit.author_name.lower()].id
         
-        # 3. Email 前缀匹配用户名
         if commit.author_email:
             prefix = commit.author_email.split('@')[0].lower()
             if prefix in self.username_map:
@@ -154,7 +143,7 @@ class UserResolver:
     def __init__(self, session: Session, client: GitLabClient):
         self.session = session
         self.client = client
-        self.cache: Dict[int, int] = {}  # gitlab_id -> internal_id
+        self.cache: Dict[int, int] = {} 
         self._load_cache()
     
     def _load_cache(self):
@@ -168,7 +157,6 @@ class UserResolver:
         if gitlab_id in self.cache:
             return self.cache[gitlab_id]
         
-        # 从 API 获取并创建用户
         try:
             user_data = self.client.get_user(gitlab_id)
             user = User(
@@ -188,45 +176,22 @@ class UserResolver:
 
 
 class GitLabWorker(BaseWorker):
-    """GitLab 数据采集 Worker。
-    
-    支持全量同步和增量同步，包含断点续传功能。
-    
-    同步数据类型:
-    - 项目元数据
-    - Commits (提交)
-    - Issues (议题)
-    - Merge Requests (合并请求)
-    - Pipelines (流水线)
-    - Deployments (部署)
-    - Notes (评论)
-    - Tags (标签)
-    - Branches (分支)
-    """
+    """GitLab 数据采集 Worker。"""
     
     def __init__(self, session: Session, client: GitLabClient, enable_deep_analysis: bool = False):
         super().__init__(session, client)
         self.enable_deep_analysis = enable_deep_analysis
-        self.identity_matcher = None  # Lazy init
-        self.user_resolver = None     # Lazy init
+        self.identity_matcher = None 
+        self.user_resolver = None 
     
     def process_task(self, task: dict) -> None:
-        """处理 GitLab 同步任务。
-        
-        Args:
-            task: {
-                "source": "gitlab",
-                "project_id": int,
-                "job_type": "full" | "incremental"
-            }
-        """
+        """处理 GitLab 同步任务。"""
         project_id = task.get('project_id')
         job_type = task.get('job_type', 'full')
         
         logger.info(f"Processing GitLab task: project_id={project_id}, job_type={job_type}")
         
         try:
-            # 1. 同步项目元数据
             project = self._sync_project(project_id)
             if not project:
                 raise ValueError(f"Project {project_id} not found")
@@ -235,15 +200,12 @@ class GitLabWorker(BaseWorker):
             project.last_synced_at = datetime.now(timezone.utc)
             self.session.commit()
             
-            # 获取增量同步起始时间
             since = None
             if job_type == 'incremental' and project.last_synced_at:
                 since = project.last_synced_at.isoformat()
             
-            # 初始化解析器
             self.user_resolver = UserResolver(self.session, self.client)
             
-            # 2. 同步各类数据
             commits_count = self._sync_commits(project, since)
             issues_count = self._sync_issues(project, since)
             mrs_count = self._sync_merge_requests(project, since)
@@ -251,16 +213,14 @@ class GitLabWorker(BaseWorker):
             deployments_count = self._sync_deployments(project)
             tags_count = self._sync_tags(project)
             branches_count = self._sync_branches(project)
+            milestones_count = self._sync_milestones(project)
             
-            # 3. 身份匹配
             self._match_identities(project)
             
-            # 4. 更新项目状态
             project.sync_status = 'COMPLETED'
             project.last_activity_at = datetime.now(timezone.utc)
             self.session.commit()
             
-            # 记录日志
             log = SyncLog(
                 project_id=project_id,
                 status='SUCCESS',
@@ -273,8 +233,6 @@ class GitLabWorker(BaseWorker):
             
         except Exception as e:
             self.session.rollback()
-            
-            # 更新项目状态为失败
             try:
                 project = self.session.query(Project).filter_by(id=project_id).first()
                 if project:
@@ -297,206 +255,228 @@ class GitLabWorker(BaseWorker):
         except Exception as e:
             logger.error(f"Failed to get project {project_id}: {e}")
             return None
-        
+            
         project = self.session.query(Project).filter_by(id=project_id).first()
         if not project:
+            if not p_data.get('namespace', {}).get('id'):
+                logger.error(f"Project {project_id} has no namespace info")
+                return None
+            
+            # 确保 Group 存在 (简单处理，只建一级)
+            group_id = p_data['namespace']['id']
+            group = self.session.query(GitLabGroup).filter_by(id=group_id).first()
+            if not group:
+                try:
+                    g_data = self.client.get_group(group_id)
+                    group = GitLabGroup(
+                        id=g_data['id'],
+                        name=g_data['name'],
+                        path=g_data['path'],
+                        full_path=g_data['full_path'],
+                        description=g_data.get('description'),
+                        visibility=g_data.get('visibility'),
+                        web_url=g_data.get('web_url'),
+                        created_at=datetime.fromisoformat(g_data['created_at'].replace('Z', '+00:00')) if g_data.get('created_at') else None
+                    )
+                    self.session.add(group)
+                    self.session.flush()
+                except Exception as e:
+                    logger.warning(f"Failed to sync group {group_id}: {e}")
+            
             project = Project(id=project_id)
             self.session.add(project)
         
         project.name = p_data.get('name')
         project.path_with_namespace = p_data.get('path_with_namespace')
         project.description = p_data.get('description')
-        project.star_count = p_data.get('star_count')
-        project.forks_count = p_data.get('forks_count')
-        project.open_issues_count = p_data.get('open_issues_count')
-        project.storage_size = p_data.get('statistics', {}).get('storage_size')
-        project.commit_count = p_data.get('statistics', {}).get('commit_count')
-        project.raw_data = p_data
+        project.web_url = p_data.get('web_url')
+        project.default_branch = p_data.get('default_branch')
+        project.group_id = p_data.get('namespace', {}).get('id')
+        project.star_count = p_data.get('star_count', 0)
+        project.forks_count = p_data.get('forks_count', 0)
+        project.visibility = p_data.get('visibility')
+        project.archived = p_data.get('archived')
         
+        stats = p_data.get('statistics', {})
+        project.storage_size = stats.get('storage_size')
+        project.commit_count = stats.get('commit_count')
+        
+        if p_data.get('created_at'):
+            project.created_at = datetime.fromisoformat(p_data['created_at'].replace('Z', '+00:00'))
+            
         return project
-    
-    def _sync_commits(self, project: Project, since: Optional[str] = None) -> int:
-        """同步提交记录 (支持流式处理和分批提交)。"""
-        return self._process_generator(
+
+    def _sync_commits(self, project: Project, since: Optional[str]) -> int:
+        count = self._process_generator(
             self.client.get_project_commits(project.id, since=since),
             lambda batch: self._save_commits_batch(project, batch)
         )
+        return count
 
     def _save_commits_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存 Commits。"""
-        ids = [item['id'] for item in batch]
-        existing = self.session.query(Commit).filter(
+        existing = self.session.query(Commit.id).filter(
             Commit.project_id == project.id,
-            Commit.id.in_(ids)
+            Commit.id.in_([c['id'] for c in batch])
         ).all()
-        existing_map = {c.id: c for c in existing}
+        existing_ids = {c.id for c in existing}
         
+        new_commits = []
         for data in batch:
-            commit = existing_map.get(data['id'])
-            if not commit:
-                commit = Commit(
-                    id=data['id'],
-                    project_id=project.id,
-                    short_id=data.get('short_id'),
-                    title=data.get('title'),
-                    author_name=data.get('author_name'),
-                    author_email=data.get('author_email'),
-                    message=data.get('message'),
-                    raw_data=data
-                )
-                self.session.add(commit)
+            if data['id'] in existing_ids:
+                continue
             
-            # 解析时间
-            if data.get('committed_date'):
-                try:
-                    commit.committed_date = datetime.fromisoformat(
-                        data['committed_date'].replace('Z', '+00:00')
-                    )
-                except:
-                    pass
+            commit = Commit(
+                id=data['id'],
+                project_id=project.id,
+                short_id=data['short_id'],
+                title=data['title'],
+                author_name=data['author_name'],
+                author_email=data['author_email'],
+                message=data['message'],
+                authored_date=datetime.fromisoformat(data['authored_date'].replace('Z', '+00:00')),
+                committed_date=datetime.fromisoformat(data['committed_date'].replace('Z', '+00:00'))
+            )
             
-            # 深度分析
-            if self.enable_deep_analysis and not commit.additions:
-                self._analyze_commit_diff(project.id, commit)
-    
-    def _sync_issues(self, project: Project, since: Optional[str] = None) -> int:
-        """同步 Issues (支持流式处理)。"""
-        return self._process_generator(
+            stats = data.get('stats', {})
+            commit.additions = stats.get('additions', 0)
+            commit.deletions = stats.get('deletions', 0)
+            commit.total = stats.get('total', 0)
+            
+            self.session.add(commit)
+            new_commits.append(commit)
+        
+        if self.enable_deep_analysis and new_commits:
+            pass
+
+    def _sync_issues(self, project: Project, since: Optional[str]) -> int:
+        count = self._process_generator(
             self.client.get_project_issues(project.id, since=since),
             lambda batch: self._save_issues_batch(project, batch)
         )
+        return count
 
     def _save_issues_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存 Issues。"""
         ids = [item['id'] for item in batch]
-        existing = self.session.query(Issue).filter(
-            Issue.project_id == project.id,
-            Issue.id.in_(ids)
-        ).all()
+        existing = self.session.query(Issue).filter(Issue.id.in_(ids)).all()
         existing_map = {i.id: i for i in existing}
         
         for data in batch:
             issue = existing_map.get(data['id'])
             if not issue:
-                issue = Issue(id=data['id'], project_id=project.id)
+                issue = Issue(id=data['id'])
                 self.session.add(issue)
             
-            issue.iid = data.get('iid')
-            issue.title = data.get('title')
+            issue.project_id = project.id
+            issue.iid = data['iid']
+            issue.title = data['title']
             issue.description = data.get('description')
-            issue.state = data.get('state')
-            issue.labels = data.get('labels')
-            issue.time_estimate = data.get('time_stats', {}).get('time_estimate')
-            issue.total_time_spent = data.get('time_stats', {}).get('total_time_spent')
-            issue.raw_data = data
+            issue.state = data['state']
+            issue.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
+            issue.updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
             
-            # 解析作者
-            if data.get('author', {}).get('id'):
-                issue.author_id = self.user_resolver.resolve(data['author']['id'])
-    
-    def _sync_merge_requests(self, project: Project, since: Optional[str] = None) -> int:
-        """同步 Merge Requests (支持流式处理)。"""
+            if data.get('closed_at'):
+                issue.closed_at = datetime.fromisoformat(data['closed_at'].replace('Z', '+00:00'))
+                
+            time_stats = data.get('time_stats', {})
+            issue.time_estimate = time_stats.get('time_estimate')
+            issue.total_time_spent = time_stats.get('total_time_spent')
+            
+            issue.labels = data.get('labels', [])
+            
+            if data.get('author'):
+                if self.user_resolver:
+                    uid = self.user_resolver.resolve(data['author']['id'])
+                    issue.author_id = uid
+
+    def _sync_merge_requests(self, project: Project, since: Optional[str]) -> int:
         return self._process_generator(
             self.client.get_project_merge_requests(project.id, since=since),
             lambda batch: self._save_mrs_batch(project, batch)
         )
 
     def _save_mrs_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存 MRs。"""
         ids = [item['id'] for item in batch]
-        existing = self.session.query(MergeRequest).filter(
-            MergeRequest.project_id == project.id,
-            MergeRequest.id.in_(ids)
-        ).all()
+        existing = self.session.query(MergeRequest).filter(MergeRequest.id.in_(ids)).all()
         existing_map = {m.id: m for m in existing}
         
         for data in batch:
             mr = existing_map.get(data['id'])
             if not mr:
-                mr = MergeRequest(id=data['id'], project_id=project.id)
+                mr = MergeRequest(id=data['id'])
                 self.session.add(mr)
             
-            mr.iid = data.get('iid')
-            mr.title = data.get('title')
+            mr.project_id = project.id
+            mr.iid = data['iid']
+            mr.title = data['title']
             mr.description = data.get('description')
-            mr.state = data.get('state')
+            mr.state = data['state']
             mr.author_username = data.get('author', {}).get('username')
-            mr.reviewers = data.get('reviewers')
-            mr.raw_data = data
+            mr.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
+            mr.updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
             
-            # 解析时间
-            for field in ['created_at', 'updated_at', 'merged_at', 'closed_at']:
-                if data.get(field):
-                    try:
-                        setattr(mr, field, datetime.fromisoformat(
-                            data[field].replace('Z', '+00:00')
-                        ))
-                    except:
-                        pass
-            
-            # 解析作者
-            if data.get('author', {}).get('id'):
-                mr.author_id = self.user_resolver.resolve(data['author']['id'])
-    
+            if data.get('merged_at'):
+                mr.merged_at = datetime.fromisoformat(data['merged_at'].replace('Z', '+00:00'))
+            if data.get('closed_at'):
+                mr.closed_at = datetime.fromisoformat(data['closed_at'].replace('Z', '+00:00'))
+                
+            if data.get('author'):
+                if self.user_resolver:
+                    uid = self.user_resolver.resolve(data['author']['id'])
+                    mr.author_id = uid
+
     def _sync_pipelines(self, project: Project) -> int:
-        """同步流水线 (支持流式处理)。"""
         return self._process_generator(
             self.client.get_project_pipelines(project.id),
             lambda batch: self._save_pipelines_batch(project, batch)
         )
 
     def _save_pipelines_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存流水线。"""
         ids = [item['id'] for item in batch]
-        existing = self.session.query(Pipeline).filter(
-            Pipeline.project_id == project.id,
-            Pipeline.id.in_(ids)
-        ).all()
+        existing = self.session.query(Pipeline).filter(Pipeline.id.in_(ids)).all()
         existing_map = {p.id: p for p in existing}
         
         for data in batch:
-            pipeline = existing_map.get(data['id'])
-            if not pipeline:
-                pipeline = Pipeline(id=data['id'], project_id=project.id)
-                self.session.add(pipeline)
+            p = existing_map.get(data['id'])
+            if not p:
+                p = Pipeline(id=data['id'])
+                self.session.add(p)
             
-            pipeline.status = data.get('status')
-            pipeline.ref = data.get('ref')
-            pipeline.sha = data.get('sha')
-            pipeline.source = data.get('source')
-            pipeline.raw_data = data
-    
+            p.project_id = project.id
+            p.status = data['status']
+            p.ref = data.get('ref')
+            p.sha = data.get('sha')
+            p.source = data.get('source')
+            p.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
+            p.updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+            p.coverage = data.get('coverage')
+
     def _sync_deployments(self, project: Project) -> int:
-        """同步部署记录 (支持流式处理)。"""
         return self._process_generator(
             self.client.get_project_deployments(project.id),
             lambda batch: self._save_deployments_batch(project, batch)
         )
-
+    
     def _save_deployments_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存部署记录。"""
         ids = [item['id'] for item in batch]
-        existing = self.session.query(Deployment).filter(
-            Deployment.project_id == project.id,
-            Deployment.id.in_(ids)
-        ).all()
+        existing = self.session.query(Deployment).filter(Deployment.id.in_(ids)).all()
         existing_map = {d.id: d for d in existing}
         
         for data in batch:
-            deploy = existing_map.get(data['id'])
-            if not deploy:
-                deploy = Deployment(id=data['id'], project_id=project.id)
-                self.session.add(deploy)
-            
-            deploy.iid = data.get('iid')
-            deploy.status = data.get('status')
-            deploy.ref = data.get('ref')
-            deploy.sha = data.get('sha')
-            deploy.environment = data.get('environment', {}).get('name')
-            deploy.raw_data = data
+            d = existing_map.get(data['id'])
+            if not d:
+                d = Deployment(id=data['id'])
+                self.session.add(d)
+                
+            d.project_id = project.id
+            d.iid = data['iid']
+            d.status = data['status']
+            d.environment = data.get('environment', {}).get('name')
+            d.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
+            d.updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+            d.ref = data.get('ref')
+            d.sha = data.get('sha')
     
     def _sync_tags(self, project: Project) -> int:
-        """同步标签 (支持流式处理)。"""
         count = self._process_generator(
             self.client.get_project_tags(project.id),
             lambda batch: self._save_tags_batch(project, batch)
@@ -505,7 +485,6 @@ class GitLabWorker(BaseWorker):
         return count
 
     def _save_tags_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存标签。"""
         names = [item['name'] for item in batch]
         existing = self.session.query(Tag).filter(
             Tag.project_id == project.id,
@@ -523,14 +502,12 @@ class GitLabWorker(BaseWorker):
             tag.commit_sha = data.get('commit', {}).get('id')
     
     def _sync_branches(self, project: Project) -> int:
-        """同步分支 (支持流式处理)。"""
         return self._process_generator(
             self.client.get_project_branches(project.id),
             lambda batch: self._save_branches_batch(project, batch)
         )
 
     def _save_branches_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存分支。"""
         names = [item['name'] for item in batch]
         existing = self.session.query(Branch).filter(
             Branch.project_id == project.id,
@@ -559,8 +536,50 @@ class GitLabWorker(BaseWorker):
                 except:
                     pass
     
+    def _sync_milestones(self, project: Project) -> int:
+        """同步里程碑 (支持流式处理)。"""
+        return self._process_generator(
+            self.client.get_project_milestones(project.id),
+            lambda batch: self._save_milestones_batch(project, batch)
+        )
+
+    def _save_milestones_batch(self, project: Project, batch: List[dict]) -> None:
+        """批量保存里程碑。"""
+        ids = [item['id'] for item in batch]
+        existing = self.session.query(Milestone).filter(Milestone.id.in_(ids)).all()
+        existing_map = {m.id: m for m in existing}
+        
+        for data in batch:
+            ms = existing_map.get(data['id'])
+            if not ms:
+                ms = Milestone(id=data['id'])
+                self.session.add(ms)
+            
+            ms.project_id = project.id
+            ms.iid = data.get('iid')
+            ms.title = data.get('title')
+            ms.description = data.get('description')
+            ms.state = data.get('state')
+            
+            if data.get('due_date'):
+                 # due_date 通常是 YYYY-MM-DD
+                try:
+                    ms.due_date = datetime.fromisoformat(data['due_date']).replace(tzinfo=timezone.utc)
+                except ValueError:
+                    pass
+                    
+            if data.get('start_date'):
+                try:
+                    ms.start_date = datetime.fromisoformat(data['start_date']).replace(tzinfo=timezone.utc)
+                except ValueError:
+                    pass
+                    
+            if data.get('created_at'):
+                 ms.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
+            if data.get('updated_at'):
+                 ms.updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+
     def _match_identities(self, project: Project) -> None:
-        """匹配未关联用户的 Commits。"""
         if not self.identity_matcher:
             self.identity_matcher = IdentityMatcher(self.session)
         
@@ -576,58 +595,7 @@ class GitLabWorker(BaseWorker):
         
         self.session.commit()
     
-    def _analyze_commit_diff(self, project_id: int, commit: Commit) -> None:
-        """分析提交的 Diff (深度分析模式)。"""
-        try:
-            diffs = self.client.get_commit_diff(project_id, commit.id)
-            
-            total_additions = 0
-            total_deletions = 0
-            
-            for diff in diffs:
-                file_path = diff.get('new_path', diff.get('old_path', ''))
-                
-                if DiffAnalyzer.is_ignored(file_path):
-                    continue
-                
-                diff_text = diff.get('diff', '')
-                stats = DiffAnalyzer.analyze_diff(diff_text, file_path)
-                
-                total_additions += stats['code_added']
-                total_deletions += stats['code_deleted']
-                
-                # 保存文件级统计
-                file_stats = CommitFileStats(
-                    commit_id=commit.id,
-                    file_path=file_path,
-                    language=file_path.split('.')[-1] if '.' in file_path else None,
-                    code_added=stats['code_added'],
-                    code_deleted=stats['code_deleted'],
-                    comment_added=stats['comment_added'],
-                    comment_deleted=stats['comment_deleted'],
-                    blank_added=stats['blank_added'],
-                    blank_deleted=stats['blank_deleted']
-                )
-                self.session.add(file_stats)
-            
-            commit.additions = total_additions
-            commit.deletions = total_deletions
-            commit.total = total_additions + total_deletions
-            
-        except Exception as e:
-            logger.warning(f"Failed to analyze diff for commit {commit.id}: {e}")
-
     def _process_generator(self, generator, processor_func, batch_size: int = 500) -> int:
-        """通用生成器处理逻辑 (流式 buffer + 批量回调)。
-        
-        Args:
-            generator: 数据生成器
-            processor_func: 批处理回调函数 func(batch_list)
-            batch_size: 批次大小
-            
-        Returns:
-            int: 处理的总条数
-        """
         count = 0
         batch = []
         for item in generator:
@@ -657,5 +625,4 @@ class GitLabWorker(BaseWorker):
         return count
 
 
-# 注册插件
 PluginRegistry.register_worker('gitlab', GitLabWorker)

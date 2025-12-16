@@ -40,6 +40,24 @@ class SonarQubeClient(BaseClient):
         'ncloc',                       # 代码行数 (Non-Comment Lines of Code)
         'complexity',                  # 圈复杂度
         'cognitive_complexity',        # 认知复杂度
+        'files',                       # 文件数
+        'lines',                       # 总行数
+        'classes',                     # 类
+        'functions',                   # 方法
+        'statements',                  # 语句
+        'security_hotspots',           # 安全热点
+        'comment_lines_density',       # 注释行密度
+        'sqale_debt_ratio',            # 技术债务率
+        'bugs',
+        'vulnerabilities',
+        'blocker_violations',          # 阻塞 (Bug + Vul + CodeSmell) - 需要单独处理或联合查询
+        'critical_violations',
+        'major_violations',
+        'minor_violations',
+        'info_violations',
+        # 注意: SonarQube API 不直接提供 bugs_blocker 这样的组合指标，通常需要通过 issues/search faceted search 获取
+        # 或者使用 new_violations 指标 (如果是增量)
+        # 这里为了保持简单，我们先不通过 measures/component 获取细分，而是通过单独的 issue 聚合逻辑
     ]
     
     def __init__(self, url: str, token: str, rate_limit: int = 5) -> None:
@@ -253,3 +271,101 @@ class SonarQubeClient(BaseClient):
         """
         rating_map = {'1.0': 'A', '2.0': 'B', '3.0': 'C', '4.0': 'D', '5.0': 'E'}
         return rating_map.get(str(value), 'E')
+
+    def get_issue_severity_distribution(self, project_key: str) -> Dict[str, Dict[str, int]]:
+        """获取项目问题类型和严重程度的分布统计。
+        
+        Uses facets to avoid fetching all issues.
+        
+        Returns:
+            {
+                'BUG': {'BLOCKER': 1, 'CRITICAL': 2, ...},
+                'VULNERABILITY': {'...'},
+                ...
+            }
+        """
+        # 我们需要同时按 severities 和 types 进行 facet，但 SonarQube API 的 facets 是一维的。
+        # 为了获取准确的 (Type, Severity) 组合，我们需要对每种 Type 分别查询 Severity 分布。
+        
+        distribution = {
+            'BUG': {},
+            'VULNERABILITY': {},
+            'CODE_SMELL': {}
+        }
+        
+        for issue_type in distribution.keys():
+            response = self._get("issues/search", params={
+                'componentKeys': project_key,
+                'types': issue_type,
+                'resolved': 'false',
+                'ps': 1,       # 我们只关心 facet，不需要 issue 列表
+                'facets': 'severities'
+            })
+            
+            data = response.json()
+            facets = data.get('facets', [])
+            
+            for facet in facets:
+                if facet['property'] == 'severities':
+                    for value in facet.get('values', []):
+                        severity = value['val']
+                        count = value['count']
+                        distribution[issue_type][severity] = count
+                        
+        return distribution
+
+    def get_hotspot_distribution(self, project_key: str) -> Dict[str, int]:
+        """获取项目安全热点风险程度分布。
+        
+        API: api/hotspots/search (SonarQube >= 8.x)
+        注意: Hotspots search API 并不是标准的 facet API，通常需要直接 search 并聚合
+        或者如果支持 facets 参数则使用 facets。
+        
+        对于较新版本 SonarQube，推荐使用 api/hotspots/search?projectKey=...
+        然而，为了通用性，我们模拟分布统计。
+        如果 API 不直接支持聚合，我们可能需要拉取列表 (通常热点数量远少于 issues)。
+        这里我们尝试使用 facets (如果支持) 或者 fallback 到分页拉取。
+        
+        SonarQube 8.2+ 引入了 Dedicated Hotspots API。
+        """
+        distribution = {
+            'HIGH': 0,
+            'MEDIUM': 0,
+            'LOW': 0
+        }
+        
+        # 尝试拉取所有 open 的热点 (通常数量也就是几十到几百个)
+        try:
+            page = 1
+            while True:
+                response = self._get("hotspots/search", params={
+                    'projectKey': project_key,
+                    'status': 'TO_REVIEW', # 只统计待处理的 (OPEN)
+                    'p': page,
+                    'ps': 500
+                })
+                data = response.json()
+                hotspots = data.get('hotspots', [])
+                
+                if not hotspots:
+                    break
+                    
+                for h in hotspots:
+                    # probability: HIGH, MEDIUM, LOW
+                    prob = h.get('vulnerabilityProbability', 'LOW')
+                    if prob in distribution:
+                        distribution[prob] += 1
+                
+                # 如果返回数量少于页大小，说明是最后一页
+                paging = data.get('paging', {})
+                total = paging.get('total', 0)
+                if (page * 500) >= total:
+                    break
+                    
+                page += 1
+                
+        except Exception:
+            # 兼容旧版本或 API 不存在的情况
+            pass
+            
+        return distribution
