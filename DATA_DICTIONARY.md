@@ -1,7 +1,7 @@
 # 企业级 DevOps 数据字典 (Enterprise DevOps Data Dictionary)
 
-**版本**: 2.2.0 (Analytics Extension)  
-**日期**: 2025-12-16  
+**版本**: 2.4.0 (Agile Extensions)  
+**日期**: 2025-12-18  
 **状态**: 已生效 (Active)  
 **维护人**: DevOps 效能平台团队
 
@@ -14,7 +14,7 @@
 ### 核心架构设计
 
 *   **统一基座 (Unified Base)**: 所有模型继承自统一的 `Base` 类，确保元数据（创建时间、更新时间）的一致性。
-*   **统一身份认证 (Centralized Identity)**: 通过 `users` 表实现跨工具（GitLab, SonarQube）的身份归一化，支持离职员工和外部贡献者的虚拟身份管理。
+*   **统一身份认证 (Centralized Identity)**: 通过 `users` 表实现跨工具（GitLab, SonarQube, Jira, ZenTao）的身份归一化，支持离职员工和外部贡献者的虚拟身份管理。
 *   **企业级多租户 (Enterprise Multi-tenancy)**: 依托 `organizations` 表实现 "公司 > 中心 > 部门 > 小组" 四级组织架构管理。
 
 ### 全局 ER 关系图
@@ -27,11 +27,17 @@ erDiagram
     Organization ||--|{ Project : "owns (拥有资产)"
 
     %% User Relationships
+    User ||--|{ IdentityMapping : "links (关联外部身份)"
+    IdentityMapping }|--|| User : "belongs_to (归属于)"
+    
     User ||--|{ Commit : "authors (提交代码)"
     User ||--|{ MergeRequest : "reviews/authors (提交MR)"
     User ||--|{ Issue : "reports (提单)"
     
-    %% Project Scopes
+    %% Jira & ZenTao & Jenkins User Links
+    User ||--o{ JiraIssue : "assignee/reporter/creator"
+    User ||--o{ ZenTaoIssue : "openedBy/assignedTo"
+    User ||--o{ JenkinsBuild : "trigger"
     Project ||--|{ Commit : "contains (包含)"
     Project ||--|{ MergeRequest : "tracks (追踪)"
     Project ||--|{ Issue : "manages (管理)"
@@ -48,6 +54,25 @@ erDiagram
     Project ||--o| SonarProject : "integrates (集成)"
     SonarProject ||--|{ SonarMeasure : "analyzes (质量快照)"
     SonarProject ||--|{ SonarIssue : "detects (发现问题)"
+
+    %% Jenkins Integration
+    Project ||--o{ JenkinsJob : "triggers (触发)"
+    JenkinsJob ||--|{ JenkinsBuild : "contains (包含)"
+
+    %% Jira Integration
+    Project ||--o{ JiraProject : "manages_agile (敏捷管理)"
+    JiraProject ||--|{ JiraBoard : "has (拥有看板)"
+    JiraBoard ||--|{ JiraSprint : "contains (包含)"
+    JiraProject ||--|{ JiraIssue : "contains (包含)"
+    JiraSprint ||--o{ JiraIssue : "groups (归集)"
+
+    JiraIssue ||--o{ JiraIssueHistory : "has_history (变更记录)"
+    %% ZenTao Integration
+    Project ||--o{ ZenTaoProduct : "tracks_agile (敏捷跟踪)"
+    ZenTaoProduct ||--o{ ZenTaoProductPlan : "plans (计划)"
+    ZenTaoProduct ||--|{ ZenTaoIssue : "contains (包含)"
+    ZenTaoProductPlan ||--o{ ZenTaoIssue : "bins (规划问题)"
+    ZenTaoProduct ||--o{ ZenTaoAction : "logged_actions (操作日志)"
 ```
 
 ---
@@ -69,23 +94,59 @@ erDiagram
 | `updated_at`  | DateTime      |      | 否    | Now    | `2024-01-02`      | 更新时间                                                                 |
 
 ### 2.2 全局用户 (`users`)
-统一的自然人身份表，解决跨系统账号不一致问题。
+统一的自然人身份表，作为系统内的唯一身份标识。解决跨系统账号不一致问题。
 
 | 字段名            | 类型          | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                                 |
 |:------------------|:--------------|:----:|:-----:|:-------|:--------------------------|:---------------------------------------------------------|
 | `id`              | Integer       | PK   | 是    | Auto   | `10086`                   | 全局用户 ID                                              |
-| `gitlab_id`       | Integer       | UK   | 否    | NULL   | `888`                     | 原始 GitLab ID (关联 `users.id`)，虚拟用户此列为 NULL    |
-| `username`        | String(100)   |      | 否    | -      | `"zhangsan"`              | 登录使用的用户名                                         |
+| `username`        | String(100)   | UK   | 是    | -      | `"zhangsan"`              | 内部唯一用户名                                           |
 | `name`            | String(200)   |      | 否    | -      | `"张三"`                  | 显示名称 (中文名)                                        |
-| `email`           | String(200)   |      | 否    | -      | `"zhangsan@corp.com"`     | 企业邮箱                                                 |
-| `state`           | String(20)    |      | 否    | -      | `"active"`                | 账号状态: `active`(激活), `blocked`(禁用)                |
-| `is_virtual`      | Boolean       |      | 否    | False  | `False`                   | **是否虚拟账号** (True=手工维护, False=自动同步)         |
-| `department`      | String(100)   |      | 否    | -      | `"基础架构部"`            | 部门快照字符串 (源自 Profile)                            |
-| `organization_id` | Integer       | FK   | 否    | NULL   | `1001`                    | 归属组织架构 ID (关联 `organizations.id`)                |
-| `avatar_url`      | String(500)   |      | 否    | -      | `"http://..."`            | 头像地址                                                 |
+| `email`           | String(200)   | UK   | 否    | -      | `"zhangsan@corp.com"`     | 企业邮箱 (用于跨源自动对齐的关键字段)                   |
+| `state`           | String(20)    |      | 否    | active | `"active"`                | 账号状态: `active`(激活), `blocked`(禁用)                |
+| `department`      | String(100)   |      | 否    | -      | `"基础架构部"`            | 归属部门名称快照                                         |
+| `organization_id` | Integer       | FK   | 否    | NULL   | `2001`                    | 关联组织 ID (外键 `organizations.id`)                    |
 | `raw_data`        | JSON          |      | 否    | -      | `{"id": 888, ...}`        | 原始数据备份                                             |
 
-### 2.3 同步日志 (`sync_logs`)
+### 2.3 身份映射 (`identity_mappings`)
+建立基础工具账号（Jira, ZenTao, GitLab 等）与全局用户之间的映射关系。实现一见多、跨系统识别。
+
+| 字段名            | 类型          | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                                 |
+|:------------------|:--------------|:----:|:-----:|:-------|:--------------------------|:---------------------------------------------------------|
+| `id`              | Integer       | PK   | 是    | Auto   | `1`                       | 映射 ID                                                   |
+| `user_id`         | Integer       | FK   | 是    | -      | `10086`                   | 全局用户 ID (外键 `users.id`)                            |
+| `source`          | String(50)    | UK1  | 是    | -      | `"jira"`                  | 来源系统 (jira, zentao, gitlab, jenkins, sonarqube)      |
+| `external_id`     | String(200)   | UK1  | 是    | -      | `"jira_acc_001"`          | 外部系统中的账号标识 (如 accountId 或 account)           |
+| `external_name`   | String(200)   |      | 否    | -      | `"张三(Jira)"`            | 该系统中的显示名称                                       |
+| `email`           | String(200)   |      | 否    | -      | `"zhangsan@corp.com"`     | 该账号记录的邮箱 (辅助对齐)                              |
+| `created_at`      | DateTime      |      | 否    | Now    | `2024-01-01`              | 创建时间                                                 |
+
+#### 2.3.1 预定义映射策略
+*   **GitLab 特色策略**: 
+    *   **字段映射**: 提取 GitLab User Profile 中的 `skype` (或 `skypeid`) 字段。
+    *   **组织关联**: 该字段值被视为 **Center (部门中心)** 名称，系统会自动在 `organizations` 表中寻找或创建 `level='Center'` 的归属组织。
+    *   **身份对齐**: 优先通过 GitLab ID 匹配，其次通过 Email 对齐现有全局用户。
+*   **Jira 特色策略**: 通过 `accountId` 作为唯一标识。
+*   **ZenTao 特色策略**: 通过 `account` 作为唯一标识。
+
+### 2.4 产品与产品线 (`products`)
+全局产品管理，用于串联业务架构与技术项目。
+
+| 字段名            | 类型          | 键   | 必填  | 默认值 | 业务说明                                                 |
+|:------------------|:--------------|:----:|:-----:|:-------|:---------------------------------------------------------|
+| `id`              | Integer       | PK   | 是    | Auto   | 全局产品 ID                                               |
+| `name`            | String(200)   |      | 是    | -      | 产品/产品线名称                                           |
+| `description`     | Text          |      | 否    | -      | 描述                                                     |
+| `level`           | String(20)    |      | 否    | -      | 层级 (`Line` 或 `Product`)                                |
+| `parent_id`       | Integer       | FK   | 否    | -      | 父节点 ID (用于产品线归属)                                |
+| `product_line_name`| String(200)  |      | 否    | -      | 归属产品线名称 (冗余)                                     |
+| `organization_id` | Integer       | FK   | 否    | -      | 归属组织中心 ID                                           |
+| `project_id`      | Integer       |      | 否    | -      | 关联的技术项目 ID (由插件具体定义)                        |
+| `product_manager_id`| Integer     | FK   | 否    | -      | 产品经理 (关联 `users.id`)                               |
+| `dev_manager_id`  | Integer       | FK   | 否    | -      | 开发经理 (关联 `users.id`)                               |
+| `test_manager_id` | Integer       | FK   | 否    | -      | 测试经理 (关联 `users.id`)                               |
+| `release_manager_id`| Integer     | FK   | 否    | -      | 发布经理 (关联 `users.id`)                               |
+
+### 2.5 同步日志 (`sync_logs`)
 数据采集任务的审计追踪。
 
 | 字段名             | 类型         | 键   | 必填  | 默认值   | 示例数据             | 业务说明                         |
@@ -343,27 +404,187 @@ SonarQube 项目映射。
 | `effort`        | String    |      | 否    | -      | `"10min"`                 | 修复预估时间                                 |
 
 ---
-*Generated by DevOps AntiGravity Agent*
 
-## 📊 5. 分析视图 (Analytics Views)
+## 🏗️ 5. Jenkins 数据域 (Jenkins Domain)
 
-基于基础表构建的高级数据模型 (Data Mart)�?
+记录 CI 构建与流水线执行详情。
 
-### 5.1 项目全景 (`view_project_overview`)
-*   **用�?*: 项目维度的全量宽表�?
-*   **关键字段**: `issue_completion_pct`, `time_variance_hours`, `quality_gate`, `active_rate_pct`.
+### 5.1 Jenkins 任务 (`jenkins_jobs`)
+存储 Jenkins Job 的基本元数据。
 
-### 5.2 PMO 战略看板 (`view_pmo_*`)
-*   **资源热力�?*: `view_pmo_resource_heatmap` (字段: `resource_share_pct`, `project_tier`)
-*   **部门效能�?*: `view_pmo_dept_ranking` (字段: `rank_speed`, `rank_stability`)
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------------|:-------------------------------------------------|
+| `id`               | Integer       | PK   | 是    | Auto   | `101`                     | 内部自增 ID                                      |
+| `name`             | String(255)   |      | 是    | -      | `"deploy-prod"`           | 任务名称                                         |
+| `full_name`        | String(500)   | UK   | 是    | -      | `"ops/deploy-prod"`       | 完整路径名称                                     |
+| `url`              | String(500)   |      | 否    | -      | `"http://jenkins/job/..."`| Web 链接                                         |
+| `description`      | Text          |      | 否    | -      | `"生产环境部署任务"`      | 描述信息                                         |
+| `color`            | String(50)    |      | 否    | -      | `"blue"`                  | 状态颜色 (如 blue, red, anime)                   |
+| `gitlab_project_id`| Integer       | FK   | 否    | NULL   | `1010`                    | 关联 GitLab 项目 (关联 `projects.id`)            |
+| `sync_status`      | String(20)    |      | 否    | 'PENDING' | `"COMPLETED"`          | 同步状态: `PENDING`, `SYNCING`, `COMPLETED`      |
+| `last_synced_at`   | DateTime      |      | 否    | -      | `2024-03-05 12:00`        | 最近一次同步时间                                 |
+| `created_at`       | DateTime      |      | 否    | Now    | `2024-12-18`              | 记录创建时间                                     |
+| `updated_at`       | DateTime      |      | 否    | Now    | `2024-12-18`              | 记录更新时间                                     |
+
+### 5.2 Jenkins 构建 (`jenkins_builds`)
+记录单次构建的执行详情 and 结果。
+
+| 字段名         | 类型         | 键   | 必填  | 默认值 | 示例数据             | 业务说明                                      |
+|:---------------|:-------------|:----:|:-----:|:-------|:---------------------|:----------------------------------------------|
+| `id`           | Integer      | PK   | 是    | Auto   | `5001`               | 记录 ID                                       |
+| `job_id`       | Integer      | FK   | 是    | -      | `101`                | 关联 Job ID (关联 `jenkins_jobs.id`)          |
+| `number`       | Integer      |      | 是    | -      | `45`                 | 构建编号 (#45)                                |
+| `result`       | String(20)   |      | 否    | -      | `"SUCCESS"`          | 结果: `SUCCESS`, `FAILURE`, `ABORTED`         |
+| `duration`     | BigInteger   |      | 否    | -      | `120000`             | 耗时 (毫秒)                                   |
+| `timestamp`    | DateTime     |      | 否    | -      | `2024-03-05 10:00`   | 构建开始时间                                  |
+| `url`          | String(500)  |      | 否    | -      | `"http://.../45/"`   | 构建详情详情链接                              |
+| `trigger_type` | String(50)   |      | 否    | -      | `"remote"`           | 触发方式 (如 manual, remote, scm)             |
+| `trigger_user` | String(100)  |      | 否    | -      | `"admin"`            | 触发人                                        |
+| `commit_sha`   | String(100)  |      | 否    | -      | `"a1b2c3d4..."`      | 构建时关联的代码 Commit SHA                   |
+| `building`     | Boolean      |      | 否    | False  | `False`              | 是否正在构建中                                |
+| `raw_data`     | JSON         |      | 否    | -      | `{"number": 45, ...}`| 原始数据备份                                  |
+
+---
+
+## 🎫 6. Jira 数据域 (Jira Domain)
+
+支持敏捷项目管理数据的深度采集。
+
+### 6.1 Jira 项目 (`jira_projects`)
+
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据            | 业务说明                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------|:---------------------------------|
+| `id`               | Integer       | PK   | 是    | Auto   | `1`                 | 内部自增 ID                      |
+| `key`              | String(50)    | UK   | 是    | -      | `"DEMO"`            | Jira 项目 Key                    |
+| `name`             | String(255)   |      | 是    | -      | `"演示项目"`        | 项目名称                         |
+| `lead_name`        | String(255)   |      | 否    | -      | `"项目负责人"`      | 项目负责人                       |
+| `gitlab_project_id`| Integer       | FK   | 否    | NULL   | `1010`              | 关联 GitLab 项目                 |
+| `sync_status`      | String(20)    |      | 否    | 'PENDING' | `"COMPLETED"`    | 同步状态                         |
+
+### 6.2 Jira 迭代 (`jira_sprints`)
+
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据            | 业务说明                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------|:---------------------------------|
+| `id`               | Integer       | PK   | 是    | -      | `1001`              | Jira 原始 Sprint ID              |
+| `board_id`         | Integer       | FK   | 是    | -      | `100`               | 关联看板 ID                      |
+| `name`             | String(255)   |      | 是    | -      | `"Sprint 1"`        | 迭代名称                         |
+| `state`            | String(20)    |      | 否    | -      | `"active"`          | 状态: `active`, `closed`, `future` |
+
+### 6.3 Jira 问题 (`jira_issues`)
+
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据            | 业务说明                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------|:---------------------------------|
+| `id`               | Integer       | PK   | 是    | -      | `50001`             | Jira 原始 Issue ID               |
+| `key`              | String(50)    | UK   | 是    | -      | `"DEMO-1"`          | 问题唯一标识                     |
+| `issue_type`       | String(50)    |      | 否    | -      | `"Story"`           | 类型: `Story`, `Bug`, `Task`     |
+| `status`           | String(50)    |      | 否    | -      | `"In Progress"`     | 当前状态                         |
+| `assignee_name`    | String(255)   |      | 否    | -      | `"zhangsan"`        | 经办人名称                       |
+| `reporter_name`    | String(255)   |      | 否    | -      | `"lisi"`            | 报告人名称                       |
+| `creator_name`     | String(255)   |      | 否    | -      | `"wangwu"`          | 创建人名称                       |
+
+### 6.4 Jira 问题变更历史 (`jira_issue_histories`)
+
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据            | 业务说明                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------|:---------------------------------|
+| `id`               | String(50)    | PK   | 是    | -      | `"1001_status"`     | 复合 ID (HistoryID_Field)        |
+| `issue_id`         | String(50)    | FK   | 是    | -      | `"DEMO-1"`          | 关联问题 ID                      |
+| `author_name`      | String(100)   |      | 否    | -      | `"张三"`            | 操作人姓名                       |
+| `created_at`       | DateTime      |      | 否    | -      | `2024-01-01`        | 变更时间                         |
+| `field`            | String(100)   |      | 否    | -      | `"status"`          | 变更字段                         |
+| `from_string`      | Text          |      | 否    | -      | `"Draft"`           | 变更前取值                       |
+| `to_string`        | Text          |      | 否    | -      | `"Open"`            | 变更后取值                       |
+
+---
+
+## 🎋 7. 禅道数据域 (ZenTao Domain)
+
+支持禅道全量敏捷资产采集，覆盖从需求到发布的完整生命周期。组织架构信息（部门与人员）会自动同步并映射至系统公共模型 [Organization](file:///c:/Users/netxs/devops/devops/devops_collector/models/base_models.py#L21) 与 [User](file:///c:/Users/netxs/devops/devops/devops_collector/models/base_models.py#L52)。
+
+### 7.1 禅道产品 (`zentao_products`)
+
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据            | 业务说明                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------|:---------------------------------|
+| `id`               | Integer       | PK   | 是    | -      | `10`                | 禅道原始 Product ID              |
+| `name`             | String(255)   |      | 是    | -      | `"智能监控系统"`    | 产品名称                         |
+| `gitlab_project_id`| Integer       | FK   | 否    | NULL   | `1010`              | 关联 GitLab 项目                 |
+
+### 7.2 禅道计划 (`zentao_product_plans`)
+
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据            | 业务说明                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------|:---------------------------------|
+| `id`               | Integer       | PK   | 是    | -      | `50`                | 禅道原始 Plan ID                 |
+| `product_id`       | Integer       | FK   | 是    | -      | `10`                | 所属产品                         |
+| `title`            | String(255)   |      | 是    | -      | `"v2.0 架构升级"`   | 计划名称                         |
+| `begin`            | DateTime      |      | 否    | -      | `2024-01-01`        | 计划开始日期                     |
+| `end`              | DateTime      |      | 否    | -      | `2024-03-31`        | 计划结束日期                     |
+| `opened_by`        | String(100)   |      | 否    | -      | `"admin"`            | 创建人                           |
+| `opened_date`      | DateTime      |      | 否    | -      | `2024-01-01`        | 创建时期                         |
+
+### 7.3 禅道执行 (`zentao_executions`)
+
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据            | 业务说明                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------|:---------------------------------|
+| `id`               | Integer       | PK   | 是    | -      | `20`                | 原始 Execution ID (迭代)         |
+| `product_id`       | Integer       | FK   | 是    | -      | `10`                | 所属产品                         |
+| `name`             | String(255)   |      | 是    | -      | `"2024 Q4 Sprint 1"`| 迭代名称                         |
+| `status`           | String(20)    |      | 否    | -      | `"doing"`           | 状态: `wait`, `doing`, `closed`  |
+
+### 7.3 禅道问题 (`zentao_issues`)
+
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据            | 业务说明                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------|:---------------------------------|
+| `id`               | Integer       | PK   | 是    | -      | `1001`              | 禅道原始 Story 或 Bug ID         |
+| `type`             | String(50)    |      | 否    | -      | `"feature"`         | **映射类型**: `feature`, `bug`   |
+| `title`            | String(500)   |      | 是    | -      | `"支持暗黑模式"`    | 标题                             |
+| `execution_id`     | Integer       | FK   | 否    | NULL   | `20`                | 所属迭代                         |
+
+### 7.4 禅道测试 (`zentao_test_cases` / `results`)
+
+| 模型               | 关键字段                                  | 说明                             |
+|:-------------------|:------------------------------------------|:---------------------------------|
+| **TestCase**       | `title`, `type`, `opened_by`, `opened_date` | 测试用例资产管理 (含创建信息)   |
+| **TestResult**     | `result` (pass/fail), `date`, `build_id`  | 执行记录，用于计算通过率         |
+
+### 7.5 禅道发布 (`zentao_builds` / `releases`)
+
+| 模型               | 关键字段                                  | 说明                             |
+|:-------------------|:------------------------------------------|:---------------------------------|
+| **Build**          | `name`, `builder`, `date`                 | 研发构建版本点 (含构建人)       |
+| **Release**        | `name`, `date`, `opened_by`               | 业务对外发布快照 (含发布人)     |
+
+### 7.6 禅道操作日志 (`zentao_actions`)
+
+| 字段名             | 类型          | 键   | 必填  | 默认值 | 示例数据            | 业务说明                         |
+|:-------------------|:--------------|:----:|:-----:|:-------|:--------------------|:---------------------------------|
+| `id`               | Integer       | PK   | 是    | -      | `10001`             | 禅道原始 Action ID               |
+| `product_id`       | Integer       | FK   | 是    | -      | `10`                | 所属产品                         |
+| `object_type`      | String(50)    |      | 是    | -      | `"story"`           | 对象类型                         |
+| `object_id`        | Integer       |      | 是    | -      | `501`               | 对象 ID                          |
+| `actor`            | String(100)   |      | 否    | -      | `"dev1"`            | 操作人账户                       |
+| `action`           | String(100)   |      | 否    | -      | `"opened"`          | 操作类型                         |
+| `date`             | DateTime      |      | 否    | -      | `2024-01-01`        | 操作时间                         |
+
+---
+
+## 📊 8. 分析视图 (Analytics Views)
+
+基于基础表构建的高级数据模型 (Data Mart)
+
+### 8.1 项目全景 (`view_project_overview`)
+*   用途: 项目维度的全量宽表
+*   关键字段: `issue_completion_pct`, `time_variance_hours`, `quality_gate`, `active_rate_pct`.
+
+### 8.2 PMO 战略看板 (`view_pmo_*`)
+*   **资源热力**: `view_pmo_resource_heatmap` (字段: `resource_share_pct`, `project_tier`)
+*   **部门效能**: `view_pmo_dept_ranking` (字段: `rank_speed`, `rank_stability`)
 *   **战略矩阵**: `view_pmo_portfolio_matrix` (字段: `x_axis_velocity`, `y_axis_health`, `quadrant`)
 *   **风险治理**: `view_pmo_governance_risk` (字段: `bypass_rate_pct`, `active_blockers`)
 *   **创新指数**: `view_pmo_innovation_metrics` (字段: `cross_pollination_index`)
-*   **客户满意�?*: `view_pmo_customer_satisfaction` (字段: `satisfaction_prediction`)
+*   **客户满意**: `view_pmo_customer_satisfaction` (字段: `satisfaction_prediction`)
 *   **ROI 效能**: `view_pmo_roi_efficiency` (字段: `throughput_per_fte`, `avg_hours_per_issue`)
 
-### 5.3 HR 人才洞察 (`view_hr_*`)
+### 8.3 HR 人才洞察 (`view_hr_*`)
 *   **能力画像**: `view_hr_user_capability_profile`
 *   **技术栈**: `view_hr_user_tech_stack`
 *   **流失风险**: `view_hr_retention_risk` (字段: `burnout_risk_level`)
-*   **质量计分�?*: `view_hr_user_quality_scorecard`
+*   **质量计分**: `view_hr_user_quality_scorecard`

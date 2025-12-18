@@ -159,6 +159,8 @@ class SonarIssue(Base):
     # 负责人
     assignee = Column(String(100))
     author = Column(String(100))
+    assignee_user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    author_user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     
     # 原始数据
     raw_data = Column(JSON)

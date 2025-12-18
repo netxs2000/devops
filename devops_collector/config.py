@@ -82,3 +82,12 @@ class Config:
     SONARQUBE_TOKEN = config_parser.get('sonarqube', 'token', fallback=os.getenv('SONARQUBE_TOKEN', ''))
     SONARQUBE_SYNC_INTERVAL_HOURS = config_parser.getint('sonarqube', 'sync_interval_hours', fallback=24)
     SONARQUBE_SYNC_ISSUES = config_parser.getboolean('sonarqube', 'sync_issues', fallback=False)
+
+    # ============================================
+    # Jenkins Configuration (NEW)
+    # ============================================
+    JENKINS_URL = config_parser.get('jenkins', 'url', fallback=os.getenv('JENKINS_URL', ''))
+    JENKINS_USER = config_parser.get('jenkins', 'user', fallback=os.getenv('JENKINS_USER', ''))
+    JENKINS_TOKEN = config_parser.get('jenkins', 'token', fallback=os.getenv('JENKINS_TOKEN', ''))
+    JENKINS_SYNC_INTERVAL_HOURS = config_parser.getint('jenkins', 'sync_interval_hours', fallback=12)
+    JENKINS_BUILD_SYNC_LIMIT = config_parser.getint('jenkins', 'build_sync_limit', fallback=100)

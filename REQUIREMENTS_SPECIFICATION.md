@@ -1,7 +1,7 @@
 # DevOps 效能平台需求规格说明书 (SRS)
 
 **项目名称**: DevOps Data Collector & Analytics Platform
-**版本**: 3.1.0 (Analytics Extension)
+**版本**: 3.2.0 (Analytics Extension)
 **日期**: 2025-12-16
 **密级**: 内部公开
 
@@ -13,7 +13,7 @@
 本文档旨在明确 **DevOps 效能平台** 的功能需求、非功能需求及接口规范，为开发团队、测试团队及项目干系人提供统一的执行标准。
 
 ### 1.2 背景
-当前研发管理面临数据分散（GitLab/SonarQube/Jira 割裂）、指标主观（缺乏 DORA 等量化标准）、协作黑盒（无法感知真实工作量与瓶颈）等痛点。本系统通过构建统一的数据底座，实现研发过程的数字化、透明化与智能化。
+当前研发管理面临数据分散（GitLab/SonarQube/Jenkins/Jira 割裂）、指标主观（缺乏 DORA 等量化标准）、协作黑盒（无法感知真实工作量与瓶颈）等痛点。本系统通过构建统一的数据底座，实现研发过程的数字化、透明化与智能化。
 
 ### 1.3 适用范围
 本系统适用于研发中心所有产研团队，覆盖需求、开发、测试、部署、运营全生命周期。
@@ -39,9 +39,9 @@
 ### 2.3 系统架构
 系统采用 **微内核 + 插件化 (Micro-kernel & Plugins)** 架构：
 *   **Core**: 负责配置管理、数据库连接、任务调度 (RabbitMQ)、身份归一化。
-*   **Plugins**: 
     *   `gitlab`: 采集 Commit, MR, Pipeline, Issue, Note。
-    *   `sonarqube`: 采集 Coverage, Duplications, TechDebt (New)。
+    *   `sonarqube`: 采集 Coverage, Duplications, TechDebt。
+    *   `jenkins`: 采集 Job metadata, Build history, Duration, Result (New)。
 *   **Data Warehouse**: PostgreSQL 星型模型存储，提供 SQL Views 层作为数据服务接口。
 
 ---
@@ -51,7 +51,7 @@
 ### 3.1 数据采集与同步 (R-COLLECT)
 
 #### R-COLLECT-01: 多源数据适配
-*   **描述**: 系统须支持 GitLab (v13+) 和 SonarQube (v8+) 的 API 对接。
+*   **描述**: 系统须支持 GitLab (v13+)、SonarQube (v8+) 和 Jenkins (v2.x+) 的 API 对接。
 *   **验收标准**: 配置 URL/Token 后，能正确连通并获取 Version 信息。
 
 #### R-COLLECT-02: 智能断点续传
@@ -109,6 +109,10 @@
 #### R-ANALYTICS-08: 人才能力画像 (HR Capability)
 *   **描述**: 多维评估工程师能力（编码/质量/协作），识别技术专家与高潜人才。
 *   **验收标准**: 提供 `view_hr_user_capability_profile` 及 `view_hr_user_tech_stack`。
+
+#### R-ANALYTICS-09: 构建效能分析 (Jenkins Analytics) (New)
+*   **描述**: 追踪构建成功率、构建耗时趋势、构建触发分布（SCM vs Manual）。
+*   **验收标准**: 提供 SQL View，能准确输出各 Job 的平均耗时及构建健康度。
 
 ---
 

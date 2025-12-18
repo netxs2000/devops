@@ -5,25 +5,28 @@
 DevOps Data Collector 采用模块化的**ETL (Extract, Transform, Load)** 架构，旨在实现高扩展性、高可靠性和数据的一致性。
 
 系统由四层组成：
-1.  **采集层 (Collection Layer)**: 插件化适配器，负责对接不同 API (GitLab, SonarQube)。
-2.  **核心层 (Core Layer)**: 负责数据清洗、实体关联、身份归一化和持久化。
+1.  **采集层 (Collection Layer)**: 插件化适配器，负责对接不同 API (GitLab, SonarQube, Jenkins)。
+2.  **核心层 (Core Layer)**: 负责数据清洗、实体关联、身份归一化、任务分发 (RabbitMQ) 和持久化。
 3.  **存储层 (Storage Layer)**: 关系型数据库 (PostgreSQL) 存储结构化基础数据 (Fact Tables)。
-4.  **服务层 (Service Layer)**: 数据集市 (Data Mart)，通过 SQL Views 封装复杂的分析逻辑（如 DORA, 战略矩阵），直接对接 BI。
+4.  **服务层 (Service Layer)**: 数据集市 (Data Mart)，通过 SQL Views 封装复杂的分析逻辑（如 DORA, 战略矩阵, Jenkins 构建分析），直接对接 BI。
 
 ```mermaid
 graph TD
     subgraph Data Sources
         GL[GitLab API]
         SQ[SonarQube API]
+        JK[Jenkins API]
     end
 
     subgraph DevOps Collector
         subgraph Plugins
             P_GL[GitLab Plugin]
             P_SQ[SonarQube Plugin]
+            P_JK[Jenkins Plugin]
         end
         
         subgraph Core Logic
+            RMQ[RabbitMQ<br>(Task Queue)]
             IM[Identity Matcher<br>(身份归一化)]
             OM[Organization Manager<br>(组织管理)]
             DB_S[DB Session Manager]
@@ -42,10 +45,13 @@ graph TD
 
     GL --> P_GL
     SQ --> P_SQ
+    JK --> P_JK
     
-    P_GL --> IM
-    P_SQ --> IM
+    P_GL --> RMQ
+    P_SQ --> RMQ
+    P_JK --> RMQ
     
+    RMQ --> IM
     IM --> OM
     OM --> DB_S
     DB_S --> DB
@@ -87,6 +93,8 @@ graph TD
     *   **幂等写入**: Upsert 策略，支持随时断点续传。
 2.  **SonarQube 采集**:
     *   关联 GitLab 项目，拉取 Quality Gate 与 Metrics。
+3.  **Jenkins 采集**:
+    *   同步 Job 列表，抓取 Build 详细记录（时长、结果、触发者）。
 
 ## 4. 关键技术决策 (Key Decisions)
 
@@ -95,8 +103,10 @@ graph TD
     *   **开放性**: 任何该支持 SQL 的 BI 工具 (Superset, Tableau, PowerBI) 都可直接接入，无需开发 API。
     *   **一致性**: SQL 脚本即文档，指标定义清晰可见 (Single Source of Truth)。
 
-*   **为什么不用 Celery？**
-    *   保持部署简单。目前的脚本模式配合 Crontab/Jenkins 调度已足够。
+*   **为什么使用 RabbitMQ？**
+    *   **削峰填谷**: 应对突发的大规模同步请求。
+    *   **解耦**: 调度层 (Scheduler) 与执行层 (Worker) 分离，支持多机器部署 Worker 提升并发性能。
+    *   **可靠性**: 任务失败可自动重回队列，确保每一条数据都不丢失。
 
 *   **大批量数据适配**
     *   **Generator Stream**: 内存占用 O(1)。

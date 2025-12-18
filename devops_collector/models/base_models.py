@@ -10,7 +10,7 @@
     from devops_collector.models.base_models import Base, Organization, User, SyncLog
 """
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, JSON, UniqueConstraint
 from sqlalchemy.orm import declarative_base, relationship, backref
 from sqlalchemy.sql import func
 
@@ -42,7 +42,7 @@ class Organization(Base):
     children = relationship("Organization", backref=backref('parent', remote_side=[id]))
     
     # 关联用户（双向关系）
-    # 注意：这里不直接定义 relationship，而是在各插件的 User 模型中通过 back_populates 建立
+    # 注意：这里不直接定义 relationship，而是在各插件 of User 模型中通过 back_populates 建立
     # 这样可以避免循环导入问题
     
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
@@ -50,63 +50,52 @@ class Organization(Base):
 
 
 class User(Base):
-    """用户模型，支持 GitLab 用户和虚拟用户。
+    """用户模型，全局唯一身份标识。
     
-    采用全局自增 ID 作为主键，`gitlab_id` 为可空字段，
-    支持手动录入外部贡献者 (无 GitLab 账号)。
-    
-    Attributes:
-        id: 系统内部全局 ID (自增主键)
-        gitlab_id: 原始 GitLab 用户 ID (虚拟用户为 NULL)
-        is_virtual: 是否为虚拟/外部用户
-        department: 部门名称 (从 skype/skypi 字段提取)
-        organization_id: 关联的组织架构 ID
-        
-    Note:
-        - organization relationship 在各插件中通过 back_populates 定义
-        - 这样可以避免循环导入问题
+    聚合来自各个系统（GitLab, Jira, ZenTao等）的人员信息。
     """
     __tablename__ = 'users'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    gitlab_id = Column(Integer, unique=True, nullable=True)  # NULL for virtual users
-    
-    username = Column(String(100))
+    username = Column(String(100), unique=True) # 内部唯一用户名
     name = Column(String(200))
-    email = Column(String(200))
-    public_email = Column(String(200))
-    state = Column(String(20))  # active, blocked
+    email = Column(String(200), unique=True)    # 唯一邮箱，用于自动匹配
     
-    # 部门信息
+    state = Column(String(20)) # active, blocked
     department = Column(String(100))
-    is_virtual = Column(Boolean, default=False)
-    
-    # 关联组织
     organization_id = Column(Integer, ForeignKey('organizations.id'))
-    # organization relationship 在插件中定义
     
-    # 额外信息
-    avatar_url = Column(String(500))
-    web_url = Column(String(500))
-    
-    # 原始数据
     raw_data = Column(JSON)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     
-    created_at = Column(DateTime(timezone=True))
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    # 关联
+    identities = relationship("IdentityMapping", back_populates="user", cascade="all, delete-orphan")
+
+
+class IdentityMapping(Base):
+    """身份映射表，记录不同系统的账号归属。"""
+    __tablename__ = 'identity_mappings'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    
+    source = Column(String(50), nullable=False)      # jira, zentao, gitlab, jenkins, sonarqube
+    external_id = Column(String(200), nullable=False) # 外部系统的账号名或 ID
+    external_name = Column(String(200))              # 外部系统的显示名
+    email = Column(String(200))                       # 该账号对应的邮箱（辅助匹配）
+    
+    user = relationship("User", back_populates="identities")
+    
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        UniqueConstraint('source', 'external_id', name='idx_source_external'),
+    )
 
 
 class SyncLog(Base):
-    """同步日志模型，记录每次同步任务的执行结果。
-    
-    Attributes:
-        source: 数据源类型 ('gitlab', 'sonarqube')
-        project_id: 关联项目 ID (根据来源不同指向不同表)
-        project_key: 项目标识 (SonarQube 使用)
-        status: 任务结果 ('SUCCESS', 'FAILED')
-        message: 详细信息或错误堆栈
-        timestamp: 记录时间
-    """
+    """同步日志模型，记录每次同步任务的执行结果。"""
     __tablename__ = 'sync_logs'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -118,6 +107,48 @@ class SyncLog(Base):
     duration_seconds = Column(Integer)  # 同步耗时
     records_synced = Column(Integer)  # 同步记录数
     timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+class Product(Base):
+    """全局产品模型，支持“产品线 -> 产品”的层级结构。
+    
+    用于在业务层面聚合技术项目和负责人。
+    """
+    __tablename__ = 'products'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(200), nullable=False)
+    description = Column(Text)
+    
+    # 层级结构
+    level = Column(String(20)) # Line (产品线), Product (产品)
+    parent_id = Column(Integer, ForeignKey('products.id'))
+    product_line_name = Column(String(200)) # 冗余字段方便查询
+    
+    # 归属中心
+    organization_id = Column(Integer, ForeignKey('organizations.id'))
+    
+    # 关联的技术项目 ID (由具体插件定义意义)
+    project_id = Column(Integer)
+    
+    # 角色负责人 (关联到全局 User)
+    product_manager_id = Column(Integer, ForeignKey('users.id'))
+    dev_manager_id = Column(Integer, ForeignKey('users.id'))
+    test_manager_id = Column(Integer, ForeignKey('users.id'))
+    release_manager_id = Column(Integer, ForeignKey('users.id'))
+    
+    # 关系
+    children = relationship("Product", backref=backref('parent', remote_side=[id]))
+    organization = relationship("Organization")
+    
+    product_manager = relationship("User", foreign_keys=[product_manager_id])
+    dev_manager = relationship("User", foreign_keys=[dev_manager_id])
+    test_manager = relationship("User", foreign_keys=[test_manager_id])
+    release_manager = relationship("User", foreign_keys=[release_manager_id])
+    
+    raw_data = Column(JSON)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
 
 
 # 公共辅助类

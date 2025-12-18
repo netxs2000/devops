@@ -1,12 +1,12 @@
 # DevOps Data Collector (研发效能数据采集器)
 
-![Version](https://img.shields.io/badge/version-2.3.0-blue)
+![Version](https://img.shields.io/badge/version-3.2.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-green)
 ![PostgreSQL](https://img.shields.io/badge/postgres-13+-blue)
 
 ## 📖 项目简介 (Introduction)
 
-**DevOps Data Collector** 是一个企业级研发效能数据采集与分析平台。它旨在打破研发工具链（GitLab, SonarQube 等）之间的数据孤岛，将分散的研发数据聚合为有价值的资产。
+**DevOps Data Collector** 是一个企业级研发效能数据采集与分析平台。它旨在打破研发工具链（GitLab, SonarQube, Jenkins 等）之间的数据孤岛，将分散的研发数据聚合为有价值的资产。
 
 系统的核心目标是为企业提供：
 *   **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）和 SPACE 框架指标。
@@ -17,7 +17,7 @@
 ## ✨ 核心特性 (Key Features)
 
 *   **统一身份认证 (Unified Identity)**: 自动关联 GitLab 账号与 SonarQube 账号，识别离职员工和外部贡献者。
-*   **多源数据采集 (Multi-Source Collection)**: 支持 **GitLab** (代码/MR/流水线/Issue) 和 **SonarQube** (质量/问题/技术债)。
+*   **多源数据采集 (Multi-Source Collection)**: 支持 **GitLab** (代码/MR/流水线/Issue)、**SonarQube** (质量/问题/技术债) 和 **Jenkins** (构建任务/构建历史)。
 *   **数据分析集市 (Analytics Mart)**: 内置丰富的 SQL 视图，直接生成 DORA、部门记分卡、资源热力图等报表。
 *   **合规与风控 (Governance & Risk)**: 监控绕过流程的 Direct Push 和积压的安全漏洞。
 *   **断点续传 (Resumable Sync)**: 针对海量数据同步设计，支持意外中断后自动恢复。
@@ -60,6 +60,11 @@ token = glpat-xxxxxxxxxxxx
 url = https://sonar.example.com
 token = squ_xxxxxxxxxxxx
 
+[jenkins]
+url = http://jenkins.example.com
+user = admin
+token = j_xxxxxxxxxxxx
+
 [common]
 org_name = MyCompany
 ```
@@ -81,6 +86,7 @@ python scripts/init_discovery.py
 psql -d devops_db -f devops_collector/sql/PROJECT_OVERVIEW.sql
 psql -d devops_db -f devops_collector/sql/PMO_ANALYTICS.sql
 psql -d devops_db -f devops_collector/sql/HR_ANALYTICS.sql
+psql -d devops_db -f devops_collector/sql/TEAM_ANALYTICS.sql
 ```
 
 ### 5. 数据采集
@@ -88,10 +94,10 @@ psql -d devops_db -f devops_collector/sql/HR_ANALYTICS.sql
 建议配置 Crontab 定时运行：
 
 ```bash
-# 启动调度器
+# 启动调度器 (生成同步任务到 MQ)
 python -m devops_collector.scheduler
 
-# 启动 Worker 执行采集
+# 启动 Worker 执行采集 (从 MQ 消费任务)
 python -m devops_collector.worker
 ```
 
