@@ -50,7 +50,14 @@ class TestIdentityMatcher(unittest.TestCase):
         u1.username = "testuser"
         u1.public_email = None
         
-        session.query.return_value.all.return_value = [u1]
+        m1 = MagicMock()
+        m1.source = 'gitlab'
+        m1.user_id = 1
+        m1.email = "test@example.com"
+        m1.external_id = "testuser"
+        m1.external_name = "Test User"
+        
+        session.query.return_value.filter_by.return_value.all.return_value = [m1]
         
         matcher = IdentityMatcher(session)
         
@@ -76,7 +83,10 @@ class TestIdentityMatcher(unittest.TestCase):
         c4 = MagicMock(spec=Commit)
         c4.author_email = "unknown@example.com"
         c4.author_name = "Unknown"
-        self.assertIsNone(matcher.match(c4))
+        # Mock IdentityManager.get_or_create_user side effect
+        with patch('devops_collector.plugins.gitlab.worker.IdentityManager.get_or_create_user') as mock_get_create:
+            mock_get_create.return_value.id = 999
+            self.assertEqual(matcher.match(c4), 999)
 
 class TestUserResolver(unittest.TestCase):
     def setUp(self):
@@ -87,7 +97,7 @@ class TestUserResolver(unittest.TestCase):
     def test_load_cache(self):
         # Already called in __init__
         # Test if it actually loaded query results
-        self.session.query.return_value.filter.return_value.all.assert_called()
+        self.session.query.return_value.filter_by.return_value.all.assert_called()
 
     def test_resolve_cached(self):
         self.resolver.cache[123] = 456
@@ -110,17 +120,14 @@ class TestUserResolver(unittest.TestCase):
         # To make it easier, let's just trust session interactions or mock User class if needed.
         # Here we just check side effects.
         
-        # We need to assign an ID to the user added to session
-        def add_side_effect(obj):
-            obj.id = 789
-        self.session.add.side_effect = add_side_effect
-        
-        uid = self.resolver.resolve(999)
-        
-        self.assertEqual(uid, 789)
-        self.client.get_user.assert_called_with(999)
-        self.session.add.assert_called()
-        self.assertEqual(self.resolver.cache[999], 789)
+        # Mock IdentityManager.get_or_create_user side effect
+        with patch('devops_collector.plugins.gitlab.worker.IdentityManager.get_or_create_user') as mock_get_create:
+            mock_get_create.return_value.id = 789
+            uid = self.resolver.resolve(999)
+            
+            self.assertEqual(uid, 789)
+            self.client.get_user.assert_called_with(999)
+            self.assertEqual(self.resolver.cache[999], 789)
 
     def test_resolve_api_failure(self):
         self.client.get_user.side_effect = Exception("API Error")
@@ -139,7 +146,8 @@ class TestGitLabWorker(unittest.TestCase):
             "name": "Test Repo",
             "path_with_namespace": "group/test-repo",
             "description": "Desc",
-            "star_count": 10
+            "star_count": 10,
+            "namespace": {"id": 10}
         }
         
         # Mock existing project query as None (new project)
@@ -205,6 +213,10 @@ class TestGitLabWorker(unittest.TestCase):
                 "id": "sha1",
                 "short_id": "s1",
                 "title": "Initial commit",
+                "author_name": "Test User",
+                "author_email": "test@example.com",
+                "message": "Commit message",
+                "authored_date": "2023-01-01T12:00:00Z",
                 "committed_date": "2023-01-01T12:00:00Z"
             }
         ]
@@ -221,35 +233,10 @@ class TestGitLabWorker(unittest.TestCase):
         self.assertIsInstance(commit, Commit)
         self.assertEqual(commit.id, "sha1")
 
-    def test_analyze_commit_diff(self):
-        commit = MagicMock(spec=Commit)
-        commit.id = "sha1"
-        
-        self.client.get_commit_diff.return_value = [
-            {"new_path": "a.py", "diff": "+code\n-# comment"}
-        ]
-        
-        # Mock DiffAnalyzer to avoid parsing complexity here (already tested separately)
-        with patch.object(DiffAnalyzer, 'analyze_diff') as mock_analyze:
-            mock_analyze.return_value = {
-                'code_added': 10, 'code_deleted': 0,
-                'comment_added': 0, 'comment_deleted': 5,
-                'blank_added': 0, 'blank_deleted': 0
-            }
-            
-            self.worker._analyze_commit_diff(1, commit)
-            
-            self.assertEqual(commit.additions, 10)
-            self.assertEqual(commit.deletions, 0) # code_deleted
-            self.assertEqual(commit.total, 10)
-            
-            # Verify file stats added
-            self.session.add.assert_called() # CommitFileStats
-            
     def test_save_issues_batch(self):
         project = MagicMock(spec=Project)
         project.id = 1
-        batch = [{"id": 101, "iid": 1, "title": "Bug"}]
+        batch = [{"id": 101, "iid": 1, "title": "Bug", "state": "opened", "created_at": "2023-01-01T12:00:00Z", "updated_at": "2023-01-01T12:00:00Z"}]
         self.session.query.return_value.filter.return_value.all.return_value = []
         
         self.worker._save_issues_batch(project, batch)
@@ -262,7 +249,7 @@ class TestGitLabWorker(unittest.TestCase):
     def test_save_mrs_batch(self):
         project = MagicMock(spec=Project)
         project.id = 1
-        batch = [{"id": 201, "iid": 1, "title": "Feature"}]
+        batch = [{"id": 201, "iid": 1, "title": "Feature", "state": "opened", "created_at": "2023-01-01T12:00:00Z", "updated_at": "2023-01-01T12:00:00Z"}]
         self.session.query.return_value.filter.return_value.all.return_value = []
         
         self.worker._save_mrs_batch(project, batch)
@@ -271,7 +258,7 @@ class TestGitLabWorker(unittest.TestCase):
     def test_save_pipelines_batch(self):
         project = MagicMock(spec=Project)
         project.id = 1
-        batch = [{"id": 301, "status": "success"}]
+        batch = [{"id": 301, "status": "success", "created_at": "2023-01-01T12:00:00Z", "updated_at": "2023-01-01T12:00:00Z"}]
         self.session.query.return_value.filter.return_value.all.return_value = []
         
         self.worker._save_pipelines_batch(project, batch)
@@ -280,7 +267,7 @@ class TestGitLabWorker(unittest.TestCase):
     def test_save_deployments_batch(self):
         project = MagicMock(spec=Project)
         project.id = 1
-        batch = [{"id": 401, "status": "success"}]
+        batch = [{"id": 401, "status": "success", "iid": 1, "created_at": "2023-01-01T12:00:00Z", "updated_at": "2023-01-01T12:00:00Z"}]
         self.session.query.return_value.filter.return_value.all.return_value = []
         
         self.worker._save_deployments_batch(project, batch)

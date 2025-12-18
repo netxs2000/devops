@@ -61,6 +61,10 @@ class Config:
             '*.exe', '*.dll', '*.so', '*.dylib'
         ]
     
+    # DORA Production Environment Mapping
+    _env_mapping = config_parser.get('analysis', 'production_env_mapping', fallback=os.getenv('PRODUCTION_ENV_MAPPING', 'prod,production,prd,main'))
+    PRODUCTION_ENV_MAPPING = [m.strip().lower() for m in _env_mapping.split(',') if m.strip()]
+    
     # Rate Limiting
     REQUESTS_PER_SECOND = config_parser.getint('ratelimit', 'requests_per_second', fallback=int(os.getenv('REQUESTS_PER_SECOND', '10')))
 

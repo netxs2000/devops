@@ -33,7 +33,9 @@ from devops_collector.plugins.gitlab.models import (
     Branch,
     GitLabGroup,
     GitLabGroupMember,
-    Milestone
+    Milestone,
+    GitLabPackage,
+    GitLabPackageFile
 )
 
 # 从 SonarQube 插件导入模型
@@ -53,6 +55,14 @@ except ImportError:
     # 允许插件暂不存在
     JenkinsJob = None
     JenkinsBuild = None
+try:
+    from devops_collector.plugins.jfrog.models import (
+        JFrogArtifact,
+        JFrogScan
+    )
+except ImportError:
+    JFrogArtifact = None
+    JFrogScan = None
 
 __all__ = [
     # 公共基础模型
@@ -62,8 +72,11 @@ __all__ = [
     'Project', 'Commit', 'CommitFileStats',
     'Issue', 'MergeRequest', 'Pipeline', 'Deployment', 
     'Note', 'Tag', 'Branch', 'GitLabGroup', 'GitLabGroupMember', 'Milestone',
+    'GitLabPackage', 'GitLabPackageFile',
     # SonarQube 模型
     'SonarProject', 'SonarMeasure', 'SonarIssue',
     # Jenkins 模型
-    'JenkinsJob', 'JenkinsBuild'
+    'JenkinsJob', 'JenkinsBuild',
+    # JFrog 模型
+    'JFrogArtifact', 'JFrogScan'
 ]

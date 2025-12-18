@@ -283,3 +283,31 @@ class GitLabClient(BaseClient):
                 yield item
                 
             page += 1
+
+    def get_packages(
+        self, 
+        project_id: int,
+        per_page: int = 100
+    ):
+        """获取项目制品库下的包列表。"""
+        page = 1
+        
+        while True:
+            params = {'per_page': per_page, 'page': page}
+            response = self._get(f"projects/{project_id}/packages", params=params)
+            data = response.json()
+            if not data:
+                break
+            
+            for item in data:
+                yield item
+                
+            page += 1
+
+    def get_package_files(
+        self, 
+        project_id: int,
+        package_id: int
+    ) -> List[dict]:
+        """获取包关联的文件列表。"""
+        return self._get(f"projects/{project_id}/packages/{package_id}/package_files").json()

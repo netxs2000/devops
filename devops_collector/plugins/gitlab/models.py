@@ -110,6 +110,7 @@ class MergeRequest(Base):
     changes_count = Column(String) 
     diff_refs = Column(JSON)
     
+    merge_commit_sha = Column(String)
     raw_data = Column(JSON)
     
     author_id = Column(Integer, ForeignKey('users.id'))
@@ -304,3 +305,42 @@ class Milestone(Base):
     raw_data = Column(JSON)
     
     project = relationship("Project", back_populates="milestones")
+
+
+class GitLabPackage(Base):
+    """GitLab 制品库包模型。"""
+    __tablename__ = 'gitlab_packages'
+    
+    id = Column(Integer, primary_key=True) # GitLab Package ID
+    project_id = Column(Integer, ForeignKey('projects.id'))
+    
+    name = Column(String(255), nullable=False)
+    version = Column(String(100))
+    package_type = Column(String(50)) # maven, npm, pypi, etc.
+    status = Column(String(50)) # default, hidden, processing, etc.
+    
+    created_at = Column(DateTime(timezone=True))
+    
+    web_url = Column(String(500))
+    
+    project = relationship("Project")
+    files = relationship("GitLabPackageFile", back_populates="package", cascade="all, delete-orphan")
+    raw_data = Column(JSON)
+
+
+class GitLabPackageFile(Base):
+    """GitLab 包关联的文件模型。"""
+    __tablename__ = 'gitlab_package_files'
+    
+    id = Column(Integer, primary_key=True) # GitLab Package File ID
+    package_id = Column(Integer, ForeignKey('gitlab_packages.id'))
+    
+    file_name = Column(String(255), nullable=False)
+    size = Column(BigInteger)
+    file_sha1 = Column(String(40))
+    file_sha256 = Column(String(64))
+    
+    created_at = Column(DateTime(timezone=True))
+    
+    package = relationship("GitLabPackage", back_populates="files")
+    raw_data = Column(JSON)
