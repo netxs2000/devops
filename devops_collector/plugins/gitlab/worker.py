@@ -13,7 +13,7 @@ from devops_collector.models import (
     Project, Commit, Issue, MergeRequest, Pipeline, 
     Deployment, Note, Tag, Branch, User, Organization,
     CommitFileStats, SyncLog, GitLabGroup, GitLabGroupMember, Milestone,
-    IdentityMapping
+    IdentityMapping, GitLabPackage, GitLabPackageFile
 )
 from devops_collector.core.identity_manager import IdentityManager
 
@@ -250,6 +250,7 @@ class GitLabWorker(BaseWorker):
             tags_count = self._sync_tags(project)
             branches_count = self._sync_branches(project)
             milestones_count = self._sync_milestones(project)
+            packages_count = self._sync_packages(project)
             
             self._match_identities(project)
             
@@ -449,6 +450,7 @@ class GitLabWorker(BaseWorker):
             mr.author_username = data.get('author', {}).get('username')
             mr.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
             mr.updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+            mr.merge_commit_sha = data.get('merge_commit_sha')
             
             if data.get('merged_at'):
                 mr.merged_at = datetime.fromisoformat(data['merged_at'].replace('Z', '+00:00'))
@@ -614,6 +616,62 @@ class GitLabWorker(BaseWorker):
                  ms.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
             if data.get('updated_at'):
                  ms.updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
+
+    def _sync_packages(self, project: Project) -> int:
+        """同步项目的包注册表。"""
+        return self._process_generator(
+            self.client.get_packages(project.id),
+            lambda batch: self._save_packages_batch(project, batch)
+        )
+
+    def _save_packages_batch(self, project: Project, batch: List[dict]) -> None:
+        """保存包及其文件明细。"""
+        ids = [item['id'] for item in batch]
+        existing = self.session.query(GitLabPackage).filter(GitLabPackage.id.in_(ids)).all()
+        existing_map = {p.id: p for p in existing}
+        
+        for data in batch:
+            pkg = existing_map.get(data['id'])
+            if not pkg:
+                pkg = GitLabPackage(id=data['id'])
+                self.session.add(pkg)
+            
+            pkg.project_id = project.id
+            pkg.name = data['name']
+            pkg.version = data.get('version')
+            pkg.package_type = data.get('package_type')
+            pkg.status = data.get('status')
+            pkg.created_at = datetime.fromisoformat(data['created_at'].replace('Z', '+00:00'))
+            pkg.web_url = data.get('_links', {}).get('web_path')
+            pkg.raw_data = data
+            
+            # 同步包文件 (相对较少，直接处理)
+            try:
+                files_data = self.client.get_package_files(project.id, pkg.id)
+                self._sync_package_files(pkg, files_data)
+            except Exception as e:
+                logger.warning(f"Failed to sync files for package {pkg.id}: {e}")
+
+    def _sync_package_files(self, package: GitLabPackage, files_data: List[dict]) -> None:
+        """同步具体包下的文件。"""
+        ids = [f['id'] for f in files_data]
+        existing = {f.id for f in package.files}
+        
+        for f_data in files_data:
+            if f_data['id'] in existing:
+                continue
+            
+            f_obj = GitLabPackageFile(
+                id=f_data['id'],
+                package_id=package.id,
+                file_name=f_data['file_name'],
+                size=f_data.get('size'),
+                file_sha1=f_data.get('file_sha1'),
+                file_sha256=f_data.get('file_sha256'),
+                created_at=datetime.fromisoformat(f_data['created_at'].replace('Z', '+00:00')),
+                raw_data=f_data
+            )
+            self.session.add(f_obj)
 
     def _match_identities(self, project: Project) -> None:
         if not self.identity_matcher:

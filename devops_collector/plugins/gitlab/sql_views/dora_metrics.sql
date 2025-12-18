@@ -11,47 +11,72 @@ SELECT
 FROM deployments
 WHERE 
     status = 'success' 
-    AND (environment LIKE '%prod%' OR environment LIKE '%production%')
+    AND environment IN ('prod', 'production', 'prd', 'main') -- Standardized production environments
 GROUP BY 1, 2
 ORDER BY 1 DESC;
 
 -- 2. Lead Time for Changes
--- Time from commit authored date to deployment created date
--- Requires joining deployments -> project and commits -> project, but ideally direct link 
--- Here we approximate by linking the deployment SHA to the commit SHA
+-- Refined calculation: breakdown into coding, review, and deploy time
 CREATE OR REPLACE VIEW dora_lead_time_for_changes AS
+WITH mr_metrics AS (
+    SELECT 
+        mr.project_id,
+        mr.iid as mr_iid,
+        mr.merge_commit_sha,
+        mr.created_at as mr_created_at,
+        mr.merged_at as mr_merged_at,
+        -- Find the first commit in this MR (simplified)
+        (SELECT MIN(authored_date) FROM commits c WHERE c.project_id = mr.project_id AND c.id = mr.merge_commit_sha) as first_commit_at
+    FROM merge_requests mr
+    WHERE mr.state = 'merged' AND mr.merged_at IS NOT NULL
+)
 SELECT 
     d.project_id,
     d.id as deployment_id,
-    c.id as commit_sha,
+    m.mr_iid,
     d.created_at as deployed_at,
-    c.authored_date as committed_at,
-    EXTRACT(EPOCH FROM (d.created_at - c.authored_date)) as lead_time_seconds
+    m.first_commit_at,
+    m.mr_created_at,
+    m.mr_merged_at,
+    -- Lead Time = Deploy Time - First Commit Authored Time
+    EXTRACT(EPOCH FROM (d.created_at - m.first_commit_at)) as total_lead_time_seconds,
+    -- Coding Time = MR Created - First Commit Authored
+    EXTRACT(EPOCH FROM (m.mr_created_at - m.first_commit_at)) as coding_time_seconds,
+    -- Review Time = MR Merged - MR Created
+    EXTRACT(EPOCH FROM (m.mr_merged_at - m.mr_created_at)) as review_time_seconds,
+    -- Deploy Time = Deployed At - MR Merged
+    EXTRACT(EPOCH FROM (d.created_at - m.mr_merged_at)) as deploy_time_seconds
 FROM deployments d
-JOIN commits c ON d.sha = c.id AND d.project_id = c.project_id
+JOIN mr_metrics m ON d.sha = m.merge_commit_sha AND d.project_id = m.project_id
 WHERE 
     d.status = 'success'
-    AND (d.environment LIKE '%prod%' OR d.environment LIKE '%production%');
+    AND d.environment IN ('prod', 'production', 'prd', 'main');
 
 -- 3. Change Failure Rate
--- Percentage of deployments that caused a failure (e.g. status='failed')
--- Note: A more advanced version would link incidents to deployments
+-- Percentage of deployments that caused a production incident
 CREATE OR REPLACE VIEW dora_change_failure_rate AS
+WITH prod_deployments AS (
+    SELECT project_id, count(*) as total_count
+    FROM deployments
+    WHERE environment IN ('prod', 'production', 'prd', 'main')
+    GROUP BY project_id
+),
+incidents AS (
+    SELECT project_id, count(*) as incident_count
+    FROM issues
+    WHERE labels::text LIKE '%bug-source::production%'
+    GROUP BY project_id
+)
 SELECT 
-    project_id,
-    count(*) as total_deployments,
-    sum(CASE WHEN status = 'failed' OR status = 'canceled' THEN 1 ELSE 0 END) as failed_deployments,
-    (sum(CASE WHEN status = 'failed' OR status = 'canceled' THEN 1 ELSE 0 END)::float / count(*)) * 100 as failure_rate_percentage
-FROM deployments
-WHERE 
-    (environment LIKE '%prod%' OR environment LIKE '%production%')
-GROUP BY project_id;
+    pd.project_id,
+    pd.total_count as total_deployments,
+    COALESCE(i.incident_count, 0) as production_incidents,
+    (COALESCE(i.incident_count, 0)::float / pd.total_count) * 100 as failure_rate_percentage
+FROM prod_deployments pd
+LEFT JOIN incidents i ON pd.project_id = i.project_id;
 
 -- 4. Time to Restore Service (MTTR)
--- Average time to close issues labeled 'incident'
--- Note: Labels are stored as JSON, so we use jsonb operators if Postgres, or text logic if simplified
--- Assuming SQLite/Simple for now, matching text LIKE '%incident%' in labels string representation
--- For Postgres: WHERE labels::jsonb ? 'incident'
+-- Average time to resolve 'bug-source::production' issues
 CREATE OR REPLACE VIEW dora_time_to_restore_service AS
 SELECT 
     project_id,
@@ -61,5 +86,5 @@ FROM issues
 WHERE 
     state = 'closed'
     AND closed_at IS NOT NULL
-    AND labels::text LIKE '%incident%' -- Simplification for compatibility
+    AND labels::text LIKE '%bug-source::production%'
 GROUP BY project_id;
