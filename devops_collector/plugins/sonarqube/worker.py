@@ -11,6 +11,7 @@ from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from .client import SonarQubeClient
 from .models import SonarProject, SonarMeasure, SonarIssue
+from devops_collector.core.identity_manager import IdentityManager
 
 # 导入 GitLab Project 用于约定映射
 try:
@@ -271,7 +272,15 @@ class SonarQubeWorker(BaseWorker):
                 issue.effort = i_data.get('effort')
                 issue.debt = i_data.get('debt')
                 issue.assignee = i_data.get('assignee')
+                if issue.assignee:
+                    u = IdentityManager.get_or_create_user(self.session, 'sonarqube', issue.assignee)
+                    issue.assignee_user_id = u.id
+                    
                 issue.author = i_data.get('author')
+                if issue.author:
+                    u = IdentityManager.get_or_create_user(self.session, 'sonarqube', issue.author)
+                    issue.author_user_id = u.id
+                    
                 issue.raw_data = i_data
                 
                 # 解析时间

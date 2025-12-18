@@ -12,8 +12,10 @@ from .client import GitLabClient
 from devops_collector.models import (
     Project, Commit, Issue, MergeRequest, Pipeline, 
     Deployment, Note, Tag, Branch, User, Organization,
-    CommitFileStats, SyncLog, GitLabGroup, GitLabGroupMember, Milestone
+    CommitFileStats, SyncLog, GitLabGroup, GitLabGroupMember, Milestone,
+    IdentityMapping
 )
+from devops_collector.core.identity_manager import IdentityManager
 
 logger = logging.getLogger(__name__)
 
@@ -103,38 +105,54 @@ class IdentityMatcher:
         self._build_index()
     
     def _build_index(self):
-        """构建用户索引以提高匹配性能。"""
-        users = self.session.query(User).all()
-        self.email_map = {}
-        self.username_map = {}
-        self.name_map = {}
+        """构建 GitLab 用户身份索引以进行规则匹配。"""
+        # 只索引来源为 gitlab 的身份映射
+        mappings = self.session.query(IdentityMapping).filter_by(source='gitlab').all()
         
-        for u in users:
-            if u.email:
-                self.email_map[u.email.lower()] = u
-            if u.public_email:
-                self.email_map[u.public_email.lower()] = u
-            if u.username:
-                self.username_map[u.username.lower()] = u
-            if u.name:
-                self.name_map[u.name.lower()] = u
+        self.email_map = {}    # {email.lower: user_id}
+        self.username_map = {} # {external_id.lower: user_id}
+        self.name_map = {}     # {external_name.lower: user_id}
+        
+        for m in mappings:
+            if m.email:
+                self.email_map[m.email.lower()] = m.user_id
+            if m.external_id:
+                self.username_map[m.external_id.lower()] = m.user_id
+            if m.external_name:
+                self.name_map[m.external_name.lower()] = m.user_id
     
     def match(self, commit: Commit) -> Optional[int]:
-        """匹配 Commit 作者到用户 ID。"""
-        if commit.author_email:
-            email_lower = commit.author_email.lower()
-            if email_lower in self.email_map:
-                return self.email_map[email_lower].id
+        """按 4 级规则匹配 Commit 作者到内部用户 ID。"""
+        email = commit.author_email.lower() if commit.author_email else ""
+        name = commit.author_name.lower() if commit.author_name else ""
         
-        if commit.author_name and commit.author_name.lower() in self.name_map:
-            return self.name_map[commit.author_name.lower()].id
-        
-        if commit.author_email:
-            prefix = commit.author_email.split('@')[0].lower()
+        # 1. 首先按 author 的 email 和 gitlab 的 email 匹配
+        if email in self.email_map:
+            return self.email_map[email]
+            
+        # 2. author_name 和 gitlab 的 username 匹配
+        if name in self.username_map:
+            return self.username_map[name]
+            
+        # 3. author_name 和 gitlab 的 name 匹配
+        if name in self.name_map:
+            return self.name_map[name]
+            
+        # 4. 截取 author 的 email 前缀和 gitlab 的 username 匹配
+        if email and '@' in email:
+            prefix = email.split('@')[0]
             if prefix in self.username_map:
-                return self.username_map[prefix].id
+                return self.username_map[prefix]
         
-        return None
+        # 如果以上都没匹配到，利用 IdentityManager 创建/查找一个占位用户
+        user = IdentityManager.get_or_create_user(
+            self.session, 
+            source='gitlab_commit', 
+            external_id=commit.author_email,
+            email=commit.author_email,
+            name=commit.author_name
+        )
+        return user.id
 
 
 class UserResolver:
@@ -147,10 +165,13 @@ class UserResolver:
         self._load_cache()
     
     def _load_cache(self):
-        """加载现有用户到缓存。"""
-        users = self.session.query(User).filter(User.gitlab_id.isnot(None)).all()
-        for u in users:
-            self.cache[u.gitlab_id] = u.id
+        """加载现有 GitLab 映射到缓存。"""
+        mappings = self.session.query(IdentityMapping).filter_by(source='gitlab').all()
+        for m in mappings:
+            try:
+                self.cache[int(m.external_id)] = m.user_id
+            except ValueError:
+                continue
     
     def resolve(self, gitlab_id: int) -> Optional[int]:
         """解析 GitLab 用户 ID 到内部 ID。"""
@@ -159,14 +180,29 @@ class UserResolver:
         
         try:
             user_data = self.client.get_user(gitlab_id)
-            user = User(
-                gitlab_id=gitlab_id,
-                username=user_data.get('username'),
-                name=user_data.get('name'),
+            user = IdentityManager.get_or_create_user(
+                self.session,
+                source='gitlab',
+                external_id=str(gitlab_id),
                 email=user_data.get('email'),
-                state=user_data.get('state'),
+                name=user_data.get('name'),
+                username=user_data.get('username')
             )
-            self.session.add(user)
+            
+            # GitLab 特色逻辑：从 skype 字段提取部门并映射到 Center 级组织
+            dept_name = user_data.get('skype')
+            if dept_name:
+                user.department = dept_name
+                # 寻找或创建 Center 级组织
+                org = self.session.query(Organization).filter_by(
+                    name=dept_name, level='Center'
+                ).first()
+                if not org:
+                    org = Organization(name=dept_name, level='Center')
+                    self.session.add(org)
+                    self.session.flush()
+                user.organization_id = org.id
+            
             self.session.flush()
             self.cache[gitlab_id] = user.id
             return user.id

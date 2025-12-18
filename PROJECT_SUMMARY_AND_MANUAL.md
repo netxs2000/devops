@@ -1,7 +1,7 @@
 # DevOps Data Collector - 项目总结与系统功能手册
 
-**版本**: 2.3.0
-**日期**: 2025-12-16
+**版本**: 3.2.0
+**日期**: 2025-12-18
 **维护**: DevOps 效能平台团队
 
 ---
@@ -12,7 +12,7 @@
 在现代软件研发过程中，研发数据分散在不同的工具链中（如 GitLab 管理代码与过程，SonarQube 管理质量），形成了数据孤岛。**DevOps Data Collector** 旨在解决这一痛点，通过构建统一的数据采集与分析平台，将分散的研发数据聚合为企业级资产。
 
 ### 1.2 核心价值
-1.  **打通数据孤岛**: 统一 GitLab 和 SonarQube 数据，实现代码提交与代码质量的关联分析。
+1.  **打通数据孤岛**: 统一 GitLab、SonarQube 和 Jenkins 数据，实现开发、质量与构建的关联分析。
 2.  **统一身份认证**: 解决工具间账号不一致问题，通过邮箱自动聚合“自然人”在不同系统的活动。
 3.  **效能度量标准化**: 自动化计算 DORA 指标（部署频率、变更前置时间等），为研发效能改进提供数据支撑。
 4.  **战略与风险洞察**: 通过波士顿矩阵和风险看板，提供从 CTO 到 PMO 的战略决策支持。
@@ -40,6 +40,13 @@
 *   **质量快照**: 周期性拉取代码覆盖率 (Coverage)、技术债务 (Tech Debt)、Bug 数等指标，存入 `sonar_measures`。
 *   **趋势记录**: 记录质量随时间的变化趋势，支持历史回溯。
 *   **Issue 同步 (可选)**: 支持同步具体的代码异味、Bug 和漏洞详情（默认关闭，可通过配置开启）。
+
+#### 2.1.3 Jenkins 采集插件 (New)
+*   **任务发现 (Job Discovery)**: 自动同步 Jenkins 实例中的所有 Job 列表及其元数据。
+*   **构建历史 (Builds)**: 
+    *   采集构建状态 (Result)、耗时 (Duration)、时间戳。
+    *   **触发源分析**: 识别构建是由 SCM 变更、用户手动、还是定时任务触发。
+*   **增量同步**: 自动记录同步断点，仅拉取最新的构建记录，支持大规模任务同步。
 
 ### 2.2 智能数据处理 (Intelligent Processing)
 
@@ -191,8 +198,8 @@
 
 ### 4.1 技术栈
 *   **开发语言**: Python 3.9+ (强类型注解)
-*   **核心框架**: 无 Web 框架（Worker 模式），专注于 ETL 逻辑。
-*   **消息队列**: RabbitMQ (负责任务分发与削峰填谷)
+*   **核心框架**: 异步 Worker 模式，使用 **RabbitMQ** 进行任务分发。
+*   **消息队列**: RabbitMQ (负责任务并发处理、解耦与重试)
 *   **ORM 层**: SQLAlchemy (Declarative Mapping)
 *   **数据库**: PostgreSQL (生产环境推荐)
 *   **依赖管理**: `requirements.txt` (tenacity, requests, sqlalchemy, psycopg2, pika)
@@ -228,6 +235,7 @@ python scripts/init_discovery.py
 psql -d devops_db -f devops_collector/sql/PROJECT_OVERVIEW.sql
 psql -d devops_db -f devops_collector/sql/PMO_ANALYTICS.sql
 psql -d devops_db -f devops_collector/sql/HR_ANALYTICS.sql
+psql -d devops_db -f devops_collector/sql/TEAM_ANALYTICS.sql
 ```
 
 ### 5.3 执行数据采集
@@ -247,6 +255,7 @@ python -m devops_collector.worker
 
 ### 5.4 独立脚本工具
 *   **手动同步 SonarQube**: `python scripts/sonarqube_stat.py`
+*   **手动验证 Jenkins**: `python scripts/verify_jenkins_plugin.py`
 *   **数据逻辑验证**: `python scripts/verify_logic.py`
 
 ### 5.5 常见问题排查

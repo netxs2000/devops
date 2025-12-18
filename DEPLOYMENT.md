@@ -10,7 +10,8 @@
 ### 软件依赖
 *   **OS**: Linux (Ubuntu 20.04+, CentOS 7+) / Windows Server
 *   **Runtime**: Python 3.9+
-*   **Database**: PostgreSQL 12+ (强烈建议，不推荐生产环境使用 SQLite)
+*   **Database**: PostgreSQL 12+
+*   **Message Queue**: RabbitMQ 3.8+ (必选，用于任务分发)
 
 ## 2. 安装步骤 (Installation)
 
@@ -63,6 +64,19 @@ python scripts/init_discovery.py
 | `url` | SonarQube 实例地址 | `https://sonar.company.com` |
 | `token` | 用户 Token | `squ_xxxxxxxx` |
 
+### [jenkins]
+| 参数 | 说明 | 示例 |
+|:---|:---|:---|
+| `url` | Jenkins 实例地址 | `http://jenkins.company.com` |
+| `user` | Jenkins 用户名 | `admin` |
+| `token` | API Token (用户设置 -> Configure 生成) | `11ea...` |
+
+### [rabbitmq]
+| 参数 | 说明 | 示例 |
+|:---|:---|:---|
+| `host` | RabbitMQ 服务地址 | `localhost` 或 `rabbitmq` |
+| `queue` | 任务队列名称 | `devops_tasks` |
+
 ### [common]
 | 参数 | 说明 | 示例 |
 |:---|:---|:---|
@@ -76,14 +90,11 @@ python scripts/init_discovery.py
 # 编辑 crontab
 crontab -e
 
-# 每天凌晨 1 点执行全量发现 (发现新项目)
-0 1 * * * cd /path/to/app && venv/bin/python scripts/init_discovery.py >> logs/discovery.log 2>&1
+# 每小时运行一次调度器，生成同步任务
+0 * * * * cd /path/to/app && venv/bin/python -m devops_collector.scheduler >> logs/scheduler.log 2>&1
 
-# 每小时执行增量同步 (抓取新 Commit)
-0 * * * * cd /path/to/app && venv/bin/python -m devops_collector.main >> logs/sync.log 2>&1
-
-# 每天凌晨 3 点同步 SonarQube 数据
-0 3 * * * cd /path/to/app && venv/bin/python scripts/sonarqube_stat.py >> logs/sonar.log 2>&1
+# 启动 Worker 进程 (生产环境建议使用 systemd 保持常驻)
+# python -m devops_collector.worker
 ```
 
 ## 5. 常见问题排查 (Troubleshooting)

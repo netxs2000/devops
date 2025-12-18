@@ -1,7 +1,7 @@
 # 项目全景概览 (Project Comprehensive Overview)
 
 ## 1. 概述 (Overview)
-**项目全景概览** 是一套基于 GitLab 和 SonarQube 数据的综合分析视图。它打破了单一工具的数据孤岛，将工程产出（GitLab）、代码质量（SonarQube）、项目进度（Issues/Milestones）和资源成本（Time Tracking）融合为一张“上帝视角”的大宽表。
+**项目全景概览** 是一套基于 GitLab、SonarQube 和 Jenkins 数据的综合分析视图。它打破了单一工具的数据孤岛，将工程产出（GitLab）、代码质量（SonarQube）、构建效能（Jenkins）、项目进度（Issues/Milestones）和资源成本（Time Tracking）融合为一张“上帝视角”的大宽表。
 
 该视图旨在为 PMO、项目经理、技术负责人提供一个**实时的、可量化的**项目健康体检报告。
 
@@ -84,7 +84,16 @@
 | `coverage_pct` | 单元测试覆盖率 | 代码被测试用例覆盖的比例 |
 | `build_status` | 构建状态 | GitLab 最近一次 Pipeline 状态 (Success/Failed) |
 
-### 3.8 工程产出 (Engineering Output)
+### 3.8 构建效能 (Build Efficiency) `Jenkins核心`
+| 字段名 | 业务含义 | 数据来源/说明 |
+| :--- | :--- | :--- |
+| `jenkins_job_url` | 关联 Jenkins 任务 | Jenkins API |
+| `last_build_result` | 最新构建结果 | Jenkins Build Result (SUCCESS/FAILURE/ABORTED) |
+| `avg_build_duration`| 平均构建耗时 | 统计最近 100 次构建的平均时间 (秒) |
+| `build_success_rate`| 构建成功率 (%) | `Success / Total Builds * 100%`，衡量代码集成稳定性 |
+| `last_build_time` | 最后构建时间 | 最近一次构建完成的时间戳 |
+
+### 3.9 工程产出 (Engineering Output)
 | 字段名 | 业务含义 | 计算公式 (由用户定义) |
 | :--- | :--- | :--- |
 | `active_days` | 活跃天数 | 有代码提交的去重日期总数 |
@@ -112,7 +121,7 @@
 ## 4. 数据视图位置
 - **SQL 视图名称**: `view_project_overview`
 - **SQL 文件路径**: `devops_collector/sql/PROJECT_OVERVIEW.sql`
-- **数据更新频率**: 取决于采集器 (Collector) 的同步周期 (建议每日同步)。
+- **数据更新频率**: 取决于采集器 (Worker) 的同步周期 (建议每日同步)。
 
 ## 5. 总结
 这份文档不仅是一个数据字典，更是一份**研发管理指南**。

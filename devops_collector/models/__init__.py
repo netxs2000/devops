@@ -14,10 +14,11 @@ from .base_models import (
     Organization,
     User,
     SyncLog,
+    IdentityMapping,
+    Product,
     TimestampMixin,
     RawDataMixin
 )
-
 # 从 GitLab 插件导入特定模型
 from devops_collector.plugins.gitlab.models import (
     Project,
@@ -29,7 +30,10 @@ from devops_collector.plugins.gitlab.models import (
     Deployment,
     Note,
     Tag,
-    Branch
+    Branch,
+    GitLabGroup,
+    GitLabGroupMember,
+    Milestone
 )
 
 # 从 SonarQube 插件导入模型
@@ -39,14 +43,27 @@ from devops_collector.plugins.sonarqube.models import (
     SonarIssue
 )
 
+# 从 Jenkins 插件导入模型
+try:
+    from devops_collector.plugins.jenkins.models import (
+        JenkinsJob,
+        JenkinsBuild
+    )
+except ImportError:
+    # 允许插件暂不存在
+    JenkinsJob = None
+    JenkinsBuild = None
+
 __all__ = [
     # 公共基础模型
-    'Base', 'Organization', 'User', 'SyncLog',
+    'Base', 'Organization', 'User', 'SyncLog', 'IdentityMapping', 'Product',
     'TimestampMixin', 'RawDataMixin',
     # GitLab 模型
     'Project', 'Commit', 'CommitFileStats',
     'Issue', 'MergeRequest', 'Pipeline', 'Deployment', 
-    'Note', 'Tag', 'Branch',
+    'Note', 'Tag', 'Branch', 'GitLabGroup', 'GitLabGroupMember', 'Milestone',
     # SonarQube 模型
-    'SonarProject', 'SonarMeasure', 'SonarIssue'
+    'SonarProject', 'SonarMeasure', 'SonarIssue',
+    # Jenkins 模型
+    'JenkinsJob', 'JenkinsBuild'
 ]
