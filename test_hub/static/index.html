@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitLab 测试管理中台 - Ultimate 模拟版</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #554488;
+            /* GitLab Purple */
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #333238;
+            --text-sub: #666;
+            --border-color: #dbdbdb;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --pending: #95a5a6;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .project-identifier {
+            background: #eee;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-container {
+            height: 250px;
+            position: relative;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .summary-item {
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-bottom: 5px;
+        }
+
+        .summary-value {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .bg-passed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .bg-failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .bg-blocked {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .bg-pending {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .test-case-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            padding: 15px 20px;
+            background: #fdfdfd;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .case-id {
+            color: var(--text-sub);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+        }
+
+        .case-title {
+            font-weight: 600;
+            text-decoration: none;
+            color: var(--text-main);
+        }
+
+        .case-title:hover {
+            color: var(--primary-color);
+        }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .priority-P0 {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .priority-P1 {
+            background: #ffedd5;
+            color: #9a3412;
+        }
+
+        .priority-P2 {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .result-passed {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #166534;
+        }
+
+        .result-failed {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #991b1b;
+        }
+
+        .result-blocked {
+            background: #fef9c3;
+            color: #854d0e;
+            border: 1px solid #854d0e;
+        }
+
+        .result-pending {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .meta-item b {
+            color: var(--text-sub);
+            margin-right: 5px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 15px 0 10px;
+            color: var(--primary-color);
+            border-left: 3px solid var(--primary-color);
+            padding-left: 8px;
+        }
+
+        .steps-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .steps-table th {
+            text-align: left;
+            background: #f8f9fa;
+            padding: 10px;
+            border-bottom: 2px solid #eee;
+            color: var(--text-sub);
+        }
+
+        .steps-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        .step-num {
+            width: 40px;
+            color: var(--text-sub);
+        }
+
+        .step-action {
+            width: 45%;
+        }
+
+        .pre-conditions {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .pre-conditions li {
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pre-conditions li::before {
+            content: "•";
+            color: var(--primary-color);
+        }
+
+        .card-footer {
+            padding: 15px 20px;
+            background: #fdfdfd;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        .btn-pass {
+            background-color: var(--success);
+        }
+
+        .btn-fail {
+            background-color: var(--danger);
+        }
+
+        .btn-block {
+            background-color: var(--warning);
+        }
+
+        #loading {
+            text-align: center;
+            padding: 50px;
+            display: none;
+        }
+
+        #results {
+            margin-top: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 100px;
+            color: var(--text-sub);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span>🦊</span> GitLab Test Hub
+                <div class="project-identifier">Ultimate Simulation Mode</div>
+            </div>
+            <div class="controls">
+                <input type="number" id="projectId" placeholder="输入 Project ID" value="">
+                <button onclick="loadTestCases()">加载测试用例</button>
+            </div>
+        </header>
+
+        <!-- Dynamic Dashboard -->
+        <div class="dashboard" id="dashboardSection" style="display: none;">
+            <div class="stat-card">
+                <div class="section-title" style="margin-top:0">执行分布 (Execution)</div>
+                <div class="chart-container">
+                    <canvas id="testPieChart"></canvas>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="section-title" style="margin-top:0">数据概要 (Statistics)</div>
+                <div class="summary-grid">
+                    <div class="summary-item bg-passed">
+                        <div class="summary-label">通过</div>
+                        <div class="summary-value" id="stat-passed">0</div>
+                    </div>
+                    <div class="summary-item bg-failed">
+                        <div class="summary-label">失败</div>
+                        <div class="summary-value" id="stat-failed">0</div>
+                    </div>
+                    <div class="summary-item bg-blocked">
+                        <div class="summary-label">阻塞</div>
+                        <div class="summary-value" id="stat-blocked">0</div>
+                    </div>
+                    <div class="summary-item bg-pending">
+                        <div class="summary-label">未执行</div>
+                        <div class="summary-value" id="stat-pending">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MR Review Dashboard -->
+        <div class="dashboard" id="mrDashboardSection" style="display: none;">
+            <div class="stat-card">
+                <div class="section-title" style="margin-top:0">代码评审分布 (Code Review)</div>
+                <div class="chart-container">
+                    <canvas id="mrPieChart"></canvas>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="section-title" style="margin-top:0">CR 深度与质量 (Quality)</div>
+                <div class="summary-grid">
+                    <div class="summary-item" style="background: #e0f2fe; color: #0369a1;">
+                        <div class="summary-label">平均讨论数</div>
+                        <div class="summary-value" id="stat-avg-disc">0</div>
+                    </div>
+                    <div class="summary-item" style="background: #fdf2f8; color: #9d174d;">
+                        <div class="summary-label">平均合并耗时 (h)</div>
+                        <div class="summary-value" id="stat-avg-time">0</div>
+                    </div>
+                    <div class="summary-item bg-passed">
+                        <div class="summary-label">评审通过</div>
+                        <div class="summary-value" id="stat-mr-appr">0</div>
+                    </div>
+                    <div class="summary-item bg-failed">
+                        <div class="summary-label">需打磨/重构</div>
+                        <div class="summary-value" id="stat-mr-rework">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading">正在连接 GitLab API 并解析数据...</div>
+
+        <div id="results">
+            <div class="empty-state">请输入项目 ID 并点击加载。</div>
+        </div>
+
+        <script>
+            let myChart = null;
+            let mrChart = null;
+
+            function updateChart(summary) {
+                const ctx = document.getElementById('testPieChart').getContext('2d');
+
+                if (myChart) {
+                    myChart.destroy();
+                }
+
+                myChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['通过', '失败', '阻塞', '未执行'],
+                        datasets: [{
+                            data: [summary.passed, summary.failed, summary.blocked, summary.pending],
+                            backgroundColor: ['#2ecc71', '#e74c3c', '#f39c12', '#95a5a6'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+
+                // Update numeric stats
+                document.getElementById('stat-passed').innerText = summary.passed;
+                document.getElementById('stat-failed').innerText = summary.failed;
+                document.getElementById('stat-blocked').innerText = summary.blocked;
+                document.getElementById('stat-pending').innerText = summary.pending;
+                document.getElementById('dashboardSection').style.display = 'grid';
+            }
+
+            function updateMRChart(summary) {
+                const ctx = document.getElementById('mrPieChart').getContext('2d');
+
+                if (mrChart) {
+                    mrChart.destroy();
+                }
+
+                mrChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: ['已合并', '进行中', '已关闭'],
+                        datasets: [{
+                            data: [summary.merged, summary.opened, summary.closed],
+                            backgroundColor: ['#2ecc71', '#3498db', '#95a5a6'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+
+                // Update numeric stats
+                document.getElementById('stat-avg-disc').innerText = summary.avg_discussions;
+                document.getElementById('stat-avg-time').innerText = summary.avg_merge_time_hours;
+                document.getElementById('stat-mr-appr').innerText = summary.approved;
+                document.getElementById('stat-mr-rework').innerText = summary.rework_needed;
+                document.getElementById('mrDashboardSection').style.display = 'grid';
+            }
+
+            async function executeTest(issueIid, result) {
+                const projectId = document.getElementById('projectId').value;
+                const btn = event.target;
+                const originalText = btn.innerText;
+
+                btn.disabled = true;
+                btn.innerText = "处理中...";
+
+                try {
+                    const response = await fetch(`/projects/${projectId}/test-cases/${issueIid}/execute?result=${result}`, {
+                        method: 'POST'
+                    });
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        alert(`执行成功: ${result}`);
+                        loadTestCases(); // 重新加载以更新状态
+                    } else {
+                        alert("执行失败: " + (data.detail || "未知错误"));
+                        btn.disabled = false;
+                        btn.innerText = originalText;
+                    }
+                } catch (err) {
+                    alert("请求错误: " + err.message);
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }
+            }
+
+            async function loadTestCases() {
+                const projectId = document.getElementById('projectId').value;
+                if (!projectId) return alert("请输入 Project ID");
+
+                const resultsDiv = document.getElementById('results');
+                const loadingDiv = document.getElementById('loading');
+
+                resultsDiv.innerHTML = '';
+                loadingDiv.style.display = 'block';
+
+                try {
+                    // Fetch all data in parallel
+                    const [casesRes, summaryRes, mrRes] = await Promise.all([
+                        fetch(`/projects/${projectId}/test-cases`),
+                        fetch(`/projects/${projectId}/test-summary`),
+                        fetch(`/projects/${projectId}/mr-summary`)
+                    ]);
+
+                    const data = await casesRes.json();
+                    const summary = await summaryRes.json();
+                    const mrSummary = await mrRes.json();
+
+                    loadingDiv.style.display = 'none';
+                    updateChart(summary);
+                    updateMRChart(mrSummary);
+
+                    if (data.length === 0) {
+                        resultsDiv.innerHTML = '<div class="empty-state">未找到 type::test 标签的测试用例。</div>';
+                        return;
+                    }
+
+                    data.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'test-case-card';
+
+                        const stepsHtml = item.steps.map(s => `
+                        <tr>
+                            <td class="step-num">${s.step_number}</td>
+                            <td class="step-action">${s.action}</td>
+                            <td class="step-expected">${s.expected_result}</td>
+                        </tr>
+                    `).join('');
+
+                        const preHtml = item.pre_conditions.map(p => `<li>${p}</li>`).join('');
+
+                        card.innerHTML = `
+                        <div class="card-header">
+                            <div class="title-group">
+                                <span class="case-id">#${item.iid}</span>
+                                <a href="${item.web_url}" target="_blank" class="case-title">${item.title}</a>
+                                <span class="badge priority-${item.priority}">${item.priority}</span>
+                            </div>
+                            <span class="badge result-${item.result}">${item.result}</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="meta-grid">
+                                <div class="meta-item"><b>类型:</b> ${item.test_type}</div>
+                                <div class="meta-item"><b>关联需求:</b> ${item.requirement_id ? '#' + item.requirement_id : '未关联'}</div>
+                            </div>
+                            
+                            ${preHtml ? `
+                                <div class="section-title">前置条件</div>
+                                <ul class="pre-conditions">${preHtml}</ul>
+                            ` : ''}
+
+                            <div class="section-title">测试步骤</div>
+                            <table class="steps-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>操作说明</th>
+                                        <th>预期结果</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${stepsHtml || '<tr><td colspan="3" style="text-align:center">未探测到标准格式的步骤</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn-sm btn-block" onclick="executeTest(${item.iid}, 'blocked')">标记阻塞</button>
+                            <button class="btn-sm btn-fail" onclick="executeTest(${item.iid}, 'failed')">执行失败</button>
+                            <button class="btn-sm btn-pass" onclick="executeTest(${item.iid}, 'passed')">验证通过</button>
+                        </div>
+                    `;
+                        resultsDiv.appendChild(card);
+                    });
+                } catch (err) {
+                    loadingDiv.style.display = 'none';
+                    alert("加载失败: " + err.message);
+                }
+            }
+        </script>
+</body>
+
+</html>
