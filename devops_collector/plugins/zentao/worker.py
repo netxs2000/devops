@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class ZenTaoWorker(BaseWorker):
     """禅道全量数据采集 Worker。"""
+    SCHEMA_VERSION = "1.0"
     
     def __init__(self, session: Session, client: ZenTaoClient):
         super().__init__(session, client)
@@ -97,6 +98,14 @@ class ZenTaoWorker(BaseWorker):
         if not product:
             response = self.client._get(f"/products/{product_id}")
             p_data = response.json()
+            # 原始数据落盘
+            self.save_to_staging(
+                source='zentao',
+                entity_type='product',
+                external_id=product_id,
+                payload=p_data,
+                schema_version=self.SCHEMA_VERSION
+            )
             product = ZenTaoProduct(
                 id=p_data['id'],
                 name=p_data['name'],
@@ -114,6 +123,15 @@ class ZenTaoWorker(BaseWorker):
         if not exe:
             exe = ZenTaoExecution(id=data['id'], product_id=product_id)
             self.session.add(exe)
+        
+        # 原始 Execution 数据落盘
+        self.save_to_staging(
+            source='zentao',
+            entity_type='execution',
+            external_id=data['id'],
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
         
         exe.name = data.get('name')
         exe.code = data.get('code')
@@ -133,6 +151,15 @@ class ZenTaoWorker(BaseWorker):
         if not plan:
             plan = ZenTaoProductPlan(id=data['id'], product_id=product_id)
             self.session.add(plan)
+        
+        # 原始 Plan 数据落盘
+        self.save_to_staging(
+            source='zentao',
+            entity_type='plan',
+            external_id=data['id'],
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
         
         plan.title = data.get('title')
         if data.get('begin'):
@@ -154,6 +181,21 @@ class ZenTaoWorker(BaseWorker):
         return plan
 
     def _sync_issue(self, product_id: int, data: dict, issue_type: str) -> ZenTaoIssue:
+        """同步禅道问题：先落盘到 Staging，再执行业务转换。"""
+        # 1. Extract & Load (Staging)
+        self.save_to_staging(
+            source='zentao',
+            entity_type=f'issue_{issue_type}',
+            external_id=data['id'],
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
+        
+        # 2. Transform & Load (DW)
+        return self._transform_issue(product_id, data, issue_type)
+
+    def _transform_issue(self, product_id: int, data: dict, issue_type: str) -> ZenTaoIssue:
+        """核心解析逻辑：将原始禅道 JSON 转换为 ZenTaoIssue 模型。"""
         issue = self.session.query(ZenTaoIssue).filter_by(id=data['id'], type=issue_type).first()
         if not issue:
             issue = ZenTaoIssue(id=data['id'], product_id=product_id, type=issue_type)
@@ -175,11 +217,18 @@ class ZenTaoWorker(BaseWorker):
             issue.user_id = u.id # 向后兼容
         
         if data.get('openedDate'):
-            issue.created_at = datetime.fromisoformat(data['openedDate'].replace(' ', 'T'))
+            # 处理禅道日期格式可能不标准的情况
+            try:
+                issue.created_at = datetime.fromisoformat(data['openedDate'].replace(' ', 'T'))
+            except: pass
         if data.get('lastEditedDate'):
-            issue.updated_at = datetime.fromisoformat(data['lastEditedDate'].replace(' ', 'T'))
+            try:
+                issue.updated_at = datetime.fromisoformat(data['lastEditedDate'].replace(' ', 'T'))
+            except: pass
         if data.get('closedDate'):
-            issue.closed_at = datetime.fromisoformat(data['closedDate'].replace(' ', 'T'))
+            try:
+                issue.closed_at = datetime.fromisoformat(data['closedDate'].replace(' ', 'T'))
+            except: pass
             
         issue.raw_data = data
         self.session.flush()
@@ -190,6 +239,15 @@ class ZenTaoWorker(BaseWorker):
         if not tc:
             tc = ZenTaoTestCase(id=data['id'], product_id=product_id)
             self.session.add(tc)
+        
+        # 原始用例数据落盘
+        self.save_to_staging(
+            source='zentao',
+            entity_type='test_case',
+            external_id=data['id'],
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
         
         tc.title = data.get('title')
         tc.type = data.get('type')
@@ -226,6 +284,24 @@ class ZenTaoWorker(BaseWorker):
             build = ZenTaoBuild(id=data['id'], product_id=product_id, execution_id=execution_id)
             self.session.add(build)
         
+        # 原始 Build 数据落盘
+        self.save_to_staging(
+            source='zentao',
+            entity_type='build',
+            external_id=data['id'],
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
+
+        return self._transform_build(product_id, execution_id, data)
+
+    def _transform_build(self, product_id: int, execution_id: int, data: dict) -> ZenTaoBuild:
+        """从原始数据转换并加载 Build。"""
+        build = self.session.query(ZenTaoBuild).filter_by(id=data['id']).first()
+        if not build:
+            build = ZenTaoBuild(id=data['id'], product_id=product_id, execution_id=execution_id)
+            self.session.add(build)
+        
         build.name = data.get('name')
         build.builder = data.get('builder')
         if build.builder:
@@ -244,6 +320,24 @@ class ZenTaoWorker(BaseWorker):
             rel = ZenTaoRelease(id=data['id'], product_id=product_id)
             self.session.add(rel)
         
+        # 原始 Release 数据落盘
+        self.save_to_staging(
+            source='zentao',
+            entity_type='release',
+            external_id=data['id'],
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
+        
+        return self._transform_release(product_id, data)
+
+    def _transform_release(self, product_id: int, data: dict) -> ZenTaoRelease:
+        """从原始数据转换并加载 Release。"""
+        rel = self.session.query(ZenTaoRelease).filter_by(id=data['id']).first()
+        if not rel:
+            rel = ZenTaoRelease(id=data['id'], product_id=product_id)
+            self.session.add(rel)
+
         rel.name = data.get('name')
         if data.get('date'):
             rel.date = datetime.fromisoformat(data['date'].replace(' ', 'T'))

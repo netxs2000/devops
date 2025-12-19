@@ -1,8 +1,8 @@
 # DevOps 效能平台需求规格说明书 (SRS)
 
 **项目名称**: DevOps Data Collector & Analytics Platform
-**版本**: 3.2.0 (Analytics Extension)
-**日期**: 2025-12-16
+**版本**: 3.3.0 (FinOps & AI Extension)
+**日期**: 2025-12-20
 **密级**: 内部公开
 
 ---
@@ -24,9 +24,9 @@
 
 ### 2.1 产品愿景
 打造企业级研发效能“驾驶舱”，通过数据驱动研发效能提升，实现：
-*   **可度量**: 全面落地 DORA、SPACE、Scrum 等效能指标体系。
+*   **可度量**: 全面落地 DORA、SPACE、Scrum 及 **Flow Efficiency** 指标体系。
 *   **可溯源**: 打通“需求-代码-质量-部署”全链路。
-*   **可洞察**: 识别高危代码、瓶颈环节与人才梯队。
+*   **可审计**: 实现研发投入 (FinOps) 与业务产出 (Contracts) 的量化对齐，支持 R&D 资本化审计。
 
 ### 2.2 用户角色
 | 角色 | 职责 | 核心诉求 |
@@ -63,6 +63,10 @@
 #### R-COLLECT-03: 深度代码分析
 *   **描述**: 采集代码变更明细，需区分“有效代码”、“空行”、“注释行”。
 *   **验收标准**: `commit_file_stats` 表能准确记录每次提交的文件级增量；且支持通过配置文件忽略特定后缀文件（如 .lock, .min.js）。
+
+#### R-PROCESS-03: 深度数据回放 (Data Replay)
+*   **描述**: 支持基于 Staging 层的原始数据进行逻辑重算（无需再次请求 API）。
+*   **验收标准**: 运行 `reprocess_staging_data.py` 后，能无损更新业务表数据，且支持指定 Schema Version 进行差异化解析。
 
 ### 3.2 数据治理与处理 (R-PROCESS)
 
@@ -122,7 +126,15 @@
 
 #### R-ANALYTICS-11: 财务与 ROI 分析 (FinOps & ROI) (New)
 *   **描述**: 采集基础设施与人力成本，计算单一需求或产品的 ROI。
-*   **验收标准**: 提供 `view_pmo_roi_efficiency`，展示单位投入的产出效率。
+*   **验收标准**: 提供 `view_pmo_roi_efficiency`，展示单位投入的产出效率 (Throughput per Dollar)。
+
+#### R-ANALYTICS-12: 流动效能分析 (Flow Efficiency) (New)
+*   **描述**: 追踪任务在各状态的停留时间，识别“忙碌的等待”。
+*   **验收标准**: 自动提取 'blocked' 标签时间，计算 Flow Efficiency = (Cycle Time - Wait Time) / Cycle Time。
+
+#### R-ANALYTICS-13: AI 智能归因 (AI Work Item Analysis) (New)
+*   **描述**: 利用 LLM 对非结构化 Commit Message 和 Issue Description 进行语义分析。
+*   **验收标准**: 自动填充 `ai_category` (Feature/Maintenance/Internal) 准确率需 > 80%，并提供摘要。
 
 ---
 
@@ -139,6 +151,7 @@
 
 ### 4.3 可扩展性
 *   **插件化**: 新增数据源（如 Jira）时，不应修改 Core 层代码，仅需在 `plugins/` 目录下新增对应包。
+*   **Schema 演进**: 必须支持 API 字段变更，通过 `SCHEMA_VERSION` 机制保证向后兼容性。
 
 ### 4.4 安全性
 *   **凭证管理**: 所有 Token 严禁明文硬编码，必须通过 `config.ini` 或环境变量注入。

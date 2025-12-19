@@ -14,6 +14,7 @@ from .base_models import (
     Organization,
     User,
     SyncLog,
+    RawDataStaging,
     IdentityMapping,
     Product,
     OKRObjective,
@@ -114,7 +115,7 @@ except ImportError:
 
 __all__ = [
     # 公共基础模型
-    'Base', 'Organization', 'User', 'SyncLog', 'IdentityMapping', 'Product',
+    'Base', 'Organization', 'User', 'SyncLog', 'RawDataStaging', 'IdentityMapping', 'Product',
     'OKRObjective', 'OKRKeyResult', 'TraceabilityLink',
     'TestExecutionSummary', 'PerformanceRecord', 'Incident', 'ResourceCost',
     'UserActivityProfile',

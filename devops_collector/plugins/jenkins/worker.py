@@ -35,6 +35,7 @@ class JenkinsWorker(BaseWorker):
     - 系统级别: 同步所有 Job 列表
     - Job 级别: 同步特定 Job 的所有或增量 Build 记录
     """
+    SCHEMA_VERSION = "1.0"
     
     def __init__(self, session: Session, client: JenkinsClient) -> None:
         """初始化 Jenkins Worker。
@@ -87,6 +88,16 @@ class JenkinsWorker(BaseWorker):
             job.url = j_data.get('url')
             job.description = j_data.get('description')
             job.color = j_data.get('color')
+            
+            # 原始数据落盘
+            self.save_to_staging(
+                source='jenkins',
+                entity_type='job',
+                external_id=full_name,
+                payload=j_data,
+                schema_version=self.SCHEMA_VERSION
+            )
+            
             job.raw_data = j_data
             job.last_synced_at = datetime.now(timezone.utc)
             job.sync_status = 'SUCCESS'
@@ -148,47 +159,17 @@ class JenkinsWorker(BaseWorker):
             try:
                 b_data = self.client.get_build_details(b_summary['url'])
                 
-                if not existing_build:
-                    existing_build = JenkinsBuild(job_id=job.id, number=build_num)
-                    self.session.add(existing_build)
+                # 1. Extract & Load (Staging)
+                self.save_to_staging(
+                    source='jenkins',
+                    entity_type='build',
+                    external_id=f"{job_full_name}#{build_num}",
+                    payload=b_data,
+                    schema_version=self.SCHEMA_VERSION
+                )
                 
-                existing_build.queue_id = b_data.get('queueId')
-                existing_build.url = b_data.get('url')
-                existing_build.result = b_data.get('result')
-                existing_build.duration = b_data.get('duration')
-                existing_build.building = b_data.get('building', False)
-                existing_build.executor = b_data.get('executor')
-                
-                # 解析构建开始时间
-                if b_data.get('timestamp'):
-                    existing_build.timestamp = datetime.fromtimestamp(
-                        b_data['timestamp'] / 1000.0, tz=timezone.utc
-                    )
-                
-                # 解析触发者
-                actions = b_data.get('actions', [])
-                for action in actions:
-                    if action.get('_class') == 'hudson.model.CauseAction':
-                        causes = action.get('causes', [])
-                        if causes:
-                            existing_build.trigger_type = causes[0].get('_class')
-                            existing_build.trigger_user = causes[0].get('userName')
-                            if existing_build.trigger_user:
-                                # Jenkins 用户名通常即为 ID，我们将其作为 external_id 和 username 同时传入
-                                u = IdentityManager.get_or_create_user(
-                                    self.session, 'jenkins', 
-                                    existing_build.trigger_user,
-                                    name=existing_build.trigger_user,
-                                    username=existing_build.trigger_user
-                                )
-                                existing_build.trigger_user_id = u.id
-                
-                existing_build.raw_data = b_data
-                
-                # 4. 尝试同步测试报告 (如果是已完成的构建)
-                if not existing_build.building and existing_build.result:
-                    self._sync_test_report(job, existing_build)
-
+                # 2. Transform & Load (DW)
+                self._transform_build(job, existing_build, b_data)
                 count += 1
                 
                 if count % 20 == 0:
@@ -200,6 +181,57 @@ class JenkinsWorker(BaseWorker):
         self.session.commit()
         self.log_success(f"Synced {count} builds for job {job_full_name}")
         return count
+
+    def _transform_build(self, job: JenkinsJob, build: Optional[JenkinsBuild], b_data: dict) -> JenkinsBuild:
+        """核心解析逻辑：将原始 Jenkins Build JSON 转换为 JenkinsBuild 模型。"""
+        build_num = b_data['number']
+        if not build:
+            build = self.session.query(JenkinsBuild).filter_by(
+                job_id=job.id, number=build_num
+            ).first()
+            
+        if not build:
+            build = JenkinsBuild(job_id=job.id, number=build_num)
+            self.session.add(build)
+            
+        build.queue_id = b_data.get('queueId')
+        build.url = b_data.get('url')
+        build.result = b_data.get('result')
+        build.duration = b_data.get('duration')
+        build.building = b_data.get('building', False)
+        build.executor = b_data.get('executor')
+        
+        # 解析构建开始时间
+        if b_data.get('timestamp'):
+            build.timestamp = datetime.fromtimestamp(
+                b_data['timestamp'] / 1000.0, tz=timezone.utc
+            )
+        
+        # 解析触发者
+        actions = b_data.get('actions', [])
+        for action in actions:
+            if action.get('_class') == 'hudson.model.CauseAction':
+                causes = action.get('causes', [])
+                if causes:
+                    build.trigger_type = causes[0].get('_class')
+                    build.trigger_user = causes[0].get('userName')
+                    if build.trigger_user:
+                        # Jenkins 用户名通常即为 ID，我们将其作为 external_id 和 username 同时传入
+                        u = IdentityManager.get_or_create_user(
+                            self.session, 'jenkins', 
+                            build.trigger_user,
+                            name=build.trigger_user,
+                            username=build.trigger_user
+                        )
+                        build.trigger_user_id = u.id
+        
+        build.raw_data = b_data
+        
+        # 4. 尝试同步测试报告 (如果是已完成的构建)
+        if not build.building and build.result:
+            self._sync_test_report(job, build)
+            
+        return build
 
     def _sync_test_report(self, job: JenkinsJob, build: JenkinsBuild) -> None:
         """从 Jenkins 获取并同步测试报告。"""

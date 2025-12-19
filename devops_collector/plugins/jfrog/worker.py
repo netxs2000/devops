@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class JFrogWorker(BaseWorker):
     """JFrog Artifactory 数据采集 Worker。"""
+    SCHEMA_VERSION = "1.0"
     
     def process_task(self, task: dict) -> None:
         """处理 JFrog 同步任务。
@@ -67,6 +68,15 @@ class JFrogWorker(BaseWorker):
             artifact = JFrogArtifact(repo=repo, path=path, name=name)
             self.session.add(artifact)
             
+        # 原始制品数据落盘
+        self.save_to_staging(
+            source='jfrog',
+            entity_type='artifact',
+            external_id=f"{repo}:{path}/{name}",
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
+            
         artifact.size_bytes = data.get('size')
         artifact.sha256 = data.get('sha256')
         artifact.created_at = datetime.fromisoformat(data['created'].replace('Z', '+00:00'))
@@ -99,6 +109,15 @@ class JFrogWorker(BaseWorker):
         if not scan:
             scan = JFrogScan(artifact_id=artifact.id)
             self.session.add(scan)
+            
+        # 原始扫描 summary 数据落盘
+        self.save_to_staging(
+            source='jfrog',
+            entity_type='xray_scan',
+            external_id=f"artifact_{artifact.id}",
+            payload=scan_data,
+            schema_version=self.SCHEMA_VERSION
+        )
             
         summary = scan_data.get('summary', {})
         scan.critical_count = summary.get('critical', 0)

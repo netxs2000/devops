@@ -1,6 +1,6 @@
 # DevOps Data Collector (研发效能数据采集器)
 
-![Version](https://img.shields.io/badge/version-3.2.0-blue)
+![Version](https://img.shields.io/badge/version-3.3.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-green)
 ![PostgreSQL](https://img.shields.io/badge/postgres-13+-blue)
 
@@ -9,8 +9,9 @@
 **DevOps Data Collector** 是一个企业级研发效能数据采集与分析平台。它旨在打破研发工具链（GitLab, SonarQube, Jenkins 等）之间的数据孤岛，将分散的研发数据聚合为有价值的资产。
 
 系统的核心目标是为企业提供：
-*   **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）和 SPACE 框架指标。
-*   **战略决策支持**: 提供波士顿矩阵（明星/现金牛项目识别）和 ROI 投入产出比分析。
+*   **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）、SPACE 框架指标及 **流动效能 (Flow Efficiency)**。
+*   **战略决策支持 (ROI)**: 提供波士顿矩阵（明星/现金牛项目识别）和 **ROI 投入产出比分析**，对接财务合同数据。
+*   **智能化分类 (AI Enrichment)**: 利用 LLM 自动识别研发产出的业务价值分类，支持智能化效能评估。
 *   **人才洞察**: 识别高潜人才、技术专家和离职风险。
 *   **组织效能分析**: 依托企业组织架构，透视各部门的人力投入与产出。
 
@@ -19,10 +20,13 @@
 *   **统一身份认证 (Unified Identity)**: 自动关联 GitLab 账号与 SonarQube 账号，识别离职员工和外部贡献者。
 *   **多源数据采集 (Multi-Source Collection)**: 支持 **GitLab** (代码/MR/流水线/Issue)、**SonarQube** (质量/问题/技术债) 和 **Jenkins** (构建任务/构建历史)。
 *   **分析数据集市 (Analytics Mart)**: 内置丰富的 SQL 视图，直接生成 DORA、部门记分卡、资源热力图等报表。
-*   **战略与财务 (OKR & FinOps)**: 支持 **OKR 目标管理** 与 **ROI 成本投入产出分析**，对齐产研与业务。
+*   **战略与财务 (FinOps & ROI)**: 支持 **CBS 成本科目管理**、**合同回款对齐** 与 **ROI 成本投入产出分析**，对齐产研与业务。
+*   **流动效能 (Flow & Cycle Time)**: 自动追踪 Issue 状态流转，量化阻塞时长，提升过程透明度。
+*   **智能语义 (AI Insights)**: 基于 LLM 自动提取 Commit/MR/Issue 的业务贡献摘要。
 *   **工程卓越度 (Developer Experience)**: 采集 MR 评审轮次、深度差异分析、加班分布，全方位量化协作质量。
 *   **合规与风控 (Governance & Risk)**: 监控绕过流程的 Direct Push 和积压的安全漏洞。
 *   **断点续传 (Resumable Sync)**: 针对海量数据同步设计，支持意外中断后自动恢复。
+*   **数据时光机 (Data Time Machine)**: 完整的 Raw Data Staging 层记录，支持基于历史原始数据进行逻辑重演与修复 (Reprocessing)。
 *   **极致简洁架构 (Refactor)**: 采用微内核 + 插件工厂模型，代码资产完全模块化，核心逻辑与具体数据源解耦。
 
 ## 🛠️ 技术栈 (Tech Stack)
@@ -77,7 +81,14 @@ org_name = MyCompany
 运行初始化脚本，自动创建表结构并发现组织架构：
 
 ```bash
+# 1. 基础数据库与组织架构
 python scripts/init_discovery.py
+
+# 2. 财务科目与合同数据 (New)
+python scripts/init_cost_codes.py
+python scripts/init_labor_rates.py
+python scripts/init_purchase_contracts.py
+python scripts/init_revenue_contracts.py
 ```
 
 ### 4. 部署分析视图 (关键步骤)

@@ -40,6 +40,12 @@ psql -U postgres -c "CREATE DATABASE devops_db;"
 
 # 2. 运行初始化脚本 (自动建表)
 python scripts/init_discovery.py
+
+# 3. 初始化财务基础数据 (科目、费率、合约示例) (New)
+python scripts/init_cost_codes.py
+python scripts/init_labor_rates.py
+python scripts/init_purchase_contracts.py
+python scripts/init_revenue_contracts.py
 ```
 
 ## 3. 配置详解 (Configuration)
@@ -82,6 +88,14 @@ python scripts/init_discovery.py
 | 参数 | 说明 | 示例 |
 |:---|:---|:---|
 | `org_name` | 顶层组织名称，用于报表标题 | `MyTechCorp` |
+| `raw_data_retention_days` | 原始数据保留天数 (默认 30) | `30` |
+
+### [enrichment] (New)
+| 参数 | 说明 | 示例 |
+|:---|:---|:---|
+| `ai_provider` | AI 服务商 (openai/azure/local) | `openai` |
+| `api_key` | API Key | `sk-xxxx` |
+| `model_name` | 使用的模型名称 | `gpt-4o-mini` |
 
 ## 4. 定时任务配置 (Scheduling)
 
