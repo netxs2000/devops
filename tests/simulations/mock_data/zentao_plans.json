@@ -1,0 +1,13 @@
+{
+    "plans": [
+        {
+            "id": 10,
+            "title": "Shop V1.0 Plan",
+            "begin": "2025-12-01",
+            "end": "2025-12-30",
+            "status": "active",
+            "openedBy": "zt-admin",
+            "openedDate": "2025-12-01 10:00:00"
+        }
+    ]
+}

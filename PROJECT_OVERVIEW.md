@@ -52,6 +52,8 @@
 | `age_days` | 项目 Age (天) | `Now - CreationDate`，衡量项目资历 |
 | `last_release_date`| 最近发版日 | 项目最近一次打 Tag 的时间，**衡量交付活跃度** |
 | `last_version` | 最新版本号 | 最近一次 Tag 的名称 (如 v1.2.0) |
+| `linked_okr_objective`| 关联 OKR 目标 | 项目对齐的最高优先级战略目标标题 |
+| `okr_progress_pct` | OKR 达成进度 | 关联关键结果 (KR) 的自动化加权进度 |
 
 ### 3.4 计划与里程碑 (Plans & Milestones) `PM核心`
 | 字段名 | 业务含义 | 说明 |
@@ -67,6 +69,8 @@
 | `estimated_hours` | 预估工时 (h) | 累加所有 Issue 的 `/estimate` 时间 |
 | `spent_hours` | 实际投入工时 (h) | 累加所有 Issue 的 `/spend` 时间 |
 | **`time_variance_hours`** | **工时偏差** | `Spent - Estimate`。**正数=超支，负数=节约**。用于成本审计 |
+| `infra_cost_amount` | 基础设施成本 | 来自 `resource_costs` 的云服务与基建分摊金额 |
+| **`roi_efficiency_score`** | **ROI 效能得分** | `(产出价值 / 投入成本)` 的归一化评分，回答“钱花得值不值” |
 
 ### 3.6 研发吞吐量 (Throughput)
 | 字段名 | 业务含义 | 说明 |
@@ -74,6 +78,8 @@
 | `total_mrs` | 累计 MR 数 | 项目历史总合并请求数 |
 | `open_mrs_backlog`| 积压 MR 数 | 当前 Open 状态的 MR，**反映代码评审(Review)的瓶颈** |
 | `merged_mrs` | 已合并 MR 数 | 实际合入主干的代码量，反映有效产出 |
+| `avg_review_cycles` | 平均评审轮次 | 每个 MR 的平均打回修订次数。**>3 轮代表沟通成本极高** |
+| `human_reply_count` | 人工互动次数 | MR 评论中排除系统自动消息的人工评论总数，衡量讨论深度 |
 
 ### 3.7 质量与风险 (Quality & Risk) `QA核心`
 | 字段名 | 业务含义 | 数据来源/说明 |
@@ -101,6 +107,7 @@
 | `total_commits` | 总提交数 | 累计 Commit 次数 |
 | `avg_daily_commits` | 活跃天平均提交 | `total_commits / active_days`，衡量开发密集度 |
 | `avg_author_commits`| 人均提交数 | `total_commits / author_count`，衡量团队平均贡献 |
+| **`off_hours_commit_pct`** | **加班活跃率** | 非工作时间 (20:00-08:00 及周末) 的提交占比。监控健康风险 |
 
 ### 3.9 代码规模 (Code Stats)
 | 字段名 | 业务含义 | 说明 |
@@ -109,6 +116,7 @@
 | `code_lines` | 有效代码行 (NCLOC) | 去除注释和空行后的纯代码行数 |
 | `comment_lines` | 注释行数 | 估算值，用于衡量代码可读性 |
 | `comment_pct` | 注释率 | `Comments / (Code + Comments)` |
+| **`reconstruction_level`** | **重构程度** | 基于重构后的 `DiffAnalyzer` 识别代码变更性质 (Refactor vs New Add) |
 
 ### 3.10 团队 (Team)
 | 字段名 | 业务含义 | 格式示例 |

@@ -2,16 +2,22 @@
 from typing import List, Dict, Optional, Any, Generator
 from devops_collector.core.base_client import BaseClient
 
+import base64
+
 class NexusClient(BaseClient):
     """Nexus Repository v3 REST API 客户端。"""
     
     def __init__(self, url: str, user: str, password: str, rate_limit: int = 10):
+        auth_str = f"{user}:{password}"
+        encoded_auth = base64.b64encode(auth_str.encode()).decode()
         super().__init__(
             base_url=f"{url.rstrip('/')}/service/rest/v1",
-            auth_headers=None, # 使用 basic auth
+            auth_headers={
+                "Authorization": f"Basic {encoded_auth}",
+                "Accept": "application/json"
+            },
             rate_limit=rate_limit
         )
-        self.session.auth = (user, password)
 
     def test_connection(self) -> bool:
         """测试连接。"""

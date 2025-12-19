@@ -1,5 +1,5 @@
 """GitLab API 客户端"""
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Generator
 from devops_collector.core.base_client import BaseClient
 
 
@@ -180,6 +180,14 @@ class GitLabClient(BaseClient):
                 yield item
                 
             page += 1
+
+    def get_mr_approvals(self, project_id: int, mr_iid: int) -> dict:
+        """获取合并请求的审批详情。"""
+        return self._get(f"projects/{project_id}/merge_requests/{mr_iid}/approvals").json()
+
+    def get_mr_pipelines(self, project_id: int, mr_iid: int) -> List[dict]:
+        """获取合并请求关联的流水线。"""
+        return self._get(f"projects/{project_id}/merge_requests/{mr_iid}/pipelines").json()
     
     def get_project_tags(
         self, 
@@ -311,3 +319,41 @@ class GitLabClient(BaseClient):
     ) -> List[dict]:
         """获取包关联的文件列表。"""
         return self._get(f"projects/{project_id}/packages/{package_id}/package_files").json()
+
+    def create_group_label(self, group_id: int, label_data: Dict) -> dict:
+        """创建群组标签。"""
+        return self._post(f"groups/{group_id}/labels", data=label_data).json()
+
+    def create_project_label(self, project_id: int, label_data: Dict) -> dict:
+        """创建项目标签。"""
+        return self._post(f"projects/{project_id}/labels", data=label_data).json()
+
+    def add_issue_label(self, project_id: int, issue_iid: int, labels: List[str]) -> dict:
+        """为 Issue 添加标签。"""
+        # GitLab API 支持使用 add_labels 参数
+        return self._put(f"projects/{project_id}/issues/{issue_iid}", data={'add_labels': ','.join(labels)}).json()
+
+    def add_issue_note(self, project_id: int, issue_iid: int, body: str) -> dict:
+        """为 Issue 添加评论。"""
+        return self._post(f"projects/{project_id}/issues/{issue_iid}/notes", data={'body': body}).json()
+
+    def get_issue_state_events(self, project_id: int, issue_iid: int) -> Generator[Dict, None, None]:
+        """获取 Issue 的状态变更事件。"""
+        return self._get_paged_data(f"projects/{project_id}/issues/{issue_iid}/resource_state_events")
+
+    def get_issue_label_events(self, project_id: int, issue_iid: int) -> Generator[Dict, None, None]:
+        """获取 Issue 的标签变更事件。"""
+        return self._get_paged_data(f"projects/{project_id}/issues/{issue_iid}/resource_label_events")
+
+    def get_issue_milestone_events(self, project_id: int, issue_iid: int) -> Generator[Dict, None, None]:
+        """获取 Issue 的里程碑变更事件。"""
+        return self._get_paged_data(f"projects/{project_id}/issues/{issue_iid}/resource_milestone_events")
+
+    def get_project_wiki_events(self, project_id: int) -> Generator[Dict, None, None]:
+        """获取项目的 Wiki 事件。"""
+        # 利用 events 接口过滤 wiki_page
+        return self._get_paged_data(f"projects/{project_id}/events", params={'target_type': 'wiki_page'})
+
+    def get_project_dependencies(self, project_id: int) -> Generator[Dict, None, None]:
+        """获取项目依赖列表 (需开启 Dependency Scanning)。"""
+        return self._get_paged_data(f"projects/{project_id}/dependencies")

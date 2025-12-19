@@ -265,12 +265,9 @@ class SonarQubeClient(BaseClient):
     
     @staticmethod
     def rating_to_letter(value: Any) -> str:
-        """将数字评级转为字母 (1.0=A, 2.0=B, ...)。
-        
-        SonarQube 返回的 rating 是数字字符串，此方法转换为字母。
-        """
-        rating_map = {'1.0': 'A', '2.0': 'B', '3.0': 'C', '4.0': 'D', '5.0': 'E'}
-        return rating_map.get(str(value), 'E')
+        """将数字评级转为字母 (1.0=A, 2.0=B, ...)。"""
+        from devops_collector.core.algorithms import QualityMetrics
+        return QualityMetrics.rating_to_letter(value)
 
     def get_issue_severity_distribution(self, project_key: str) -> Dict[str, Dict[str, int]]:
         """获取项目问题类型和严重程度的分布统计。

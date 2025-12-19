@@ -83,6 +83,11 @@ class JenkinsBuild(Base):
     # 原始数据
     raw_data = Column(JSON)
     
+    # 链路追溯：关联构建触发的上下文与结果
+    gitlab_mr_iid = Column(Integer)   # 触发此构建的 MR IID
+    artifact_id = Column(String(200)) # 产出的制品牌版本或地址
+    artifact_type = Column(String(50)) # docker_image, jar, npm_package
+    
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
     job = relationship("JenkinsJob", back_populates="builds")

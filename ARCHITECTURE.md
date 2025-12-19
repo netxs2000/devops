@@ -9,6 +9,7 @@ DevOps Data Collector 采用模块化的**ETL (Extract, Transform, Load)** 架�
 2.  **核心层 (Core Layer)**: 负责数据清洗、实体关联、身份归一化、任务分发 (RabbitMQ) 和持久化。
 3.  **存储层 (Storage Layer)**: 关系型数据库 (PostgreSQL) 存储结构化基础数据 (Fact Tables)。
 4.  **服务层 (Service Layer)**: 数据集市 (Data Mart)，通过 SQL Views 封装复杂的分析逻辑（如 DORA, 战略矩阵, Jenkins 构建分析），直接对接 BI。
+5.  **逻辑抽离层 (Logic Extraction)**: 关键算法（如周期时间计算、差异分析）已从 Worker 抽离至独立工具类，便于单元测试与逻辑复用。
 
 ```mermaid
 graph TD
@@ -43,6 +44,12 @@ graph TD
         API[Admin API]
     end
 
+    subgraph Factory Registry
+        PR[Plugin Registry]
+        GL_C[GitLab Client]
+        GL_W[GitLab Worker]
+    end
+
     GL --> P_GL
     SQ --> P_SQ
     JK --> P_JK
@@ -68,8 +75,8 @@ graph TD
 *   **机制**: 优先基于 **Email** 进行匹配。
 *   **虚拟用户**: 对于外部贡献者（无公司邮箱），标记 `is_virtual=True`，允许手动维护。
 
-### 2.2 插件化架构 (Plugin Architecture)
-每个数据源作为一个独立的 Plugin 存在，必须实现标准接口：
+每个数据源作为一个独立的 Plugin 存在，必须实现标准接口，并通过 `PluginRegistry` 统一注册：
+*   **Registry 工厂模式**: 核心代码不再硬编码具体 Client。Worker 在运行时通过 `get_client_instance` 和 `get_worker_instance` 动态构建对象。
 *   `collect_projects()`: 发现项目。
 *   `sync_data()`: 执行同步逻辑。
 
@@ -91,6 +98,7 @@ graph TD
     *   **流式拉取**: 利用 Python Generator 逐页获取数据。
     *   **分批处理**: 每 500 条记录构建 Batch。
     *   **幂等写入**: Upsert 策略，支持随时断点续传。
+    *   **深度分析模式 (Deep Analysis)**: 可选开启深度分析，采集 Issue 事件流 (Events)、代码差异明细 (Diff Stats) 以及 Wiki/依赖变更，支持 CALMS 深度洞察。
 2.  **SonarQube 采集**:
     *   关联 GitLab 项目，拉取 Quality Gate 与 Metrics。
 3.  **Jenkins 采集**:
@@ -113,7 +121,8 @@ graph TD
     *   **Batch Commit**: 兼顾写入性能与事务安全。
 
 ## 5. 扩展性设计 (Extensibility)
-如需添加新指标（如“代码注释率”）：
+系统采用“注册驱动”模式。如需添加新指标（如“代码注释率”）：
 1.  **Schema**: 修改 `models/` 增加字段。
-2.  **Collector**: 修改 Plugin 填充字段。
-3.  **Analytics**: 修改 `sql/PROJECT_OVERVIEW.sql` 视图定义即可生效。
+2.  **Plugin**: 在插件目录下扩展 `analyzer.py` 或 `identity.py` 逻辑。
+3.  **Collector**: 修改 Plugin 填充字段。
+4.  **Analytics**: 修改 `sql/PROJECT_OVERVIEW.sql` 视图定义即可生效。

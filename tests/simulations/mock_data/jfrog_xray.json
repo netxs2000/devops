@@ -1,0 +1,22 @@
+{
+    "summary": {
+        "critical": 1,
+        "high": 2,
+        "medium": 5,
+        "low": 10
+    },
+    "issues": [
+        {
+            "cve": "CVE-2023-1234",
+            "severity": "Critical",
+            "component": "log4j-core-2.14.0.jar",
+            "description": "Remote code execution vulnerability in log4j"
+        },
+        {
+            "cve": "CVE-2023-5678",
+            "severity": "High",
+            "component": "spring-core-5.3.8.jar",
+            "description": "Denial of service vulnerability in spring core"
+        }
+    ]
+}

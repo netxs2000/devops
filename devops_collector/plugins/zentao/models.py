@@ -114,6 +114,10 @@ class ZenTaoIssue(Base):
     
     raw_data = Column(JSON)
     
+    # 链路追溯：代码修复记录
+    first_commit_sha = Column(String(100))
+    first_fix_date = Column(DateTime(timezone=True))
+    
     product = relationship("ZenTaoProduct", back_populates="issues")
     plan = relationship("ZenTaoProductPlan", back_populates="issues")
 
@@ -132,6 +136,11 @@ class ZenTaoTestCase(Base):
     opened_date = Column(DateTime)
     
     last_run_result = Column(String(20))  # pass, fail, blocked
+    
+    # 自动化元数据：支持测试金字塔与效能分析
+    is_automated = Column(Boolean, default=False)   # 是否已自动化
+    automation_type = Column(String(50))           # 脚本类型 (Pytest, RobotFramework, etc.)
+    script_path = Column(String(500))              # 自动化脚本存储路径
     
     product = relationship("ZenTaoProduct", back_populates="test_cases")
     results = relationship("ZenTaoTestResult", back_populates="test_case", cascade="all, delete-orphan")

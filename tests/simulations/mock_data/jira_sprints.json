@@ -1,0 +1,21 @@
+{
+    "maxResults": 50,
+    "startAt": 0,
+    "isLast": true,
+    "values": [
+        {
+            "id": 101,
+            "name": "Sprint 1",
+            "state": "active",
+            "startDate": "2025-12-01T09:00:00.000Z",
+            "endDate": "2025-12-15T18:00:00.000Z"
+        },
+        {
+            "id": 102,
+            "name": "Sprint 2",
+            "state": "future",
+            "startDate": "2025-12-16T09:00:00.000Z",
+            "endDate": "2025-12-30T18:00:00.000Z"
+        }
+    ]
+}

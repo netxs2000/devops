@@ -25,6 +25,7 @@ erDiagram
     Organization ||--|{ Organization : "parent/child (父子组织)"
     Organization ||--|{ User : "contains (包含成员)"
     Organization ||--|{ Project : "owns (拥有资产)"
+    Organization ||--o{ OKRObjective : "owns (拥有目标)"
 
     %% User Relationships
     User ||--|{ IdentityMapping : "links (关联外部身份)"
@@ -33,6 +34,7 @@ erDiagram
     User ||--|{ Commit : "authors (提交代码)"
     User ||--|{ MergeRequest : "reviews/authors (提交MR)"
     User ||--|{ Issue : "reports (提单)"
+    User ||--o{ OKRObjective : "owns (负责OKR)"
     
     %% Jira & ZenTao & Jenkins User Links
     User ||--o{ JiraIssue : "assignee/reporter/creator"
@@ -46,7 +48,13 @@ erDiagram
     Project ||--o{ Tag : "releases (发布)"
     Project ||--o{ Branch : "has (拥有分支)"
     Project ||--o{ Note : "discussions (讨论)"
+    Project ||--o{ ResourceCost : "costs (产生分摊成本)"
     
+    %% OKR Models
+    Product ||--o{ OKRObjective : "aligns (关联)"
+    OKRObjective ||--|{ OKRKeyResult : "measured_by (度量)"
+    OKRObjective ||--o{ OKRObjective : "parent/child (层级分解)"
+
     %% Detail Stats
     Commit ||--|{ CommitFileStats : "details (文件变更明细)"
 
@@ -127,6 +135,9 @@ erDiagram
     *   **身份对齐**: 优先通过 GitLab ID 匹配，其次通过 Email 对齐现有全局用户。
 *   **Jira 特色策略**: 通过 `accountId` 作为唯一标识。
 *   **ZenTao 特色策略**: 通过 `account` 作为唯一标识。
+*   **标准化标签定义 (New)**:
+    *   **资源分离**: 平台核心标签（type, priority, severity 等）统一由 `devops_collector/plugins/gitlab/labels.py` 定义。
+    *   **自动化对齐**: 客户端工具（如 `check_issue_labels.py`）动态引用该库进行 Issue 规范性校验，确保跨项目的元数据一致性。
 
 ### 2.4 产品与产品线 (`products`)
 全局产品管理，用于串联业务架构与技术项目。
@@ -141,12 +152,74 @@ erDiagram
 | `product_line_name`| String(200)  |      | 否    | -      | 归属产品线名称 (冗余)                                     |
 | `organization_id` | Integer       | FK   | 否    | -      | 归属组织中心 ID                                           |
 | `project_id`      | Integer       |      | 否    | -      | 关联的技术项目 ID (由插件具体定义)                        |
+| `external_epic_id` | String    |      | 否    | -      | **关联外部系统 Epic/需求 ID (Jira/ZenTao)**              |
+| `external_goal_id` | String    |      | 否    | -      | **关联外部战略目标/OKR ID**                              |
+| `source_system`    | String    |      | 否    | -      | **来源系统: `jira`, `zentao`**                           |
 | `product_manager_id`| Integer     | FK   | 否    | -      | 产品经理 (关联 `users.id`)                               |
 | `dev_manager_id`  | Integer       | FK   | 否    | -      | 开发经理 (关联 `users.id`)                               |
 | `test_manager_id` | Integer       | FK   | 否    | -      | 测试经理 (关联 `users.id`)                               |
 | `release_manager_id`| Integer     | FK   | 否    | -      | 发布经理 (关联 `users.id`)                               |
+| `budget_amount`   | Float         |      | 否    | -      | **预算金额 (用于 ROI 分析)**                             |
+| `business_value_score`| Integer    |      | 否    | -      | **业务价值评分 (1-100)**                                 |
 
-### 2.5 同步日志 (`sync_logs`)
+### 2.5 OKR 目标管理 (`okr_objectives`) (New)
+记录战略高度的业务目标，支持双向对齐与层级拆解。
+
+| 字段名            | 类型          | 键   | 必填  | 默认值 | 业务说明                                                 |
+|:------------------|:--------------|:----:|:-----:|:-------|:---------------------------------------------------------|
+| `id`              | Integer       | PK   | 是    | Auto   | 目标 ID                                                   |
+| `title`           | String        |      | 是    | -      | 目标名称 (Objective)                                     |
+| `owner_id`        | Integer       | FK   | 是    | -      | 责任人 (关联 `users.id`)                                 |
+| `organization_id` | Integer       | FK   | 否    | -      | 归属组织 (关联 `organizations.id`)                        |
+| `product_id`      | Integer       | FK   | 否    | -      | 关联产品 (关联 `products.id`)                             |
+| `period`          | String        |      | 否    | -      | 周期 (如 `2024-Q4`)                                      |
+| `status`          | String        |      | 否    | `draft`| 状态: `draft`, `active`, `achieved`, `closed`            |
+| `parent_id`       | Integer       | FK   | 否    | -      | 父目标 ID (用于战略分解)                                 |
+
+### 2.6 OKR 关键结果 (`okr_key_results`) (New)
+定义量化指标，衡量目标达成进度。
+
+| 字段名            | 类型          | 键   | 必填  | 默认值 | 业务说明                                                 |
+|:------------------|:--------------|:----:|:-----:|:-------|:---------------------------------------------------------|
+| `id`              | Integer       | PK   | 是    | Auto   | KR ID                                                    |
+| `objective_id`    | Integer       | FK   | 是    | -      | 关联目标 ID (关联 `okr_objectives.id`)                    |
+| `title`           | String        |      | 是    | -      | 关键结果描述                                             |
+| `initial_value`   | String        |      | 否    | -      | 初始值                                                   |
+| `target_value`    | String        |      | 是    | -      | 目标值                                                   |
+| `current_value`   | String        |      | 否    | -      | 当前实际值                                               |
+| `metric_unit`     | String        |      | 否    | -      | 单位 (%, 天, 个等)                                       |
+| `progress`        | Integer       |      | 否    | 0      | 进度百分比 (0-100)                                       |
+| `linked_metrics_config`| JSON     |      | 否    | -      | **自动化度量配置 (关联 SQL/API 指标)**                   |
+
+### 2.7 资源与成本 (`resource_costs`) (New)
+记录财务维度的投入数据，支持 FinOps 与 ROI 分析。
+
+| 字段名            | 类型          | 键   | 必填  | 默认值 | 业务说明                                                 |
+|:------------------|:--------------|:----:|:-----:|:-------|:---------------------------------------------------------|
+| `id`              | Integer       | PK   | 是    | Auto   | 记录 ID                                                  |
+| `project_id`      | Integer       | FK   | 否    | -      | 关联项目 ID                                              |
+| `product_id`      | Integer       | FK   | 否    | -      | 关联产品 ID                                              |
+| `organization_id` | Integer       | FK   | 否    | -      | 关联组织 ID                                              |
+| `period`          | String        |      | 是    | -      | 周期 (如 `2025-01`)                                      |
+| `cost_type`       | String        |      | 是    | -      | 成本分类: `Infrastructure`, `HumanLabor`, `Licensing`    |
+| `cost_item`       | String        |      | 否    | -      | 具体名目 (如 `AWS-EC2`, `StaffSalaray`)                  |
+| `amount`          | Float         |      | 是    | -      | 金额                                                     |
+| `currency`        | String        |      | 否    | `CNY`  | 币种                                                     |
+| `source_system`   | String        |      | 否    | -      | 数据来源: `aws_billing`, `hr_system`, `manual`           |
+
+### 2.8 链路追溯关系 (`traceability_links`) (New)
+存储跨系统、跨实体的逻辑链接关系。
+
+| 字段名            | 类型          | 键   | 必填  | 默认值 | 业务说明                                                 |
+|:------------------|:--------------|:----:|:-----:|:-------|:---------------------------------------------------------|
+| `id`              | Integer       | PK   | 是    | Auto   | 链路 ID                                                  |
+| `source_system`   | String        |      | 是    | -      | 源系统 (jira, zentao, gitlab...)                         |
+| `source_id`       | String        |      | 是    | -      | 源实体 ID                                                |
+| `target_system`   | String        |      | 是    | -      | 目标系统 (gitlab, jenkins...)                            |
+| `target_id`       | String        |      | 是    | -      | 目标实体 ID                                              |
+| `link_type`       | String        |      | 否    | -      | 关系类型: `fixes`, `relates_to`, `implements`            |
+
+### 2.9 同步日志 (`sync_logs`)
 数据采集任务的审计追踪。
 
 | 字段名             | 类型         | 键   | 必填  | 默认值   | 示例数据             | 业务说明                         |
@@ -230,6 +303,8 @@ GitLab 的组织单元，用于管理项目和子群组。
 | `additions`      | Integer   |         | 否    | -      | `150`                     | 增加行数                           |
 | `deletions`      | Integer   |         | 否    | -      | `20`                      | 删除行数                           |
 | `total`          | Integer   |         | 否    | -      | `170`                     | 变更总行数                         |
+| `is_off_hours`   | Boolean   |         | 否    | False  | `True`                    | **加班提交标识** (20:00-08:00/周末)|
+| `lint_status`    | String(20)|         | 否    | NULL   | `"passed"`                | **代码规范状态**                   |
 | `gitlab_user_id` | Integer   | FK      | 否    | NULL   | `10086`                   | 关联内部用户 ID (关联 `users.id`)  |
 
 ### 3.3 提交文件统计 (`commit_file_stats`) 🌟
@@ -241,6 +316,7 @@ GitLab 的组织单元，用于管理项目和子群组。
 | `commit_id`     | String    | FK   | 否    | -      | `"a1b2c3d4..."`        | 关联 Commit SHA    |
 | `file_path`     | String    |      | 否    | -      | `"src/main.py"`        | 变更文件路径       |
 | `language`      | String    |      | 否    | -      | `"Python"`             | 编程语言类型       |
+| `file_type_category`| String |     | 否    | -      | `"Code"`               | **文件分类: `Code`, `Test`, `IaC`, `Config`** |
 | `code_added`    | Integer   |      | 否    | 0      | `50`                   | **代码**增加行数   |
 | `comment_added` | Integer   |      | 否    | 0      | `10`                   | **注释**增加行数   |
 | `blank_added`   | Integer   |      | 否    | 0      | `5`                    | **空行**增加行数   |
@@ -259,6 +335,12 @@ GitLab 的组织单元，用于管理项目和子群组。
 | `created_at`    | DateTime  |      | 否    | -      | `2024-02-01 09:00`         | 创建时间                         |
 | `merged_at`     | DateTime  |      | 否    | NULL   | `2024-02-02 18:00`         | 合并时间 (计算 Review 耗时)      |
 | `changes_count` | String    |      | 否    | -      | `"10"`                     | 变更文件数                       |
+| `review_cycles` | Integer   |      | 否    | 1      | `3`                        | **评审轮次 (打回修订次数)**      |
+| `approval_count`| Integer   |      | 否    | 0      | `2`                        | **审批成功人数**                 |
+| `human_comment_count`| Integer |    | 否    | 0      | `12`                       | **人工有效评论数**               |
+| `review_time_total`| BigInteger |   | 否    | -      | `43200`                    | **总评审耗时 (秒)**              |
+| `quality_gate_status`| String(20)|   | 否    | -      | `"passed"`                 | **质量门禁结果**                 |
+| `author_id`     | Integer   | FK   | 否    | -      | `10086`                    | 关联内部用户 ID (关联 `users.id`) |
 
 ### 3.5 议题 (`issues`)
 需求与缺陷管理。
@@ -273,6 +355,20 @@ GitLab 的组织单元，用于管理项目和子群组。
 | `total_time_spent` | Integer   |      | 否    | NULL   | `7200`                    | 实际耗时 (秒)                    |
 | `author_id`        | Integer   | FK   | 否    | -      | `10086`                   | 提单人 (关联 `users.id`)         |
 | `labels`           | JSON      |      | 否    | -      | `["bug", "P0"]`           | 标签集合                         |
+
+### 3.6 议题变更事件 (`gitlab_issue_events`) 🌟 (New)
+用于 CALMS 文化与精益扫描，追踪 Issue 的状态流转、标签变动等历史。
+
+| 字段名             | 类型      | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                         |
+|:-------------------|:----------|:----:|:-----:|:-------|:--------------------------|:-------------------------------------------------|
+| `id`               | Integer   | PK   | 是    | Auto   | `10001`                   | 内部自增 ID                                      |
+| `issue_id`         | Integer   | FK   | 是    | -      | `3050`                    | 关联 Issue ID (关联 `issues.id`)                 |
+| `user_id`          | Integer   | FK   | 否    | NULL   | `10086`                   | 执行人 (关联 `users.id`)                         |
+| `event_type`       | String    |      | 是    | -      | `"state"`                 | 事件类型: `state`, `label`, `milestone`          |
+| `action`           | String    |      | 是    | -      | `"closed"`                | 具体动作: `closed`, `reopened`, `add`, `remove`  |
+| `external_event_id`| Integer   |      | 否    | -      | `556677`                  | GitLab 原始事件 ID                               |
+| `meta_info`        | JSON      |      | 否    | -      | `{"label": {"id": 1}...}` | 原始事件数据 (含变更详情)                        |
+| `created_at`       | DateTime  |      | 是    | -      | `2024-03-05 10:00`        | 事件发生时间                                     |
 
 ### 3.6 讨论笔记 (`notes`)
 MR 和 Issue 中的评论互动。
@@ -329,6 +425,56 @@ Git 引用信息。
 | `state`       | String    |      | 否    | -      | `"active"`           | 状态: `active`, `closed`     |
 | `due_date`    | DateTime  |      | 否    | -      | `2024-04-01`         | **截止日期 (死线)**          |
 | `start_date`  | DateTime  |      | 否    | -      | `2024-03-01`         | 开始日期                     |
+
+### 3.11 Wiki 变更日志 (`gitlab_wiki_logs`) 🌟 (New)
+用于 CALMS Sharing 维度，追踪知识库的沉淀与分享活跃度。
+
+| 字段名             | 类型      | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                         |
+|:-------------------|:----------|:----:|:-----:|:-------|:--------------------------|:-------------------------------------------------|
+| `id`               | Integer   | PK   | 是    | Auto   | `1`                       | 自增 ID                                          |
+| `project_id`       | Integer   | FK   | 是    | -      | `450`                     | 关联项目 ID                                      |
+| `title`            | String    |      | 否    | -      | `"Deployment Guide"`      | Wiki 页面标题                                   |
+| `action`           | String    |      | 是    | -      | `"updated"`               | 动作: `created`, `updated`, `deleted`            |
+| `user_id`          | Integer   | FK   | 否    | NULL   | `10086`                   | 操作人 (关联 `users.id`)                         |
+| `created_at`       | DateTime  |      | 是    | -      | `2024-03-05 10:00`        | 变更时间                                         |
+
+### 3.12 项目依赖 (`gitlab_dependencies`) 🌟 (New)
+用于 CALMS Sharing 维度，识别内源组件的引用关系与技术栈分布。
+
+| 字段名             | 类型      | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                         |
+|:-------------------|:----------|:----:|:-----:|:-------|:--------------------------|:-------------------------------------------------|
+| `id`               | Integer   | PK   | 是    | Auto   | `1`                       | 自增 ID                                          |
+| `project_id`       | Integer   | FK   | 是    | -      | `450`                     | 关联消费方项目 ID                                |
+| `name`             | String    |      | 是    | -      | `"common-auth-lib"`       | 依赖包名称                                       |
+| `version`          | String    |      | 否    | -      | `"1.2.3"`                 | 引用版本                                         |
+| `package_manager`  | String    |      | 否    | -      | `"maven"`                 | 包管理器: `maven`, `npm`, `pypi` 等              |
+| `dependency_type`  | String    |      | 否    | -      | `"direct"`                | 依赖类型: `direct`(直接), `transitive`(间接)     |
+| `raw_data`         | JSON      |      | 否    | -      | `{...}`                   | 原始数据备份                                     |
+
+### 3.13 制品仓库 (`gitlab_packages`) 🌟 (New)
+记录项目产出的二进制制品资产。
+
+| 字段名             | 类型      | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                         |
+|:-------------------|:----------|:----:|:-----:|:-------|:--------------------------|:-------------------------------------------------|
+| `id`               | Integer   | PK   | 是    | -      | `77`                      | GitLab Package ID                                |
+| `name`             | String    |      | 是    | -      | `"my-service"`            | 包名                                             |
+| `version`          | String    |      | 否    | -      | `"1.0.0-SNAPSHOT"`        | 版本号                                           |
+| `package_type`     | String    |      | 否    | -      | `"maven"`                 | 类型: `maven`, `npm`, `pypi` 等                  |
+| `status`           | String    |      | 否    | -      | `"default"`               | 状态: `default`, `hidden`                        |
+| `created_at`       | DateTime  |      | 是    | -      | `2024-03-05 10:00`        | 发布时间                                         |
+
+### 3.14 用户行为画像 (`user_activity_profiles`) 🌟 (New)
+记录开发者在一段时间内的协作行为特征与效能指标。
+
+| 字段名             | 类型      | 键   | 必填  | 默认值 | 业务说明                                         |
+|:-------------------|:----------|:----:|:-----:|:-------|:-------------------------------------------------|
+| `id`               | Integer   | PK   | 是    | Auto   | 记录 ID                                          |
+| `user_id`          | Integer   | FK   | 是    | -      | 关联用户 ID                                      |
+| `period`           | String    |      | 是    | -      | 统计周期 (如 `2025-Q1`)                          |
+| `off_hours_activity_ratio`| Float |    | 否    | -      | 非工作时间提交占比 (WLB 维)                      |
+| `avg_review_turnaround`| Float    |    | 否    | -      | 平均评审响应速度 (秒)                            |
+| `context_switch_rate`| Float      |    | 否    | -      | 任务切换频率 (上下文切换频率)                    |
+| `avg_lint_errors_per_kloc`| Float |    | 否    | -      | 每千行代码平均规范错误数                         |
 
 ---
 

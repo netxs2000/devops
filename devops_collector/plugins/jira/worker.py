@@ -70,7 +70,8 @@ class JiraWorker(BaseWorker):
         project = self.session.query(JiraProject).filter_by(key=project_key).first()
         if not project:
             # 尝试从 API 获取详情 (此处示例逻辑)
-            p_data = self.client._get(f"/rest/api/3/project/{project_key}")
+            response = self.client._get(f"/rest/api/3/project/{project_key}")
+            p_data = response.json()
             project = JiraProject(
                 key=p_data['key'],
                 name=p_data['name'],

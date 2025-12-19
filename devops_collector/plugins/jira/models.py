@@ -109,6 +109,14 @@ class JiraIssue(Base):
     # 原始数据
     raw_data = Column(JSON)
     
+    # 链路追溯：代码修复记录
+    first_commit_sha = Column(String(100))
+    first_fix_date = Column(DateTime(timezone=True))
+    
+    # 行为特征：协作体验 (Developer Experience)
+    reopening_count = Column(Integer, default=0)        # 重开次数 (从 Done/Resolved 回到 In Progress)
+    time_to_first_response = Column(BigInteger)         # 响应延迟 (创建到首次分配或状态变更的时间，秒)
+    
     project = relationship("JiraProject", back_populates="issues")
     history = relationship("JiraIssueHistory", back_populates="issue", cascade="all, delete-orphan")
     sprint = relationship("JiraSprint", back_populates="issues")

@@ -1,0 +1,14 @@
+[
+    {
+        "accountId": "jira_zhangsan",
+        "displayName": "Zhang San",
+        "emailAddress": "zhangsan@example.com",
+        "accountType": "atlassian"
+    },
+    {
+        "accountId": "jira_lisi",
+        "displayName": "Li Si",
+        "emailAddress": "lisi@example.com",
+        "accountType": "atlassian"
+    }
+]

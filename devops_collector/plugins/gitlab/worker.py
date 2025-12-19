@@ -1,261 +1,105 @@
-"""GitLab 数据采集 Worker"""
+"""GitLab 数据采集 Worker 模块。
+
+本模块实现了 GitLabWorker 类，负责协调从 GitLab API 获取数据并存储到数据库的
+完整流程。支持项目元数据、提交记录、Issue、合并请求、流水线、部署、Wiki、
+依赖及制品库等全量或增量同步。
+
+Typical Usage:
+    worker = GitLabWorker(session, client)
+    worker.process_task({"project_id": 123})
+"""
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from devops_collector.core.base_worker import BaseWorker
-from devops_collector.core.registry import PluginRegistry
-from .client import GitLabClient
-
-from devops_collector.models import (
-    Project, Commit, Issue, MergeRequest, Pipeline, 
-    Deployment, Note, Tag, Branch, User, Organization,
-    CommitFileStats, SyncLog, GitLabGroup, GitLabGroupMember, Milestone,
-    IdentityMapping, GitLabPackage, GitLabPackageFile
+from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.models import (
+    Project, Commit, Issue, MergeRequest, Pipeline, Tag, 
+    Branch, Milestone, GitLabPackage, GitLabPackageFile, Note,
+    Deployment, CommitFileStats, GitLabWikiLog, GitLabDependency, SyncLog
 )
 from devops_collector.core.identity_manager import IdentityManager
 
 logger = logging.getLogger(__name__)
 
 
-class DiffAnalyzer:
-    """代码差异分析器，将 Git diff 拆分为代码/注释/空行三类。"""
-    
-    COMMENT_SYMBOLS = {
-        'py': '#', 'rb': '#', 'sh': '#', 'yaml': '#', 'yml': '#', 
-        'dockerfile': '#', 'pl': '#', 'r': '#',
-        'java': '//', 'js': '//', 'ts': '//', 'c': '//', 'cpp': '//', 
-        'cs': '//', 'go': '//', 'rs': '//', 'swift': '//', 'kt': '//', 
-        'scala': '//', 'php': '//',
-        'html': '<!--', 'xml': '<!--',
-        'css': '/*', 'scss': '/*', 'less': '/*',
-        'sql': '--',
-    }
-    
-    IGNORED_PATTERNS = [
-        '*.lock', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
-        '*.min.js', '*.min.css', '*.map',
-        'node_modules/*', 'dist/*', 'build/*', 'vendor/*',
-        '*.svg', '*.png', '*.jpg', '*.jpeg', '*.gif', '*.ico',
-        '*.pdf', '*.exe', '*.dll', '*.so', '*.dylib',
-    ]
-    
-    @classmethod
-    def is_ignored(cls, file_path: str) -> bool:
-        """检查文件是否应被忽略。"""
-        import fnmatch
-        for pattern in cls.IGNORED_PATTERNS:
-            if fnmatch.fnmatch(file_path.lower(), pattern):
-                return True
-        return False
-    
-    @classmethod
-    def get_comment_symbol(cls, file_path: str) -> Optional[str]:
-        """根据文件扩展名获取注释符号。"""
-        ext = file_path.split('.')[-1].lower() if '.' in file_path else ''
-        return cls.COMMENT_SYMBOLS.get(ext)
-    
-    @classmethod
-    def analyze_diff(cls, diff_text: str, file_path: str) -> Dict[str, int]:
-        """分析 Git diff 文本，返回分类统计。"""
-        stats = {
-            'code_added': 0, 'code_deleted': 0,
-            'comment_added': 0, 'comment_deleted': 0,
-            'blank_added': 0, 'blank_deleted': 0
-        }
-        
-        symbol = cls.get_comment_symbol(file_path)
-        
-        for line in diff_text.split('\n'):
-            if line.startswith('@@') or line.startswith('+++') or line.startswith('---'):
-                continue
-            
-            if len(line) < 1:
-                continue
-                
-            content = line[1:].strip()
-            is_blank = (content == '')
-            is_comment = symbol and content.startswith(symbol)
-            
-            if line.startswith('+'):
-                if is_blank:
-                    stats['blank_added'] += 1
-                elif is_comment:
-                    stats['comment_added'] += 1
-                else:
-                    stats['code_added'] += 1
-            elif line.startswith('-'):
-                if is_blank:
-                    stats['blank_deleted'] += 1
-                elif is_comment:
-                    stats['comment_deleted'] += 1
-                else:
-                    stats['code_deleted'] += 1
-                    
-        return stats
-
-
-class IdentityMatcher:
-    """身份匹配器，将 Commit 作者信息关联到 GitLab 用户。"""
-    
-    def __init__(self, session: Session):
-        self.session = session
-        self._build_index()
-    
-    def _build_index(self):
-        """构建 GitLab 用户身份索引以进行规则匹配。"""
-        # 只索引来源为 gitlab 的身份映射
-        mappings = self.session.query(IdentityMapping).filter_by(source='gitlab').all()
-        
-        self.email_map = {}    # {email.lower: user_id}
-        self.username_map = {} # {external_id.lower: user_id}
-        self.name_map = {}     # {external_name.lower: user_id}
-        
-        for m in mappings:
-            if m.email:
-                self.email_map[m.email.lower()] = m.user_id
-            if m.external_id:
-                self.username_map[m.external_id.lower()] = m.user_id
-            if m.external_name:
-                self.name_map[m.external_name.lower()] = m.user_id
-    
-    def match(self, commit: Commit) -> Optional[int]:
-        """按 4 级规则匹配 Commit 作者到内部用户 ID。"""
-        email = commit.author_email.lower() if commit.author_email else ""
-        name = commit.author_name.lower() if commit.author_name else ""
-        
-        # 1. 首先按 author 的 email 和 gitlab 的 email 匹配
-        if email in self.email_map:
-            return self.email_map[email]
-            
-        # 2. author_name 和 gitlab 的 username 匹配
-        if name in self.username_map:
-            return self.username_map[name]
-            
-        # 3. author_name 和 gitlab 的 name 匹配
-        if name in self.name_map:
-            return self.name_map[name]
-            
-        # 4. 截取 author 的 email 前缀和 gitlab 的 username 匹配
-        if email and '@' in email:
-            prefix = email.split('@')[0]
-            if prefix in self.username_map:
-                return self.username_map[prefix]
-        
-        # 如果以上都没匹配到，利用 IdentityManager 创建/查找一个占位用户
-        user = IdentityManager.get_or_create_user(
-            self.session, 
-            source='gitlab_commit', 
-            external_id=commit.author_email,
-            email=commit.author_email,
-            name=commit.author_name
-        )
-        return user.id
-
-
-class UserResolver:
-    """用户解析器，将 gitlab_id 映射到内部用户 ID。"""
-    
-    def __init__(self, session: Session, client: GitLabClient):
-        self.session = session
-        self.client = client
-        self.cache: Dict[int, int] = {} 
-        self._load_cache()
-    
-    def _load_cache(self):
-        """加载现有 GitLab 映射到缓存。"""
-        mappings = self.session.query(IdentityMapping).filter_by(source='gitlab').all()
-        for m in mappings:
-            try:
-                self.cache[int(m.external_id)] = m.user_id
-            except ValueError:
-                continue
-    
-    def resolve(self, gitlab_id: int) -> Optional[int]:
-        """解析 GitLab 用户 ID 到内部 ID。"""
-        if gitlab_id in self.cache:
-            return self.cache[gitlab_id]
-        
-        try:
-            user_data = self.client.get_user(gitlab_id)
-            user = IdentityManager.get_or_create_user(
-                self.session,
-                source='gitlab',
-                external_id=str(gitlab_id),
-                email=user_data.get('email'),
-                name=user_data.get('name'),
-                username=user_data.get('username')
-            )
-            
-            # GitLab 特色逻辑：从 skype 字段提取部门并映射到 Center 级组织
-            dept_name = user_data.get('skype')
-            if dept_name:
-                user.department = dept_name
-                # 寻找或创建 Center 级组织
-                org = self.session.query(Organization).filter_by(
-                    name=dept_name, level='Center'
-                ).first()
-                if not org:
-                    org = Organization(name=dept_name, level='Center')
-                    self.session.add(org)
-                    self.session.flush()
-                user.organization_id = org.id
-            
-            self.session.flush()
-            self.cache[gitlab_id] = user.id
-            return user.id
-        except Exception as e:
-            logger.warning(f"Failed to resolve user {gitlab_id}: {e}")
-            return None
+from .analyzer import DiffAnalyzer
+from .identity import IdentityMatcher, UserResolver
 
 
 class GitLabWorker(BaseWorker):
-    """GitLab 数据采集 Worker。"""
+    """GitLab 数据采集 Worker。
     
+    负责具体项目的全生命周期数据同步，包括基础信息、研发活动、协作行为以及效能指标。
+    
+    Attributes:
+        session (Session): 数据库会话。
+        client (GitLabClient): GitLab API 客户端。
+        enable_deep_analysis (bool): 是否启用深度分析（如代码 Diff 分析，计算量较大）。
+        identity_manager (IdentityManager): 身份映射管理器。
+    """
+
     def __init__(self, session: Session, client: GitLabClient, enable_deep_analysis: bool = False):
+        """初始化 GitLab Worker。
+        
+        Args:
+            session (Session): SQLAlchemy 会话。
+            client (GitLabClient): GitLab 客户端实例。
+            enable_deep_analysis (bool): 是否执行深度分析。默认为 False。
+        """
         super().__init__(session, client)
         self.enable_deep_analysis = enable_deep_analysis
-        self.identity_matcher = None 
-        self.user_resolver = None 
+        self.identity_manager = IdentityManager(session)
     
-    def process_task(self, task: dict) -> None:
-        """处理 GitLab 同步任务。"""
+    def process_task(self, task: dict):
+        """处理 GitLab 同步任务。
+        
+        根据任务配置同步单个项目的所有维度数据，并记录同步日志。
+        
+        Args:
+            task (dict): 任务配置，需包含 'project_id'。
+                示例: {"project_id": 456, "sync_types": ["commits", "issues"]}
+                
+        Returns:
+            None
+            
+        Raises:
+            Exception: 同步过程中遇到未捕获的错误。
+        """
         project_id = task.get('project_id')
-        job_type = task.get('job_type', 'full')
-        
-        logger.info(f"Processing GitLab task: project_id={project_id}, job_type={job_type}")
-        
+        if not project_id:
+            logger.error("No project_id provided in task")
+            return
+
+        start_time = datetime.now()
         try:
+            # 1. 同步项目基础信息
             project = self._sync_project(project_id)
             if not project:
-                raise ValueError(f"Project {project_id} not found")
+                return
+
+            since = project.last_synced_at.isoformat() if project.last_synced_at else None
             
-            project.sync_status = 'SYNCING'
-            project.last_synced_at = datetime.now(timezone.utc)
-            self.session.commit()
-            
-            since = None
-            if job_type == 'incremental' and project.last_synced_at:
-                since = project.last_synced_at.isoformat()
-            
-            self.user_resolver = UserResolver(self.session, self.client)
-            
-            commits_count = self._sync_commits(project, since)
-            issues_count = self._sync_issues(project, since)
-            mrs_count = self._sync_merge_requests(project, since)
-            pipelines_count = self._sync_pipelines(project)
-            deployments_count = self._sync_deployments(project)
-            tags_count = self._sync_tags(project)
-            branches_count = self._sync_branches(project)
-            milestones_count = self._sync_milestones(project)
-            packages_count = self._sync_packages(project)
-            
+            # 2. 同步各类资源 (顺序敏感，部分资源依赖 Project 存在)
+            self._sync_commits(project, since)
+            self._sync_issues(project, since)
+            self._sync_merge_requests(project, since)
+            self._sync_pipelines(project) # 流水线暂不支持简单 since 过滤，通常依赖 IID 增量
+            self._sync_deployments(project)
+            self._sync_tags(project)
+            self._sync_branches(project)
+            self._sync_milestones(project)
+            self._sync_packages(project)
+            self._sync_wiki_logs(project)
+            self._sync_dependencies(project)
+
+            # 3. 身份匹配与后处理
             self._match_identities(project)
             
-            project.sync_status = 'COMPLETED'
-            project.last_activity_at = datetime.now(timezone.utc)
             self.session.commit()
             
             log = SyncLog(
@@ -286,7 +130,16 @@ class GitLabWorker(BaseWorker):
             raise
     
     def _sync_project(self, project_id: int) -> Optional[Project]:
-        """同步项目元数据。"""
+        """同步项目元数据。
+        
+        从 GitLab API 获取项目详情，并更新或创建本地 Project 记录及关联的 Group。
+        
+        Args:
+            project_id (int): GitLab 项目的唯一标识 ID。
+            
+        Returns:
+            Optional[Project]: 同步成功的 Project 实体对象，若失败则返回 None。
+        """
         try:
             p_data = self.client.get_project(project_id)
         except Exception as e:
@@ -341,9 +194,95 @@ class GitLabWorker(BaseWorker):
         if p_data.get('created_at'):
             project.created_at = datetime.fromisoformat(p_data['created_at'].replace('Z', '+00:00'))
             
+        # 同步 Wiki 日志（CALMS Sharing 维度）
+        if self.enable_deep_analysis:
+            try:
+                self._sync_wiki_logs(project)
+                self._sync_dependencies(project)
+            except Exception as e:
+                logger.warning(f"Failed to sync sharing metadata for project {project_id}: {e}")
+
         return project
 
+    def _sync_dependencies(self, project: Project) -> None:
+        """同步项目的第三方/内部依赖关系。
+        
+        从 GitLab 依赖列表 API 提取信息，并保存到 GitLabDependency 表中。
+        
+        Args:
+            project (Project): 需要同步依赖的项目实体。
+            
+        Returns:
+            None
+        """
+        for dep in self.client.get_project_dependencies(project.id):
+            # 简单去重：按名称和版本
+            existing = self.session.query(GitLabDependency).filter_by(
+                project_id=project.id,
+                name=dep['name'],
+                version=dep['version']
+            ).first()
+            
+            if existing:
+                continue
+                
+            dependency = GitLabDependency(
+                project_id=project.id,
+                name=dep['name'],
+                version=dep['version'],
+                package_manager=dep.get('package_manager'),
+                dependency_type=dep.get('dependency_type'),
+                raw_data=dep
+            )
+            self.session.add(dependency)
+
+    def _sync_wiki_logs(self, project: Project) -> None:
+        """同步 Wiki 事件日志。
+        
+        基于事件审计 API 采集 Wiki 的创建、更新或删除活动。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            
+        Returns:
+            None
+        """
+        for event in self.client.get_project_wiki_events(project.id):
+            # 检查是否已存在
+            existing = self.session.query(GitLabWikiLog).filter_by(
+                project_id=project.id,
+                created_at=datetime.fromisoformat(event['created_at'].replace('Z', '+00:00'))
+            ).first()
+            
+            if existing:
+                continue
+                
+            wiki_log = GitLabWikiLog(
+                project_id=project.id,
+                title=event.get('target_title'),
+                slug=event.get('target_title'), # 简化处理
+                action=event.get('action_name'),
+                created_at=datetime.fromisoformat(event['created_at'].replace('Z', '+00:00')),
+                raw_data=event
+            )
+            
+            if event.get('author_id') and self.user_resolver:
+                wiki_log.user_id = self.user_resolver.resolve(event['author_id'])
+                
+            self.session.add(wiki_log)
+
     def _sync_commits(self, project: Project, since: Optional[str]) -> int:
+        """同步提交记录。
+        
+        使用生成器流式同步项目的 Git 提交。
+        
+        Args:
+            project (Project): 项目实体对象。
+            since (Optional[str]): ISO 格式的时间字符串，仅同步该时间之后的提交。
+            
+        Returns:
+            int: 本次成功处理的提交总数。
+        """
         count = self._process_generator(
             self.client.get_project_commits(project.id, since=since),
             lambda batch: self._save_commits_batch(project, batch)
@@ -351,6 +290,15 @@ class GitLabWorker(BaseWorker):
         return count
 
     def _save_commits_batch(self, project: Project, batch: List[dict]) -> None:
+        """批量保存提交记录，并触发追溯与行为分析。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            batch (List[dict]): 从 API 获取的原始提交数据列表。
+            
+        Returns:
+            None
+        """
         existing = self.session.query(Commit.id).filter(
             Commit.project_id == project.id,
             Commit.id.in_([c['id'] for c in batch])
@@ -381,11 +329,64 @@ class GitLabWorker(BaseWorker):
             
             self.session.add(commit)
             new_commits.append(commit)
+            
+            # 自动化链路追踪提取
+            self._apply_traceability_extraction(commit)
+            
+            # 行为特征：加班识别与行为特征
+            self._apply_commit_behavior_analysis(commit)
         
         if self.enable_deep_analysis and new_commits:
-            pass
+            for commit in new_commits:
+                self._process_commit_diffs(project, commit)
+
+    def _process_commit_diffs(self, project: Project, commit: Commit) -> None:
+        """分析 Commit 的 Diff 并分类统计文件变更。
+        
+        提取每次提交中具体文件的代码、注释和空行变更数量，并识别文件所属的技术栈。
+        
+        Args:
+            project (Project): 项目实体。
+            commit (Commit): 需要分析 Diff 的提交实体。
+            
+        Returns:
+            None
+        """
+        try:
+            diffs = self.client.get_commit_diff(project.id, commit.id)
+            for diff in diffs:
+                file_path = diff.get('new_path') or diff.get('old_path')
+                if not file_path or DiffAnalyzer.is_ignored(file_path):
+                    continue
+                
+                # 分析差异统计
+                diff_text = diff.get('diff', '')
+                stats = DiffAnalyzer.analyze_diff(diff_text, file_path)
+                
+                # 识别文件分类
+                category = DiffAnalyzer.get_file_category(file_path)
+                
+                # 保存统计
+                file_stats = CommitFileStats(
+                    commit_id=commit.id,
+                    file_path=file_path,
+                    file_type_category=category,
+                    **stats
+                )
+                self.session.add(file_stats)
+        except Exception as e:
+            logger.warning(f"Failed to analyze diff for commit {commit.id}: {e}")
 
     def _sync_issues(self, project: Project, since: Optional[str]) -> int:
+        """从项目同步 Issue。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            since (Optional[str]): ISO 格式时间，仅同步该时间后的 Issue。
+            
+        Returns:
+            int: 处理的 Issue 总数。
+        """
         count = self._process_generator(
             self.client.get_project_issues(project.id, since=since),
             lambda batch: self._save_issues_batch(project, batch)
@@ -393,6 +394,15 @@ class GitLabWorker(BaseWorker):
         return count
 
     def _save_issues_batch(self, project: Project, batch: List[dict]) -> None:
+        """批量保存 Issue 元数据。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            batch (List[dict]): Issue 原始数据列表。
+            
+        Returns:
+            None
+        """
         ids = [item['id'] for item in batch]
         existing = self.session.query(Issue).filter(Issue.id.in_(ids)).all()
         existing_map = {i.id: i for i in existing}
@@ -424,14 +434,102 @@ class GitLabWorker(BaseWorker):
                 if self.user_resolver:
                     uid = self.user_resolver.resolve(data['author']['id'])
                     issue.author_id = uid
+            
+            # 如果开启了深度分析，则同步 Issue 事件历史（CALMS 文化扫描）
+            if self.enable_deep_analysis:
+                self._sync_issue_events(project, data)
+
+    def _sync_issue_events(self, project: Project, issue_data: Dict) -> None:
+        """同步单个 Issue 的所有资源事件（状态、标签、里程碑）。
+        
+        用于 CALMS 模型中文化与协作维度的扫描。
+        
+        Args:
+            project (Project): 关联的项目。
+            issue_data (Dict): Issue 的原始数据。
+            
+        Returns:
+            None
+        """
+        project_id = project.id
+        issue_iid = issue_data['iid']
+        issue_id = issue_data['id']
+        
+        # 1. 同步状态变更事件
+        for event in self.client.get_issue_state_events(project_id, issue_iid):
+            self._save_issue_event(issue_id, 'state', event)
+            
+        # 2. 同步标签变更事件
+        for event in self.client.get_issue_label_events(project_id, issue_iid):
+            self._save_issue_event(issue_id, 'label', event)
+            
+        # 3. 同步里程碑变更事件
+        for event in self.client.get_issue_milestone_events(project_id, issue_iid):
+            self._save_issue_event(issue_id, 'milestone', event)
+
+    def _save_issue_event(self, issue_id: int, event_type: str, data: Dict) -> None:
+        """保存 Issue 事件，确保幂等。
+        
+        Args:
+            issue_id (int): 数据库内 Issue 的 ID。
+            event_type (str): 事件类型 (state, label, milestone)。
+            data (Dict): 事件原始 JSON 内容。
+            
+        Returns:
+            None
+        """
+        external_id = data['id']
+        
+        # 检查是否已存在
+        existing = self.session.query(GitLabIssueEvent).filter_by(
+            issue_id=issue_id, 
+            event_type=event_type, 
+            external_event_id=external_id
+        ).first()
+        
+        if existing:
+            return
+            
+        event = GitLabIssueEvent(
+            issue_id=issue_id,
+            event_type=event_type,
+            external_event_id=external_id,
+            action=data.get('state') or data.get('action') or 'update',
+            created_at=datetime.fromisoformat(data['created_at'].replace('Z', '+00:00')),
+            meta_info=data
+        )
+        
+        # 关联用户
+        if data.get('user') and self.user_resolver:
+            event.user_id = self.user_resolver.resolve(data['user']['id'])
+            
+        self.session.add(event)
 
     def _sync_merge_requests(self, project: Project, since: Optional[str]) -> int:
+        """从项目同步合并请求 (MR)。
+        
+        Args:
+            project (Project): 项目实体。
+            since (Optional[str]): 增量同步起始时间。
+            
+        Returns:
+            int: 处理的 MR 数量。
+        """
         return self._process_generator(
             self.client.get_project_merge_requests(project.id, since=since),
             lambda batch: self._save_mrs_batch(project, batch)
         )
 
     def _save_mrs_batch(self, project: Project, batch: List[dict]) -> None:
+        """批量保存合并请求记录。
+        
+        Args:
+            project (Project): 关联项目。
+            batch (List[dict]): MR 原始数据列表。
+            
+        Returns:
+            None
+        """
         ids = [item['id'] for item in batch]
         existing = self.session.query(MergeRequest).filter(MergeRequest.id.in_(ids)).all()
         existing_map = {m.id: m for m in existing}
@@ -461,14 +559,38 @@ class GitLabWorker(BaseWorker):
                 if self.user_resolver:
                     uid = self.user_resolver.resolve(data['author']['id'])
                     mr.author_id = uid
+            
+            # 自动化链路追踪提取
+            self._apply_traceability_extraction(mr)
+            
+            # 行为特征：协作深度与评审质量 (仅对已合并或已进入评审的 MR)
+            if self.enable_deep_analysis or mr.state in ('merged', 'opened'):
+                self._apply_mr_collaboration_analysis(project, mr)
 
     def _sync_pipelines(self, project: Project) -> int:
+        """从项目同步流水线记录。
+        
+        Args:
+            project (Project): 项目实体。
+            
+        Returns:
+            int: 同步成功的流水线总数。
+        """
         return self._process_generator(
             self.client.get_project_pipelines(project.id),
             lambda batch: self._save_pipelines_batch(project, batch)
         )
 
     def _save_pipelines_batch(self, project: Project, batch: List[dict]) -> None:
+        """批量保存流水线及其基本指标。
+        
+        Args:
+            project (Project): 关联项目。
+            batch (List[dict]): 流水线数据列表。
+            
+        Returns:
+            None
+        """
         ids = [item['id'] for item in batch]
         existing = self.session.query(Pipeline).filter(Pipeline.id.in_(ids)).all()
         existing_map = {p.id: p for p in existing}
@@ -489,12 +611,29 @@ class GitLabWorker(BaseWorker):
             p.coverage = data.get('coverage')
 
     def _sync_deployments(self, project: Project) -> int:
+        """同步部署记录。
+        
+        Args:
+            project (Project): 项目实体。
+            
+        Returns:
+            int: 部署记录总数。
+        """
         return self._process_generator(
             self.client.get_project_deployments(project.id),
             lambda batch: self._save_deployments_batch(project, batch)
         )
     
     def _save_deployments_batch(self, project: Project, batch: List[dict]) -> None:
+        """批量保存部署信息。
+        
+        Args:
+            project (Project): 关联项目。
+            batch (List[dict]): 部署原始数据。
+            
+        Returns:
+            None
+        """
         ids = [item['id'] for item in batch]
         existing = self.session.query(Deployment).filter(Deployment.id.in_(ids)).all()
         existing_map = {d.id: d for d in existing}
@@ -515,6 +654,14 @@ class GitLabWorker(BaseWorker):
             d.sha = data.get('sha')
     
     def _sync_tags(self, project: Project) -> int:
+        """同步 Git 标签。
+        
+        Args:
+            project (Project): 项目实体。
+            
+        Returns:
+            int: 标签总数。
+        """
         count = self._process_generator(
             self.client.get_project_tags(project.id),
             lambda batch: self._save_tags_batch(project, batch)
@@ -523,6 +670,15 @@ class GitLabWorker(BaseWorker):
         return count
 
     def _save_tags_batch(self, project: Project, batch: List[dict]) -> None:
+        """批量保存标签。
+        
+        Args:
+            project (Project): 关联项目。
+            batch (List[dict]): 标签原始数据。
+            
+        Returns:
+            None
+        """
         names = [item['name'] for item in batch]
         existing = self.session.query(Tag).filter(
             Tag.project_id == project.id,
@@ -540,12 +696,29 @@ class GitLabWorker(BaseWorker):
             tag.commit_sha = data.get('commit', {}).get('id')
     
     def _sync_branches(self, project: Project) -> int:
+        """同步分支元数据。
+        
+        Args:
+            project (Project): 项目实体。
+            
+        Returns:
+            int: 分支总数。
+        """
         return self._process_generator(
             self.client.get_project_branches(project.id),
             lambda batch: self._save_branches_batch(project, batch)
         )
 
     def _save_branches_batch(self, project: Project, batch: List[dict]) -> None:
+        """批量保存分支。
+        
+        Args:
+            project (Project): 关联项目。
+            batch (List[dict]): 分支数据列表。
+            
+        Returns:
+            None
+        """
         names = [item['name'] for item in batch]
         existing = self.session.query(Branch).filter(
             Branch.project_id == project.id,
@@ -575,14 +748,29 @@ class GitLabWorker(BaseWorker):
                     pass
     
     def _sync_milestones(self, project: Project) -> int:
-        """同步里程碑 (支持流式处理)。"""
+        """同步里程碑 (支持流式处理)。
+        
+        Args:
+            project (Project): 项目实体。
+            
+        Returns:
+            int: 里程碑总数。
+        """
         return self._process_generator(
             self.client.get_project_milestones(project.id),
             lambda batch: self._save_milestones_batch(project, batch)
         )
 
     def _save_milestones_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存里程碑。"""
+        """批量保存里程碑。
+        
+        Args:
+            project (Project): 关联项目。
+            batch (List[dict]): 里程碑数据列表。
+            
+        Returns:
+            None
+        """
         ids = [item['id'] for item in batch]
         existing = self.session.query(Milestone).filter(Milestone.id.in_(ids)).all()
         existing_map = {m.id: m for m in existing}
@@ -618,14 +806,29 @@ class GitLabWorker(BaseWorker):
                  ms.updated_at = datetime.fromisoformat(data['updated_at'].replace('Z', '+00:00'))
 
     def _sync_packages(self, project: Project) -> int:
-        """同步项目的包注册表。"""
+        """同步项目的制品包。
+        
+        Args:
+            project (Project): 项目实体。
+            
+        Returns:
+            int: 制品包总数。
+        """
         return self._process_generator(
             self.client.get_packages(project.id),
             lambda batch: self._save_packages_batch(project, batch)
         )
 
     def _save_packages_batch(self, project: Project, batch: List[dict]) -> None:
-        """保存包及其文件明细。"""
+        """保存包及其关联文件。
+        
+        Args:
+            project (Project): 关联项目。
+            batch (List[dict]): 包数据列表。
+            
+        Returns:
+            None
+        """
         ids = [item['id'] for item in batch]
         existing = self.session.query(GitLabPackage).filter(GitLabPackage.id.in_(ids)).all()
         existing_map = {p.id: p for p in existing}
@@ -653,7 +856,15 @@ class GitLabWorker(BaseWorker):
                 logger.warning(f"Failed to sync files for package {pkg.id}: {e}")
 
     def _sync_package_files(self, package: GitLabPackage, files_data: List[dict]) -> None:
-        """同步具体包下的文件。"""
+        """同步特定包下的文件。
+        
+        Args:
+            package (GitLabPackage): 数据库内的包实体。
+            files_data (List[dict]): 文件原始数据。
+            
+        Returns:
+            None
+        """
         ids = [f['id'] for f in files_data]
         existing = {f.id for f in package.files}
         
@@ -674,6 +885,14 @@ class GitLabWorker(BaseWorker):
             self.session.add(f_obj)
 
     def _match_identities(self, project: Project) -> None:
+        """匹配项目内未关联用户的提交记录。
+        
+        Args:
+            project (Project): 项目实体。
+            
+        Returns:
+            None
+        """
         if not self.identity_matcher:
             self.identity_matcher = IdentityMatcher(self.session)
         
@@ -689,7 +908,169 @@ class GitLabWorker(BaseWorker):
         
         self.session.commit()
     
+    def _apply_traceability_extraction(self, obj: Any) -> None:
+        """从项目对象（Commit/MR）的文本内容中提取业务需求追溯信息。
+        
+        支持正则匹配:
+        - Jira: [A-Z]+-\d+ (如 PROJ-123)
+        - ZenTao: #\d+ (如 #456)
+        
+        Args:
+            obj (Any): 提交记录 (Commit) 或合并请求 (MergeRequest) 实体。
+            
+        Returns:
+            None
+        """
+        text_to_scan = ""
+        if isinstance(obj, Commit):
+            text_to_scan = f"{obj.title}\n{obj.message}"
+        elif isinstance(obj, MergeRequest):
+            text_to_scan = f"{obj.title}\n{obj.description or ''}"
+        
+        if not text_to_scan:
+            return
+
+        # 1. 匹配 Jira (大写字母+横线+数字)
+        jira_matches = list(set(re.findall(r'([A-Z]{2,}-\d+)', text_to_scan)))
+        # 2. 匹配 ZenTao (井号+数字)
+        zentao_matches = list(set(re.findall(r'#(\d+)', text_to_scan)))
+
+        # 更新对象字段并建立 TraceabilityLink
+        if jira_matches:
+            self._save_traceability_results(obj, jira_matches, 'jira')
+        
+        if zentao_matches:
+            self._save_traceability_results(obj, zentao_matches, 'zentao')
+
+    def _save_traceability_results(self, obj: Any, ids: List[str], source: str) -> None:
+        """保存提取到的追溯 ID 到对象并创建映射表记录。
+        
+        Args:
+            obj (Any): 目标实体对象。
+            ids (List[str]): 提取到的外部 ID 列表。
+            source (str): 来源系统类型 (jira, zentao)。
+            
+        Returns:
+            None
+        """
+        if isinstance(obj, MergeRequest):
+            # MR 通常只关联一个主需求，取第一个
+            obj.external_issue_id = ids[0]
+            obj.issue_source = source
+        elif isinstance(obj, Commit):
+            # Commit 支持关联多个需求
+            if not obj.linked_issue_ids:
+                obj.linked_issue_ids = []
+            
+            # 合并并去重
+            current_ids = set(obj.linked_issue_ids)
+            current_ids.update(ids)
+            obj.linked_issue_ids = list(current_ids)
+            obj.issue_source = source
+
+        # 创建通用追溯链路记录
+        target_type = 'commit' if isinstance(obj, Commit) else 'mr'
+        target_id = obj.id if isinstance(obj, Commit) else str(obj.iid)
+
+        for ext_id in ids:
+            # 幂等检查：防止重复插入链路记录
+            existing = self.session.query(TraceabilityLink).filter_by(
+                source_system=source,
+                source_id=ext_id,
+                target_system='gitlab',
+                target_type=target_type,
+                target_id=target_id
+            ).first()
+
+            if not existing:
+                link = TraceabilityLink(
+                    source_system=source,
+                    source_type='task' if source == 'zentao' else 'issue',
+                    source_id=ext_id,
+                    target_system='gitlab',
+                    target_type=target_type,
+                    target_id=target_id,
+                    link_type='fixes',
+                    raw_data={'auto_extracted': True, 'found_in': text_to_scan[:200] if 'text_to_scan' in locals() else None}
+                )
+                self.session.add(link)
+
+    def _apply_commit_behavior_analysis(self, commit: Commit) -> None:
+        """分析 Commit 的行为特征（如加班识别）。
+        
+        Args:
+            commit (Commit): 提交实体。
+            
+        Returns:
+            None
+        """
+        if not commit.committed_date:
+            return
+            
+        dt = commit.committed_date
+        # 加班定义：周末，或常规工作时间 (09:00 - 19:00) 之外 (取 20:00 - 08:00)
+        is_weekend = dt.weekday() >= 5
+        is_night = dt.hour >= 20 or dt.hour < 8
+        
+        commit.is_off_hours = is_weekend or is_night
+
+    def _apply_mr_collaboration_analysis(self, project: Project, mr: MergeRequest) -> None:
+        """分析合并请求的协作深度与评审质量。
+        
+        Args:
+            project (Project): 关联项目。
+            mr (MergeRequest): 合并请求实体。
+            
+        Returns:
+            None
+        """
+        try:
+            # 1. 获取审批数
+            approvals = self.client.get_mr_approvals(project.id, mr.iid)
+            mr.approval_count = len(approvals.get('approved_by', []))
+            
+            # 2. 获取评论与首次响应
+            notes = list(self.client.get_mr_notes(project.id, mr.iid))
+            human_notes = [n for n in notes if n.get('system') is False]
+            mr.human_comment_count = len(human_notes)
+            
+            if human_notes:
+                # 按创建时间排序
+                human_notes.sort(key=lambda x: x['created_at'])
+                first_note_at = datetime.fromisoformat(human_notes[0]['created_at'].replace('Z', '+00:00'))
+                mr.first_response_at = first_note_at
+            
+            # 3. 计算评审周期 (以系统通知中提到 "added ... commits" 的次数为近似值)
+            system_notes = [n for n in notes if n.get('system') is True]
+            # 每一波新提交通常对应一次代码打回后的修订
+            updated_commits_notes = [n for n in system_notes if "added" in n.get('body', "").lower() and "commit" in n.get('body', "").lower()]
+            mr.review_cycles = 1 + len(updated_commits_notes)
+            
+            # 4. 计算评审耗时
+            if mr.merged_at and mr.created_at:
+                delta = mr.merged_at - mr.created_at
+                mr.review_time_total = int(delta.total_seconds())
+                
+            # 5. 质量门禁状态 (基于关联流水线记录)
+            pipelines = self.client.get_mr_pipelines(project.id, mr.iid)
+            if pipelines:
+                latest_p = pipelines[0] # 通常是按倒序排列的
+                mr.quality_gate_status = 'passed' if latest_p.get('status') == 'success' else 'failed'
+
+        except Exception as e:
+            logger.warning(f"Failed to analyze MR collaboration for {mr.iid}: {e}")
+
     def _process_generator(self, generator, processor_func, batch_size: int = 500) -> int:
+        """通用的生成器批处理助手。
+        
+        Args:
+            generator: GitLab API 返回的生成器对象。
+            processor_func: 用于处理单批次数据的回调函数。
+            batch_size (int): 每批次处理的数据量，默认 500。
+            
+        Returns:
+            int: 总处理记录数。
+        """
         count = 0
         batch = []
         for item in generator:

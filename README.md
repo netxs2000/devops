@@ -18,9 +18,12 @@
 
 *   **统一身份认证 (Unified Identity)**: 自动关联 GitLab 账号与 SonarQube 账号，识别离职员工和外部贡献者。
 *   **多源数据采集 (Multi-Source Collection)**: 支持 **GitLab** (代码/MR/流水线/Issue)、**SonarQube** (质量/问题/技术债) 和 **Jenkins** (构建任务/构建历史)。
-*   **数据分析集市 (Analytics Mart)**: 内置丰富的 SQL 视图，直接生成 DORA、部门记分卡、资源热力图等报表。
+*   **分析数据集市 (Analytics Mart)**: 内置丰富的 SQL 视图，直接生成 DORA、部门记分卡、资源热力图等报表。
+*   **战略与财务 (OKR & FinOps)**: 支持 **OKR 目标管理** 与 **ROI 成本投入产出分析**，对齐产研与业务。
+*   **工程卓越度 (Developer Experience)**: 采集 MR 评审轮次、深度差异分析、加班分布，全方位量化协作质量。
 *   **合规与风控 (Governance & Risk)**: 监控绕过流程的 Direct Push 和积压的安全漏洞。
 *   **断点续传 (Resumable Sync)**: 针对海量数据同步设计，支持意外中断后自动恢复。
+*   **极致简洁架构 (Refactor)**: 采用微内核 + 插件工厂模型，代码资产完全模块化，核心逻辑与具体数据源解耦。
 
 ## 🛠️ 技术栈 (Tech Stack)
 

@@ -78,7 +78,7 @@ class IdentityManager:
             )
             session.add(user)
             session.flush() # 获取 ID
-            logger.info(f"Created new global user: {username}")
+            logger.info(f"Created new global user: {final_username}")
 
         # 4. 建立新的映射记录
         mapping = IdentityMapping(

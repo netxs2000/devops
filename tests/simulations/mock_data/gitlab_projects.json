@@ -1,0 +1,26 @@
+[
+    {
+        "id": 101,
+        "name": "Frontend Web App",
+        "name_with_namespace": "Product Group / Frontend Web App",
+        "path_with_namespace": "product-group/frontend-web-app",
+        "default_branch": "main",
+        "web_url": "https://gitlab.com/product-group/frontend-web-app",
+        "visibility": "public",
+        "archived": false,
+        "star_count": 10,
+        "forks_count": 2,
+        "last_activity_at": "2025-12-19T08:00:00Z",
+        "created_at": "2024-01-01T10:00:00Z",
+        "statistics": {
+            "repository_size": 2048000,
+            "commit_count": 500
+        },
+        "namespace": {
+            "id": 10,
+            "name": "Product Group",
+            "path": "product-group",
+            "kind": "group"
+        }
+    }
+]

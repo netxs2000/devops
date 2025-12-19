@@ -59,9 +59,20 @@
 
 #### 💰 投入产出比 (ROI Efficiency)
 *   **人均吞吐量 (Throughput per FTE)**: 平均每位全职人力交付的 MR 数量。
-*   **需求成本 (Cost per Issue)**: 交付一个需求平均消耗的工时。
+*   **单位成本 (Cost per Unit)**: 交付一个需求或特性平均消耗的基础设施与人力费用。
 
-### 2.4 流程健康 (Governance & Process)
+### 2.4 协作与文化 (Collaboration & Experience) (New)
+*关注“怎么做到的”*
+
+#### 📈 评审深度 (Review Depth)
+*   **评审轮次 (Review Cycles)**: MR 从开启到合并间发生的正式修订与再评审次数。
+*   **解读**: 轮次适中最好（1-3轮）。大于5轮可能意味着工程基座腐烂或沟通不畅。
+
+#### ⚖️ 工作负荷与健康 (Workload & Balance)
+*   **加班提交占比 (Off-hours Activity Ratio)**: 在深夜或周末发生的提交比例。
+*   **解读**: 持续高占比可能引发团队倦怠压力，需及时干预。
+
+### 2.5 流程健康 (Governance & Process)
 *关注“规不规”*
 
 #### 🚨 流程违规率 (Direct Push Rate)

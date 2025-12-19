@@ -11,7 +11,7 @@
 *   **OS**: Linux (Ubuntu 20.04+, CentOS 7+) / Windows Server
 *   **Runtime**: Python 3.9+
 *   **Database**: PostgreSQL 12+
-*   **Message Queue**: RabbitMQ 3.8+ (必选，用于任务分发)
+*   **Message Queue**: RabbitMQ 3.8+ (必选，系统核心异步总线，用于支持海量数据采集与重试)
 
 ## 2. 安装步骤 (Installation)
 
@@ -57,6 +57,7 @@ python scripts/init_discovery.py
 | `url` | GitLab 实例地址 | `https://gitlab.company.com` |
 | `token` | 具有 `api` 权限的 Personal Access Token | `glpat-xxxxxxxx` |
 | `nop_token` | (可选) 备用 Token，主 Token 限流时切换 | `glpat-yyyyyyyy` |
+| `enable_deep_analysis`| 是否开启深度分析模式 (Events, Diff, Wiki) | `true` |
 
 ### [sonarqube]
 | 参数 | 说明 | 示例 |

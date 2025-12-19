@@ -42,6 +42,8 @@
     *   `gitlab`: 采集 Commit, MR, Pipeline, Issue, Note。
     *   `sonarqube`: 采集 Coverage, Duplications, TechDebt。
     *   `jenkins`: 采集 Job metadata, Build history, Duration, Result (New)。
+*   **Factory Registry (New)**: 引入 `PluginRegistry` 工厂，支持 Client 和 Worker 的零硬编码实例化，极大提升了新插件的接入效率。
+*   **Modular Processing**: GitLab 同步逻辑解耦为 `DiffAnalyzer` (代码分析)、`IdentityMatcher` (身份识别) 和 `UserResolver` (组织映射) 三大独立模块。
 *   **Data Warehouse**: PostgreSQL 星型模型存储，提供 SQL Views 层作为数据服务接口。
 
 ---
@@ -113,6 +115,14 @@
 #### R-ANALYTICS-09: 构建效能分析 (Jenkins Analytics) (New)
 *   **描述**: 追踪构建成功率、构建耗时趋势、构建触发分布（SCM vs Manual）。
 *   **验收标准**: 提供 SQL View，能准确输出各 Job 的平均耗时及构建健康度。
+
+#### R-ANALYTICS-10: 战略对齐与 OKR (OKR & Alignment) (New)
+*   **描述**: 支持录入 OKR 目标并将其与产品、项目的产出指标自动化关联。
+*   **验收标准**: 能展示 OKR 进度的实时自动化更新。
+
+#### R-ANALYTICS-11: 财务与 ROI 分析 (FinOps & ROI) (New)
+*   **描述**: 采集基础设施与人力成本，计算单一需求或产品的 ROI。
+*   **验收标准**: 提供 `view_pmo_roi_efficiency`，展示单位投入的产出效率。
 
 ---
 

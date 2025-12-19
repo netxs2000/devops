@@ -22,78 +22,92 @@ from .plugins import gitlab, sonarqube
 logging.basicConfig(level=Config.LOG_LEVEL)
 logger = logging.getLogger('Worker')
 
+def _get_plugin_configs(source: str) -> dict:
+    """根据数据源获取对应的配置参数。
+    
+    Args:
+        source: 数据源名称 (gitlab, sonarqube, jenkins 等)
+        
+    Returns:
+        包含 client 和 worker 配置的字典
+    """
+    configs = {
+        'gitlab': {
+            'client': {
+                'url': Config.GITLAB_URL,
+                'token': Config.GITLAB_PRIVATE_TOKEN,
+                'rate_limit': Config.REQUESTS_PER_SECOND
+            },
+            'worker': {
+                'enable_deep_analysis': Config.ENABLE_DEEP_ANALYSIS
+            }
+        },
+        'sonarqube': {
+            'client': {
+                'url': Config.SONARQUBE_URL,
+                'token': Config.SONARQUBE_TOKEN,
+                'rate_limit': Config.REQUESTS_PER_SECOND
+            },
+            'worker': {
+                'sync_issues': Config.SONARQUBE_SYNC_ISSUES
+            }
+        },
+        'jenkins': {
+            'client': {
+                'url': Config.JENKINS_URL,
+                'token': Config.JENKINS_TOKEN,
+                'user': Config.JENKINS_USER
+            },
+            'worker': {
+                'build_limit': Config.JENKINS_BUILD_SYNC_LIMIT
+            }
+        }
+    }
+    return configs.get(source, {'client': {}, 'worker': {}})
+
 def process_task(ch, method, properties, body):
     """处理 MQ 消息的回调函数。"""
     task = {}
     session = None
     try:
         task = json.loads(body)
-        source = task.get('source', 'gitlab') # 默认为 gitlab (向后兼容)
+        source = task.get('source', 'gitlab')
         
         logger.info(f"Received task: {task} (source={source})")
         
-        # 获取对应的 Worker 类
-        worker_cls = PluginRegistry.get_worker(source)
-        if not worker_cls:
-            raise ValueError(f"No worker registered for source: {source}")
+        # 获取配置
+        plugin_cfg = _get_plugin_configs(source)
+        
+        # 1. 自动实例化客户端
+        client = PluginRegistry.get_client_instance(source, **plugin_cfg['client'])
+        if not client:
+            raise ValueError(f"No client registered or invalid config for source: {source}")
             
-        # 获取对应的 Client 类
-        client_cls = PluginRegistry.get_client(source)
-        if not client_cls:
-            raise ValueError(f"No client registered for source: {source}")
-            
-        # 实例化 Client
-        client = None
-        if source == 'gitlab':
-            client = client_cls(
-                url=Config.GITLAB_URL, 
-                token=Config.GITLAB_PRIVATE_TOKEN,
-                rate_limit=Config.REQUESTS_PER_SECOND
-            )
-        elif source == 'sonarqube':
-            client = client_cls(
-                url=Config.SONARQUBE_URL,
-                token=Config.SONARQUBE_TOKEN,
-                rate_limit=Config.REQUESTS_PER_SECOND
-            )
-        else:
-            raise ValueError(f"Unknown source or missing config for: {source}")
-            
-        # 创建数据库会话
+        # 2. 创建数据库会话
         engine = create_engine(Config.DB_URI)
         Session = sessionmaker(bind=engine)
         session = Session()
         
-        # 实例化并执行 Worker
-        worker = None
-        if source == 'gitlab':
-            worker = worker_cls(
-                session, 
-                client, 
-                enable_deep_analysis=Config.ENABLE_DEEP_ANALYSIS
-            )
-        elif source == 'sonarqube':
-            worker = worker_cls(
-                session, 
-                client, 
-                sync_issues=Config.SONARQUBE_SYNC_ISSUES
-            )
-        else:
-            # Fallback for generic workers
-            worker = worker_cls(session, client)
+        # 3. 自动实例化 Worker
+        worker = PluginRegistry.get_worker_instance(
+            source, 
+            session, 
+            client, 
+            **plugin_cfg['worker']
+        )
+        if not worker:
+            raise ValueError(f"No worker registered for source: {source}")
 
+        # 4. 执行任务
         worker.process_task(task)
         
-        # 确认消息处理完成
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        logger.info("Task processed successfully.")
+        logger.info(f"Task for {source} processed successfully.")
         
     except Exception as e:
         logger.error(f"Error processing task: {e}")
         if session:
             session.rollback()
-        # 这里可以选择拒绝消息(requeue=False)或重试(requeue=True)
-        # 为防止死循环，暂时不重试
         ch.basic_ack(delivery_tag=method.delivery_tag)
     finally:
         if session:

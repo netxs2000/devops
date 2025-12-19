@@ -1,0 +1,16 @@
+[
+    {
+        "name": "Frontend Web App",
+        "fullName": "frontend-build",
+        "url": "http://mock-jenkins.com/job/frontend-build/",
+        "color": "blue",
+        "description": "Build for frontend project"
+    },
+    {
+        "name": "backend-api",
+        "fullName": "backend-api",
+        "url": "http://jenkins.example.com/job/backend-api/",
+        "color": "red",
+        "description": "Backend API service"
+    }
+]

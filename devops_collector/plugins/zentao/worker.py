@@ -95,7 +95,8 @@ class ZenTaoWorker(BaseWorker):
     def _sync_product(self, product_id: int) -> Optional[ZenTaoProduct]:
         product = self.session.query(ZenTaoProduct).filter_by(id=product_id).first()
         if not product:
-            p_data = self.client._get(f"/products/{product_id}")
+            response = self.client._get(f"/products/{product_id}")
+            p_data = response.json()
             product = ZenTaoProduct(
                 id=p_data['id'],
                 name=p_data['name'],

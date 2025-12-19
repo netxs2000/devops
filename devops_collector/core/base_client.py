@@ -15,7 +15,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
 import requests
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,17 @@ class RateLimiter:
         """阻塞等待直到获取到令牌。"""
         while not self.get_token():
             time.sleep(0.1)
+
+
+def is_retryable_exception(exception: Exception) -> bool:
+    """判断异常是否值得重试。
+    
+    401 (Unauthorized) 和 403 (Forbidden) 通常表示配置错误，重试无意义。
+    """
+    if isinstance(exception, requests.exceptions.HTTPError):
+        if exception.response.status_code in [401, 403]:
+            return False
+    return isinstance(exception, requests.exceptions.RequestException)
 
 
 class BaseClient(ABC):
@@ -116,7 +127,7 @@ class BaseClient(ABC):
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=4, max=60),
-        retry=retry_if_exception_type((requests.exceptions.RequestException,))
+        retry=retry_if_exception(is_retryable_exception)
     )
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> requests.Response:
         """发送 GET 请求。
@@ -159,12 +170,19 @@ class BaseClient(ABC):
                 raise  # 不重试认证错误
             raise
     
-    def _post(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> requests.Response:
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=4, max=60),
+        retry=retry_if_exception(is_retryable_exception)
+    )
+    def _post(self, endpoint: str, data: Optional[Any] = None, json: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> requests.Response:
         """发送 POST 请求。
         
         Args:
             endpoint: API 端点
-            data: 请求体数据
+            data: 请求体数据 (bytes 或 string)
+            json: 请求体数据 (JSON)
+            headers: 额外的请求头
             
         Returns:
             Response 对象
@@ -172,14 +190,50 @@ class BaseClient(ABC):
         self.limiter.wait_for_token()
         url = f"{self.base_url}/{endpoint}"
         
-        response = requests.post(
-            url, 
-            headers=self.headers, 
-            json=data, 
-            timeout=self.timeout
-        )
-        response.raise_for_status()
-        return response
+        req_headers = self.headers.copy() if self.headers else {}
+        if headers:
+            req_headers.update(headers)
+            
+        try:
+            response = requests.post(
+                url, 
+                headers=req_headers, 
+                data=data,
+                json=json, 
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code in [401, 403]:
+                logger.error(f"Auth error: {e}")
+                raise
+            raise
+
+    @retry(
+        stop=stop_after_attempt(5),
+        wait=wait_exponential(multiplier=1, min=4, max=60),
+        retry=retry_if_exception(is_retryable_exception)
+    )
+    def _put(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> requests.Response:
+        """发送 PUT 请求。"""
+        self.limiter.wait_for_token()
+        url = f"{self.base_url}/{endpoint}"
+        
+        try:
+            response = requests.put(
+                url, 
+                headers=self.headers, 
+                json=data, 
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code in [401, 403]:
+                logger.error(f"Auth error: {e}")
+                raise
+            raise
     
     @abstractmethod
     def test_connection(self) -> bool:

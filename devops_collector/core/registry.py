@@ -123,6 +123,40 @@ class PluginRegistry:
         return list(set(cls._clients.keys()) | set(cls._workers.keys()))
     
     @classmethod
+    def get_client_instance(cls, name: str, **kwargs) -> Optional[object]:
+        """获取并实例化客户端。
+        
+        Args:
+            name: 数据源名称
+            **kwargs: 传递给客户端构造函数的命名参数
+            
+        Returns:
+            实例化后的客户端对象，如果未找到类则返回 None
+        """
+        client_cls = cls.get_client(name)
+        if not client_cls:
+            return None
+        return client_cls(**kwargs)
+
+    @classmethod
+    def get_worker_instance(cls, name: str, session: object, client: object, **kwargs) -> Optional[object]:
+        """获取并实例化 Worker。
+        
+        Args:
+            name: 数据源名称
+            session: 数据库会话
+            client: 客户端实例
+            **kwargs: 传递给 Worker 构造函数的命名参数
+            
+        Returns:
+            实例化后的 Worker 对象，如果未找到类则返回 None
+        """
+        worker_cls = cls.get_worker(name)
+        if not worker_cls:
+            return None
+        return worker_cls(session, client, **kwargs)
+
+    @classmethod
     def clear(cls) -> None:
         """清空所有注册 (主要用于测试)。"""
         cls._clients.clear()

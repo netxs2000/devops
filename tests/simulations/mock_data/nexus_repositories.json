@@ -1,0 +1,14 @@
+[
+    {
+        "name": "maven-releases",
+        "type": "hosted",
+        "format": "maven2",
+        "url": "http://mock-nexus.com/repository/maven-releases"
+    },
+    {
+        "name": "npm-internal",
+        "type": "hosted",
+        "format": "npm",
+        "url": "http://mock-nexus.com/repository/npm-internal"
+    }
+]

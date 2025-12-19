@@ -1,0 +1,53 @@
+[
+    {
+        "id": 1001,
+        "iid": 1,
+        "project_id": 101,
+        "title": "Implement Login Page",
+        "description": "Task for authentication",
+        "state": "closed",
+        "created_at": "2025-12-01T10:00:00Z",
+        "updated_at": "2025-12-05T15:00:00Z",
+        "closed_at": "2025-12-05T15:00:00Z",
+        "labels": [
+            "type::feature",
+            "priority::P1"
+        ],
+        "author": {
+            "id": 1001,
+            "name": "Zhang San",
+            "username": "zhangsan"
+        },
+        "time_stats": {
+            "time_estimate": 36000,
+            "total_time_spent": 54000,
+            "human_time_estimate": "10h",
+            "human_total_time_spent": "15h"
+        }
+    },
+    {
+        "id": 1002,
+        "iid": 2,
+        "project_id": 101,
+        "title": "Bug: Header overlap",
+        "description": "UI bug on mobile",
+        "state": "opened",
+        "created_at": "2025-12-10T09:00:00Z",
+        "updated_at": "2025-12-11T10:00:00Z",
+        "labels": [
+            "type::bug",
+            "priority::P2"
+        ],
+        "author": {
+            "id": 1002,
+            "name": "Li Si",
+            "username": "lisi"
+        },
+        "time_stats": {
+            "time_estimate": 7200,
+            "total_time_spent": 0,
+            "human_time_estimate": "2h",
+            "human_total_time_spent": null
+        }
+    }
+]

@@ -1,4 +1,99 @@
 
+## 🗓️ 2025-12-19 每日工作总结 - netxs
+
+### 🎯 今日焦点与目标达成
+
+同步远程仓库 `origin/main` 分支的最新代码，确保本地开发环境包含所有最新的插件功能测试与核心模型优化。
+
+### ✅ 主要完成的工作 (Highlights)
+
+*   **代码同步与环境更新**：
+    *   执行 `git pull origin main`，同步了最新研发成果。
+    *   **新增测试套件**: 集成了包括 `tests/devops_collector/plugins/jira` 和 `tests/devops_collector/plugins/zentao` 在内的多个插件测试用例，增强了对第三方工具采集链路的自动化验证能力。
+    *   **核心模型验证**: 同步了针对 `identity_manager` 和 `product_model` 的测试更新，确保身份识别与产品数据模型的一致性。
+
+### 🚧 遗留问题与障碍 (Blockers)
+
+*   **无**：本地代码库已完成清理并成功与远程同步，暂无阻塞性问题。
+
+### 🚀 下一步计划 (Next Steps)
+
+1.  **运行回归测试**: 针对新拉取的 Jira 和禅道插件测试用例执行本地测试，验证采集逻辑的准确性。
+2.  **配置文件对齐**: 根据 `config.ini` 的要求，检查并更新与新插件相关的本地配置参数。
+
+
+---
+
+## 🗓️ 2025-12-18 每日工作总结 - netxs
+
+### 🎯 今日焦点与目标达成
+
+成功构建并发布 **GitLab 测试管理中心 (Test Management Hub)** 原型，同步确立了高度标准化的 GitLab 治理体系，实现了从开发、评审到测试的全链路效能闭环。
+
+### ✅ 主要完成的工作 (Highlights)
+
+*   **测试枢纽原型开发 (Test Management Hub Prototyping)**：
+    *   **后端逻辑**: 基于 FastAPI 开发 `test_hub/main.py`，实现 Issue 智能解析引擎，将 Markdown 描述自动转化为结构化测试步骤。
+    *   **全栈交互**: 构建 `test_hub/static/index.html` 仪表盘，支持实时执行测试、自动更新 GitLab 状态及 MR 评审统计看板。
+    *   **实时同步**: 配置 Webhook 处理机制，实现 GitLab 与本地枢纽的双向同步。
+
+*   **标签自动化与质量守门员 (Labeling & Quality Gate)**：
+    *   **脚本体系**: 优化 `scripts/create_gitlab_labels.py`，一键生成包括全量省份标签 (`province::*`)、缺陷分类 (`bug-category::*`)、测试结果及原因在内的标准化标签。
+    *   **合规审计**: 新增 `scripts/check_issue_labels.py` 和 `check_issue_resolution.py`，自动化检查 Issue 及 MR 的合规性，确保度量数据准确性。
+
+*   **流程标准化与文档化 (Standardization & Documentation)**：
+    *   **高标准模板**: 在 `.gitlab/` 集成 `Bug.md`, `Requirement.md`, `TestCase.md` 及 MR 默认模板，强制引导结构化输入。
+    *   **权威文档**: 发布 `GITLAB_METRICS_DATA_SOURCES.md`（度量溯源）与 `ISSUE_LABEL_ENFORCEMENT_GUIDE.md`（标签指南）。
+    *   **部署指南**: 编写 `test_hub/WEBHOOK_SETUP_GUIDE.md`，打通研发与测试的协同配置路径。
+
+*   **环境治理与清理 (Cleanliness & Governance)**：
+    *   **代码库瘦身**: 删除了 `devops_collector/models/` 目录下过时的架构分析与重构报告，确保核心代码库的简洁与聚焦。
+    *   **规范化开发**: 坚持 Google Python Style Guide，所有新增逻辑模块化实现，并采用 Google Docstrings 风格进行深度注释。
+
+### 🚧 遗留问题与障碍 (Blockers)
+
+*   **Token 安全**: 本地 `config.ini` 的 Token 管理需进一步提升到系统环境变量级别。
+*   **Webhook 稳定性**: 在高负载推送场景下，Test Hub 的异步能力待进一步压测。
+
+### 🚀 下一步计划 (Next Steps)
+
+1.  **标签跨组同步**: 扩展脚本以支持一键初始化整个 GitLab Subgroup 的标签体系，实现多项目对齐。
+2.  **看板集成**: 尝试将 Test Hub 的统计图表以 Wiki 或评论形式自动回传至 GitLab，实现全透明进度管理。
+
+
+---
+
+## 🗓️ 2025-12-17 每日工作总结 - netxs
+
+### 🎯 今日焦点与目标达成
+
+深化 DevOps 效能分析维度，重点解决了跨团队贡献度量与 GitLab 资源层级化组织难题，为后续的自动化数据采集奠定了结构化基础。
+
+### ✅ 主要完成的工作 (Highlights)
+
+*   **效能度量与贡献分析 (Metrics & Analytics)**：
+    *   **贡献度量脚本**: 开发并上线 `scripts/gitlab_user_contributions.py`，支持基于线程池的高并发数据采集，实现对用户提交次数、合并请求、代码增删行数及参与项目数的全维度统计。
+    *   **Sonar 深度集成**: 增强了 SonarQube 数据采集插件，引入 `quality_metrics.sql`，支持代码质量指标的结构化存储。
+
+*   **资源组织与治理 (Resource Organization)**：
+    *   **层级模型 design**: 确立了 “产品线 (Product Line) > 产品 (Product) > 项目 (Project)” 的 GitLab 资源组织架构。
+    *   **架构升级**: 更新 `ARCHITECTURE.md`，明确了基于组 (Groups) 与子组 (Subgroups) 的权限管理与 Issue 聚合方案。
+
+*   **系统规划与文档化 (Planning & Documentation)**：
+    *   **多维度分析计划**: 发布了 `PMO_ANALYTICS_PLAN.md`, `HR_ANALYTICS_PLAN.md` 和 `TEAM_ANALYTICS_PLAN.md`，定义了从组织治理、人力风险到团队产出的完整指标矩阵。
+    *   **技术溯源**: 在 `DATA_DICTIONARY.md` 中补充了针对 GitLab 核心元数据的定义，确保技术实现与业务逻辑的高度一致。
+
+### 🚧 遗留问题与障碍 (Blockers)
+
+*   **API 速率限制**: 在全量拉取 GitLab 所有项目提交记录时，面临远程服务器速率限制 (Rate Limiting) 风险，需考虑增加重试机制或增量同步逻辑。
+
+### 🚀 下一步计划 (Next Steps)
+
+1.  **标签系统设计**: 开始设计跨项目的自动化标签注入脚本，以支持按产品线维度的 Issue 自动标记。
+2.  **SQL 视图落地**: 开始在数据库中实现基于新设计的层级结构的聚合视图。
+
+---
+
 ## 🗓️ 2025-12-16 每日工作总结 - DevOps Team
 
 ### 🎯 今日焦点与目标达成
@@ -26,4 +121,108 @@
 ### 🚀 下一步计划 (Next Steps)
 
 1.  **BI 可视化 (Visualization)**: 将三大 SQL 视图接入 Superset/Grafana，搭建 PMO 战略指挥大屏与部门效能仪表盘。
+
 2.  **风险告警闭环 (Alerting)**: 基于 `view_pmo_governance_risk` 开发每日飞书/钉钉告警，阻断“绕过流程”发布行为。
+
+---
+
+## 🗓️ 2025-12-15 每日工作总结 - netxs
+
+### 🎯 今日焦点与目标达成
+
+完成了 DevOps 数据采集引擎 **DevOps Collector** 的核心框架搭建，并实现了 GitLab 与 SonarQube 的全量数据同步与深度分析能力，奠定了平台的数据底座。
+
+### ✅ 主要完成的工作 (Highlights)
+
+*   **采集引擎核心 (Collector Core Framework)**：
+    *   **插件化架构**: 实现了 `devops_collector/core` 基础类，支持 `Registry` 模式，方便快速扩展不同工具链的采集插件。
+    *   **调度与执行**: 开发了 `scheduler.py` 与 `worker.py`，建立了采集任务的异步执行与并发控制机制。
+
+*   **数据分析视图 (Data Analytics Views - GitLab)**：
+    *   **深度洞察 SQL**: 爆发式输出了 12+ 套专业分析视图，涵盖了 **DORA Metrics**（效能四指标）、代码评审质量 (`review_quality.sql`)、内源协作 (`innersource.sql`) 以及极具价值的 **User Impact** (用户影响力) 分析。
+    *   **行为建模**: 构建了用户生命周期 (`user_lifecycle.sql`) 与热力图看板，实现了研发行为的精准建模。
+
+*   **扫描与质量集成 (Scanner Integration - SonarQube)**：
+    *   **自动化扫描**: 实现了 SonarQube 插件，通过 `quality_metrics.sql` 将代码重复率、圈复杂度等硬性指标与项目效能挂钩。
+
+*   **配套工具链 (Utility Scripts & DevOps)**：
+    *   **脚本重构**: 整理并优化了 `scripts/` 目录，包括依赖检查、活跃度分析及逻辑校验等多个实用工具。
+    *   **度量定义**: 编写了《活跃度定义说明.md》，从业务视角定义了什么是“有效活跃”，消除了多方沟通的信息差。
+
+### 🚧 遗留问题与障碍 (Blockers)
+
+*   **数据库性能优化**: 随着 10 多套深度分析视图的并行计算，需关注大规模数据量下的 SQL 执行效率，下一步需考虑索引优化或物化视图 (Materialized Views) 方案。
+
+### 🚀 下一步计划 (Next Steps)
+
+1.  **架构升级方案**: 基于当前的采集能力，向上层构建更加业务化的 “PMO/HR/Team” 三大战略分析看板。
+
+2.  **可视化对接**: 调研 Superset 对复用复杂 SQL 视图的兼容性。
+
+---
+
+## 🗓️ 2025-12-14 每日工作总结 - netxs
+
+### 🎯 今日焦点与目标达成
+
+**项目启动与架构蓝图绘制**。确立了 DevOps 效能平台的建设愿景，完成了核心技术选型与四层架构模型设计，为系统的长期可扩展性奠定了理论基础。
+
+### ✅ 主要完成的工作 (Highlights)
+
+*   **平台愿景与需求定义 (Vision & Requirements)**：
+    *   **愿景设定**: 明确了打造“企业级研发效能驾驶舱”的目标，重点落地 DORA、SPACE 框架及 ROI 分析。
+    *   **需求梳理**: 编写了《需求规格说明书 (SRS)》初稿，识别了数据分散、指标主观、协作黑盒等 3 大核心痛点。
+
+*   **架构体系设计 (Architecture Blueprinting)**：
+    *   **四层模型**: 设计了由“采集层、核心层、存储层、服务层”组成的模块化 ETL 架构。
+    *   **ELT 哲学**: 确立了 “Python 搬运数据，SQL Views 承载业务逻辑 (Analytics-in-Database)” 的核心设计理念，以实现指标定义的快速迭代。
+    *   **插件化机制**: 定义了微内核 + 插件的扩展模式，确保 GitLab、SonarQube、Jenkins 等工具链的解耦集成。
+
+*   **底层标准确立 (Foundational Standards)**：
+    *   **技术栈选型**: 确定使用 Python 3.x + PostgreSQL + RabbitMQ 的技术组合。
+    *   **工程规范**: 强制执行 **Google Python Style Guide** 与 **Google Docstrings** 注释标准，确立了以 `config.ini` 为核心的配置驱动开发模式。
+    *   **身份建模**: 提出了“自然人身份归一化 (Unified Identity)”方案，通过 Email 建立跨工具的账号关联机制。
+
+### 🚧 遗留问题与障碍 (Blockers)
+
+*   **环境依赖准备**: 需尽快搭建测试用的 GitLab 与 SonarQube 沙箱环境，以支持后续的 API 联调验证。
+
+### 🚀 下一步计划 (Next Steps)
+
+1.  **代码骨架搭建**: 开始编写 `devops_collector` 核心逻辑及第一个采集插件 (GitLab)。
+
+2.  **DDL 映射**: 根据数据字典完成基础 Fact Tables 的 DDL 脚本编写。
+
+---
+
+## 🗓️ 2025-12-13 每日工作总结 - netxs
+
+### 🎯 今日焦点与目标达成
+
+**效能度量模型设计与术语标准确立**。重点攻克了“活跃度”与“贡献影响力”的量化定义难题，为平台从技术实现向业务价值转化确立了核心算法逻辑。
+
+### ✅ 主要完成的工作 (Highlights)
+
+*   **度量体系标准定义 (Standard Definition)**：
+    *   **活跃度三级阈值**: 确立了以 30/90/365 天为阶梯的用户与项目活跃度分类标准（Active/Dormant/Churned），通过 SQL 逻辑实现自动化状态判定。
+    *   **贡献影响力建模**: 定义了多维贡献评分公式：`Score = (MRs × 10) + (Issues × 2) + (Commits × 1)`，回归研发本质，强调代码审查（MR）的最高价值权重。
+
+*   **业务逻辑预研 (Logic Prototyping)**：
+    *   **时序分析逻辑**: 设计了基于“周内小时热力图”和“年度趋势”的时间维度分析框架。
+    *   **部门效能指标**: 引入了“部门活力评分 (Vitality Score)”概念，量化活跃项目占比。
+
+*   **技术契约达成 (Technical Agreement)**：
+    *   **视图层驱动**: 确立了以 `view_user_lifecycle.sql` 和 `view_user_impact.sql` 为代表的 SQL 驱动架构。
+    *   **数据源对齐**: 明确了采集引擎必须覆盖 `commits`, `projects`, `merge_requests`, `issues` 五大核心事实来源。
+
+### 🚧 遗留问题与障碍 (Blockers)
+
+*   **权重争议**: 核心算法中 MR 与 Commit 的权重比例（10:1）虽已初步通过，但后续在实际运行中需根据团队反馈进行灵敏度校准。
+
+### 🚀 下一步计划 (Next Steps)
+
+1.  **正式立项文档**: 完成《活跃度定义说明.md》的最终编撰。
+2.  **需求闭环**: 将讨论结果输出至《需求规格说明书》，形成项目一期基线。
+
+
+
