@@ -1,0 +1,16 @@
+{
+    "maxResults": 50,
+    "startAt": 0,
+    "isLast": true,
+    "values": [
+        {
+            "id": 1,
+            "name": "PROJ Board",
+            "type": "scrum",
+            "location": {
+                "projectKey": "PROJ",
+                "displayName": "E-Commerce Rebirth"
+            }
+        }
+    ]
+}

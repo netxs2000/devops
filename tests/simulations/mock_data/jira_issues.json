@@ -1,0 +1,84 @@
+{
+    "total": 2,
+    "issues": [
+        {
+            "id": "10001",
+            "key": "PROJ-1",
+            "fields": {
+                "summary": "Implement shopping cart",
+                "description": "User should be able to add items to cart",
+                "status": {
+                    "name": "In Progress"
+                },
+                "priority": {
+                    "name": "High"
+                },
+                "issuetype": {
+                    "name": "Story"
+                },
+                "assignee": {
+                    "accountId": "jira_lisi",
+                    "displayName": "Li Si",
+                    "emailAddress": "lisi@example.com"
+                },
+                "reporter": {
+                    "accountId": "jira_zhangsan",
+                    "displayName": "Zhang San",
+                    "emailAddress": "zhangsan@example.com"
+                },
+                "creator": {
+                    "accountId": "jira_zhangsan",
+                    "displayName": "Zhang San"
+                },
+                "created": "2025-12-05T10:00:00.000Z",
+                "updated": "2025-12-07T14:30:00.000Z"
+            },
+            "changelog": {
+                "histories": [
+                    {
+                        "id": "101",
+                        "author": {
+                            "displayName": "Li Si"
+                        },
+                        "created": "2025-12-07T14:30:00.000Z",
+                        "items": [
+                            {
+                                "field": "status",
+                                "fromString": "To Do",
+                                "toString": "In Progress"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "10002",
+            "key": "PROJ-2",
+            "fields": {
+                "summary": "Fix login bug",
+                "description": "Login fails on mobile devices",
+                "status": {
+                    "name": "Open"
+                },
+                "priority": {
+                    "name": "Critical"
+                },
+                "issuetype": {
+                    "name": "Bug"
+                },
+                "assignee": null,
+                "reporter": {
+                    "accountId": "jira_lisi",
+                    "displayName": "Li Si"
+                },
+                "creator": {
+                    "accountId": "jira_lisi",
+                    "displayName": "Li Si"
+                },
+                "created": "2025-12-08T09:00:00.000Z",
+                "updated": "2025-12-08T09:00:00.000Z"
+            }
+        }
+    ]
+}

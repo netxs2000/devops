@@ -1,0 +1,21 @@
+{
+    "number": 101,
+    "url": "http://mock-jenkins.com/job/frontend-build/101/",
+    "result": "SUCCESS",
+    "duration": 120500,
+    "timestamp": 1734580800000,
+    "building": false,
+    "queueId": 501,
+    "actions": [
+        {
+            "_class": "hudson.model.CauseAction",
+            "causes": [
+                {
+                    "_class": "hudson.model.Cause$UserIdCause",
+                    "userName": "zhangsan",
+                    "userId": "zhangsan"
+                }
+            ]
+        }
+    ]
+}

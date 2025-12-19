@@ -11,6 +11,10 @@ from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from .client import JenkinsClient
 from .models import JenkinsJob, JenkinsBuild
+from .parser import ReportParser
+from devops_collector.models import (
+    User, Organization, SyncLog, TestExecutionSummary
+)
 from devops_collector.core.identity_manager import IdentityManager
 
 # 尝试导入 GitLab Project 用于映射
@@ -89,9 +93,15 @@ class JenkinsWorker(BaseWorker):
             
             # 尝试映射到 GitLab 项目 (简单匹配 strategy)
             if GitLabProject and not job.gitlab_project_id:
-                # 假设 Job 名称或 FullName 包含 GitLab 项目路径
-                # 这里可以根据实际情况调整匹配逻辑
-                pass
+                # 策略 1: 完全匹配 path_with_namespace
+                gitlab_project = self.session.query(GitLabProject).filter(
+                    (GitLabProject.path_with_namespace == full_name) | 
+                    (GitLabProject.name == job.name)
+                ).first()
+                
+                if gitlab_project:
+                    job.gitlab_project_id = gitlab_project.id
+                    logger.info(f"Mapped Jenkins Job {full_name} to GitLab project {gitlab_project.id}")
             
             count += 1
             if count % 50 == 0:
@@ -164,14 +174,21 @@ class JenkinsWorker(BaseWorker):
                             existing_build.trigger_type = causes[0].get('_class')
                             existing_build.trigger_user = causes[0].get('userName')
                             if existing_build.trigger_user:
+                                # Jenkins 用户名通常即为 ID，我们将其作为 external_id 和 username 同时传入
                                 u = IdentityManager.get_or_create_user(
                                     self.session, 'jenkins', 
-                                    existing_build.trigger_user, # Jenkins ID usually matches username
-                                    name=existing_build.trigger_user
+                                    existing_build.trigger_user,
+                                    name=existing_build.trigger_user,
+                                    username=existing_build.trigger_user
                                 )
                                 existing_build.trigger_user_id = u.id
                 
                 existing_build.raw_data = b_data
+                
+                # 4. 尝试同步测试报告 (如果是已完成的构建)
+                if not existing_build.building and existing_build.result:
+                    self._sync_test_report(job, existing_build)
+
                 count += 1
                 
                 if count % 20 == 0:
@@ -183,6 +200,43 @@ class JenkinsWorker(BaseWorker):
         self.session.commit()
         self.log_success(f"Synced {count} builds for job {job_full_name}")
         return count
+
+    def _sync_test_report(self, job: JenkinsJob, build: JenkinsBuild) -> None:
+        """从 Jenkins 获取并同步测试报告。"""
+        try:
+            report_data = self.client.get_test_report(build.url)
+            if not report_data:
+                return
+
+            summary = ReportParser.parse_jenkins_test_report(
+                project_id=job.gitlab_project_id,
+                build_id=str(build.number),
+                report_data=report_data,
+                job_name=job.name or ""
+            )
+
+            if summary:
+                # 检查是否已存在 (幂等)
+                existing = self.session.query(TestExecutionSummary).filter_by(
+                    project_id=job.gitlab_project_id,
+                    build_id=str(build.number),
+                    test_level=summary.test_level
+                ).first()
+
+                if not existing:
+                    self.session.add(summary)
+                    logger.info(f"Saved test summary for build {build.number} ({summary.test_level})")
+                else:
+                    # 更新已有记录
+                    existing.total_cases = summary.total_cases
+                    existing.passed_count = summary.passed_count
+                    existing.failed_count = summary.failed_count
+                    existing.pass_rate = summary.pass_rate
+                    existing.duration_ms = summary.duration_ms
+                    existing.raw_data = summary.raw_data
+
+        except Exception as e:
+            logger.warning(f"Failed to sync test report for build {build.number}: {e}")
 
 
 # 注册插件

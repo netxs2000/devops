@@ -34,6 +34,10 @@
     *   采集 Pipeline 状态与时长。
     *   采集 Deployment 记录（环境、Ref），作为 **DORA 指标**的核心数据源。
 *   **过程数据**: 采集 Issue（需求/缺陷）和 Notes（评论），支持沟通密度分析。
+*   **CALMS 深度扫描 (New)**: 自动采集 Issue 的 **State/Label/Milestone Resource Events**。通过追踪这些原子事件，系统能够量化“等待浪费”、“需求跳变频率”以及“跨团队响应速度”，为组织文化扫描提供核心依据。
+*   **工程卓越度增强**: 自动计算 MR 的**评审轮次 (Review Cycles)**、**有效评论数**、**代码规范状态 (Lint)** 以及**非工作时间提交频率 (Work-Life Balance)**。
+*   **制品与依赖扫描**: 同步 GitLab Package Registry 中的制品元数据，并自动建立跨项目的模块依赖图谱。
+*   **共享文化 (Sharing)**: 采集 Wiki 变更频率，作为知识库活跃度（Sharing 维度）的度量。
 
 #### 2.1.2 SonarQube 采集插件
 *   **自动映射**: 基于项目路径规则自动关联 GitLab 项目与 SonarQube 项目。
@@ -41,28 +45,68 @@
 *   **趋势记录**: 记录质量随时间的变化趋势，支持历史回溯。
 *   **Issue 同步 (可选)**: 支持同步具体的代码异味、Bug 和漏洞详情（默认关闭，可通过配置开启）。
 
-#### 2.1.3 Jenkins 采集插件 (New)
+#### 2.1.3 Jenkins 采集插件
 *   **任务发现 (Job Discovery)**: 自动同步 Jenkins 实例中的所有 Job 列表及其元数据。
 *   **构建历史 (Builds)**: 
     *   采集构建状态 (Result)、耗时 (Duration)、时间戳。
     *   **触发源分析**: 识别构建是由 SCM 变更、用户手动、还是定时任务触发。
+*   **跨系统映射**: 自动通过 Job 名称匹配 GitLab 项目路径，建立构建与代码库的血缘关系。
 *   **增量同步**: 自动记录同步断点，仅拉取最新的构建记录，支持大规模任务同步。
+
+#### 2.1.4 Jira 采集插件 (New)
+*   **敏捷实体同步**: 完整拉取项目 (Project)、看板 (Board)、迭代 (Sprint) 和问题 (Issue)。
+*   **变更历史 (Changelog)**: 记录状态流转过程（如 To Do -> In Progress），支持计算周期时间 (Cycle Time)。
+*   **工作负载分析**: 统计 Assignee 分布，支持 HR 维度的资源投入分析。
+
+#### 2.1.5 禅道 (ZenTao) 采集插件
+*   **全量生命周期**: 采集产品 (Product)、计划 (Plan)、需求 (Story) 和执行 (ExecutionInstance)。
+*   **结构化映射**: 将禅道内部复杂的层级关系映射为统一的 Issue 模型，确保跨源数据统计的一致性。
+
+#### 2.1.6 Nexus 采集插件 (New)
+*   **资产普查**: 自动同步 Nexus 仓库中的组件 (Components) 与资产 (Assets)。
+*   **校验和记录**: 采集 SHA1/SHA256 校验和，为软件包的唯一性验证提供支持。
+
+#### 2.1.7 JFrog Artifactory 采集插件 (New)
+*   **制品追溯**: 基于 AQL (Artifactory Query Language) 采集制品元数据。
+*   **质量与安全**: 同步下载量统计 (Stats) 和 Xray 安全扫描摘要 (Vulnerabilities)。
+*   **构建血缘**: 自动提取制品属性中的 `build.name`，实现从制品回溯到构建任务的完整链路。
 
 ### 2.2 智能数据处理 (Intelligent Processing)
 
 #### 2.2.1 统一身份归一化 (Identity Matcher)
+*   **独立模块化**: 已重构为独立模块 `IdentityMatcher` 和 `UserResolver`，支持跨插件调用。
 *   **自动匹配**: 系统内置智能匹配引擎，优先基于 **Email** 将 Git 提交记录关联到全局 `users` 表。
 *   **模糊匹配**: 支持基于 Name 或 Username 前缀的辅助匹配策略。
 *   **虚拟账号管理**: 自动标记无公司邮箱的外部贡献者，支持后续手工归并。
 
-#### 2.2.2 断点续传与增量同步 (Resumable Sync)
+#### 2.2.2 插件工厂与实例化 (Plugin Factory) (New)
+*   **零耦合分发**: 主 Worker 进程通过 `PluginRegistry` 动态创建 Client 和 Worker 实例，彻底消除 `if-elif` 硬编码。
+*   **统一配置路由**: 任务根据 `source` 类型自动关联 `config.ini` 中的对应配置项。
+
+#### 2.2.3 断点续传与增量同步 (Resumable Sync)
 *   **状态机**: 每个项目维护 `content_status` (PENDING/SYNCING/COMPLETED)。
 *   **从断点恢复**: 记录同步进度（如 Page Number 或 Last Synced Time），中断后重新运行通过 `sync_state` 自动接续，无需从头重跑。
 *   **Generator 流式处理**: 客户端采用 `yield` 模式逐页拉取数据，结合 `batch save` 自定义批处理，有效防止大规模项目同步时的内存溢出 (OOM)。
 
-#### 2.2.3 组织架构映射 (Organization Mapping)
-*   **自动发现**: 启动时自动扫描 GitLab 顶层 Group 结构。
 *   **层级构建**: 将 Group/Subgroup 映射为标准的四级组织架构，支持部门层级的效能聚合查询。
+
+#### 2.2.4 跨系统映射逻辑 (Cross-System Mapping) (New)
+系统通过“约定优于配置”的原则打通不同工具链的数据：
+*   **SonarQube -> GitLab**: 默认基于 SonarQube 的 `Project Key` 或 `Project Name` 匹配 GitLab 的 `path_with_namespace`。
+*   **Jenkins -> GitLab**: 基于 Jenkins Job 的 `fullName` 或 `name` 与 GitLab 项目名称进行模糊及完全匹配。
+*   **Jira -> GitLab**: 通过关联配置或项目 Key 的命名规范实现双向追踪。
+*   **制品库 -> 构建/代码**: 
+    *   **JFrog**: 通过 `build.name` 属性自动关联至对应的 `jenkins_jobs`。
+    *   **Nexus**: 基于 Maven GAV (GroupId, ArtifactId) 坐标与 GitLab 项目路径的命名契约进行关联。
+*   **核心关联健**: 统一指向 `projects.id`，实现“一个项目，全链洞察”。
+
+#### 2.2.5 容错与自动重试 (Fault Tolerance & Retry) (New)
+系统内置了工业级的异常处理与重试机制，确保在复杂网络环境下的高可用性：
+*   **智能重试策略**: 基于 `tenacity` 实现指数退避重试（Exponential Backoff）。
+*   **精细化异常分类**: 
+    *   **可重试异常**: 如网络超时、连接断开、5xx 服务端错误、429 速率限制。
+    *   **非重试异常**: 如 401/403 认证错误，系统将立即停止并记录 ERROR 日志，防止无效重试。
+*   **速率限制适配**: 自动解析 API 返回的 `Retry-After` 头部，动态调整等待时间。
 
 ---
 
@@ -107,7 +151,17 @@
     - **资产质量**: 维护代码总量, Bug 密度。
 - **实现方式**: `devops_collector/sql/PMO_ANALYTICS.sql`
 
-### 3.5 开发者代码热力图 (User Heatmap)
+### 3.5 战略对齐 (OKR & Alignment) (New)
+- **核心逻辑**: 将底层研发交付指标 (API 调用量、构建频率等) 向上映射至业务目标 (Objective)。
+- **价值**: 让技术产出变得“可理解”，量化技术对业务目标的实际贡献。
+- **维度**: 目标进度百分比, KR 信心指数。
+
+### 3.6 成本与 ROI (FinOps) (New)
+- **核心逻辑**: 结合服务器/云成本与人力工时成本，计算产研投入产出比。
+- **价值**: 优化资源配置，识别长尾低价值项目。
+- **维度**: 单位 Story 交付成本, 部门月度云资源开销趋势。
+
+### 3.7 开发者代码热力图 (User Heatmap)
 - **核心逻辑**: 可视化展示开发者每日的提交频率 (Contribution Graph)。
 - **价值**: 直观呈现开发者的工作节奏与活跃模式。
 - **实现方式**: `devops_collector/sql/HR_ANALYTICS.sql`
@@ -258,14 +312,33 @@ python -m devops_collector.worker
 *   **手动验证 Jenkins**: `python scripts/verify_jenkins_plugin.py`
 *   **数据逻辑验证**: `python scripts/verify_logic.py`
 
-### 5.5 常见问题排查
-*   **同步中断**: 检查日志文件，系统会自动记录失败的项目 ID。重新运行主程序即可自动续传。
-*   **RabbitMQ 连接失败**: 检查 `config.ini` 中 MQ 配置及服务状态。
-*   **身份未关联**: 检查 `users` 表，确认为用户配置了正确的邮箱。
+### 5.6 系统验证与仿真测试 (Validation & Simulation)
+系统内置了“七位一体”全链路仿真测试框架，允许在脱离真实环境的情况下验证从 API 到指标计算的完整逻辑。
+
+**功能特性**:
+- **多源 API 仿真**: 同时拦截并模拟 **GitLab, SonarQube, Jenkins, Jira, ZenTao, Nexus, JFrog** 七个系统的 Rest API 响应。
+- **内存流水线**: 采用 SQLite 内存数据库，支持 50+ 张模型表的自动构建与跨系统一致性校验。
+- **关联路径验证**: 验证从“代码提交”到“构建任务”再到“制品产出”的端到端逻辑链路。
+
+**执行方式**:
+```bash
+# 执行全链路集成仿真测试 (七系统联合)
+python tests/simulations/run_full_integration.py
+
+# 执行制品库专项仿真 (Nexus + JFrog)
+python tests/simulations/run_artifactory_integration.py
+
+# 执行敏捷/管理专项仿真 (Jira + ZenTao)
+python tests/simulations/run_jira_integration.py
+
+# 执行异常场景与容错重试仿真
+python tests/simulations/run_error_scenarios.py
+```
 
 ---
 
 ## 🔮 6. 未来规划 (Roadmap)
 *   **BI 大屏集成**: 计划提供 Superset Dashboard 模板，一键导入上述 SQL 视图的可视化。
-*   **更多插件**: 计划支持 Jenkins (构建详情)、Jira (敏捷管理) 数据源。
+*   **分布式采集加速**: 引入 Celery + Redis 替换当前简单的 Pika 模式，支持海量数据的并发抓取。
 *   **Web 管理端**: 基于 FastAPI 开发轻量级管理后台，用于手动修正用户归属和查看同步状态。
+*   **实时 Webhook**: 增加对各工具 Webhook 的支持，实现从“周期性同步”到“事件驱动更新”的转换。

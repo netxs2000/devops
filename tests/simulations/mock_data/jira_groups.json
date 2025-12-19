@@ -1,0 +1,13 @@
+{
+    "groups": [
+        {
+            "name": "Developers"
+        },
+        {
+            "name": "Testers"
+        },
+        {
+            "name": "Product Owners"
+        }
+    ]
+}

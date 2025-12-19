@@ -1,0 +1,10 @@
+[
+    {
+        "number": 101,
+        "url": "http://mock-jenkins.com/job/frontend-build/101/"
+    },
+    {
+        "number": 102,
+        "url": "http://mock-jenkins.com/job/frontend-build/102/"
+    }
+]

@@ -1,0 +1,20 @@
+[
+    {
+        "id": 5001,
+        "iid": 1,
+        "project_id": 101,
+        "title": "Add Auth Logic",
+        "state": "merged",
+        "created_at": "2025-12-02T10:00:00Z",
+        "updated_at": "2025-12-04T14:00:00Z",
+        "merged_at": "2025-12-04T14:00:00Z",
+        "target_branch": "main",
+        "source_branch": "feat/auth",
+        "author": {
+            "id": 1001,
+            "name": "Zhang San",
+            "username": "zhangsan"
+        },
+        "user_notes_count": 5
+    }
+]

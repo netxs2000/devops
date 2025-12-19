@@ -1,0 +1,12 @@
+[
+    {
+        "id": "10001",
+        "key": "PROJ",
+        "name": "E-Commerce Rebirth",
+        "description": "Redesign of the e-commerce platform",
+        "lead": {
+            "displayName": "Zhang San",
+            "accountId": "jira_zhangsan"
+        }
+    }
+]

@@ -1,0 +1,26 @@
+{
+    "component": {
+        "measures": [
+            {
+                "metric": "coverage",
+                "value": "88.2"
+            },
+            {
+                "metric": "bugs",
+                "value": "12"
+            },
+            {
+                "metric": "vulnerabilities",
+                "value": "3"
+            },
+            {
+                "metric": "code_smells",
+                "value": "150"
+            },
+            {
+                "metric": "ncloc",
+                "value": "15400"
+            }
+        ]
+    }
+}

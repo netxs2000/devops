@@ -1,0 +1,12 @@
+[
+    {
+        "id": 10,
+        "name": "Product Group",
+        "path": "product-group",
+        "full_path": "product-group",
+        "description": "Main product development group",
+        "visibility": "public",
+        "web_url": "https://gitlab.com/product-group",
+        "created_at": "2023-12-01T10:00:00Z"
+    }
+]

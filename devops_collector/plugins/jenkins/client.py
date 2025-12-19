@@ -127,3 +127,23 @@ class JenkinsClient(BaseClient):
         
         response = self._get(endpoint)
         return response.json()
+
+    def get_test_report(self, build_url: str) -> Optional[Dict[str, Any]]:
+        """获取构建的测试报告详情。
+        
+        API: BUILD_URL/testReport/api/json
+        
+        Args:
+            build_url: Build 的完整 URL 或相对路径
+        """
+        endpoint = build_url.replace(self.base_url, "").strip('/')
+        endpoint = f"{endpoint}/testReport/api/json"
+        
+        try:
+            response = self._get(endpoint)
+            if response.status_code == 200:
+                return response.json()
+            return None
+        except Exception:
+            # 并不是所有构建都有测试报告，忽略错误
+            return None

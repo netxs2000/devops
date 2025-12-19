@@ -1,0 +1,37 @@
+{
+    "items": [
+        {
+            "id": "comp_1",
+            "repository": "maven-releases",
+            "format": "maven2",
+            "group": "com.example",
+            "name": "core-library",
+            "version": "1.0.0",
+            "assets": [
+                {
+                    "id": "asset_1",
+                    "path": "com/example/core-library/1.0.0/core-library-1.0.0.jar",
+                    "downloadUrl": "http://mock-nexus.com/repository/maven-releases/com/example/core-library/1.0.0/core-library-1.0.0.jar",
+                    "fileSize": 1048576,
+                    "checksum": {
+                        "sha1": "sha1-core",
+                        "sha256": "sha256-core",
+                        "md5": "md5-core"
+                    }
+                },
+                {
+                    "id": "asset_2",
+                    "path": "com/example/core-library/1.0.0/core-library-1.0.0.pom",
+                    "downloadUrl": "http://mock-nexus.com/repository/maven-releases/com/example/core-library/1.0.0/core-library-1.0.0.pom",
+                    "fileSize": 2048,
+                    "checksum": {
+                        "sha1": "sha1-pom",
+                        "sha256": "sha256-pom",
+                        "md5": "md5-pom"
+                    }
+                }
+            ]
+        }
+    ],
+    "continuationToken": null
+}
