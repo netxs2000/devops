@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 class JiraWorker(BaseWorker):
     """Jira 数据采集 Worker。"""
+    SCHEMA_VERSION = "1.0"
     
     def __init__(self, session: Session, client: JiraClient):
         super().__init__(session, client)
@@ -72,6 +73,14 @@ class JiraWorker(BaseWorker):
             # 尝试从 API 获取详情 (此处示例逻辑)
             response = self.client._get(f"/rest/api/3/project/{project_key}")
             p_data = response.json()
+            # 原始项目数据落盘
+            self.save_to_staging(
+                source='jira',
+                entity_type='project',
+                external_id=project_key,
+                payload=p_data,
+                schema_version=self.SCHEMA_VERSION
+            )
             project = JiraProject(
                 key=p_data['key'],
                 name=p_data['name'],
@@ -89,6 +98,15 @@ class JiraWorker(BaseWorker):
             board = JiraBoard(id=data['id'], project_id=project.id)
             self.session.add(board)
         
+        # 原始看板数据落盘
+        self.save_to_staging(
+            source='jira',
+            entity_type='board',
+            external_id=data['id'],
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
+        
         board.name = data['name']
         board.type = data['type']
         board.raw_data = data
@@ -100,6 +118,15 @@ class JiraWorker(BaseWorker):
         if not sprint:
             sprint = JiraSprint(id=data['id'], board_id=board.id)
             self.session.add(sprint)
+        
+        # 原始 Sprint 数据落盘
+        self.save_to_staging(
+            source='jira',
+            entity_type='sprint',
+            external_id=data['id'],
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
         
         sprint.name = data['name']
         sprint.state = data['state']
@@ -116,6 +143,21 @@ class JiraWorker(BaseWorker):
         return sprint
 
     def _sync_issue(self, project: JiraProject, data: dict) -> JiraIssue:
+        """同步 Jira 问题：先落盘到 Staging，再执行业务转换。"""
+        # 1. Extract & Load (Staging)
+        self.save_to_staging(
+            source='jira',
+            entity_type='issue',
+            external_id=data['id'],
+            payload=data,
+            schema_version=self.SCHEMA_VERSION
+        )
+        
+        # 2. Transform & Load (DW)
+        return self._transform_issue(project, data)
+
+    def _transform_issue(self, project: JiraProject, data: dict) -> JiraIssue:
+        """核心解析逻辑：将原始 Jira JSON 转换为 JiraIssue 模型。"""
         issue = self.session.query(JiraIssue).filter_by(id=data['id']).first()
         if not issue:
             issue = JiraIssue(id=data['id'], key=data['key'], project_id=project.id)

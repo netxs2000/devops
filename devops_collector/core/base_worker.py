@@ -14,6 +14,7 @@ Typical usage:
 """
 import logging
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
 
@@ -37,6 +38,7 @@ class BaseWorker(ABC):
                 self.session.add(Project(**data))
                 self.session.commit()
     """
+    SCHEMA_VERSION = "1.0"
     
     def __init__(self, session: Session, client):
         """初始化 Worker。
@@ -95,3 +97,58 @@ class BaseWorker(ABC):
         """
         percent = (current / total * 100) if total > 0 else 0
         logger.info(f"[PROGRESS] {message}: {current}/{total} ({percent:.1f}%)")
+
+    def save_to_staging(self, source: str, entity_type: str, external_id: str, payload: dict, schema_version: str = "1.0") -> None:
+        """将原始数据保存到 Staging 层。
+        
+        采用 Upsert 逻辑：如果存在则更新内容，不存在则创建。
+        
+        Args:
+            source: 数据源 (如 'gitlab')
+            entity_type: 实体类型 (如 'merge_request')
+            external_id: 外部唯一 ID
+            payload: JSON 载荷
+            schema_version: Schema 版本 (如 '1.0', 'v2')
+        """
+        from devops_collector.models.base_models import RawDataStaging
+        from sqlalchemy.dialects.postgresql import insert
+
+        # 使用 PostgreSQL 的 insert ... on conflict 语法实现逻辑上的幂等
+        try:
+            stmt = insert(RawDataStaging).values(
+                source=source,
+                entity_type=entity_type,
+                external_id=str(external_id),
+                payload=payload,
+                schema_version=schema_version,
+                collected_at=datetime.now(timezone.utc)
+            ).on_conflict_do_update(
+                index_elements=['source', 'entity_type', 'external_id'],
+                set_={
+                    'payload': payload, 
+                    'schema_version': schema_version,
+                    'collected_at': datetime.now(timezone.utc)
+                }
+            )
+            self.session.execute(stmt)
+        except Exception as e:
+            self.log_failure(f"Failed to save {entity_type} {external_id} to staging", e)
+            # 回退到标准模型处理方式
+            existing = self.session.query(RawDataStaging).filter_by(
+                source=source,
+                entity_type=entity_type,
+                external_id=str(external_id)
+            ).first()
+            if existing:
+                existing.payload = payload
+                existing.schema_version = schema_version
+                existing.collected_at = datetime.now(timezone.utc)
+            else:
+                new_raw = RawDataStaging(
+                    source=source,
+                    entity_type=entity_type,
+                    external_id=str(external_id),
+                    payload=payload,
+                    schema_version=schema_version
+                )
+                self.session.add(new_raw)

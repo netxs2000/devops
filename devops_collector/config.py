@@ -37,6 +37,7 @@ class Config:
     
     # Database
     DB_URI = config_parser.get('database', 'uri', fallback=os.getenv('DB_URI', 'postgresql://gitlab_collector:password@localhost/gitlab_data'))
+    RAW_DATA_RETENTION_DAYS = config_parser.getint('database', 'raw_data_retention_days', fallback=30)
     
     # RabbitMQ
     RABBITMQ_HOST = config_parser.get('rabbitmq', 'host', fallback=os.getenv('RABBITMQ_HOST', 'rabbitmq'))

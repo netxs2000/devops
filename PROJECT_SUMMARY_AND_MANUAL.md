@@ -1,7 +1,7 @@
 # DevOps Data Collector - 项目总结与系统功能手册
 
-**版本**: 3.2.0
-**日期**: 2025-12-18
+**版本**: 3.3.0
+**日期**: 2025-12-20
 **维护**: DevOps 效能平台团队
 
 ---
@@ -36,8 +36,11 @@
 *   **过程数据**: 采集 Issue（需求/缺陷）和 Notes（评论），支持沟通密度分析。
 *   **CALMS 深度扫描 (New)**: 自动采集 Issue 的 **State/Label/Milestone Resource Events**。通过追踪这些原子事件，系统能够量化“等待浪费”、“需求跳变频率”以及“跨团队响应速度”，为组织文化扫描提供核心依据。
 *   **工程卓越度增强**: 自动计算 MR 的**评审轮次 (Review Cycles)**、**有效评论数**、**代码规范状态 (Lint)** 以及**非工作时间提交频率 (Work-Life Balance)**。
+*   **敏捷流动效能 (Agile Flow)**: 追踪 Issue 的 `state_transitions`，自动计算 **Cycle Time**。识别 `blocked` 标签时段，量化**阻塞时长**与**流动速率 (Flow Efficiency)**。
+*   **AI 价值识别**: 利用 LLM 自动对 Commit 和 Issue 进行分类 (Feature/Maintenance/Internal) 并生成业务价值摘要 (AI Summary)。
 *   **制品与依赖扫描**: 同步 GitLab Package Registry 中的制品元数据，并自动建立跨项目的模块依赖图谱。
 *   **共享文化 (Sharing)**: 采集 Wiki 变更频率，作为知识库活跃度（Sharing 维度）的度量。
+*   **原始数据暂存 (Staging)**: 所有采集到的 JSON 数据（Issue, MR, Pipeline, Deployment）均带有 Schema Version 落盘至 `raw_data_staging` 表，支持数据回溯。
 
 #### 2.1.2 SonarQube 采集插件
 *   **自动映射**: 基于项目路径规则自动关联 GitLab 项目与 SonarQube 项目。
@@ -70,6 +73,12 @@
 *   **制品追溯**: 基于 AQL (Artifactory Query Language) 采集制品元数据。
 *   **质量与安全**: 同步下载量统计 (Stats) 和 Xray 安全扫描摘要 (Vulnerabilities)。
 *   **构建血缘**: 自动提取制品属性中的 `build.name`，实现从制品回溯到构建任务的完整链路。
+
+#### 2.1.8 财务系统集成 (FinOps Integration) 🌟 (New)
+*   **成本科目 (CBS)**: 建立财务级的成本拆解树，支持 Labor、Infrastructure 分类。
+*   **采购合同**: 记录支出合同（如云服务器订阅），支持线性摊销成本流水生产。
+*   **收入合同与收款**: 支持 3-4-3 等多种回款计划。
+*   **技术-财务对齐**: 将合同收款节点与 GitLab Milestone 挂钩。里程碑关闭即视为回款条件达成（或风险预警）。
 
 ### 2.2 智能数据处理 (Intelligent Processing)
 
@@ -107,6 +116,14 @@
     *   **可重试异常**: 如网络超时、连接断开、5xx 服务端错误、429 速率限制。
     *   **非重试异常**: 如 401/403 认证错误，系统将立即停止并记录 ERROR 日志，防止无效重试。
 *   **速率限制适配**: 自动解析 API 返回的 `Retry-After` 头部，动态调整等待时间。
+
+#### 2.2.6 原始数据回放 (Data Replay) (New)
+*   **Schema Evolution**: 支持 `SCHEMA_VERSION` 常量管理（如 GitLab v1.1），应对 API 字段变更。
+*   **Reprocessing**: 提供 `reprocess_staging_data.py` 脚本，可直接从 Staging 表读取历史 JSON 数据并重新运行业务解析逻辑，无需再次请求外部 API。这对于**修复历史数据逻辑错误**或**新增字段回填**至关重要。
+
+#### 2.2.8 AI 辅助归因服务 (AI Enrichment Service) 🌟 (New)
+*   **自动化分类**: 基于 LLM 对 Commit Message 和 Issue 内容进行语义识别。
+*   **置信度审计**: 记录 AI 分类置信度，支持人工抽检与自动化阈值过滤。
 
 ---
 
@@ -158,8 +175,15 @@
 
 ### 3.6 成本与 ROI (FinOps) (New)
 - **核心逻辑**: 结合服务器/云成本与人力工时成本，计算产研投入产出比。
-- **价值**: 优化资源配置，识别长尾低价值项目。
-- **维度**: 单位 Story 交付成本, 部门月度云资源开销趋势。
+- **价值**: 优化资源配置，识别长尾低价值项目，支持 R&D 资本化审计。
+- **维度**: 单位 Story 交付成本, 部门月度云资源开销趋势, **资本化率 (CAPEX%)**。
+
+### 3.7 流动效能分析 (Flow Efficiency) 🌟 (New)
+- **核心逻辑**: 追踪任务从创建到交付的全生命周期状态流转。
+- **价值**: 识别流程中的“等待黑盒”，量化阻塞带来的损失。
+- **维度**:
+    - **周期时间 (Cycle Time)**: 从开发到完成。
+    - **流动速率 (Flow Efficiency)**: `ActiveTime / TotalTime`。
 
 ### 3.7 开发者代码热力图 (User Heatmap)
 - **核心逻辑**: 可视化展示开发者每日的提交频率 (Contribution Graph)。
@@ -285,6 +309,12 @@ cp devops_collector/config.ini.example devops_collector/config.ini
 # 1. 初始化数据库与组织架构
 python scripts/init_discovery.py
 
+# 2. 初始化财务科目、费率与合同示例 (New)
+python scripts/init_cost_codes.py
+python scripts/init_labor_rates.py
+python scripts/init_purchase_contracts.py
+python scripts/init_revenue_contracts.py
+
 # 2. 部署 SQL 分析视图 (需安装 psql 客户端)
 psql -d devops_db -f devops_collector/sql/PROJECT_OVERVIEW.sql
 psql -d devops_db -f devops_collector/sql/PMO_ANALYTICS.sql
@@ -311,6 +341,7 @@ python -m devops_collector.worker
 *   **手动同步 SonarQube**: `python scripts/sonarqube_stat.py`
 *   **手动验证 Jenkins**: `python scripts/verify_jenkins_plugin.py`
 *   **数据逻辑验证**: `python scripts/verify_logic.py`
+*   **数据逻辑重算**: `python scripts/reprocess_staging_data.py` (基于 Staging 数据回放)
 
 ### 5.6 系统验证与仿真测试 (Validation & Simulation)
 系统内置了“七位一体”全链路仿真测试框架，允许在脱离真实环境的情况下验证从 API 到指标计算的完整逻辑。

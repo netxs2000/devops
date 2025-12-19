@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
+from devops_collector.core.utils import safe_int, safe_float, parse_iso8601
 from .client import SonarQubeClient
 from .models import SonarProject, SonarMeasure, SonarIssue
+from .transformer import SonarDataTransformer
 from devops_collector.core.identity_manager import IdentityManager
 
 # 导入 GitLab Project 用于约定映射
@@ -35,6 +37,7 @@ class SonarQubeWorker(BaseWorker):
     项目映射策略:
     - 约定映射: SonarQube Key = GitLab path_with_namespace
     """
+    SCHEMA_VERSION = "1.0"
     
     def __init__(
         self, 
@@ -51,6 +54,7 @@ class SonarQubeWorker(BaseWorker):
         """
         super().__init__(session, client)
         self.sync_issues = sync_issues
+        self.transformer = SonarDataTransformer(session)
     
     def process_task(self, task: dict) -> None:
         """处理 SonarQube 同步任务。
@@ -118,6 +122,15 @@ class SonarQubeWorker(BaseWorker):
         if not p_data:
             return None
         
+        # 将原始项目数据落盘到 Staging 层
+        self.save_to_staging(
+            source='sonarqube',
+            entity_type='project',
+            external_id=key,
+            payload=p_data,
+            schema_version=self.SCHEMA_VERSION
+        )
+        
         # 查找或创建项目
         project = self.session.query(SonarProject).filter_by(key=key).first()
         if not project:
@@ -128,13 +141,7 @@ class SonarQubeWorker(BaseWorker):
         project.qualifier = p_data.get('qualifier')
         
         # 解析最后分析时间
-        if p_data.get('lastAnalysisDate'):
-            try:
-                project.last_analysis_date = datetime.fromisoformat(
-                    p_data['lastAnalysisDate'].replace('Z', '+00:00')
-                )
-            except:
-                pass
+        project.last_analysis_date = parse_iso8601(p_data.get('lastAnalysisDate'))
         
         # 约定映射: 尝试匹配 GitLab 项目
         if GitLabProject and not project.gitlab_project_id:
@@ -160,75 +167,23 @@ class SonarQubeWorker(BaseWorker):
         
         # 获取问题严重分布 (新增)
         issue_dist = self.client.get_issue_severity_distribution(project.key)
-        bug_dist = issue_dist.get('BUG', {})
-        vul_dist = issue_dist.get('VULNERABILITY', {})
         
         # 获取安全热点分布 (新增)
         hotspot_dist = self.client.get_hotspot_distribution(project.key)
         
-        # 创建指标快照
-        measure = SonarMeasure(
-            project_id=project.id,
-            analysis_date=project.last_analysis_date or datetime.now(timezone.utc),
-            
-            # 代码规模
-            files=self._safe_int(measures_data.get('files')),
-            lines=self._safe_int(measures_data.get('lines')),
-            ncloc=self._safe_int(measures_data.get('ncloc')),
-            classes=self._safe_int(measures_data.get('classes')),
-            functions=self._safe_int(measures_data.get('functions')),
-            statements=self._safe_int(measures_data.get('statements')),
-            
-            # 核心指标
-            coverage=self._safe_float(measures_data.get('coverage')),
-            
-            # Bug 分布
-            bugs=self._safe_int(measures_data.get('bugs')),
-            bugs_blocker=bug_dist.get('BLOCKER', 0),
-            bugs_critical=bug_dist.get('CRITICAL', 0),
-            bugs_major=bug_dist.get('MAJOR', 0),
-            bugs_minor=bug_dist.get('MINOR', 0),
-            bugs_info=bug_dist.get('INFO', 0),
-            
-            # 漏洞分布
-            vulnerabilities=self._safe_int(measures_data.get('vulnerabilities')),
-            vulnerabilities_blocker=vul_dist.get('BLOCKER', 0),
-            vulnerabilities_critical=vul_dist.get('CRITICAL', 0),
-            vulnerabilities_major=vul_dist.get('MAJOR', 0),
-            vulnerabilities_minor=vul_dist.get('MINOR', 0),
-            vulnerabilities_info=vul_dist.get('INFO', 0),
-            
-            # 安全热点分布
-            security_hotspots=self._safe_int(measures_data.get('security_hotspots')),
-            security_hotspots_high=hotspot_dist.get('HIGH', 0),
-            security_hotspots_medium=hotspot_dist.get('MEDIUM', 0),
-            security_hotspots_low=hotspot_dist.get('LOW', 0),
-            
-            code_smells=self._safe_int(measures_data.get('code_smells')),
-            comment_lines_density=self._safe_float(measures_data.get('comment_lines_density')),
-            duplicated_lines_density=self._safe_float(measures_data.get('duplicated_lines_density')),
-            sqale_index=self._safe_int(measures_data.get('sqale_index')),
-            sqale_debt_ratio=self._safe_float(measures_data.get('sqale_debt_ratio')),
-            
-            # 复杂度
-            complexity=self._safe_int(measures_data.get('complexity')),
-            cognitive_complexity=self._safe_int(measures_data.get('cognitive_complexity')),
-            
-            # 评级
-            reliability_rating=SonarQubeClient.rating_to_letter(
-                measures_data.get('reliability_rating')
-            ),
-            security_rating=SonarQubeClient.rating_to_letter(
-                measures_data.get('security_rating')
-            ),
-            sqale_rating=SonarQubeClient.rating_to_letter(
-                measures_data.get('sqale_rating')
-            ),
-            
-            # 质量门禁
-            quality_gate_status=gate_status.get('status')
+        # 原始指标数据落盘
+        self.save_to_staging(
+            source='sonarqube',
+            entity_type='measure',
+            external_id=f"{project.key}_current",
+            payload=measures_data,
+            schema_version=self.SCHEMA_VERSION
         )
-        
+
+        # 转换为业务对象
+        measure = self.transformer.transform_measures_snapshot(
+            project, measures_data, gate_status, issue_dist, hotspot_dist
+        )
         self.session.add(measure)
         self.session.commit()
         
@@ -237,7 +192,7 @@ class SonarQubeWorker(BaseWorker):
             f"coverage={measure.coverage}%, bugs={measure.bugs}, "
             f"vulnerabilities={measure.vulnerabilities}"
         )
-    
+
     def _sync_issues(self, project: SonarProject) -> int:
         """同步问题详情。"""
         count = 0
@@ -249,54 +204,18 @@ class SonarQubeWorker(BaseWorker):
                 break
             
             for i_data in issues_data:
-                issue = self.session.query(SonarIssue).filter_by(
-                    issue_key=i_data['key']
-                ).first()
+                # 1. Extract & Load (Staging)
+                self.save_to_staging(
+                    source='sonarqube',
+                    entity_type='issue',
+                    external_id=i_data['key'],
+                    payload=i_data,
+                    schema_version=self.SCHEMA_VERSION
+                )
                 
-                if not issue:
-                    issue = SonarIssue(
-                        issue_key=i_data['key'],
-                        project_id=project.id
-                    )
-                    self.session.add(issue)
-                    count += 1
-                
-                issue.type = i_data.get('type')
-                issue.severity = i_data.get('severity')
-                issue.status = i_data.get('status')
-                issue.resolution = i_data.get('resolution')
-                issue.rule = i_data.get('rule')
-                issue.message = i_data.get('message')
-                issue.component = i_data.get('component')
-                issue.line = i_data.get('line')
-                issue.effort = i_data.get('effort')
-                issue.debt = i_data.get('debt')
-                issue.assignee = i_data.get('assignee')
-                if issue.assignee:
-                    u = IdentityManager.get_or_create_user(self.session, 'sonarqube', issue.assignee)
-                    issue.assignee_user_id = u.id
-                    
-                issue.author = i_data.get('author')
-                if issue.author:
-                    u = IdentityManager.get_or_create_user(self.session, 'sonarqube', issue.author)
-                    issue.author_user_id = u.id
-                    
-                issue.raw_data = i_data
-                
-                # 解析时间
-                for field in ['creationDate', 'updateDate', 'closeDate']:
-                    if i_data.get(field):
-                        try:
-                            attr_name = {
-                                'creationDate': 'creation_date',
-                                'updateDate': 'update_date',
-                                'closeDate': 'close_date'
-                            }[field]
-                            setattr(issue, attr_name, datetime.fromisoformat(
-                                i_data[field].replace('Z', '+00:00')
-                            ))
-                        except:
-                            pass
+                # 2. Transform & Load (DW)
+                self.transformer.transform_issue(project, i_data)
+                count += 1
             
             page += 1
             
@@ -330,23 +249,6 @@ class SonarQubeWorker(BaseWorker):
                 logger.error(f"Failed to sync project {p_data['key']}: {e}")
         
         return count
-    
-    @staticmethod
-    def _safe_int(value) -> int:
-        """安全转换为整数。"""
-        try:
-            return int(float(value)) if value else 0
-        except (ValueError, TypeError):
-            return 0
-    
-    @staticmethod
-    def _safe_float(value) -> float:
-        """安全转换为浮点数。"""
-        try:
-            return float(value) if value else 0.0
-        except (ValueError, TypeError):
-            return 0.0
-
 
 # 注册插件
 PluginRegistry.register_worker('sonarqube', SonarQubeWorker)

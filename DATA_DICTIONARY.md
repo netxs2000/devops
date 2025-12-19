@@ -1,7 +1,7 @@
 # 企业级 DevOps 数据字典 (Enterprise DevOps Data Dictionary)
 
-**版本**: 2.4.0 (Agile Extensions)  
-**日期**: 2025-12-18  
+**版本**: 3.3.0 (FinOps & AI Extension)  
+**日期**: 2025-12-20  
 **状态**: 已生效 (Active)  
 **维护人**: DevOps 效能平台团队
 
@@ -81,6 +81,20 @@ erDiagram
     ZenTaoProduct ||--|{ ZenTaoIssue : "contains (包含)"
     ZenTaoProductPlan ||--o{ ZenTaoIssue : "bins (规划问题)"
     ZenTaoProduct ||--o{ ZenTaoAction : "logged_actions (操作日志)"
+
+    %% FinOps & ROI Integration (New)
+    CostCode ||--o{ CostCode : "parent/child (CBS层级)"
+    CostCode ||--o{ ResourceCost : "categorizes (分类)"
+    Product ||--o{ RevenueContract : "generates (产生收入)"
+    RevenueContract ||--|{ ContractPaymentNode : "milestones (收款节点)"
+    ContractPaymentNode ||--o| Milestone : "tracks (对应技术里程碑)"
+    CostCode ||--o{ PurchaseContract : "links (关联采购)"
+    PurchaseContract ||--o{ ResourceCost : "generates (产生流水)"
+    LaborRateConfig ||--o{ User : "determines_cost (决定人工单价)"
+
+    %% Agile Flow Analysis (New)
+    Issue ||--|{ IssueStateTransition : "tracks_flow (追踪流转)"
+    Issue ||--|{ Blockage : "records_blocks (记录阻塞)"
 ```
 
 ---
@@ -110,6 +124,10 @@ erDiagram
 | `username`        | String(100)   | UK   | 是    | -      | `"zhangsan"`              | 内部唯一用户名                                           |
 | `name`            | String(200)   |      | 否    | -      | `"张三"`                  | 显示名称 (中文名)                                        |
 | `email`           | String(200)   | UK   | 否    | -      | `"zhangsan@corp.com"`     | 企业邮箱 (用于跨源自动对齐的关键字段)                   |
+| `employee_id`     | String(50)    |      | 否    | -      | `"EMP001"`                | **工号 (HR 系统关联)**                                   |
+| `job_title_level` | String(50)    |      | 否    | -      | `"P3/Senior"`             | **职级/岗位 (用于计算人工费率)**                         |
+| `hire_date`       | Date          |      | 否    | -      | `2020-01-01`              | **入职日期 (计算在岗周期)**                              |
+| `termination_date`| Date          |      | 否    | -      | `2024-12-31`              | **离职日期**                                             |
 | `state`           | String(20)    |      | 否    | active | `"active"`                | 账号状态: `active`(激活), `blocked`(禁用)                |
 | `department`      | String(100)   |      | 否    | -      | `"基础架构部"`            | 归属部门名称快照                                         |
 | `organization_id` | Integer       | FK   | 否    | NULL   | `2001`                    | 关联组织 ID (外键 `organizations.id`)                    |
@@ -200,11 +218,16 @@ erDiagram
 | `project_id`      | Integer       | FK   | 否    | -      | 关联项目 ID                                              |
 | `product_id`      | Integer       | FK   | 否    | -      | 关联产品 ID                                              |
 | `organization_id` | Integer       | FK   | 否    | -      | 关联组织 ID                                              |
+| `cost_code_id`    | Integer       | FK   | 否    | -      | **关联财务科目 ID (外键 `cost_codes.id`)**               |
+| `purchase_contract_id`| Integer   | FK   | 否    | -      | **关联采购合同 ID (用于分摊溯源)**                       |
 | `period`          | String        |      | 是    | -      | 周期 (如 `2025-01`)                                      |
 | `cost_type`       | String        |      | 是    | -      | 成本分类: `Infrastructure`, `HumanLabor`, `Licensing`    |
 | `cost_item`       | String        |      | 否    | -      | 具体名目 (如 `AWS-EC2`, `StaffSalaray`)                  |
 | `amount`          | Float         |      | 是    | -      | 金额                                                     |
 | `currency`        | String        |      | 否    | `CNY`  | 币种                                                     |
+| `capex_opex_flag` | String(10)    |      | 否    | -      | **CAPEX/OPEX 标识**                                      |
+| `is_locked`       | Boolean       |      | 否    | False  | **财务结账锁定标识 (禁止修改)**                          |
+| `accounting_date` | Date          |      | 否    | -      | **入账日期**                                             |
 | `source_system`   | String        |      | 否    | -      | 数据来源: `aws_billing`, `hr_system`, `manual`           |
 
 ### 2.8 链路追溯关系 (`traceability_links`) (New)
@@ -232,6 +255,86 @@ erDiagram
 | `duration_seconds` | Integer      |      | 否    | -        | `45`                 | 耗时 (秒)                        |
 | `records_synced`   | Integer      |      | 否    | -        | `120`                | 同步条数                         |
 | `timestamp`        | DateTime     |      | 否    | Now      | `2025-12-14 10:00`   | 执行时间                         |
+
+### 2.10 原始数据暂存层 (`raw_data_staging`) 🌟 (New)
+用于 ETL 的 Extract 阶段，存储来自各源系统的原始 JSON 响应，支持数据审计、全量回刷与排障。
+
+| 字段名          | 类型          | 键   | 必填  | 默认值 | 示例数据                  | 业务说明                                                                 |
+|:--------------|:--------------|:----:|:-----:|:-------|:--------------------------|:-------------------------------------------------------------------------|
+| `id`          | BigInteger    | PK   | 是    | Auto   | `1`                       | 自增 ID                                                                  |
+| `source`      | String(50)    | UK1  | 是    | -      | `"gitlab"`                | 数据源: `gitlab`, `jira`, `zentao`, `jenkins`, `sonarqube`, `jfrog`, `nexus` |
+| `entity_type` | String(50)    | UK1  | 是    | -      | `"merge_request"`         | 实体类型                                                                 |
+| `external_id` | String(255)   | UK1  | 是    | -      | `"!101"`                  | 外部系统 ID                                                              |
+| `payload`     | JSONB         |      | 是    | -      | `{"id": 101, ...}`        | 原始 API 响应内容                                                        |
+| `schema_version`| String(20)    |      | 否    | `"1.0"`| `"1.1"`                   | 原始 JSON 的 Schema 版本 (如 GitLab v1.1)，用于解析多样性                 |
+| `collected_at`| DateTime      |      | 否    | Now    | `2025-12-20 12:00`        | 采集时间 (带时区)                                                        |
+
+#### 2.10.1 关键特性
+*   **非破坏性更新**: 使用 `ON CONFLICT (source, entity_type, external_id) DO UPDATE` 确保最新。
+*   **生存周期 (TTL)**: 受 `RAW_DATA_RETENTION_DAYS` 配置控制，由 `RetentionManager` 自动清理。
+*   **重放支持**: 支持在不触发外部 API 请求的情况下，通过更改 Transform 逻辑并读取此表进行“数据回刷”。
+
+### 2.11 财务成本科目 (`cost_codes`) 🌟 (New)
+定义组织级的成本拆解结构 (CBS Tree)。
+
+| 字段名         | 类型          | 键   | 必填  | 业务说明                                      |
+|:---------------|:--------------|:----:|:-----:|:----------------------------------------------|
+| `id`           | Integer       | PK   | 是    | 科目自增 ID                                   |
+| `code`         | String(50)    | UK   | 是    | 财务科目代码 (如 1001.01)                     |
+| `name`         | String(200)   |      | 是    | 科目名称                                      |
+| `parent_id`    | Integer       | FK   | 否    | 父级科目 ID (自关联)                          |
+| `category`     | String(50)    |      | 否    | 大类: `Labor`, `Infrastructure`, `License`    |
+| `default_capex_opex`| String(10)|      | 否    | 默认资本化/费用化建议 (CAPEX/OPEX)            |
+| `is_active`    | Boolean       |      | 否    | 是否启用                                      |
+
+### 2.12 收入合同 (`revenue_contracts`) 🌟 (New)
+记录外部商务合同元数据，支持 ROI 分析的“产出”维度。
+
+| 字段名         | 类型          | 键   | 必填  | 业务说明                         |
+|:---------------|:--------------|:----:|:-----:|:---------------------------------|
+| `id`           | Integer       | PK   | 是    | 合同 ID                          |
+| `contract_no`  | String(100)   | UK   | 是    | 外部合同编号                     |
+| `title`        | String(500)   |      | 是    | 合同标题                         |
+| `total_value`  | Float         |      | 是    | 合同总金额                       |
+| `product_id`   | Integer       | FK   | 否    | 关联产品 ID                      |
+| `sign_date`    | Date          |      | 否    | 签署日期                         |
+
+### 2.13 合同收款节点 (`contract_payment_nodes`) 🌟 (New)
+将财务回款计划（如 3-4-3 比例）与技术系统里程碑 (GitLab Milestone) 挂钩。
+
+| 字段名                | 类型         | 键   | 必填  | 业务说明                                         |
+|:----------------------|:-------------|:----:|:-----:|:-------------------------------------------------|
+| `id`                  | Integer      | PK   | 是    | 节点 ID                                          |
+| `contract_id`         | Integer      | FK   | 是    | 关联收入合同 ID                                  |
+| `node_name`           | String(200)  |      | 是    | 节点名称 (如“首付款”、“验收款”)                 |
+| `billing_percentage`  | Float        |      | 是    | 计费百分比 (%)                                   |
+| `billing_amount`      | Float        |      | 是    | 预计收款金额                                     |
+| `linked_system`       | String(50)   |      | 否    | 触发系统: `gitlab`, `manual`                     |
+| `linked_milestone_id`| Integer       |      | 否    | **映射的 GitLab 里程碑 ID**                      |
+| `is_achieved`         | Boolean      |      | 否    | 是否已达成 (基于里程碑状态或人工确认)           |
+| `achieved_at`         | DateTime     |      | 否    | 达成时间                                         |
+
+### 2.14 采购合同 (`purchase_contracts`) 🌟 (New)
+记录支出类合同，用于分摊云成本或外包成本。
+
+| 字段名         | 类型          | 键   | 必填  | 业务说明                         |
+|:---------------|:--------------|:----:|:-----:|:---------------------------------|
+| `id`           | Integer       | PK   | 是    | 采购合同 ID                      |
+| `contract_no`  | String(100)   | UK   | 是    | 采购号                           |
+| `vendor_name`  | String(200)   |      | 否    | 供应商名称                       |
+| `total_amount` | Float         |      | 是    | 合同总额                         |
+| `cost_code_id` | Integer       | FK   | 否    | 归属财务科目                     |
+
+### 2.15 人工费率配置 (`labor_rate_configs`) 🌟 (New)
+建立职级与标准人天成本的映射。
+
+| 字段名             | 类型         | 键   | 必填  | 业务说明                                      |
+|:-------------------|:-------------|:----:|:-----:|:----------------------------------------------|
+| `id`               | Integer      | PK   | 是    | ID                                            |
+| `job_title_level`  | String(50)   | UK   | 是    | 职级/岗位名称 (如 P3, Dev)                    |
+| `daily_rate`       | Float        |      | 是    | **标准人天费率 (Blended Rate)**               |
+| `hourly_rate`      | Float        |      | 否    | 标准人时费率                                  |
+| `is_active`        | Boolean      |      | 否    | 是否生效                                      |
 
 ---
 
@@ -305,6 +408,9 @@ GitLab 的组织单元，用于管理项目和子群组。
 | `total`          | Integer   |         | 否    | -      | `170`                     | 变更总行数                         |
 | `is_off_hours`   | Boolean   |         | 否    | False  | `True`                    | **加班提交标识** (20:00-08:00/周末)|
 | `lint_status`    | String(20)|         | 否    | NULL   | `"passed"`                | **代码规范状态**                   |
+| `ai_category`    | String(50)|         | 否    | -      | `"Refactor"`              | **AI 自动分类 (Feature/Bug/Refactor)** |
+| `ai_summary`     | Text      |         | 否    | -      | `"优化用户登录查询性能"`  | **AI 生成的业务价值摘要**          |
+| `ai_confidence`  | Float     |         | 否    | -      | `0.95`                    | **AI 分类置信度**                  |
 | `gitlab_user_id` | Integer   | FK      | 否    | NULL   | `10086`                   | 关联内部用户 ID (关联 `users.id`)  |
 
 ### 3.3 提交文件统计 (`commit_file_stats`) 🌟
@@ -340,6 +446,8 @@ GitLab 的组织单元，用于管理项目和子群组。
 | `human_comment_count`| Integer |    | 否    | 0      | `12`                       | **人工有效评论数**               |
 | `review_time_total`| BigInteger |   | 否    | -      | `43200`                    | **总评审耗时 (秒)**              |
 | `quality_gate_status`| String(20)|   | 否    | -      | `"passed"`                 | **质量门禁结果**                 |
+| `ai_category`    | String(50)|         | 否    | -      | `"Feature"`               | **AI 需求分类**                  |
+| `ai_summary`     | Text      |         | 否    | -      | `"实现多因素认证登录"`    | **AI 业务价值总结**              |
 | `author_id`     | Integer   | FK   | 否    | -      | `10086`                    | 关联内部用户 ID (关联 `users.id`) |
 
 ### 3.5 议题 (`issues`)
@@ -353,6 +461,10 @@ GitLab 的组织单元，用于管理项目和子群组。
 | `title`            | String    |      | 否    | -      | `"Fix login bug"`         | 标题                             |
 | `time_estimate`    | Integer   |      | 否    | NULL   | `3600`                    | 预估工时 (秒)                    |
 | `total_time_spent` | Integer   |      | 否    | NULL   | `7200`                    | 实际耗时 (秒)                    |
+| `weight`           | Integer   |      | 否    | NULL   | `5`                       | **敏捷权重 (Story Points)**      |
+| `work_item_type`   | String(50)|      | 否    | -      | `"issue"`                 | **工作项类型 (Issue, Task, Bug)**|
+| `ai_category`    | String(50)|         | 否    | -      | `"Refactor"`              | **AI 智能分类**                  |
+| `ai_summary`     | Text      |         | 否    | -      | `"底层存储架构重构"`      | **AI 产出摘要**                  |
 | `author_id`        | Integer   | FK   | 否    | -      | `10086`                   | 提单人 (关联 `users.id`)         |
 | `labels`           | JSON      |      | 否    | -      | `["bug", "P0"]`           | 标签集合                         |
 
@@ -389,6 +501,29 @@ CI/CD 持续集成执行记录。
 |:-------------|:----------|:----:|:-----:|:-------|:---------------------|:--------------------------------|
 | `id`         | Integer   | PK   | 是    | -      | `9001`               | Pipeline ID                     |
 | `project_id` | Integer   | FK   | 否    | -      | `1010`               | 归属项目                        |
+
+### 3.14 议题状态流转 (`issue_state_transitions`) 🌟 (New)
+追踪 Issue 在不同状态间的流转轨迹，用于 Cycle Time 分析。
+
+| 字段名             | 类型      | 键   | 必填  | 业务说明                         |
+|:-------------------|:----------|:----:|:-----:|:---------------------------------|
+| `id`               | Integer   | PK   | 是    | ID                               |
+| `issue_id`         | Integer   | FK   | 是    | 关联 Issue ID                    |
+| `from_state`       | String    |      | 是    | 起始状态                         |
+| `to_state`         | String    |      | 是    | 目标状态                         |
+| `timestamp`        | DateTime  |      | 是    | 流转时间                         |
+| `duration_hours`   | Float     |      | 否    | **在此状态停留时长 (小时)**      |
+
+### 3.15 议题阻塞记录 (`issue_blockages`) 🌟 (New)
+由 'blocked' 标签触发的阻塞区间记录。
+
+| 字段名             | 类型      | 键   | 必填  | 业务说明                         |
+|:-------------------|:----------|:----:|:-----:|:---------------------------------|
+| `id`               | Integer   | PK   | 是    | ID                               |
+| `issue_id`         | Integer   | FK   | 是    | 关联 Issue ID                    |
+| `reason`           | String    |      | 否    | 阻塞原因 (标签名)                |
+| `start_time`       | DateTime  |      | 是    | 阻塞开始时间                     |
+| `end_time`         | DateTime  |      | 否    | 阻塞解除时间 (NULL 代表进行中)   |
 | `status`     | String    |      | 否    | -      | `"success"`          | 状态: `success`, `failed`, `canceled` |
 | `duration`   | Integer   |      | 否    | -      | `300`                | 运行时长 (秒)                   |
 | `coverage`   | String    |      | 否    | NULL   | `"85.4"`             | 单元测试覆盖率 (如 "85.4")      |

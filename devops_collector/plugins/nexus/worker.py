@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class NexusWorker(BaseWorker):
     """Nexus 数据采集 Worker。"""
+    SCHEMA_VERSION = "1.0"
     
     def process_task(self, task: dict) -> None:
         """处理 Nexus 同步任务。
@@ -62,6 +63,15 @@ class NexusWorker(BaseWorker):
                 comp = NexusComponent(id=comp_id)
                 self.session.add(comp)
             
+            # 原始组件数据落盘
+            self.save_to_staging(
+                source='nexus',
+                entity_type='component',
+                external_id=comp_id,
+                payload=data,
+                schema_version=self.SCHEMA_VERSION
+            )
+            
             comp.repository = data['repository']
             comp.format = data['format']
             comp.group = data.get('group')
@@ -83,8 +93,18 @@ class NexusWorker(BaseWorker):
             if a_id in existing_ids:
                 # 简单处理：如果已存在则更新（如有必要）
                 continue
-                
+            
+            # 原始 Asset 数据落盘
+            self.save_to_staging(
+                source='nexus',
+                entity_type='asset',
+                external_id=a_id,
+                payload=asset_data,
+                schema_version=self.SCHEMA_VERSION
+            )
+
             asset = NexusAsset(
+
                 id=a_id,
                 component_id=component.id,
                 path=asset_data['path'],

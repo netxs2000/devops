@@ -7,7 +7,7 @@
 Typical Usage:
     session.query(GitLabGroup).filter(GitLabGroup.path == 'my-group').first()
 """
-from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, Boolean, BigInteger, Text
+from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, Boolean, BigInteger, Text, Float
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 from datetime import datetime, timezone
@@ -184,7 +184,6 @@ class MergeRequest(Base):
         changes_count: 变更文件数量。
         diff_refs: 差异参考信息 (SHA 等)。
         merge_commit_sha: 合并后的 Commit SHA。
-        raw_data: 原始 JSON。
         external_issue_id: 关联的外部需求 ID (如 Jira)。
         issue_source: 需求来源系统 (jira, zentao)。
         first_response_at: 首次评审回复时间。
@@ -193,9 +192,13 @@ class MergeRequest(Base):
         approval_count: 审批通过的人数。
         review_time_total: 从创建到合并的总评审时长 (秒)。
         quality_gate_status: 质量门禁状态 (passed, failed)。
+        ai_category: AI 分类结果 (Feature, Bugfix, etc.)。
+        ai_summary: AI 生产的业务价值摘要。
+        ai_confidence: AI 分类置信度。
         author_id: 关联的系统内部用户 ID。
         author: 关联的 User 对象。
         project: 关联的 Project 对象。
+        raw_data: 原始 JSON 镜像存档。
     """
     __tablename__ = 'merge_requests'
     
@@ -232,6 +235,11 @@ class MergeRequest(Base):
     # 规范遵循度
     quality_gate_status = Column(String(20)) # passed, failed
     
+    # AI 增强分析 (用于 FinOps 分类与工作项审计)
+    ai_category = Column(String(50))   # Feature, Bugfix, Refactor, Documentation, etc.
+    ai_summary = Column(Text)          # AI 生成的业务价值摘要
+    ai_confidence = Column(Float)      # AI 置信度
+    
     author_id = Column(Integer, ForeignKey('users.id'))
     author = relationship("User")
     
@@ -256,14 +264,17 @@ class Commit(Base):
         additions: 新增行数。
         deletions: 删除行数。
         total: 总变更行数。
-        raw_data: 原始 JSON。
         linked_issue_ids: 关联的需求 ID 列表 (JSON)。
         issue_source: 需求来源系统。
         is_off_hours: 是否在非工作时间提交。
         lint_status: 代码规范检查状态。
+        ai_category: AI 分类建议 (Feature, Bugfix, Refactor)。
+        ai_summary: AI 生产的提交内容摘要。
+        ai_confidence: AI 分类置信度。
         gitlab_user_id: 关联的系统内部用户 ID。
         author_user: 关联的 User 对象。
         project: 关联的 Project 对象。
+        raw_data: 原始 JSON 镜像存档。
     """
     __tablename__ = 'commits'
     
@@ -290,6 +301,11 @@ class Commit(Base):
     # 行为特征：加班与规范
     is_off_hours = Column(Boolean, default=False) # 是否为非工作时间提交
     lint_status = Column(String(20))               # passed, failed, warning
+    
+    # AI 增强分析
+    ai_category = Column(String(50))   # Feature, Bugfix, Refactor, etc.
+    ai_summary = Column(Text)
+    ai_confidence = Column(Float)
     
     gitlab_user_id = Column(Integer, ForeignKey('users.id'))
     author_user = relationship("User")
@@ -343,20 +359,27 @@ class Issue(Base):
         id: Issue 在 GitLab 中的唯一内部 ID。
         iid: 项目内 IID。
         project_id: 所属项目 ID。
-        title: 标题。
-        description: 描述。
+        title: 任务标题。
+        description: 任务详细描述。
         state: 状态 (opened, closed)。
         created_at: 创建时间。
         updated_at: 更新时间。
         closed_at: 关闭时间。
         time_estimate: 预估耗时 (秒)。
         total_time_spent: 实际累计耗时 (秒)。
+        weight: 敏捷权重 (Story Points)。
+        work_item_type: 工作项类型 (Issue, Task, Bug等)。
+        ai_category: AI 自动分类建议。
+        ai_summary: AI 生产的业务价值总结。
+        ai_confidence: AI 置信度。
         labels: 标签列表 (JSON)。
-        raw_data: 原始 JSON。
-        author_id: 关联的系统内部用户 ID。
+        author_id: 关联的系统内部作者 ID。
         author: 关联的 User 对象。
         project: 关联的 Project 对象。
-        events: 关联的状态变更事件流。
+        events: 关联的状态变更事件流集合。
+        transitions: 关联的状态流转历史集合。
+        blockages: 关联的阻塞记录集合。
+        raw_data: 原始 JSON 镜像存档。
     """
     __tablename__ = 'issues'
     
@@ -372,6 +395,16 @@ class Issue(Base):
     
     time_estimate = Column(Integer) 
     total_time_spent = Column(Integer) 
+
+    # 敏捷规划字段
+    weight = Column(Integer) # Story Points
+    work_item_type = Column(String(50)) # User Story, Bug, Task, etc.
+
+    # AI 增强分析
+    ai_category = Column(String(50))
+    ai_summary = Column(Text)
+    ai_confidence = Column(Float)
+    
     labels = Column(JSON) 
     
     raw_data = Column(JSON)
@@ -381,6 +414,10 @@ class Issue(Base):
     
     project = relationship("Project")
     events = relationship("GitLabIssueEvent", back_populates="issue", cascade="all, delete-orphan")
+
+    # 敏捷效能分析关联
+    transitions = relationship("IssueStateTransition", back_populates="issue", cascade="all, delete-orphan")
+    blockages = relationship("Blockage", back_populates="issue", cascade="all, delete-orphan")
 
 
 class GitLabIssueEvent(Base):
@@ -413,6 +450,42 @@ class GitLabIssueEvent(Base):
 
     issue = relationship("Issue", back_populates="events")
     user = relationship("User")
+
+
+class IssueStateTransition(Base):
+    """Issue 状态流转记录。
+    
+    用于计算 Cycle Time 和分析流动效率。
+    """
+    __tablename__ = 'issue_state_transitions'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    issue_id = Column(Integer, ForeignKey('issues.id'), nullable=False)
+    
+    from_state = Column(String(50))
+    to_state = Column(String(50), nullable=False)
+    timestamp = Column(DateTime(timezone=True), nullable=False)
+    
+    duration_hours = Column(Float) # 在上一状态停留的时长 (小时)
+    
+    issue = relationship("Issue", back_populates="transitions")
+
+
+class Blockage(Base):
+    """Issue 阻塞记录。
+    
+    用于分析阻碍流动的原因和时长 (Flow Efficiency)。
+    """
+    __tablename__ = 'issue_blockages'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    issue_id = Column(Integer, ForeignKey('issues.id'), nullable=False)
+    
+    reason = Column(String(200)) # 阻塞原因
+    start_time = Column(DateTime(timezone=True), nullable=False)
+    end_time = Column(DateTime(timezone=True))
+    
+    issue = relationship("Issue", back_populates="blockages")
 
 
 class Pipeline(Base):

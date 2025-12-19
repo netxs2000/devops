@@ -11,6 +11,7 @@
 - **填补视角空白**：解决以往只看代码提交量，不看需求完工率和质量风险的片面视角。
 - **量化项目健康**：通过活跃率、工时偏差、质量门禁等复合指标，数字化定义什么是“健康的项目”。
 - **资产盘点**：快速识别僵尸项目、高风险项目和核心资产项目。
+- **数据资产化**：通过 Raw Data Staging 层沉淀原始研发数据资产，支持未来的数据挖掘与 AI 训练。
 
 ### 2.2 作用
 1.  **数字驾驶舱 (Digital Cockpit)**：作为 BI 工具（如 Grafana, Superset, PowerBI）的底层数据源，直接展示所有项目的红绿灯状态。
@@ -69,8 +70,10 @@
 | `estimated_hours` | 预估工时 (h) | 累加所有 Issue 的 `/estimate` 时间 |
 | `spent_hours` | 实际投入工时 (h) | 累加所有 Issue 的 `/spend` 时间 |
 | **`time_variance_hours`** | **工时偏差** | `Spent - Estimate`。**正数=超支，负数=节约**。用于成本审计 |
+| `labor_cost_amount` | **人力成本金额 (CNY)** | 基于 `spent_hours` 乘以该用户对应的 `labor_rate_configs` 费率 |
 | `infra_cost_amount` | 基础设施成本 | 来自 `resource_costs` 的云服务与基建分摊金额 |
-| **`roi_efficiency_score`** | **ROI 效能得分** | `(产出价值 / 投入成本)` 的归一化评分，回答“钱花得值不值” |
+| `capex_opex_ratio` | **资本化率 (CAPEX%)** | `(开发类耗时 / 总耗时)`，支持 R&D 费用资本化审计 |
+| **`roi_efficiency_score`** | **ROI 效能得分** | `(关联收入合同已达成金额 / 投入成本)`，回答“钱投入到哪儿最值” |
 
 ### 3.6 研发吞吐量 (Throughput)
 | 字段名 | 业务含义 | 说明 |
@@ -118,6 +121,19 @@
 | `comment_pct` | 注释率 | `Comments / (Code + Comments)` |
 | **`reconstruction_level`** | **重构程度** | 基于重构后的 `DiffAnalyzer` 识别代码变更性质 (Refactor vs New Add) |
 
+### 3.11 流动效能 (Flow Efficiency) `精密研发` 🌟 (New)
+| 字段名 | 业务含义 | 说明 |
+| :--- | :--- | :--- |
+| `avg_cycle_time_h` | 平均周期时间 (h) | 从 Issue 进入 `In Progress` 到 `Closed` 的平均小时数 |
+| `avg_blocking_h` | 平均阻塞时长 (h) | 处于 `blocked` 标签状态的累计时间 |
+| **`flow_efficiency_pct`**| **流动速率** | `(CycleTime - BlockingTime) / CycleTime`。**< 40% 代表组织极度低效** |
+
+### 3.12 AI 智能语义 (AI Insights) 🌟 (New)
+| 字段名 | 业务含义 | 说明 |
+| :--- | :--- | :--- |
+| `ai_primary_category`| 主导分类 | AI 判定该项目最近 30 天属于功能开发、架构调整还是故障维护 |
+| `ai_value_brief` | 业务价值摘要 | 使用 LLM 总结该项目本月对公司的核心业务贡献 (One-liner) |
+
 ### 3.10 团队 (Team)
 | 字段名 | 业务含义 | 格式示例 |
 | :--- | :--- | :--- |
@@ -136,3 +152,11 @@
 - **对于 PM**: 盯紧 `issue_completion_pct` (进度) 和 `milestone_due_date` (死线)。
 - **对于 Tech Lead**: 盯紧 `quality_gate` (质量) 和 `open_mrs_backlog` (评审阻塞)。
 - **对于 PMO**: 盯紧 `time_variance_hours` (成本控制) 和 `active_rate_pct` (资源盘点)。
+
+## 6. 数据回放能力 (Data Replay Capability)
+
+为应对采集逻辑变更或历史数据修正需求，系统建立了完整的 **Raw Data Staging -> Transformation** 回放机制。
+
+- **工作原理**: 所有 API 原始响应均存储于 `RawDataStaging` 表（Raw Layer）。当业务逻辑（如 Lead Time 计算公式）变更时，无需重新请求外部 API，直接重放 Staging 数据即可刷新宽表。
+- **执行脚本**: `python scripts/reprocess_staging_data.py [source] [entity_type]`
+- **验证机制**: `tests/integration/test_data_replay.py` 确保回放逻辑的正确性与幂等性。

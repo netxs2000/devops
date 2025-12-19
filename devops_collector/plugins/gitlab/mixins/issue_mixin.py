@@ -1,0 +1,261 @@
+"""GitLab Worker Issue Mixin.
+
+提供 Issue 及其相关时间 (Event) 的同步、Staging 和 Transformation 逻辑。
+"""
+import logging
+from datetime import datetime
+from typing import List, Optional, Dict
+
+from devops_collector.core.utils import parse_iso8601
+from devops_collector.plugins.gitlab.models import (
+    Project, Issue, GitLabIssueEvent, IssueStateTransition, Blockage
+)
+
+logger = logging.getLogger(__name__)
+
+
+class IssueMixin:
+    """提供 GitLab Issue 相关的同步逻辑 Mixin。
+
+    支持对 Issue 基础元数据、状态变迁历史 (Transitions) 以及阻塞事件 (Blockages) 的同步。
+    """
+
+    def _sync_issues(self, project: Project, since: Optional[str]) -> int:
+        """从项目同步 Issue。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            since (Optional[str]): ISO 格式时间，仅同步该时间后的 Issue。
+            
+        Returns:
+            int: 处理的 Issue 总数。
+        """
+        return self._process_generator(
+            self.client.get_project_issues(project.id, since=since),
+            lambda batch: self._save_issues_batch(project, batch)
+        )
+
+    def _save_issues_batch(self, project: Project, batch: List[dict]) -> None:
+        """批量保存来自 API 的 Issue 原始数据及其转换后的实体。
+
+        Args:
+            project: 关联的 Project 模型对象。
+            batch: 包含多个 Issue 原始 JSON 数据的列表。
+        """
+        # 1. Staging
+        for data in batch:
+            self.save_to_staging(
+                source='gitlab',
+                entity_type='issue',
+                external_id=data['id'],
+                payload=data,
+                schema_version=self.SCHEMA_VERSION
+            )
+
+        # 2. Transform
+        self._transform_issues_batch(project, batch)
+
+    def _transform_issues_batch(self, project: Project, batch: List[dict]) -> None:
+        """将原始 JSON 数据转换并加载至 Issue 实体模型中。
+
+        支持增量更新，当 ID 冲突时会更新现有记录。
+
+        Args:
+            project: 关联的 Project 模型对象。
+            batch: 包含多个 Issue 原始 JSON 数据的列表。
+        """
+        ids = [item['id'] for item in batch]
+        existing = self.session.query(Issue).filter(Issue.id.in_(ids)).all()
+        existing_map = {i.id: i for i in existing}
+        
+        for data in batch:
+            issue = existing_map.get(data['id'])
+            if not issue:
+                issue = Issue(id=data['id'])
+                self.session.add(issue)
+            
+            issue.project_id = project.id
+            issue.iid = data['iid']
+            issue.title = data['title']
+            issue.description = data.get('description')
+            issue.state = data['state']
+            issue.created_at = parse_iso8601(data['created_at'])
+            issue.updated_at = parse_iso8601(data['updated_at'])
+            
+            if data.get('closed_at'):
+                issue.closed_at = parse_iso8601(data['closed_at'])
+                
+            time_stats = data.get('time_stats', {})
+            issue.time_estimate = time_stats.get('time_estimate')
+            issue.total_time_spent = time_stats.get('total_time_spent')
+            
+            issue.labels = data.get('labels', [])
+            
+            # Agile 增强字段
+            issue.weight = data.get('weight')
+            issue.work_item_type = data.get('issue_type') or 'issue'
+            
+            if data.get('author'):
+                if self.user_resolver:
+                    uid = self.user_resolver.resolve(data['author']['id'])
+                    issue.author_id = uid
+            
+            # 如果开启了深度分析，则同步 Issue 事件历史（CALMS 文化扫描）
+            # 注意：此部分涉及 API 调用，若为纯离线 Replay 可能无法执行
+            # 但为保持逻辑一致性，仅在非 Replay 模式 (或显式允许) 下执行
+            # 由于当前架构 Replay 主要是 Transform 逻辑，_sync_issue_events 还是需要 Client
+            if self.enable_deep_analysis and 'iid' in data and hasattr(self, 'client'):
+                try:
+                    self._sync_issue_events(project, data)
+                    # 深度分析逻辑：同步状态流转与阻塞记录 (Agile 分析核心)
+                    self._sync_issue_flow_details(project, data)
+                except Exception as e:
+                    # 不因 Event 同步失败阻塞主 Issue
+                    logger.warning(f"Failed to sync details for issue {issue.iid}: {e}")
+
+    def _sync_issue_events(self, project: Project, issue_data: Dict) -> None:
+        """同步指定 Issue 的全量资源事件 (状态、标签、里程碑)。
+
+        通过调用 GitLab 事件接口，捕捉每一个状态变迁点。
+
+        Args:
+            project: 关联的 Project 对象。
+            issue_data: Issue 的详情字典 (必须包含 id 和 iid)。
+        """
+        project_id = project.id
+        issue_iid = issue_data['iid']
+        issue_id = issue_data['id']
+        
+        # 1. 同步状态变更事件
+        for event in self.client.get_issue_state_events(project_id, issue_iid):
+            self._save_issue_event(issue_id, 'state', event)
+            
+        # 2. 同步标签变更事件
+        for event in self.client.get_issue_label_events(project_id, issue_iid):
+            self._save_issue_event(issue_id, 'label', event)
+            
+        # 3. 同步里程碑变更事件
+        for event in self.client.get_issue_milestone_events(project_id, issue_iid):
+            self._save_issue_event(issue_id, 'milestone', event)
+
+    def _save_issue_event(self, issue_id: int, event_type: str, data: Dict) -> None:
+        """保存 Issue 事件，确保幂等性。
+
+        用于将 GitLab 的原子事件（如状态变更、标签变更等）同步至数据库。
+
+        Args:
+            issue_id: 数据库中对应的 Issue 内部 ID。
+            event_type: 事件分类 (state, label, milestone 等)。
+            data: 来自 GitLab API 的原始事件元数据字典。
+        """
+        external_id = data['id']
+        
+        # 检查是否已存在
+        existing = self.session.query(GitLabIssueEvent).filter_by(
+            issue_id=issue_id, 
+            event_type=event_type, 
+            external_event_id=external_id
+        ).first()
+        
+        if existing:
+            return
+            
+        event = GitLabIssueEvent(
+            issue_id=issue_id,
+            event_type=event_type,
+            external_event_id=external_id,
+            action=data.get('state') or data.get('action') or 'update',
+            created_at=parse_iso8601(data.get('created_at')),
+            meta_info=data
+        )
+        
+        # 关联用户
+        if data.get('user') and self.user_resolver:
+            event.user_id = self.user_resolver.resolve(data['user']['id'])
+            
+        self.session.add(event)
+
+    def _sync_issue_flow_details(self, project: Project, issue_data: Dict) -> None:
+        """同步 Issue 的流转历史细节与阻塞记录 (用于流动效能分析)。
+
+        基于 GitLab 资源事件重建 Issue 的状态演进过程并识别阻塞区间。
+        这些数据是计算周期时间 (Cycle Time) 和流动效率的基础。
+
+        Args:
+            project: 关联的 Project 数据库模型实例。
+            issue_data: 从 GitLab API 获取的原始 Issue 详情数据字典。
+        """
+        issue_id = issue_data['id']
+        issue_iid = issue_data['iid']
+        
+        # 1. 同步状态流转 (Transitions)
+        state_events = sorted(
+            list(self.client.get_issue_state_events(project.id, issue_iid)),
+            key=lambda x: x['created_at']
+        )
+        
+        last_state = 'opened'  # GitLab Issue 默认初始状态
+        last_time = parse_iso8601(issue_data['created_at'])
+        
+        for event in state_events:
+            current_state = event['state']
+            current_time = parse_iso8601(event['created_at'])
+            
+            # 计算时长 (单位：小时)
+            duration = (current_time - last_time).total_seconds() / 3600.0
+            
+            # 保存流转记录 (确保不重复添加)
+            existing = self.session.query(IssueStateTransition).filter_by(
+                issue_id=issue_id, to_state=current_state, timestamp=current_time
+            ).first()
+            
+            if not existing:
+                trans = IssueStateTransition(
+                    issue_id=issue_id,
+                    from_state=last_state,
+                    to_state=current_state,
+                    timestamp=current_time,
+                    duration_hours=duration
+                )
+                self.session.add(trans)
+                
+            last_state = current_state
+            last_time = current_time
+
+        # 2. 同步阻塞记录 (Blockages)
+        # 通过标签变更识别 'blocked' 标签的生命周期。
+        # 认为带有 'blocked' 字样的标签被添加即进入阻塞状态，被移除即解除阻塞。
+        label_events = sorted(
+            list(self.client.get_issue_label_events(project.id, issue_iid)),
+            key=lambda x: x['created_at']
+        )
+        
+        for event in label_events:
+            label_name = event.get('label', {}).get('name', '').lower()
+            if 'blocked' not in label_name:
+                continue
+                
+            action = event['action']  # 'add' 或 'remove'
+            event_time = parse_iso8601(event['created_at'])
+            
+            if action == 'add':
+                # 开始阻塞区间：检查是否已有同一时间的记录
+                existing = self.session.query(Blockage).filter_by(
+                    issue_id=issue_id, start_time=event_time
+                ).first()
+                if not existing:
+                    active_blockage = Blockage(
+                        issue_id=issue_id,
+                        reason=label_name,
+                        start_time=event_time
+                    )
+                    self.session.add(active_blockage)
+            elif action == 'remove':
+                # 结束阻塞区间：更新最近一条未闭环的阻塞记录
+                last_block = self.session.query(Blockage).filter(
+                    Blockage.issue_id == issue_id,
+                    Blockage.end_time == None
+                ).order_by(Blockage.start_time.desc()).first()
+                
+                if last_block:
+                    last_block.end_time = event_time

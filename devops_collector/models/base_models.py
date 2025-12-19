@@ -10,7 +10,7 @@
     from devops_collector.models.base_models import Base, Organization, User, SyncLog
 """
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, JSON, UniqueConstraint
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, JSON, UniqueConstraint, Float, BigInteger
 from sqlalchemy.orm import declarative_base, relationship, backref
 from sqlalchemy.sql import func
 
@@ -28,6 +28,36 @@ class TimestampMixin:
 class RawDataMixin:
     """原始数据混入类，存储 API 返回的完整 JSON。"""
     raw_data = Column(JSON)
+
+
+class RawDataStaging(Base):
+    """原始数据落盘表 (Staging Layer)。
+    
+    用于存储未经转换的原始 API 响应内容。支持按需重放、审计以及故障排查。
+    配合生命周期管理策略，可定期清理旧数据。
+    
+    Attributes:
+        id: 自增主键。
+        source: 数据源来源 (gitlab, sonarqube, jenkins 等)。
+        entity_type: 实体类型 (merge_request, project, issue, build 等)。
+        external_id: 外部系统的唯一标识 (如 MR 的 IID 或项目 ID)。
+        payload: 原始 JSON 响应内容。
+        collected_at: 采集时间，用于生命周期管理。
+    """
+    __tablename__ = 'raw_data_staging'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source = Column(String(50), nullable=False, index=True)
+    entity_type = Column(String(50), nullable=False, index=True)
+    external_id = Column(String(100), nullable=False, index=True)
+    
+    payload = Column(JSON, nullable=False)
+    schema_version = Column(String(20), default="1.0", index=True) # 记录采集时的 Schema 版本
+    collected_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    
+    __table_args__ = (
+        UniqueConstraint('source', 'entity_type', 'external_id', name='idx_source_entity_extid'),
+    )
 
 
 class Organization(Base):
@@ -50,9 +80,16 @@ class Organization(Base):
     level = Column(String(20))  # Company, Center, Department, Group
     parent_id = Column(Integer, ForeignKey('organizations.id'))
     
+    # 财务与 HR 关联字段
+    finance_code = Column(String(100), unique=True) # 财务系统中的成本中心代码 (Cost Center Code)
+    external_id = Column(String(100))               # HR 系统中的组织唯一标识
+    
     # 自关联关系
     children = relationship("Organization", backref=backref('parent', remote_side=[id]))
     
+    # 关联服务
+    services = relationship("Service", back_populates="organization")
+
     # 关联用户（双向关系）
     # 注意：这里不直接定义 relationship，而是在各插件 of User 模型中通过 back_populates 建立
     # 这样可以避免循环导入问题
@@ -90,12 +127,51 @@ class User(Base):
     department = Column(String(100))
     organization_id = Column(Integer, ForeignKey('organizations.id'))
     
+    # HR 与财务对齐字段
+    employee_id = Column(String(50), unique=True)  # HR 系统工号
+    job_title_level = Column(String(100))          # 岗位序列与级别 (用于通过平均费率计算成本)
+    hire_date = Column(DateTime)                   # 入职日期
+    termination_date = Column(DateTime)            # 离职日期
+    
     raw_data = Column(JSON)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     
     # 关联
     identities = relationship("IdentityMapping", back_populates="user", cascade="all, delete-orphan")
+
+
+class LaborRateConfig(Base, TimestampMixin):
+    """人工费率配置模型 (Labor Rate Configuration)。
+
+    用于定义不同岗位级别、不同区域或不同组织的“标准人天成本 (Blended Rate)”。
+    通过标准费率而非真实工资进行核算，在保护员工隐私的同时符合财务预算模型。
+
+    Attributes:
+        id: 自增内部主键。
+        job_title_level: 岗位序列与级别 (与 User.job_title_level 对应，如 P7, Senior)。
+        organization_id: 关联的组织 ID (可选)。支持不同部门或地域设置不同的核算费率。
+        daily_rate: 标准人天成本金额。
+        hourly_rate: 标准人时成本金额 (通常为 daily_rate / 8)。
+        currency: 币种代码 (如 CNY, USD)。
+        effective_date: 费率生效时间。
+        is_active: 是否启用该费率配置。
+        organization: 关联的 Organization 对对象。
+    """
+    __tablename__ = 'labor_rate_configs'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_title_level = Column(String(100), nullable=False, index=True)
+    organization_id = Column(Integer, ForeignKey('organizations.id'), nullable=True)
+    
+    daily_rate = Column(Float, nullable=False)
+    hourly_rate = Column(Float)
+    currency = Column(String(10), default='CNY')
+    
+    effective_date = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    is_active = Column(Boolean, default=True)
+    
+    organization = relationship("Organization")
 
 
 class IdentityMapping(Base):
@@ -195,6 +271,7 @@ class Product(Base):
     
     # 归属中心
     organization_id = Column(Integer, ForeignKey('organizations.id'))
+    finance_code = Column(String(100)) # 关联财务系统的预算科目或项目代码
     
     # 关联的技术项目 ID (由具体插件定义意义)
     project_id = Column(Integer)
@@ -223,7 +300,7 @@ class Product(Base):
     objectives = relationship("OKRObjective", back_populates="product")
     
     # 财务与业务指标：支持 ROI 与波士顿矩阵分析
-    budget_amount = Column(func.float)       # 预算金额
+    budget_amount = Column(Float)            # 预算金额
     business_value_score = Column(Integer)   # 业务价值评分 (1-100)
     
     raw_data = Column(JSON)
@@ -309,6 +386,90 @@ class OKRKeyResult(Base, TimestampMixin):
     objective = relationship("OKRObjective", back_populates="key_results")
 
 
+class Service(Base, TimestampMixin):
+    """服务目录模型 (Service Catalog)。
+    
+    用于在逻辑层面定义业务服务，一个服务可能对应多个技术项目(Repositories)。
+    跨越 DevOps L4 的核心元数据。
+    
+    Attributes:
+        id: 自增主键。
+        name: 服务名称。
+        tier: 服务等级 (P0: 核心, P1: 重要, P2: 一般, P3: 次要)。
+        description: 服务描述。
+        organization_id: 归属的组织/团队 ID。
+        product_id: 关联的产品 ID。
+        raw_data: 原始 JSON 备份。
+    """
+    __tablename__ = 'services'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(200), nullable=False, unique=True)
+    tier = Column(String(20)) # P0, P1, P2, P3
+    description = Column(Text)
+    
+    organization_id = Column(Integer, ForeignKey('organizations.id'))
+    product_id = Column(Integer, ForeignKey('products.id'))
+    
+    raw_data = Column(JSON)
+    
+    # 关系映射
+    organization = relationship("Organization", back_populates="services")
+    product = relationship("Product")
+    slos = relationship("SLO", back_populates="service", cascade="all, delete-orphan")
+    projects = relationship("ServiceProjectMapping", back_populates="service", cascade="all, delete-orphan")
+
+
+class ServiceProjectMapping(Base, TimestampMixin):
+    """服务与技术项目映射表。
+    
+    解决一个逻辑服务对应多个代码仓库/项目的问题。
+    """
+    __tablename__ = 'service_project_mappings'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(Integer, ForeignKey('services.id'), nullable=False)
+    
+    # 关联技术项目 (跨插件支持)
+    source = Column(String(50), default='gitlab') # gitlab, etc.
+    project_id = Column(Integer, nullable=False)   # 对应插件系统中的项目 ID
+    
+    service = relationship("Service", back_populates="projects")
+
+
+class SLO(Base, TimestampMixin):
+    """服务等级目标模型 (SLO)。
+    
+    定义服务的可靠性承诺，衡量服务是否达到预期水平。
+    
+    Attributes:
+        id: 自增主键。
+        service_id: 关联的服务 ID。
+        name: SLO 名称 (如 Availability, Latency P99)。
+        indicator_type: 指标类型 (Availability, Latency, ErrorRate, Throughput)。
+        target_value: 目标达成值 (如 99.9, 200)。
+        metric_unit: 计量单位 (%, ms, ops/s)。
+        time_window: 统计时间窗口 (7d, 28d, 30d)。
+        description: 指标定义描述。
+    """
+    __tablename__ = 'slos'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(Integer, ForeignKey('services.id'), nullable=False)
+    
+    name = Column(String(200), nullable=False)
+    indicator_type = Column(String(50)) # Availability, Latency, ErrorRate, Throughput
+    
+    target_value = Column(Float, nullable=False)
+    metric_unit = Column(String(20))    # %, ms, req/s
+    time_window = Column(String(20))    # 7d, 28d, 30d
+    
+    description = Column(Text)
+    
+    # 关系映射
+    service = relationship("Service", back_populates="slos")
+
+
 class TraceabilityLink(Base, TimestampMixin):
     """通用链路追溯映射表。
     
@@ -378,7 +539,7 @@ class TestExecutionSummary(Base, TimestampMixin):
     passed_count = Column(Integer, default=0)
     failed_count = Column(Integer, default=0)
     skipped_count = Column(Integer, default=0)
-    pass_rate = Column(func.float) # 计算字段
+    pass_rate = Column(Float) # 计算字段
     duration_ms = Column(BigInteger) # 执行耗时
     
     raw_data = Column(JSON)
@@ -410,10 +571,10 @@ class PerformanceRecord(Base, TimestampMixin):
     scenario_name = Column(String(200), nullable=False) # 压测场景或接口名
     
     # 核心性能指标
-    avg_latency = Column(func.float) # 平均耗时 (ms)
-    p99_latency = Column(func.float) # P99 耗时 (ms)
-    throughput = Column(func.float)  # 吞吐量 (TPS/RPS)
-    error_rate = Column(func.float)  # 错误率 (%)
+    avg_latency = Column(Float) # 平均耗时 (ms)
+    p99_latency = Column(Float) # P99 耗时 (ms)
+    throughput = Column(Float)  # 吞吐量 (TPS/RPS)
+    error_rate = Column(Float)  # 错误率 (%)
     
     concurrency = Column(Integer)    # 并发数
     
@@ -473,6 +634,42 @@ class Incident(Base, TimestampMixin):
     raw_data = Column(JSON)
 
 
+class CostCode(Base, TimestampMixin):
+    """成本分解结构模型 (Cost Breakdown Structure - CBS Tree)。
+
+    用于建立独立于行政组织的财务核算体系，作为项目投入和预算控制的核心维度。
+    支持无限层级的科目分解 (如：1000 技术投入 -> 1001 云服务 -> 1001.01 计算节点)。
+
+    Attributes:
+        id: 自增内部主键。
+        code: 财务科目编码 (唯一，如 1002.01.03)。
+        name: 科目显示名称 (如 云服务器存储费)。
+        description: 该科目的具体适用范围和核算规则说明。
+        parent_id: 父级科目 ID，用于构建树形层级。
+        category: 成本大类 (如 Labor, Cloud, License, Infrastructure)。
+        default_capex_opex: 默认支出性质建议 (CAPEX 代表资本化，OPEX 代表费用化)。
+        is_active: 状态标记，停用的科目不再参与新的成本关联。
+        costs: 关联的 ResourceCost 列表。
+    """
+    __tablename__ = 'cost_codes'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(50), unique=True, nullable=False) # 财务编码映射
+    name = Column(String(200), nullable=False)
+    description = Column(Text)
+    
+    # 树形结构
+    parent_id = Column(Integer, ForeignKey('cost_codes.id'))
+    children = relationship("CostCode", backref=backref('parent', remote_side=[id]))
+    
+    # 财务属性
+    category = Column(String(50))           # Labor, Cloud, License, Infrastructure, etc.
+    default_capex_opex = Column(String(20)) # CAPEX, OPEX
+    is_active = Column(Boolean, default=True)
+    
+    costs = relationship("ResourceCost", back_populates="cost_code")
+
+
 class ResourceCost(Base, TimestampMixin):
     """资源与成本统计模型。
     
@@ -508,9 +705,25 @@ class ResourceCost(Base, TimestampMixin):
     cost_type = Column(String(50))   # 分类：Infrastructure(基建), HumanLabor(人力), Licensing(授权), Cloud(云服务)
     cost_item = Column(String(100))  # 具体项目：AWS-EC2, SonarQube-License, DeveloperSalaray
     
-    # 金额指标
-    amount = Column(func.float, nullable=False)
-    currency = Column(String(10), default='CNY') # 币种
+    # 财务关联核心
+    cost_code_id = Column(Integer, ForeignKey('cost_codes.id'))
+    cost_code = relationship("CostCode", back_populates="costs")
+    
+    purchase_contract_id = Column(Integer, ForeignKey('purchase_contracts.id'))
+    purchase_contract = relationship("PurchaseContract", back_populates="costs")
+    
+    # 冗余字段方便快速查询
+    vendor_name = Column(String(200))
+    
+    # 指标
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), default='CNY')   # 币种
+    
+    # 财务合规字段
+    capex_opex_flag = Column(String(20))           # CAPEX (资本化), OPEX (费用化)
+    finance_category = Column(String(100))         # 财务科目分类
+    is_locked = Column(Boolean, default=False)     # 关账状态：True 则禁止修改，保护审计数据
+    accounting_date = Column(DateTime(timezone=True)) # 账务发生日期
     
     # 数据来源
     source_system = Column(String(50)) # 来源：aws_billing, internal_hr, manual_entry
@@ -547,26 +760,167 @@ class UserActivityProfile(Base, TimestampMixin):
     period = Column(String(50), nullable=False) # 统计周期：2025-01, 2025-Q1
     
     # 协作深度指标
-    avg_review_turnaround = Column(func.float) # 平均评审响应时长 (秒)
-    review_participation_rate = Column(func.float) # 评审参与率
+    avg_review_turnaround = Column(Float) # 平均评审响应时长 (秒)
+    review_participation_rate = Column(Float) # 评审参与率
     
     # 认知负担指标
-    context_switch_rate = Column(func.float)    # 任务切换频率 (平均每天处理的项目或仓库数)
-    contribution_diversity = Column(func.float) # 贡献多样性 (跨项目分布得分)
+    context_switch_rate = Column(Float)    # 任务切换频率 (平均每天处理的项目或仓库数)
+    contribution_diversity = Column(Float) # 贡献多样性 (跨项目分布得分)
     
     # 技术特征
     top_languages = Column(JSON)  # 主要编程语言分布
     
     # 行为健康指标 (加班与负荷)
-    off_hours_activity_ratio = Column(func.float) # 非工作时间活动占比 (如 20:00 - 08:00)
+    off_hours_activity_ratio = Column(Float) # 非工作时间活动占比 (如 20:00 - 08:00)
     weekend_activity_count = Column(Integer)      # 周末活跃天数
     
     # 代码规范与质量遵循度
-    avg_lint_errors_per_kloc = Column(func.float) # 每千行代码平均 Lint 错误数
-    code_review_acceptance_rate = Column(func.float) # 评审通过率 (无需返工直接合并的比例)
+    avg_lint_errors_per_kloc = Column(Float) # 每千行代码平均 Lint 错误数
+    code_review_acceptance_rate = Column(Float) # 评审通过率 (无需返工直接合并的比例)
     
     user = relationship("User")
     raw_data = Column(JSON)
+
+
+class RevenueContract(Base, TimestampMixin):
+    """收入合同模型 (Revenue Contract)。
+
+    记录业务端签署的产生外部收入的合同，并将其回款条件与研发项目的里程碑进行联动。
+    有助于实现“基于价值交付的收入确认”和“项目 ROI 分析”。
+
+    Attributes:
+        id: 自增内部主键。
+        contract_no: 外部合同唯一编号。
+        title: 合同名称或项目名称简述。
+        client_name: 客户或集成商名称。
+        total_value: 合同含税总金额。
+        currency: 币种 (默认 CNY)。
+        sign_date: 合同正式签署日期。
+        start_date: 服务期/履行起始日期。
+        end_date: 服务期/履行截止日期。
+        product_id: 关联的内部产品 ID。
+        organization_id: 负责交付的内部组织 ID。
+        status: 合同生命周期状态 (Active, Finished, Suspended)。
+        raw_data: 存储来自外部合同系统的原始 JSON 镜像。
+        product: 关联的 Product 模型。
+        organization: 关联的 Organization 模型。
+        payment_nodes: 关联的分阶段收款节点集合。
+    """
+    __tablename__ = 'revenue_contracts'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contract_no = Column(String(100), unique=True, nullable=False)
+    title = Column(String(500), nullable=False)
+    
+    client_name = Column(String(200))
+    total_value = Column(Float, nullable=False)
+    currency = Column(String(10), default='CNY')
+    
+    sign_date = Column(DateTime)
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    
+    # 关联业务维度
+    product_id = Column(Integer, ForeignKey('products.id'))
+    organization_id = Column(Integer, ForeignKey('organizations.id'))
+    
+    status = Column(String(50), default='Active')
+    raw_data = Column(JSON)
+    
+    product = relationship("Product")
+    organization = relationship("Organization")
+    payment_nodes = relationship("ContractPaymentNode", back_populates="contract", cascade="all, delete-orphan")
+
+
+class ContractPaymentNode(Base, TimestampMixin):
+    """合同回款节点/里程碑模型。
+
+    将合同总金额拆分为具体的收款节点，并将其技术达成条件与 GitLab/禅道中的里程碑绑定。
+    通过自动化同步里程碑状态，实时计算“应收账款 (Accounts Receivable)”。
+
+    Attributes:
+        id: 自增内部主键。
+        contract_id: 所属收入合同 ID。
+        node_name: 节点名称 (如 预付款, UAT 验收款)。
+        billing_percentage: 该节点占合同总额的百分比。
+        billing_amount: 该节点的具体应收金额。
+        linked_milestone_id: 关联的外部技术里程碑 ID (如 GitLab Milestone)。
+        linked_system: 里程碑所在的源系统 (gitlab, zentao, jira)。
+        is_achieved: 技术指标是否已达成（根据外部系统状态自动同步）。
+        achieved_at: 技术指标达成的具体时间。
+        is_billed: 是否已发起财务维度的开票或收款动作。
+        billed_at: 实际回款或开票时间。
+        contract: 关联的 RevenueContract 模型。
+    """
+    __tablename__ = 'contract_payment_nodes'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contract_id = Column(Integer, ForeignKey('revenue_contracts.id'), nullable=False)
+    
+    node_name = Column(String(200), nullable=False)
+    billing_percentage = Column(Float) # 如 30.0 代表 30%
+    billing_amount = Column(Float)     # 该节点的应收金额
+    
+    # 与项目的技术进度挂钩
+    linked_milestone_id = Column(Integer)  # 外部系统里程碑 ID (如 GitLab Milestone)
+    linked_system = Column(String(50))     # gitlab, zentao, jira
+    
+    # 财务进度控制
+    is_achieved = Column(Boolean, default=False)
+    achieved_at = Column(DateTime)
+    is_billed = Column(Boolean, default=False)
+    billed_at = Column(DateTime)
+    
+    contract = relationship("RevenueContract", back_populates="payment_nodes")
+
+
+class PurchaseContract(Base, TimestampMixin):
+    """采购合同模型 (Purchase Contract)。
+
+    用于记录公司支出的各类采购合同，包括：云服务采购、人力外包、软件许可、设备租赁等。
+    它是 ResourceCost 支出的源头追溯依据。
+
+    Attributes:
+        id: 自增内部主键。
+        contract_no: 采购合同唯一编号。
+        vendor_name: 供应商全称。
+        vendor_id: 供应商在内部 SRM 或财务系统中的唯一 ID。
+        title: 合同项目详细名称。
+        total_amount: 合同含税总金额。
+        currency: 币种 (默认 CNY)。
+        start_date: 合同有效起始日期。
+        end_date: 合同过期日期。
+        cost_code_id: 关联的财务 CBS 科目 ID。
+        capex_opex_flag: 支出性质 (CAPEX 或 OPEX)。
+        status: 合同有效状态 (Active, Expired, Pending)。
+        raw_data: 原始 JSON 镜像存储。
+        cost_code: 关联的 CostCode 模型。
+        costs: 分摊到该合同下的 ResourceCost 流水集合。
+    """
+    __tablename__ = 'purchase_contracts'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contract_no = Column(String(100), unique=True, nullable=False)
+    vendor_name = Column(String(200), nullable=False)
+    vendor_id = Column(String(100)) # 外部供应商系统 ID
+    
+    title = Column(String(500), nullable=False)
+    total_amount = Column(Float, nullable=False)
+    currency = Column(String(10), default='CNY')
+    
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    
+    # 财务维度
+    cost_code_id = Column(Integer, ForeignKey('cost_codes.id'))
+    capex_opex_flag = Column(String(20)) # CAPEX, OPEX
+    
+    status = Column(String(50), default='Active')
+    raw_data = Column(JSON)
+    
+    # 关系
+    cost_code = relationship("CostCode")
+    costs = relationship("ResourceCost", back_populates="purchase_contract")
 
 
 
