@@ -117,6 +117,15 @@ class JiraIssue(Base):
     reopening_count = Column(Integer, default=0)        # 重开次数 (从 Done/Resolved 回到 In Progress)
     time_to_first_response = Column(BigInteger)         # 响应延迟 (创建到首次分配或状态变更的时间，秒)
     
+    # PMO 指标扩展：进度与预估
+    original_estimate = Column(BigInteger)              # 原始预估工时 (秒)
+    time_spent = Column(BigInteger)                     # 实际消耗工时 (秒)
+    remaining_estimate = Column(BigInteger)              # 剩余预估工时 (秒)
+    
+    # 标签与版本 (用于里程碑、风险、战略分类)
+    labels = Column(JSON)                               # 标签列表 (数组)
+    fix_versions = Column(JSON)                         # 修复版本 (数组，包含标识里程碑的信息)
+    
     project = relationship("JiraProject", back_populates="issues")
     history = relationship("JiraIssueHistory", back_populates="issue", cascade="all, delete-orphan")
     sprint = relationship("JiraSprint", back_populates="issues")

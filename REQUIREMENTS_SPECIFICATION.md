@@ -55,12 +55,15 @@
 #### R-COLLECT-01: 多源数据适配
 *   **描述**: 系统须支持 GitLab (v13+)、SonarQube (v8+) 和 Jenkins (v2.x+) 的 API 对接。
 *   **验收标准**: 配置 URL/Token 后，能正确连通并获取 Version 信息。
+#### R-COLLECT-02: Jira 深度数据
+*   **描述**: 采集标签、修复版本、预估/实际工时、以及 Issue 链接（Dependency）。
+*   **验收标准**: `jira_issues` 和 `traceability_links` 表能体现完整的链路关系。
 
-#### R-COLLECT-02: 智能断点续传
+#### R-COLLECT-03: 智能断点续传
 *   **描述**: 针对大仓库（10万+ Commits），支持分批次 (Batch) 拉取。
 *   **验收标准**: 中途中断同步（模拟 Kill 进程），重启后能从上次中断的页码/时间点继续，不重跑已同步数据。
 
-#### R-COLLECT-03: 深度代码分析
+#### R-COLLECT-04: 深度代码分析
 *   **描述**: 采集代码变更明细，需区分“有效代码”、“空行”、“注释行”。
 *   **验收标准**: `commit_file_stats` 表能准确记录每次提交的文件级增量；且支持通过配置文件忽略特定后缀文件（如 .lock, .min.js）。
 
@@ -135,6 +138,9 @@
 #### R-ANALYTICS-13: AI 智能归因 (AI Work Item Analysis) (New)
 *   **描述**: 利用 LLM 对非结构化 Commit Message 和 Issue Description 进行语义分析。
 *   **验收标准**: 自动填充 `ai_category` (Feature/Maintenance/Internal) 准确率需 > 80%，并提供摘要。
+#### R-NOTIFY-01: 多渠道风险告警
+*   **描述**: 支持基于异常指标（进度落后、质量红线、跨项目阻塞）的自动推送。
+*   **验收标准**: 支持企业微信、飞书、钉钉三方渠道，延迟 < 5min。
 
 ---
 

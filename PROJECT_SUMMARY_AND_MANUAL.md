@@ -221,12 +221,13 @@
 - **价值**: 无需 Clone 代码库即可分析项目的技术栈分布 (Python vs Go)、文件规模分布等。
 - **实现方式**: `devops_collector/sql/PROJECT_OVERVIEW.sql`
 
-### 3.11 协作熵与评审质量 (Review Quality)
-- **核心逻辑**: 区分评审是“走过场”还是“真探讨”，分析代码合并权限的分布。
-- **价值**: 提升代码审查的实效性，避免形式主义。
-- **维度**:
-    - **评审乒乓指数**: Review Rounds (交互轮次)。
-    - **评审民主度**: Merger Gini Coefficient (合并权限分布)。
+### 3.11 评审民主度与协作熵 (Review Democracy & Entropy) 🌟 (New)
+- **核心逻辑**: 通过分析代码评审 (CR) 轨迹，识别“一言堂”或“无效沟通”风险。
+    - **民主度**: 统计 MR 的独立评审人多样性。
+    - **协作熵**: 统计单次变更伴随的平均人工评论数。
+    - **乒乓指数**: 统计 MR 打回修订的轮次。
+- **价值**: 提升代码质量把关实效，防止技术负债隐秘堆积。
+- **实现方式**: `devops_collector/sql/TEAM_ANALYTICS.sql` (`view_team_review_quality_entropy`)
 
 ### 3.12 团队倦怠雷达 (Burnout Radar)
 - **核心逻辑**: 利用时间戳数据感知团队健康度，寻找不可持续工作的信号。
@@ -248,12 +249,77 @@
     - **重构比率**: 删除线/新增线 趋近于 1。
     - **逻辑耦合热度**: Co-change Frequency (异构模块同时修改)。
 
-### 3.15 跨边界协作力 (InnerSource Impact)
+### 3.15 跨边界协作力与内源生态 (InnerSource Impact)
 - **核心逻辑**: 衡量组织内部的开源文化与知识共享情况。
-- **价值**: 打破部门墙，促进技术复用。
-- **维度**:
-    - **内源贡献率**: 对非本部门项目的贡献占比。
-    - **实现方式**: `devops_collector/sql/PMO_ANALYTICS.sql`
+    - **内源贡献率**: 跨部门 MR 贡献占比。
+    - **组件复用率**: 内源组件被外部项目引用的广度。
+- **价值**: 打破部门墙，通过技术复利降低重复造轮子成本。
+- **计算逻辑**: `InnerSource Index = (跨部门提交的 MR 数 / 总 MR 数) * 0.4 + (被外部引用的组件数 / 总组件数) * 0.6`。
+- **实现方式**: `devops_collector/sql/PMO_ANALYTICS.sql` (`view_pmo_innersource_reuse_heatmap`)
+
+### 3.19 人员效能六边形 (Ability Hexagon Persona) 🌟 (New)
+- **核心逻辑**: 从生产力、质量、协作、响应性、广度、持续性六个维度对员工进行全方位刻画。
+- **价值**: 识别团队中的“扫地僧”（高质量低产量）与“冲锋队长”（高产量高响应）。
+- **实现方式**: `devops_collector/sql/HR_ANALYTICS.sql` (view_user_ability_hexagon)
+
+### 3.20 风险预警推送 (Risk Notification) 🌟 (New)
+- **核心逻辑**: 自动识别并推送 进度、质量、协作、安全 四大类红线告警。
+- **价值**: 让风险发现从“被动报表”转为“主动触达”。
+- **渠道**: 企业微信、飞书、钉钉推送。
+- **配置**: 详见 `METRIC_THRESHOLDS_GUIDE.md` (指标预警阈值配置白皮书)。
+
+### 3.22 隐性满意度 (Shadow Satisfaction Index) 🌟 (New)
+- **核心逻辑**: 在无问卷调查的情况下，通过“行为指纹”推导交付体验。
+    - **响应性 (Penalty)**: Bug 修复时长的 SLA 扣分。
+    - **冲突性 (Penalty)**: 高争议需求评论密度的扣分。
+    - **返工性 (Penalty)**: 需求重开记录的扣分。
+- **价值**: 识别那些“交付了但业务体验极差”的风险项目。
+- **实现方式**: `devops_collector/sql/PMO_ANALYTICS.sql` (`view_pmo_customer_satisfaction`)
+
+### 3.21 自动化归责逻辑 (Automated Attribution) 🌟 (New)
+- **核心逻辑**: 系统如何判定一个 Bug 或 Lint 问题属于谁？
+    - **SCM Blame 归责**: 通过 SonarQube 的 Git Blame 插件实时定位代码行的最后修改人。
+    - **提交关联归责**: 所有的 Lint 遵循度和 CI 失败记录均与该 Commit 的 Author 绑定。
+    - **缺陷引入者追溯**: 通过 `traceability_links` 建立 MR 与业务 Bug 的逻辑关联，实现从结果到原因的“穿透式归属”。
+- **价值**: 确保“能力六边形”中质量维度的客观公正。
+
+### 3.23 架构脆性指数 (Architectural Brittleness Index) 🌟 (New)
+- **核心逻辑**: 识别研发资产中因“高耦合+高变动+低质量”构成的技术黑洞。
+    - **依赖权重**: 外部引用的入度因子。
+    - **动荡权重**: 过去 90 天代码流转频率。
+    - **硬伤权重**: 圈复杂度与单测覆盖率得分。
+- **价值**: 预防系统性技术塌陷，精准指导重构资源投入。
+- **实现方式**: `devops_collector/sql/PMO_ANALYTICS.sql` (`view_pmo_architectural_brittleness`)
+
+### 3.24 计划确定性指数 (Planning Certainty Index) 🌟 (New)
+- **核心逻辑**: 量化团队的承诺履行能力与估算水准。
+    - **估算准确度**: 统计实耗工时与预估工时的偏差。
+    - **交付稳定性**: 监控截止日期的延期频次。
+- **价值**: 辅助 PMO 识别“靠谱团队”，提升业务排期的可预见性。
+- **实现方式**: `devops_collector/sql/TRADITIONAL_PM_ANALYTICS.sql` (`view_pmo_planning_certainty`)
+
+### 3.25 “胶水人”贡献模型 (The Glue-Person Index) 🌟 (New)
+- **核心逻辑**: 识别通过非代码产出维持团队高效运作的“灵魂人物”。
+    - **知识布道**: 活跃在 Wiki 和技术文档建设的一线。
+    - **流程守护**: 主动修正 Issue 状态、标签，确保研发流程合规。
+    - **协作催化**: 在评论区积极响应、解决争议、解除他人阻塞。
+- **价值**: 完善人才评价体系，奖励那些让别人更高效的开发者。
+- **实现方式**: `devops_collector/sql/HR_ANALYTICS.sql` (`view_hr_glue_person_index`)
+
+### 3.26 软件供应链流转效率 (Software Supply Chain Velocity) 🌟 (New)
+- **核心逻辑**: 监控制品从代码合并到生产发布的全生命周期。
+    - **构建转换率**: 统计维持一次稳定发布所需的平均构建次数。
+    - **环境停留时延**: 量化制品在 Staging/UAT 环境待部署的时长。
+    - **交付漏斗**: 关联 Pipeline 成功率与 Deployment 频次。
+- **价值**: 识别交付流程中的“物理淤积点”，推动持续交付 (CD) 的深度落地。
+- **实现方式**: `devops_collector/sql/PMO_ANALYTICS.sql` (`view_pmo_software_supply_chain_velocity`)
+
+### 3.27 组织依赖透明度 (Organization Dependency Transparency) 🌟 (New)
+- **核心逻辑**: 识别跨部门的协作阻塞节点与链式延期风险。
+    - **脆弱性指数**: 统计受外部部门阻塞的任务占比。
+    - **影响拓扑**: 识别“关键路径”上的跨部门依赖。
+- **价值**: 为组织治理提供依据，识别那些被“上游”拖累的项目。
+- **实现方式**: `devops_collector/sql/TRADITIONAL_PM_ANALYTICS.sql` (`view_pmo_org_dependency_transparency`)
 
 ### 3.16 战略投资组合 (Strategic Portfolio) (New)
 - **核心逻辑**: 基于波士顿矩阵，将项目划分为 Stars (高质高产), Cash Cows (高质低产), Dogs (低质低产), Problem Children (低质高产)。
@@ -269,6 +335,91 @@
 - **核心逻辑**: 计算研发投入 (FTE, Hours) 与产出 (Throughput) 的转化率。
 - **价值**: 回答 "钱花得值不值"。
 - **实现方式**: `devops_collector/sql/PMO_ANALYTICS.sql`
+
+---
+
+## 💰 4. 财务视角的研发效能洞察 (Finance Analytics)
+
+### 4.1 项目真实盈利能力分析 (Project Profitability) 🌟 (New)
+- **核心逻辑**: 量化项目的收入、成本与毛利率。
+    - **收入端**: 汇总已达成的合同回款节点。
+    - **成本端**: 人力成本 + 云成本 + 外包成本。
+- **价值**: 识别"伪需求"项目，为定价策略提供成本基准。
+- **实现方式**: `devops_collector/sql/FINANCE_ANALYTICS.sql` (`view_finance_project_profitability`)
+
+### 4.2 里程碑交付与回款健康度 (Milestone-Payment Health) 🌟 (New)
+- **核心逻辑**: 监控技术交付进度与财务回款节奏的同步性。
+- **价值**: 预警现金流断裂风险，为财务部门提供精准的现金流预测。
+- **实现方式**: `devops_collector/sql/FINANCE_ANALYTICS.sql` (`view_finance_milestone_payment_health`)
+
+### 4.3 人力成本燃烧率与预算预警 (Burn Rate Alert) 🌟 (New)
+- **核心逻辑**: 监控项目的人力成本消耗速度与预算健康度。
+    - **燃烧率**: 月均人力成本消耗速度。
+    - **跑道时长**: 剩余预算还能支撑多久。
+- **价值**: 提前 2-3 个月预警预算超支。
+- **实现方式**: `devops_collector/sql/FINANCE_ANALYTICS.sql` (`view_finance_burn_rate_alert`)
+
+### 4.4 技术债务的财务量化 (Tech Debt Cost) 🌟 (New)
+- **核心逻辑**: 将 SonarQube 的技术债务转换为财务成本。
+- **价值**: 用 CFO 听得懂的语言（金额）量化技术债务，为重构项目争取预算。
+- **实现方式**: `devops_collector/sql/FINANCE_ANALYTICS.sql` (`view_finance_tech_debt_cost`)
+
+### 4.5 外包 vs 自研的成本效益分析 (Outsourcing Analysis) 🌟 (New)
+- **核心逻辑**: 对比外包项目与自研项目的成本与质量。
+- **价值**: 为"外包 vs 自研"决策提供量化依据。
+- **实现方式**: `devops_collector/sql/FINANCE_ANALYTICS.sql` (`view_finance_outsourcing_analysis`)
+
+### 4.6 研发资本化合规性监控 (CAPEX Compliance) 🌟 (New)
+- **核心逻辑**: 识别可资本化的研发投入，确保会计合规。
+    - **资本化**: Feature/Epic 类工时。
+    - **费用化**: Bug/Refactor 类工时。
+- **价值**: 降低财务审计风险，优化财务报表。
+- **实现方式**: `devops_collector/sql/FINANCE_ANALYTICS.sql` (`view_finance_capex_compliance`)
+
+---
+
+## 🛡️ 5. 内控与合规性洞察 (Compliance Analytics)
+
+### 5.1 四眼原则合规性监控 (Four-Eyes Principle) 🌟 (New)
+- **核心逻辑**: 确保代码合并经过独立审查，满足 SOX 404 职责分离要求。
+- **价值**: 降低代码质量风险，为审计提供合规证据。
+- **实现方式**: `devops_collector/sql/COMPLIANCE_ANALYTICS.sql` (`view_compliance_four_eyes_principle`)
+
+### 5.2 权限滥用与异常操作检测 (Privilege Abuse) 🌟 (New)
+- **核心逻辑**: 识别非工作时间的敏感操作和权限滥用行为。
+- **价值**: 识别内部威胁，满足 ISO 27001 访问控制要求。
+- **实现方式**: `devops_collector/sql/COMPLIANCE_ANALYTICS.sql` (`view_compliance_privilege_abuse`)
+
+### 5.3 变更管理合规性追溯 (Change Traceability) 🌟 (New)
+- **核心逻辑**: 确保生产变更可追溯到需求，满足 ITIL 变更管理要求。
+- **价值**: 为事故调查提供审计线索，降低合规风险。
+- **实现方式**: `devops_collector/sql/COMPLIANCE_ANALYTICS.sql` (`view_compliance_change_traceability`)
+
+### 5.4 敏感数据访问审计 (Sensitive Data Access) 🌟 (New)
+- **核心逻辑**: 监控敏感文件的访问和变更，满足 GDPR/PIPL 数据保护要求。
+- **价值**: 预防密钥泄露事故，为安全审计提供证据。
+- **实现方式**: `devops_collector/sql/COMPLIANCE_ANALYTICS.sql` (`view_compliance_sensitive_data_access`)
+
+### 5.5 职责分离有效性验证 (Segregation of Duties) 🌟 (New)
+- **核心逻辑**: 确保同一人不同时拥有开发和发布权限，满足 SOX 404 要求。
+- **价值**: 降低舞弊风险，为内审提供合规证据。
+- **实现方式**: `devops_collector/sql/COMPLIANCE_ANALYTICS.sql` (`view_compliance_segregation_of_duties`)
+
+### 5.6 开源许可证合规性扫描 (OSS License Risk) 🌟 (New)
+- **核心逻辑**: 基于 OWASP Dependency-Check 扫描项目依赖，识别高风险开源许可证。
+    - **SPDX 标准化**: 将许可证规范化为 SPDX ID（如 Apache-2.0, MIT, GPL-3.0）。
+    - **风险评级**: 预置 16+ 常见许可证规则，自动评估风险等级。
+    - **CVE 漏洞检测**: 同时识别依赖包的安全漏洞（CVSS 评分）。
+- **价值**: 降低知识产权诉讼风险，满足企业开源治理政策，为法务部门提供风险清单。
+- **实现方式**: 
+    - SQL: `devops_collector/sql/COMPLIANCE_ANALYTICS.sql` (`view_compliance_oss_license_risk_enhanced`)
+    - Worker: `devops_collector/plugins/dependency_check/worker.py`
+    - 数据表: `dependency_scans`, `dependencies`, `dependency_cves`, `license_risk_rules`
+
+### 5.7 代码归属与知识产权保护 (IP Protection) 🌟 (New)
+- **核心逻辑**: 识别离职员工的异常行为和潜在的知识产权流失风险。
+- **价值**: 预防知识产权流失，为法律诉讼提供证据。
+- **实现方式**: `devops_collector/sql/COMPLIANCE_ANALYTICS.sql` (`view_compliance_ip_protection`)
 
 ---
 

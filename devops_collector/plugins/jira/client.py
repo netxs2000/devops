@@ -103,7 +103,11 @@ class JiraClient(BaseClient):
                 "startAt": start_at,
                 "maxResults": max_results,
                 "expand": ["changelog"],
-                "fields": ["summary", "description", "status", "priority", "issuetype", "assignee", "reporter", "creator", "created", "updated", "resolutiondate"]
+                "fields": [
+                    "summary", "description", "status", "priority", "issuetype", 
+                    "assignee", "reporter", "creator", "created", "updated", "resolutiondate",
+                    "labels", "fixVersions", "timeoriginalestimate", "timespent", "timeestimate", "issuelinks"
+                ]
             }
             response = self._get("/rest/api/3/search", params=params)
             data = response.json()

@@ -25,6 +25,11 @@
 *   **智能语义 (AI Insights)**: 基于 LLM 自动提取 Commit/MR/Issue 的业务贡献摘要。
 *   **工程卓越度 (Developer Experience)**: 采集 MR 评审轮次、深度差异分析、加班分布，全方位量化协作质量。
 *   **合规与风控 (Governance & Risk)**: 监控绕过流程的 Direct Push 和积压的安全漏洞。
+*   **开源许可证合规 (OSS License Compliance) 🌟 (New)**: 集成 OWASP Dependency-Check，自动扫描项目依赖，识别高风险许可证（GPL/AGPL）和 CVE 安全漏洞，支持 SPDX 标准化和 CVSS 评分。
+*   **模块化预警与通知 (Modular Alerting & Notification) 🌟 (New)**: 系统内置了高性能的“多渠道风险预警引擎”，实现从数据洞察到管理动作的闭环：
+    *   **异常识别**: 定时扫描 `view_pmo_risk_anomalies` 视图。
+    *   **多端推送**: 支持 **企业微信 (WeCom)**、**飞书 (Feishu)** 和 **钉钉 (DingTalk)** 的 Webhook 集成。
+    *   **结构化触达**: 自动生成富文本卡片，包含风险等级颜色标识与责任人 @ 提及功能。
 *   **断点续传 (Resumable Sync)**: 针对海量数据同步设计，支持意外中断后自动恢复。
 *   **数据时光机 (Data Time Machine)**: 完整的 Raw Data Staging 层记录，支持基于历史原始数据进行逻辑重演与修复 (Reprocessing)。
 *   **极致简洁架构 (Refactor)**: 采用微内核 + 插件工厂模型，代码资产完全模块化，核心逻辑与具体数据源解耦。
@@ -139,3 +144,9 @@ devops_collector/
 ## 📄 许可证 (License)
 
 [MIT](LICENSE)
+
+## 🌟 最新特性 (New Features v3.4.0)
+*   **Jira 360° 采集**: 深度解析标签、修复版本、工时预估与实际值、以及 Issue Links 依赖。
+*   **多渠道风险预警**: 异常指标自动推送至**企业微信、飞书、钉钉**，风险无处遁形。
+*   **财务透明化**: 基于职级费率自动核算研发人工成本，支持项目 ROI 分析。
+*   **人才能力六边形**: 自动化生成基于产出、质量、协作等维度的开发者画像。
