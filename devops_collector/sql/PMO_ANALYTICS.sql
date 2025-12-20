@@ -267,3 +267,168 @@ FROM view_project_overview
 WHERE active_days > 0
 GROUP BY group_name
 ORDER BY throughput_per_fte DESC;
+
+
+-- 9. 内源组件复用热力图 (InnerSource Component Reuse Heatmap)
+-- 作用：透视跨部门的技术供应与消费关系，量化技术复利
+CREATE OR REPLACE VIEW view_pmo_innersource_reuse_heatmap AS
+WITH package_provision AS (
+    -- 识别包的供应源头 (Provider)
+    SELECT 
+        pkg.name as package_name,
+        p.organization_id as provider_org_id,
+        o.name as provider_dept,
+        p.name as source_project
+    FROM gitlab_packages pkg
+    JOIN projects p ON pkg.project_id = p.id
+    JOIN organizations o ON p.organization_id = o.id
+),
+dependency_consumption AS (
+    -- 识别包的消费终端 (Consumer)
+    SELECT 
+        dep.name as package_name,
+        p.organization_id as consumer_org_id,
+        o.name as consumer_dept,
+        p.name as consumer_project
+    FROM gitlab_dependencies dep
+    JOIN projects p ON dep.project_id = p.id
+    JOIN organizations o ON p.organization_id = o.id
+)
+SELECT 
+    pp.provider_dept as x_axis_provider,  -- 供应部门
+    dc.consumer_dept as y_axis_consumer,  -- 消费部门
+    COUNT(DISTINCT dc.consumer_project) as reuse_intensity, -- 热力强度 (复用项目数)
+    STRING_AGG(DISTINCT pp.package_name, ', ' ORDER BY pp.package_name) as shared_components -- 涉及组件清单
+FROM package_provision pp
+JOIN dependency_consumption dc ON pp.package_name = dc.package_name
+WHERE pp.provider_org_id != dc.consumer_org_id -- 仅统计跨部门复用 (内源共创)
+GROUP BY pp.provider_dept, dc.consumer_dept
+ORDER BY reuse_intensity DESC;
+
+
+-- ---------------------------------------------------------
+-- 11. 架构脆性指数视图 (Architectural Brittleness Index)
+-- 识别技术影响力大 (In-Degree 高) 但质量差/变动频繁的高风险核心模块
+-- ---------------------------------------------------------
+CREATE OR REPLACE VIEW view_pmo_architectural_brittleness AS
+WITH package_map AS (
+    SELECT name, project_id FROM gitlab_packages
+),
+in_degree_stats AS (
+    SELECT 
+        pm.project_id,
+        COUNT(DISTINCT dep.project_id) as external_consumers
+    FROM gitlab_dependencies dep
+    JOIN package_map pm ON dep.name = pm.name
+    WHERE dep.project_id != pm.project_id
+    GROUP BY pm.project_id
+),
+churn_stats AS (
+    SELECT 
+        project_id,
+        COUNT(*) as commit_count
+    FROM commits
+    WHERE committed_date >= NOW() - INTERVAL '90 days'
+    GROUP BY project_id
+),
+sonar_latest AS (
+    SELECT 
+        project_id,
+        cognitive_complexity,
+        complexity,
+        coverage,
+        sqale_index
+    FROM sonar_measures sm
+    -- 仅取最后一次分析结果
+    WHERE analysis_date = (
+        SELECT MAX(analysis_date) 
+        FROM sonar_measures 
+        WHERE project_id = sm.project_id
+    )
+)
+SELECT 
+    p.name as project_name,
+    g.name as group_name,
+    COALESCE(ids.external_consumers, 0) as in_degree,
+    COALESCE(cs.commit_count, 0) as churn_90d,
+    COALESCE(sl.cognitive_complexity, COALESCE(sl.complexity, 0)) as complexity_score,
+    COALESCE(sl.coverage, 0) as coverage_pct,
+    -- ABI 得分算法: 
+    -- 基础分 = 影响面权重 + 复杂度权重 + 质量风险权重 + 活跃动荡权重
+    ROUND(
+        (LOG(COALESCE(ids.external_consumers, 0) + 1, 2) * 20) + 
+        (COALESCE(sl.cognitive_complexity, COALESCE(sl.complexity, 0)) / 5.0) +
+        (100 - COALESCE(sl.coverage, 0)) +
+        (LOG(COALESCE(cs.commit_count, 0) + 1, 2) * 10)
+    ) as abi_score,
+    CASE 
+        WHEN (LOG(COALESCE(ids.external_consumers, 0) + 1, 2) * 20) >= 40 AND 
+             (COALESCE(sl.cognitive_complexity, COALESCE(sl.complexity, 0)) / 5.0 + (100 - COALESCE(sl.coverage, 0))) > 60 
+        THEN 'CRITICAL: Brittle Core' -- 脆性核心：影响面极广但质量/负债严重
+        WHEN (LOG(COALESCE(ids.external_consumers, 0) + 1, 2) * 20) < 10 AND 
+             (COALESCE(sl.cognitive_complexity, COALESCE(sl.complexity, 0)) / 5.0 + (100 - COALESCE(sl.coverage, 0))) > 80
+        THEN 'POOR: Legacy Island' -- 遗产孤岛：虽然没人在用，但极其难修
+        WHEN (LOG(COALESCE(ids.external_consumers, 0) + 1, 2) * 20) >= 40 
+        THEN 'STABLE: Organization Engine' -- 稳定引擎：影响面广且质量过硬
+        ELSE 'NORMAL'
+    END as architectural_status
+FROM projects p
+JOIN gitlab_groups g ON p.group_id = g.id
+LEFT JOIN in_degree_stats ids ON p.id = ids.project_id
+LEFT JOIN churn_stats cs ON p.id = cs.project_id
+LEFT JOIN sonar_latest sl ON p.id = sl.project_id
+WHERE p.archived = false;
+
+
+-- ---------------------------------------------------------
+-- 12. 软件供应链流转效率 (Software Supply Chain Velocity - SSCV)
+-- 识别从代码合并到生产发布的流转阻塞点
+-- ---------------------------------------------------------
+CREATE OR REPLACE VIEW view_pmo_software_supply_chain_velocity AS
+WITH pipeline_summary AS (
+    -- 统计每个项目的构建活跃度
+    SELECT 
+        project_id,
+        COUNT(*) as total_builds,
+        SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_builds
+    FROM pipelines
+    WHERE created_at >= NOW() - INTERVAL '90 days'
+    GROUP BY project_id
+),
+deployment_hops AS (
+    -- 识别跨环境的流转时长 (Staging -> Production)
+    SELECT 
+        d1.project_id,
+        AVG(EXTRACT(EPOCH FROM (d2.created_at - d1.created_at))/3600.0) as avg_hop_hours,
+        COUNT(DISTINCT d2.id) as prod_deploy_count
+    FROM deployments d1
+    JOIN deployments d2 ON d1.project_id = d2.project_id 
+        AND d1.ref = d2.ref -- 假设通过 ref (branch/tag) 匹配相同制品
+    WHERE d1.environment IN ('staging', 'uat', 'test') 
+        AND d1.status = 'success'
+        AND d2.environment = 'production'
+        AND d2.created_at > d1.created_at
+    GROUP BY d1.project_id
+)
+SELECT 
+    p.name as project_name,
+    g.name as group_name,
+    COALESCE(ps.total_builds, 0) as total_build_ops,
+    -- 构建转化比: 每产生一个生产发布需要多少次构建
+    ROUND(COALESCE(ps.total_builds, 0)::numeric / NULLIF(dh.prod_deploy_count, 0), 1) as build_per_release,
+    -- 交付漏斗: 成功构建 vs 总构建
+    ROUND(COALESCE(ps.successful_builds, 0)::numeric / NULLIF(ps.total_builds, 0) * 100, 1) as pipeline_pass_rate,
+    -- 跨环境流转时延 (小时)
+    ROUND(COALESCE(dh.avg_hop_hours, 0)::numeric, 1) as avg_env_dwell_hours,
+    
+    CASE 
+        WHEN dh.avg_hop_hours > 72 THEN 'CLOGGED: Deployment Bottleneck' -- 部署淤积：环境间停滞超过3天
+        WHEN COALESCE(ps.total_builds, 0)::numeric / NULLIF(dh.prod_deploy_count, 0) > 15 THEN 'INEFFICIENT: Try-and-Error' -- 试错型：构建次数过多
+        WHEN dh.prod_deploy_count > 0 THEN 'SMOOTH: DevOps Pipeline'
+        ELSE 'INACTIVE'
+    END as supply_chain_status
+FROM projects p
+JOIN gitlab_groups g ON p.group_id = g.id
+LEFT JOIN pipeline_summary ps ON p.id = ps.project_id
+LEFT JOIN deployment_hops dh ON p.id = dh.project_id
+WHERE p.archived = false;

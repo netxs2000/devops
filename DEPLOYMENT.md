@@ -97,6 +97,13 @@ python scripts/init_revenue_contracts.py
 | `api_key` | API Key | `sk-xxxx` |
 | `model_name` | 使用的模型名称 | `gpt-4o-mini` |
 
+### [notifiers] (New)
+| 参数 | 说明 | 示例 |
+|:---|:---|:---|
+| `wecom_webhook` | 企业微信 Webhook | `https://qyapi.weixin.qq.com/...` |
+| `feishu_webhook` | 飞书 Webhook | `https://open.feishu.cn/...` |
+| `dingtalk_webhook`| 钉钉 Webhook | `https://oapi.dingtalk.com/...` |
+
 ## 4. 定时任务配置 (Scheduling)
 
 建议使用 Crontab 进行任务调度。

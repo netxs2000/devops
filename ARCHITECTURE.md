@@ -12,6 +12,7 @@ DevOps Data Collector 采用模块化的**ETL (Extract, Transform, Load)** 架�
 5.  **增强层 (Enrichment Layer)** 🌟: 利用 **LLM (大语言模型)** 对 Work Items 和 Commits 进行自动分类与摘要，为 ROI 分析提供业务语义。
 6.  **财务层 (FinOps Layer)** 🌟: 建立 CBS (Cost Breakdown Structure) 科目树，将技术里程碑与合同回款节点挂钩。
 7.  **服务层 (Service Layer)**: 数据集市 (Data Mart)，通过 SQL Views 封装复杂的分析逻辑（如 DORA, 战略矩阵），直接对接 BI。
+8.  **推送层 (Notification Layer)** 🌟: 周期性扫描异常指标，多渠道（企微/飞书/钉钉）实时送达负责人。
 
 ```mermaid
 graph TD
@@ -99,6 +100,9 @@ graph TD
     *   关联 GitLab 项目，拉取 Quality Gate 与 Metrics。
 4.  **Jenkins 采集**:
     *   同步 Job 列表，抓取 Build 详细记录（时长、结果、触发者）。
+5.  **Jira 增强采集**:
+    *   **依赖追踪**: 提取 `issuelinks` 并持久化至 `traceability_links`，支持跨项目阻塞分析。
+    *   **PMO 指标**: 记录 `original_estimate` 与 `time_spent`，支持 TV（工时偏差）核算。
 
 ## 4. 财务与 ROI 架构 (FinOps & ROI Design) 🌟 (New)
 

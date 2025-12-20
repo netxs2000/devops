@@ -1,6 +1,6 @@
 # 企业级 DevOps 数据字典 (Enterprise DevOps Data Dictionary)
 
-**版本**: 3.3.0 (FinOps & AI Extension)  
+**版本**: 3.4.0 (PMO & Governance Extension)  
 **日期**: 2025-12-20  
 **状态**: 已生效 (Active)  
 **维护人**: DevOps 效能平台团队
@@ -95,6 +95,12 @@ erDiagram
     %% Agile Flow Analysis (New)
     Issue ||--|{ IssueStateTransition : "tracks_flow (追踪流转)"
     Issue ||--|{ Blockage : "records_blocks (记录阻塞)"
+    
+    %% OWASP Dependency-Check Integration (New)
+    Project ||--|{ DependencyScan : "scans (扫描依赖)"
+    DependencyScan ||--|{ Dependency : "contains (包含依赖)"
+    Dependency ||--|{ DependencyCVE : "has_vulnerabilities (漏洞)"
+    LicenseRiskRule }|--|| Dependency : "evaluates (评估风险)"
 ```
 
 ---
@@ -467,6 +473,10 @@ GitLab 的组织单元，用于管理项目和子群组。
 | `ai_summary`     | Text      |         | 否    | -      | `"底层存储架构重构"`      | **AI 产出摘要**                  |
 | `author_id`        | Integer   | FK   | 否    | -      | `10086`                   | 提单人 (关联 `users.id`)         |
 | `labels`           | JSON      |      | 否    | -      | `["bug", "P0"]`           | 标签集合                         |
+| `state`            | String    |      | 否    | -      | `"closed"`                | 状态: `opened`, `closed`         |
+| `created_at`       | DateTime  |      | 否    | -      | `2024-02-01`              | 创建时间                         |
+| `closed_at`        | DateTime  |      | 否    | NULL   | `2024-02-05`              | 关闭时间 (用于计算 MTTR)         |
+| `user_notes_count` | Integer   |      | 否    | 0      | `5`                       | **人工评论总数 (用于争议度分析)**|
 
 ### 3.6 议题变更事件 (`gitlab_issue_events`) 🌟 (New)
 用于 CALMS 文化与精益扫描，追踪 Issue 的状态流转、标签变动等历史。
@@ -762,6 +772,11 @@ SonarQube 项目映射。
 | `assignee_name`    | String(255)   |      | 否    | -      | `"zhangsan"`        | 经办人名称                       |
 | `reporter_name`    | String(255)   |      | 否    | -      | `"lisi"`            | 报告人名称                       |
 | `creator_name`     | String(255)   |      | 否    | -      | `"wangwu"`          | 创建人名称                       |
+| `original_estimate`| BigInteger    |      | 否    | -      | `3600`              | 原始预估工时 (秒)                |
+| `time_spent`       | BigInteger    |      | 否    | -      | `7200`              | 实际消耗工时 (秒)                |
+| `remaining_estimate`| BigInteger   |      | 否    | -      | `1800`              | 剩余预估工时 (秒)                |
+| `labels`           | JSON          |      | 否    | -      | `["Risk", "P0"]`    | 标签列表                         |
+| `fix_versions`     | JSON          |      | 否    | -      | `["v1.0", "M1"]`    | 修复版本 (里程碑)                |
 
 ### 6.4 Jira 问题变更历史 (`jira_issue_histories`)
 
@@ -847,7 +862,95 @@ SonarQube 项目映射。
 
 ---
 
-## 📊 8. 分析视图 (Analytics Views)
+## 🛡️ 8. 安全与合规数据域 (Security & Compliance Domain)
+
+覆盖开源依赖扫描、许可证合规性、CVE 漏洞管理。
+
+### 8.1 依赖扫描记录 (`dependency_scans`) 🌟 (New)
+存储每次 OWASP Dependency-Check 扫描的元数据。
+
+| 字段名 | 类型 | 键 | 必填 | 默认值 | 示例数据 | 业务说明 |
+|:---|:---|:---:|:---:|:---|:---|:---|
+| `id` | Integer | PK | 是 | - | `1` | 扫描记录 ID |
+| `project_id` | Integer | FK | 是 | - | `123` | 关联项目 ID |
+| `scan_date` | DateTime | | 是 | NOW() | `2025-12-20 10:00:00` | 扫描时间 |
+| `scanner_name` | String(50) | | 是 | `OWASP Dependency-Check` | `OWASP Dependency-Check` | 扫描器名称 |
+| `scanner_version` | String(20) | | 否 | - | `8.4.0` | 扫描器版本 |
+| `total_dependencies` | Integer | | 否 | `0` | `150` | 依赖总数 |
+| `vulnerable_dependencies` | Integer | | 否 | `0` | `12` | 存在漏洞的依赖数 |
+| `high_risk_licenses` | Integer | | 否 | `0` | `3` | 高风险许可证数量 |
+| `scan_status` | String(20) | | 否 | `completed` | `completed` | 扫描状态: completed, failed, in_progress |
+| `report_path` | Text | | 否 | - | `/var/lib/devops/reports/1/` | 报告文件路径 |
+| `raw_json` | JSONB | | 否 | - | `{...}` | 原始 JSON 报告 |
+| `created_at` | DateTime | | 否 | NOW() | `2025-12-20 10:00:00` | 创建时间 |
+| `updated_at` | DateTime | | 否 | NOW() | `2025-12-20 10:05:00` | 更新时间 |
+
+### 8.2 许可证风险规则 (`license_risk_rules`) 🌟 (New)
+定义各类开源许可证的风险等级和使用限制。
+
+| 字段名 | 类型 | 键 | 必填 | 默认值 | 示例数据 | 业务说明 |
+|:---|:---|:---:|:---:|:---|:---|:---|
+| `id` | Integer | PK | 是 | - | `1` | 规则 ID |
+| `license_name` | String(200) | UK | 是 | - | `Apache License 2.0` | 许可证名称 |
+| `license_spdx_id` | String(100) | | 否 | - | `Apache-2.0` | SPDX 标准 ID |
+| `risk_level` | String(20) | | 是 | - | `low` | 风险等级: critical, high, medium, low |
+| `is_copyleft` | Boolean | | 否 | `false` | `false` | 是否为传染性许可证 (如 GPL) |
+| `commercial_use_allowed` | Boolean | | 否 | `true` | `true` | 是否允许商业使用 |
+| `modification_allowed` | Boolean | | 否 | `true` | `true` | 是否允许修改 |
+| `distribution_allowed` | Boolean | | 否 | `true` | `true` | 是否允许分发 |
+| `patent_grant` | Boolean | | 否 | `false` | `true` | 是否提供专利授权 |
+| `description` | Text | | 否 | - | `商业友好，提供专利授权` | 许可证描述 |
+| `policy_notes` | Text | | 否 | - | `推荐使用` | 企业政策备注 |
+| `is_active` | Boolean | | 否 | `true` | `true` | 是否启用 |
+
+### 8.3 依赖清单 (`dependencies`) 🌟 (New)
+存储项目的依赖包及其许可证和漏洞信息。
+
+| 字段名 | 类型 | 键 | 必填 | 默认值 | 示例数据 | 业务说明 |
+|:---|:---|:---:|:---:|:---|:---|:---|
+| `id` | Integer | PK | 是 | - | `1` | 依赖 ID |
+| `scan_id` | Integer | FK | 是 | - | `1` | 关联扫描记录 ID |
+| `project_id` | Integer | FK | 是 | - | `123` | 关联项目 ID |
+| `package_name` | String(500) | | 是 | - | `spring-boot-starter-web` | 包名 |
+| `package_version` | String(100) | | 否 | - | `2.7.5` | 版本号 |
+| `package_manager` | String(50) | | 否 | - | `maven` | 包管理器: maven, npm, pypi, nuget, go |
+| `dependency_type` | String(20) | | 否 | `direct` | `direct` | 依赖类型: direct, transitive |
+| `license_name` | String(200) | | 否 | - | `Apache License 2.0` | 许可证名称 |
+| `license_spdx_id` | String(100) | | 否 | - | `Apache-2.0` | SPDX 标准 ID |
+| `license_url` | Text | | 否 | - | `https://...` | 许可证 URL |
+| `license_risk_level` | String(20) | | 否 | - | `low` | 许可证风险等级 |
+| `has_vulnerabilities` | Boolean | | 否 | `false` | `true` | 是否存在漏洞 |
+| `highest_cvss_score` | Float | | 否 | - | `7.5` | 最高 CVSS 评分 |
+| `critical_cve_count` | Integer | | 否 | `0` | `2` | Critical 级别 CVE 数量 |
+| `high_cve_count` | Integer | | 否 | `0` | `5` | High 级别 CVE 数量 |
+| `medium_cve_count` | Integer | | 否 | `0` | `8` | Medium 级别 CVE 数量 |
+| `low_cve_count` | Integer | | 否 | `0` | `3` | Low 级别 CVE 数量 |
+| `file_path` | Text | | 否 | - | `/pom.xml` | 依赖声明文件路径 |
+| `description` | Text | | 否 | - | `Spring Boot Web Starter` | 包描述 |
+| `homepage_url` | Text | | 否 | - | `https://spring.io` | 主页 URL |
+| `raw_data` | JSONB | | 否 | - | `{...}` | 原始数据备份 |
+
+### 8.4 CVE 漏洞详情 (`dependency_cves`) 🌟 (New)
+存储依赖包的安全漏洞信息。
+
+| 字段名 | 类型 | 键 | 必填 | 默认值 | 示例数据 | 业务说明 |
+|:---|:---|:---:|:---:|:---|:---|:---|
+| `id` | Integer | PK | 是 | - | `1` | CVE 记录 ID |
+| `dependency_id` | Integer | FK | 是 | - | `1` | 关联依赖 ID |
+| `cve_id` | String(50) | | 是 | - | `CVE-2023-12345` | CVE 编号 |
+| `cvss_score` | Float | | 否 | - | `7.5` | CVSS 评分 (0-10) |
+| `cvss_vector` | String(200) | | 否 | - | `NETWORK` | CVSS 攻击向量 |
+| `severity` | String(20) | | 否 | - | `HIGH` | 严重性: CRITICAL, HIGH, MEDIUM, LOW |
+| `description` | Text | | 否 | - | `Remote code execution...` | 漏洞描述 |
+| `published_date` | Date | | 否 | - | `2023-05-15` | 发布日期 |
+| `last_modified_date` | Date | | 否 | - | `2023-06-01` | 最后修改日期 |
+| `fixed_version` | String(100) | | 否 | - | `2.7.6` | 修复版本 |
+| `remediation` | Text | | 否 | - | `Upgrade to 2.7.6+` | 修复建议 |
+| `references` | JSONB | | 否 | - | `[{url: "..."}]` | 引用链接 |
+
+---
+
+## 📊 9. 分析视图 (Analytics Views)
 
 基于基础表构建的高级数据模型 (Data Mart)
 

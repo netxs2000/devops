@@ -178,3 +178,58 @@ FROM users u
 LEFT JOIN issue_stats ist ON (u.username = ist.author OR split_part(u.email, '@', 1) = ist.author)
 WHERE u.state = 'active' AND u.is_virtual = false
 ORDER BY active_critical_issues DESC, active_bugs DESC;
+
+
+-- 5. “胶水人”贡献模型 (The Glue-Person Index - GPI)
+-- 用途：识别团队中的“无名英雄”，即通过非代码产出维持团队高效运作的人员。
+-- 维度：知识沉淀 (Wiki), 流程守护 (Label/Milestone updates), 争议解决 (Thread resolution), 跨团队协同。
+CREATE OR REPLACE VIEW view_hr_glue_person_index AS
+WITH wiki_activity AS (
+    SELECT user_id, COUNT(*) as wiki_actions
+    FROM gitlab_wiki_logs
+    WHERE created_at >= NOW() - INTERVAL '90 days'
+    GROUP BY user_id
+),
+process_guard_activity AS (
+    -- 统计 Issue/Jira 状态流转或标签修正动作
+    SELECT user_id, COUNT(*) as meta_updates
+    FROM (
+        SELECT user_id FROM gitlab_issue_events WHERE event_type IN ('label', 'milestone')
+        UNION ALL
+        -- 假设 author_name 可以关联到 user，这里简化逻辑
+        SELECT u.id FROM jira_issue_histories jh JOIN users u ON jh.author_name = u.name 
+        WHERE jh.field IN ('status', 'labels', 'duedate')
+    ) sub
+    GROUP BY user_id
+),
+help_activity AS (
+    -- 统计人工评论活跃度 (排除系统消息)
+    SELECT author_id, COUNT(*) as comment_count
+    FROM notes
+    WHERE created_at >= NOW() - INTERVAL '90 days' AND system = false
+    GROUP BY author_id
+)
+SELECT 
+    u.name,
+    u.department,
+    COALESCE(wa.wiki_actions, 0) as wiki_score,
+    COALESCE(pa.meta_updates, 0) as process_score,
+    COALESCE(ha.comment_count, 0) as help_score,
+    -- GPI 综合得分 (加权)
+    ROUND(
+        (COALESCE(wa.wiki_actions, 0) * 5.0) + 
+        (COALESCE(pa.meta_updates, 0) * 2.0) + 
+        (COALESCE(ha.comment_count, 0) * 0.5)
+    ) as gpi_score,
+    
+    CASE 
+        WHEN (COALESCE(wa.wiki_actions, 0) * 5.0 + COALESCE(pa.meta_updates, 0) * 2.0 + COALESCE(ha.comment_count, 0) * 0.5) > 100 THEN 'Team Catalyst (Star)'
+        WHEN (COALESCE(wa.wiki_actions, 0) * 5.0 + COALESCE(pa.meta_updates, 0) * 2.0 + COALESCE(ha.comment_count, 0) * 0.5) > 50 THEN 'Bridge Builder'
+        WHEN (COALESCE(wa.wiki_actions, 0) * 5.0 + COALESCE(pa.meta_updates, 0) * 2.0 + COALESCE(ha.comment_count, 0) * 0.5) > 20 THEN 'Supportive Member'
+        ELSE 'Silent Contributor'
+    END as glue_role
+FROM users u
+LEFT JOIN wiki_activity wa ON u.id = wa.user_id
+LEFT JOIN process_guard_activity pa ON u.id = pa.user_id
+LEFT JOIN help_activity ha ON u.id = ha.author_id
+WHERE u.state = 'active' AND u.is_virtual = false;

@@ -43,17 +43,51 @@
 ### 1.7 创新与技术 (Innovation & Tech)
 - **战略拷问**: 我们是在重复造轮子，还是在通过“跨界融合”创造复利？
 - **核心价值**: 衡量 **组织边界的打破** 和 **技术资产的复利利用**。
-- **关键指标**: 跨界创新指数 (Cross-Pollination)、资产复用率。
+- **关键指标**: 跨界创新指数 (Cross-Pollination)、组件复用热力图 (Component Reuse Heatmap)。
 
-### 1.8 客户体验 (Customer Satisfaction)
+### 1.8 内源生态健康度 (InnerSource Ecosystem Health)
+- **战略拷问**: 我们是拥有一个充满活力的技术共享社区，还是在一个个技术孤岛中工作？
+- **核心价值**: 量化**技术影响力的传递路径**。识别各部门在技术生态中的生态位（供应者 vs 消费者），推动技术复用与共创文化。
+- **关键指标**: 内源共创指数 (InnerSource Impact)、跨部门复用强度。
+- **计算逻辑**: `InnerSource Index = (跨部门提交的 MR 数 / 总 MR 数) * 0.4 + (被外部引用的组件数 / 总组件数) * 0.6`。
+
+### 1.9 客户体验与隐性满意度 (Shadow Satisfaction)
 - **战略拷问**: 我们的交付让业务方感到“爽”吗？
-- **核心价值**: 关注交付体验与售后服务，量化“隐性满意度”。
-- **关键指标**: Bug响应速度 (SLA)、需求争议度 (Controversy Rate)。
+- **核心价值**: 关注交付体验与售后服务，量化“隐性满意度”。识别那些“交付了但口碑极差”的项目。
+- **关键指标**: 隐性满意度指数 (Shadow Satisfaction Index - SSI)。
+- **计算逻辑**: `SSI = 100 - (SLA惩罚) - (争议惩罚) - (返工惩罚)`。
 
-### 1.9 投入产出 (ROI Efficiency)
+### 1.10 架构脆性与风险 (Architectural Brittleness)
+- **战略拷问**: 我们的底层核心模块是坚固的基石，还是随时会崩塌的纸牌屋？
+- **核心价值**: 识别**高风险技术中枢**。防止核心组件在“高复杂度、高变更、低测试覆盖”的情况下由于过度依赖而引发组织级技术塌陷。
+- **关键指标**: 架构脆性指数 (Architectural Brittleness Index - ABI)。
+
+### 1.11 计划确定性 (Planning Certainty)
+- **战略拷问**: 我们的团队是能够“使命必达”，还是习惯性“画饼”或“延期”？
+- **核心价值**: 衡量组织的**确定性交付能力**。识别那些预估精准、节奏平稳的标杆团队。
+- **关键指标**: 计划确定性指数 (Planning Certainty Index - PCI)、估算准确度、延期稳定性。
+
+### 1.12 投入产出 (ROI Efficiency)
 - **战略拷问**: 我们的每一分钱投入，换回了多少产出？
 - **核心价值**: 直接回应 **“钱花得值不值”**。量化人均产能与单需求成本。
 - **关键指标**: 人均吞吐量 (Throughput per FTE)、单需求成本 (Cost per Issue)。
+
+### 1.13 协作熵与管理健康 (Team Health & Entropy)
+- **战略拷问**: 我们的团队是在高效沟通，还是在无休止的争吵或“一言堂”中内耗？
+- **核心价值**: 识别团队的协作模式风险。防止技术独裁（评审民主度低）或沟通冗余（协作熵过高）。
+- **关键指标**: 评审民主度 (Review Democracy)、协作熵 (Collab Entropy)、评审乒乓指数。
+
+### 1.14 “胶水人”与隐性贡献 (Glue Person & Implicit Contribution)
+- **战略拷问**: 谁在默默为团队“打补丁”，确保项目不掉链子？
+- **核心价值**: 识别那些在代码产出之外，通过**知识沉淀、流程守护和争议解决**维持团队高效运作的“灵魂人物”，防止其价值被传统指标掩盖。
+- **关键指标**: “胶水人”贡献指数 (Glue-Person Index - GPI)。
+
+- **关键指标**: 供应链流转指数 (SSCV)、构建发布比、跨环境停留时长。
+
+### 1.16 组织依赖透明度 (Organization Dependency Transparency)
+- **战略拷问**: 组织的部门墙是否正在拖慢我们的速度？跨部门的阻塞是否会引发系统性的延期“雪球”？
+- **核心价值**: 识别**跨边界协作瓶颈**。通过量化跨部门的阻塞链路，识别那些处于“复杂依赖网核心”的脆弱部门，为组织架构优化提供数据支撑。
+- **关键指标**: 脆弱性指数 (Vulnerability Index)、跨部门阻塞率、影响因子。
 
 ---
 
@@ -186,27 +220,79 @@
     - **资产价值**: 筛选 Stars >= 5 或 Forks >= 2 的项目，视为高价值公共组件。
 
 
-### 2.8 客户满意度洞察 (Customer Satisfaction Insights)
+### 2.8 组件复用热力图 (Component Reuse Heatmap)
 
-- **作用**: 在缺乏问卷系统的情况下，基于协作数据推导“影子满意度”。
-- **核心价值**: 关注**交付体验**。不仅仅是看“做完了没有”，还要看“做得开不开心（争议度）”和“售后好不好（已读回不回）”。
+- **作用**: 可视化展示跨部门的技术供应与消费关系。
+- **核心价值**: 识别企业的“技术引擎”（核心供应部门）与“复用大户”（高效能消费部门），发现由于缺乏共享而导致的重复造轮子风险。
 - **核心逻辑**: 
-    1. **响应速度 (SLA)**: 计算 Bug 的平均修复时长 (MTTR)，响应越快满意度越高。
-    2. **争议度 (Controversy)**: 统计评论数异常高 (>10条) 的 Issue 比例，反映需求沟通是否顺畅。
-    3. **返工率 (Rework)**: 统计被打回 (Reopened) 的需求比例。
+    1. **归一化映射**: 从 `gitlab_packages` 提取组件供应源，从 `gitlab_dependencies` 提取组件消费端。
+    2. **跨域碰撞**: 筛选供应项目所属部门 != 消费项目所属部门的记录。
+    3. **热力计算**: 以供应部门为 X 轴，消费部门为 Y 轴，复用项目数为热力强度。
 - **度量指标**: 
-    - **Bug平均修复时长 (Bug MTTR)**: 小时。
-    - **高争议需求占比 (High Controversy %)**: 评论>10的Issue占比。
-    - **满意度预警**: 综合上述指标给出的红绿灯状态。
-- **SQL视图**: `view_pmo_customer_satisfaction` (位于 `devops_collector/sql/PMO_ANALYTICS.sql`)
+    - **复用强度 (Reuse Intensity)**: 跨部门引用的项目总数。
+    - **供应活跃度**: 产生的公共组件被多少个外部部门使用。
+- **SQL视图**: `view_pmo_innersource_reuse_heatmap` (位于 `devops_collector/sql/PMO_ANALYTICS.sql`)
 - **SQL说明**:
-    - **数据源**: `issues`。
-    - **MTTR**: 计算关闭状态的 Bug 的平均修复时长 (ClosedAt - CreatedAt)。
-    - **争议度**: 筛选 `user_notes_count > 10` 的 Issue 比例。
-    - **综合预警**: 如果 MTTR > 72小时或争议度 > 20%，判定为 Low Satisfaction Risk。
+    - **数据源**: `gitlab_packages`, `gitlab_dependencies`, `organizations`, `projects`。
+    - **逻辑**: 使用 `WITH` 子句分别构建供应方清单 and 消费方清单，基于包名连接并过滤同部门引用。
+    - **可视化建议**: 推荐使用 ECharts 热力图，X轴为 Provider Dept，Y轴为 Consumer Dept。
 
 
-### 2.9 投入产出效能仪表盘 (ROI & Efficiency Dashboard)
+### 2.9 客户满意度洞察与 SSI (Shadow Satisfaction Insights)
+
+- **作用**: 在缺乏问卷系统的情况下，基于协作数据推导“隐性满意度 (Shadow Satisfaction Index)”。
+- **核心价值**: **工程行为映射体验**。识别“低响应、高争议、多返工”的风险交付。
+- **核心逻辑**: 
+    1. **响应性 (SLA)**: 以 Bug MTTR 为基准。每超过 24h 扣 10 分（上限 40）。公式：$Penalty_{SLA} = (MTTR / 24) * 10$。
+    2. **争议度 (Controversy)**: 统计评论数 > 10 的 Issue 占比。反映方案冲突，扣分权重 1.5（上限 30）。
+    3. **返工率 (Rework)**: 统计 Reopened 的任务占比。反映交付质量，扣分权重 3.0（上限 30）。
+- **度量指标**: 
+    - **SSI 指数**: 0-100 分综合得分。
+    - **满意度评级**: 80+(Health), 60-80(Warning), <60(Risk)。
+- **SQL视图**: `view_pmo_customer_satisfaction` (位于 `devops_collector/sql/PMO_ANALYTICS.sql`)
+
+### 2.10 评审民主度与协作熵 (Review Democracy & Entropy)
+
+- **作用**: 识别“形式主义评审”、技术垄断及沟通效能瓶颈。
+- **核心价值**: 确保代码评审的**真实有效性**与**决策去中心化**。
+- **核心逻辑**: 
+    1. **评审民主度 (Review Democracy)**: 统计 MR 独立评审人数量。若 `avg_reviewers` 长期处于低位，暗示代码合并权过度集中。
+    2. **协作熵 (Collab Entropy)**: 计算 MR 平均人工备注（Comment）数。代表单次变更触发的探讨密度。
+    3. **评审乒乓 (Ping-Pong Index)**: 统计 MR 状态打回 (Reopened) 的平均轮次。过高 ( > 4) 代表协作低效。
+- **SQL视图**: `view_team_review_quality_entropy` (位于 `devops_collector/sql/TEAM_ANALYTICS.sql`)
+
+
+### 2.11 架构脆性指数 (Architectural Brittleness Index)
+
+- **作用**: 识别研发资产中因“高耦合+高变动+低质量”构成的技术黑洞。
+- **核心价值**: **预防系统性崩溃**。指导 CTO 在何处投入重构资源。
+- **核心逻辑**: 
+    1. **依赖影响力 (In-Degree)**: 统计外部项目对该项目产定制品的引用数。
+    2. **代码流转率 (Churn)**: 统计过去 90 天的提交频次，反映模块活跃度。
+    3. **技术硬伤 (Risk)**: 提取 SonarQube 的圈复杂度与单测覆盖率。
+- **计算公式**: $ABI = log_2(InDegree+1)*20 + \frac{Complexity}{10} + (100 - Coverage) + log_2(Churn+1)*10$
+- **度量指标**: 
+    - **ABI 分值**: 0-150分。
+    - **状态判定**: `Brittle Core` (高影响力且高分), `Stable Engine` (高影响力但低分)。
+- **SQL视图**: `view_pmo_architectural_brittleness` (位于 `devops_collector/sql/PMO_ANALYTICS.sql`)
+
+
+### 2.13 计划确定性模型 (Planning Certainty Model)
+
+- **作用**: 量化团队的承诺履行能力与估算水准。
+- **核心价值**: **透明化交付灰盒**。识别过度乐观的估算陷阱，提升业务排期的可预测性。
+- **核心逻辑**: 
+    1. **估算偏差 (Estimation Variance)**: 统计 `Spent Hours` 与 `Original Estimate` 的偏差率。
+    2. **延期惯性 (Delay Inertia)**: 统计 Issue 变更 history 中 `due_date` 被延后的频率。
+    3. **完成质量 (Completion Quality)**: 结合是否在迭代内完成。
+- **计算公式**: $PCI = (Accuracy \times 0.7) + (\frac{1}{DelayCount+1} \times 0.3) \times 100$
+- **度量指标**: 
+    - **PCI 分值**: 0-100分。
+    - **状态判定**: `High Reliability`, `Moderate`, `Low Reliability`.
+- **SQL视图**: `view_pmo_planning_certainty` (位于 `devops_collector/sql/TRADITIONAL_PM_ANALYTICS.sql`)
+
+
+### 2.14 投入产出效能仪表盘 (ROI & Efficiency Dashboard)
 
 - **作用**: 回答 CTO/CEO 关于“钱花得值不值”的拷问，量化工程团队的生产力与成本结构。
 - **核心价值**: **效能黑盒透明化**。通过 Input/Output 比率识别低效团队（成本高产出低）和高效能标杆。
@@ -225,6 +311,77 @@
     - **Output**: 汇总 `merged_mrs` 和 `closed_issues`。
     - **Metrics**: 计算投入产出比 `Throughput / FTE` 和 `Hours / Issue`。
 
+
+### 2.15 "胶水人"贡献模型 (The Glue-Person Index - GPI)
+
+- **作用**: 识别通过非代码产出维持团队高效运作的"灵魂人物"。
+- **核心价值**: **完善人才评价体系**。奖励那些让别人更高效的开发者，防止其价值被传统指标掩盖。
+- **核心逻辑**: 
+    1. **知识布道 (Wiki Score)**: 统计 90 天内在 `gitlab_wiki_logs` 中的创建与更新动作。识别主动沉淀知识、编写文档的"布道者"。
+    2. **流程守护 (Process Score)**: 统计对 `gitlab_issue_events` 中标签 (Labels)、里程碑 (Milestones) 的维护频次，以及对 Jira `due_date` 的调整动作。识别主动优化流程、确保项目合规的"守护者"。
+    3. **协作催化 (Help Score)**: 统计在 `notes` 表中的人工评论活跃度（排除系统消息）。识别积极响应、解决争议、解除他人阻塞的"催化剂"。
+- **计算公式**: $GPI = (WikiScore \times 5) + (ProcessScore \times 2) + (HelpScore \times 0.5)$
+    - **权重说明**: Wiki 贡献权重最高（5倍），因为知识沉淀具有长期复利效应；流程守护次之（2倍），因为它直接影响团队效率；评论帮助权重最低（0.5倍），因为它是日常协作的基础行为。
+- **度量指标**: 
+    - **GPI 分值**: 0-200+分。
+    - **角色定性**: 
+        - `Team Catalyst (金牌催化剂)` (>100): 组织内极具影响力的隐性导师。
+        - `Bridge Builder (协作桥梁)` (50-100): 擅长跨团队沟通与流程梳理。
+        - `Supportive Member (支持型成员)` (20-50): 积极参与协作，提供帮助。
+        - `Silent Contributor (默默贡献者)` (<20): 扎实履行岗位职责。
+- **SQL视图**: `view_hr_glue_person_index` (位于 `devops_collector/sql/HR_ANALYTICS.sql`)
+- **SQL说明**:
+    - **数据源**: `gitlab_wiki_logs`, `gitlab_issue_events`, `jira_issue_histories`, `notes`, `users`。
+    - **Wiki 统计**: 汇总 90 天内的 Wiki 创建、更新动作。
+    - **流程统计**: 合并 GitLab Issue Events (label/milestone) 和 Jira History (status/labels/duedate) 的元数据修正动作。
+    - **帮助统计**: 统计非系统消息的评论总数。
+    - **角色判定**: 根据加权总分自动分配角色标签。
+
+
+### 2.16 软件供应链流转效率 (Software Supply Chain Velocity - SSCV)
+
+- **作用**: 识别交付全链路中的"物理淤积点"，量化从代码合并到生产发布的流转效率。
+- **核心价值**: **推动持续交付 (CD) 深度落地**。识别环境间的等待与阻塞，优化发布流水线，实现"制品即发布"的极致体验。
+- **核心逻辑**: 
+    1. **构建活跃度 (Build Ops)**: 统计 `pipelines` 表中过去 90 天的总构建次数与成功构建次数。
+    2. **交付漏斗 (Pipeline Pass Rate)**: 计算 `成功构建数 / 总构建数`，识别"试错型"项目（构建成功率低，反复重试）。
+    3. **环境流转时延 (Env Dwell Time)**: 通过 `deployments` 表，关联 Staging 与 Production 环境的 `ref` (branch/tag)，计算同一制品在两个环境间的时间差。这反映了制品在 Staging 环境的"停留时长"。
+    4. **构建发布比 (Build per Release)**: 计算 `总构建次数 / 生产发布次数`，识别构建浪费（如每次发布需要 15+ 次构建，说明流程不稳定）。
+- **计算公式**: 
+    - $DwellTime = AVG(Production.created\_at - Staging.created\_at)$ (单位: 小时)
+    - $BuildPerRelease = TotalBuilds / ProdDeployCount$
+    - $PassRate = SuccessfulBuilds / TotalBuilds \times 100\%$
+- **度量指标**: 
+    - **avg_env_dwell_hours**: 跨环境平均停留时长。
+    - **build_per_release**: 每次发布所需的平均构建次数。
+    - **pipeline_pass_rate**: 构建成功率 (%)。
+    - **supply_chain_status**: 
+        - `SMOOTH: DevOps Pipeline` (顺畅): 环境流转快速，构建成功率高。
+        - `CLOGGED: Deployment Bottleneck` (淤积): 环境停留时长 >72h，说明 Staging 到 Production 的发布流程存在人工审批或环境锁定问题。
+        - `INEFFICIENT: Try-and-Error` (试错型): 构建发布比 >15，说明 CI/CD 流程不稳定，需要优化测试策略。
+        - `INACTIVE`: 无生产发布记录。
+- **SQL视图**: `view_pmo_software_supply_chain_velocity` (位于 `devops_collector/sql/PMO_ANALYTICS.sql`)
+- **SQL说明**:
+    - **数据源**: `pipelines`, `deployments`, `projects`, `gitlab_groups`。
+    - **构建统计**: 汇总 90 天内的构建总数与成功数。
+    - **环境匹配**: 通过 `ref` 字段关联同一制品在不同环境的部署记录。假设 Staging 部署先于 Production 部署。
+    - **时延计算**: 提取 Staging 到 Production 的时间差平均值。
+    - **状态判定**: 根据时延和构建比自动分类供应链状态。
+
+### 2.17 组织依赖透明度 (Organization Dependency Transparency - ODT)
+
+- **作用**: 识别跨部门的协作阻塞节点，量化"部门墙"的负面影响。
+- **核心价值**: **为组织架构优化提供数据支撑**。预判延期雪球效应。
+- **核心逻辑**: 
+    1. **实体映射**: 建立 Jira Issue 与 GitLab 部门的关联链路。
+    2. **依赖抓取**: 从 `traceability_links` 中提取 `blocks` 的跨部门阻塞关系。
+    3. **脆弱性量化**: 统计各部门受外部影响的任务比例。
+- **计算公式**: $VulnerabilityIndex = log_2(BlockedTaskCount + 1) \times 20$
+- **度量指标**: 
+    - **external_blocker_dept_count**: 有多少个外部部门在阻塞我。
+    - **vulnerability_index**: 脆弱性指数 (0-100+分)。
+    - **dependency_status**: `CRITICAL` (≥3个外部部门), `HIGH` (>5个阻塞任务), `STABLE`。
+- **SQL视图**: `view_pmo_org_dependency_transparency` (位于 `devops_collector/sql/TRADITIONAL_PM_ANALYTICS.sql`)
 
 ---
 
@@ -255,3 +412,105 @@ PMO 视角的分析高度依赖数据的**聚合 (Aggregation)** 和 **关联 (J
     通过 `ROI Efficiency` 和 `Customer Satisfaction`，我们用 CFO 听得懂的语言（投入产出比）和业务方在乎的指标（满意度），证明了技术团队的商业价值。
 
 这不仅是一套报表，更是 **组织进化的罗盘**。它指引着整个研发组织在 **“做正确的事 (Strategic)”** 与 **“正确地做事 (Tactical)”** 之间找到最佳平衡，实现可持续的高质量增长。
+
+---
+
+## 5. 补充：传统项目管理与项目群管理指标 (Expanded Metrics)
+
+为了进一步完善 PMO 的治理体系，我们引入了以下基于传统 PMBOK 维度和项目群/组合管理维度的核心指标。
+
+### 5.1 传统项目管理维度 (Traditional Project Management)
+
+这些指标侧重于单项目的交付确定性，即“铁三角”（进度、成本、质量）的闭环管理。
+
+| 维度 | 度量指标 (Metrics) | 说明 (Definition) | 管理意义 (Strategic Value) |
+| :--- | :--- | :--- | :--- |
+| **进度** | **进度偏差 (SV)** | `实际/预测完成时间 vs 计划完成时间` | 评估项目是否延期，识别关键路径瓶颈。 |
+| **进度** | **里程碑达成率** | `已按时达成的里程碑数 / 总里程碑计划数` | 衡量阶段性目标交付的确定性。 |
+| **范围** | **需求变更频率** | `周期内发生变更的需求数 / 需求总数` | 识别需求不稳定性，防范范围蔓延风险。 |
+| **成本/工时** | **工时偏差 (TV)** | `实际消耗工时 vs 原始预算/估算工时` | 评估估算准确度及人力成本超预算风险。 |
+| **成本/工时** | **工时转化率** | `Spent / Estimated` | 衡量计划与实际的对齐程度。 |
+| **质量** | **缺陷逃逸率** | `上线后发现的缺陷数 / 总缺陷数` | 评估测试环节的有效性和线上发布质量。 |
+| **风险** | **风险暴露指数** | `未关闭的高危风险数 * 风险存续时长` | 量化单项目的风险积压压力。 |
+
+### 5.2 项目群与项目组合管理维度 (Program & Portfolio)
+
+这些指标侧重于跨项目的资源平衡、战略一致性和投资组合的整体健康。
+
+| 维度 | 度量指标 (Metrics) | 说明 (Definition) | 管理意义 (Strategic Value) |
+| :--- | :--- | :--- | :--- |
+| **战略一致性** | **战略对齐度得分** | `符合战略支柱分类的项目数 / 总项目数` | 确保组织资源正投入到最关键的业务方向。 |
+| **资源效率** | **多项目资源冲突率** | `被标记为 Overbooked 的核心人力百分比` | 识别关键资源（如架构师、核心开发）的瓶颈。 |
+| **生命周期** | **组合健康度分布** | `基于 Health Score 的项目等级分布 (红/黄/绿)` | 提供整体组合的稳健性评估。 |
+| **投资回报** | **组合 ROI 效率** | `组合总交付价值 (Business Value) / 组合总投入` | 评估项目群作为一个整体的经济效益。 |
+| **协同依赖** | **跨项目阻塞率** | `被外部项目 Block 的任务数 / 总任务数` | 识别组织内部的协同阻塞节点和系统性依赖风险。 |
+
+---
+
+## 6. 指标落地数据源映射 (Jira Data Mapping)
+
+为了支撑上述指标，我们需要扩展 Jira 数据采集能力：
+- **里程碑**: 映射自 Jira 的 `fixVersions`。
+- **预算工时**: 映射自 Jira 的 `timeoriginalestimate`。
+- **进度/工时**: 映射自 Jira 的 `timespent` 和 `timeestimate`。
+- **依赖关系**: 映射自 Jira 的 `issuelinks`，存储于 `traceability_links` 表。
+- **风险/变更**: 通过自定义标签 (`labels`) 或特定 Issue Type (如 `Risk`, `Change Request`) 进行自动识别。
+- **战略分类**: 基于 Jira Project 属性或特定的全局层级标签。
+
+---
+
+## 7. 财务投入透明化 (Financial Transparency)
+
+为了实现“分摊到位的数字化财务管理”，系统通过结合工程工时的产出与人力单价的投入，构建了自动化的成本核算模型。
+
+### 7.1 人力成本核算模型 (Labor Cost Model)
+
+**核算公式**:
+`项目/任务成本 = (实际消耗工时 / 3600) * 岗位标准时薪`
+
+**数据链路**:
+1.  **投入端 (Input)**: 从 Jira `jira_issues` 采集 `time_spent`（实际消耗工时，秒）。
+2.  **单价端 (Rate)**: 基于 `users.job_title_level`（职级）在 `labor_rate_configs` 表中查找对应的 `hourly_rate`（标准时薪）。
+3.  **归一化 (Normalization)**: 系统自动将不同系统的账号对齐到全局 User，确保工时能够精准挂接到人员及其单位成本。
+
+### 7.2 财务分析维度
+
+| 分析维度 | 指标 (Metrics) | 说明 (Definition) | 价值 |
+| :--- | :--- | :--- | :--- |
+| **项目成本** | **累计人力投入成本** | 关联所有 Issue 的工时成本总和 | 实时掌握项目资金消耗情况 (Burn Rate)。 |
+| **部门损益** | **部门月度研发支出** | 部门内所有成员月度产生的工时成本 | 作为研发中心向财务汇报的自动化依据。 |
+| **ROI 评估** | **单产出价值比 (Cost/Value)** | `项目总成本 / 已交付需求量` | 识别交付最“昂贵”的项目，优化资源配置。 |
+| **预算预警** | **预算消耗率** | `已发生人力成本 / 项目原始预算` | 提前预判预算超支风险。 |
+
+### 7.3 落地建议 (SQL View)
+使用 `view_pmo_project_labor_costs` 视图进行实时核算（详见 `TRADITIONAL_PM_ANALYTICS.sql`）。
+
+---
+
+## 8. 多项目风险预警引擎 (Risk Warning Engine)
+
+预警引擎旨在将“被动查看报表”转变为“主动推送风险”，通过企业微信 (WeCom) 即时触达项目负责人与 PMO。
+
+### 8.1 预警触发规则 (Risk Rules)
+
+| 风险类别 | 触发阈值 (Anomalies) | 严重等级 | 推送建议 |
+| :--- | :--- | :--- | :--- |
+| **进度风险** | `view_jira_iron_triangle.completion_rate_pct < 进度时间轴比例 - 15%` | 高 (High) | 即时推送项目经理 |
+| **成本风控** | `view_jira_iron_triangle.effort_variance_pct > 20%` (超支) | 中 (Mid) | 每周汇总推送 PMO |
+| **质量红线** | `view_project_overview.quality_gate = 'ERROR'` | 高 (High) | 即时推送 Tech Lead |
+| **安全债务** | `view_pmo_governance_risk.avg_vuln_age_days > 7` | 中 (Mid) | 隔日提醒负责人 |
+| **协作瓶颈** | `view_jira_dependency_analysis.risk_level = 'CRITICAL_BLOCK'` | 高 (High) | 即时推送阻塞方与被阻塞方 |
+
+### 8.2 推送机制 (Notification Mechanism)
+
+*   **通道**: 企业微信机器人 Webhook。
+*   **格式**: Markdown 卡片，包含：
+    *   **风险标题**: 简洁明了（如：[进度预警] 某支付系统延期风险）。
+    *   **异常详情**: 具体的度量值对比（如：当前完成度 30%，预期完成度 55%）。
+    *   **责任人**: @ 对应的负责人账号。
+    *   **处理建议**: 自动化生成初步行动项。
+
+### 8.3 落地建议 (Automation)
+1.  **SQL 支撑**: 创建 `view_pmo_risk_anomalies` 汇总所有风险。
+2.  **Python 引擎**: 编写 `scripts/wecom_risk_bot.py` 定时运行，识别异常并调用 Webhook。
+

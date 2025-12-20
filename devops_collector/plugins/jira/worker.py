@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
-from devops_collector.models.base_models import Organization, User as GlobalUser
+from devops_collector.models.base_models import Organization, User as GlobalUser, TraceabilityLink
 
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
@@ -202,12 +202,26 @@ class JiraWorker(BaseWorker):
         if fields.get('resolutiondate'):
             issue.resolved_at = datetime.fromisoformat(fields['resolutiondate'].replace('Z', '+00:00'))
             
+        # 解析扩展字段
+        issue.original_estimate = fields.get('timeoriginalestimate')
+        issue.time_spent = fields.get('timespent')
+        issue.remaining_estimate = fields.get('timeestimate')
+        issue.labels = fields.get('labels', [])
+        
+        # 解析版本 (里程碑)
+        if fields.get('fixVersions'):
+            issue.fix_versions = [v.get('name') for v in fields['fixVersions']]
+            
         issue.raw_data = data
         self.session.flush()
         
         # 同步变更历史
         if 'changelog' in data:
             self._sync_issue_history(issue, data['changelog'])
+            
+        # 同步 Issue Links (依赖分析)
+        if fields.get('issuelinks'):
+            self._sync_issue_links(issue, fields['issuelinks'])
             
         return issue
 
@@ -233,6 +247,55 @@ class JiraWorker(BaseWorker):
                         raw_data=history
                     )
                     self.session.add(h_record)
+        self.session.flush()
+
+    def _sync_issue_links(self, issue: JiraIssue, links: List[Dict[str, Any]]) -> None:
+        """同步 Jira 问题的链路关系 (依赖分析)。
+        
+        Args:
+            issue: JiraIssue 对象
+            links: Jira API 返回的 issuelinks 列表
+        """
+        for link in links:
+            # 识别是 inward 还是 outward
+            target_issue_data = None
+            link_direction = None
+            
+            if 'outwardIssue' in link:
+                target_issue_data = link['outwardIssue']
+                link_direction = link.get('type', {}).get('outward')
+            elif 'inwardIssue' in link:
+                target_issue_data = link['inwardIssue']
+                link_direction = link.get('type', {}).get('inward')
+                
+            if not target_issue_data or not link_direction:
+                continue
+                
+            # 使用 TraceabilityLink 存储
+            source_ext_id = str(issue.id)
+            target_ext_id = str(target_issue_data['id'])
+            
+            # 检查是否已存在 (避免重复创建)
+            existing = self.session.query(TraceabilityLink).filter_by(
+                source_system='jira',
+                source_id=source_ext_id,
+                target_id=target_ext_id,
+                link_type=link_direction
+            ).first()
+            
+            if not existing:
+                link_record = TraceabilityLink(
+                    source_system='jira',
+                    source_type='issue',
+                    source_id=source_ext_id,
+                    target_system='jira',
+                    target_type='issue',
+                    target_id=target_ext_id,
+                    link_type=link_direction,
+                    raw_data=link
+                )
+                self.session.add(link_record)
+        
         self.session.flush()
 
     def _sync_groups(self) -> None:

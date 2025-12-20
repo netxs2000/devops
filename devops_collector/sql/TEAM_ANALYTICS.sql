@@ -104,3 +104,51 @@ WHERE sm.analysis_date = (
 )
 GROUP BY g.name
 ORDER BY total_debt_hours DESC;
+
+
+-- 4. 评审民主度与协作熵 (Review Democracy & Entropy)
+-- 作用：识别"走过场"评审、技术垄断及沟通冗余风险
+CREATE OR REPLACE VIEW view_team_review_quality_entropy AS
+WITH mr_review_stats AS (
+    SELECT 
+        g.name as group_name,
+        mr.id as mr_id,
+        mr.author_id,
+        -- 我们假设合并者或关闭者为决策执行人 (GitLab 暂未采集 merged_by_id，此处以流水线触发或状态变迁记录模拟，或直接统计 author 分布)
+        -- 为简化，我们统计 MR 评论者的多样性
+        COUNT(DISTINCT n.author_id) filter (where n.author_id != mr.author_id) as independent_reviewers,
+        mr.review_cycles as rounds,
+        mr.human_comment_count as comments
+    FROM gitlab_groups g
+    JOIN projects p ON g.id = p.group_id
+    JOIN merge_requests mr ON p.id = mr.project_id
+    LEFT JOIN notes n ON mr.id = n.noteable_iid 
+        AND n.noteable_type = 'MergeRequest'
+        AND n.system = false
+    WHERE mr.state = 'merged'
+    AND mr.merged_at >= NOW() - INTERVAL '90 days'
+    GROUP BY g.name, mr.id, mr.review_cycles, mr.human_comment_count, mr.author_id
+),
+team_summary AS (
+    SELECT 
+        group_name,
+        AVG(independent_reviewers) as avg_reviewers,
+        AVG(rounds) as ping_pong_index,
+        AVG(comments) as collab_entropy_score,
+        -- 民主度：参与评审的人数 / 总活跃人数 (需关联 view_team_collaboration_health 的 active_devs)
+        COUNT(DISTINCT author_id) as unique_contributors
+    FROM mr_review_stats
+    GROUP BY group_name
+)
+SELECT 
+    ts.group_name,
+    ROUND(ts.ping_pong_index::numeric, 1) as avg_review_rounds, -- 评审乒乓指数
+    ROUND(ts.collab_entropy_score::numeric, 1) as collab_entropy, -- 协作熵 (平均人工评论数)
+    ROUND(ts.avg_reviewers::numeric, 1) as avg_reviewers_per_mr,
+    CASE 
+        WHEN ts.ping_pong_index > 4 THEN 'HIGH_ENTROPY (Inefficient)'
+        WHEN ts.ping_pong_index < 1.2 AND ts.collab_entropy_score < 2 THEN 'LOW_ENGAGEMENT (Trivial)'
+        ELSE 'HEALTHY'
+    END as collaboration_quality_status
+FROM team_summary ts
+ORDER BY avg_review_rounds DESC;
