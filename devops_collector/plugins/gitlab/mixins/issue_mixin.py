@@ -25,10 +25,10 @@ class IssueMixin:
         
         Args:
             project (Project): 关联的项目实体。
-            since (Optional[str]): ISO 格式时间，仅同步该时间后的 Issue。
+            since (Optional[str]): ISO 格式时间字符串，仅同步该时间之后的 Issue。
             
         Returns:
-            int: 处理的 Issue 总数。
+            int: 同步处理的 Issue 总数。
         """
         return self._process_generator(
             self.client.get_project_issues(project.id, since=since),
@@ -39,8 +39,8 @@ class IssueMixin:
         """批量保存来自 API 的 Issue 原始数据及其转换后的实体。
 
         Args:
-            project: 关联的 Project 模型对象。
-            batch: 包含多个 Issue 原始 JSON 数据的列表。
+            project (Project): 关联的 Project 模型对象。
+            batch (List[dict]): 包含多个 Issue 原始 JSON 数据的列表。
         """
         # 1. Staging
         for data in batch:
@@ -61,8 +61,8 @@ class IssueMixin:
         支持增量更新，当 ID 冲突时会更新现有记录。
 
         Args:
-            project: 关联的 Project 模型对象。
-            batch: 包含多个 Issue 原始 JSON 数据的列表。
+            project (Project): 关联的 Project 模型对象。
+            batch (List[dict]): 包含多个 Issue 原始 JSON 数据的列表。
         """
         ids = [item['id'] for item in batch]
         existing = self.session.query(Issue).filter(Issue.id.in_(ids)).all()
@@ -119,8 +119,8 @@ class IssueMixin:
         通过调用 GitLab 事件接口，捕捉每一个状态变迁点。
 
         Args:
-            project: 关联的 Project 对象。
-            issue_data: Issue 的详情字典 (必须包含 id 和 iid)。
+            project (Project): 关联的 Project 对象。
+            issue_data (Dict): Issue 的详情字典 (必须包含 id 和 iid)。
         """
         project_id = project.id
         issue_iid = issue_data['iid']
@@ -144,9 +144,9 @@ class IssueMixin:
         用于将 GitLab 的原子事件（如状态变更、标签变更等）同步至数据库。
 
         Args:
-            issue_id: 数据库中对应的 Issue 内部 ID。
-            event_type: 事件分类 (state, label, milestone 等)。
-            data: 来自 GitLab API 的原始事件元数据字典。
+            issue_id (int): 数据库中对应的 Issue 内部 ID。
+            event_type (str): 事件分类 (state, label, milestone 等)。
+            data (Dict): 来自 GitLab API 的原始事件元数据字典。
         """
         external_id = data['id']
         
@@ -182,8 +182,8 @@ class IssueMixin:
         这些数据是计算周期时间 (Cycle Time) 和流动效率的基础。
 
         Args:
-            project: 关联的 Project 数据库模型实例。
-            issue_data: 从 GitLab API 获取的原始 Issue 详情数据字典。
+            project (Project): 关联的 Project 数据库模型实例。
+            issue_data (Dict): 从 GitLab API 获取的原始 Issue 详情数据字典。
         """
         issue_id = issue_data['id']
         issue_iid = issue_data['iid']
