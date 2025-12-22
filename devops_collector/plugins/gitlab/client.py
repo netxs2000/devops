@@ -4,9 +4,19 @@ from devops_collector.core.base_client import BaseClient
 
 
 class GitLabClient(BaseClient):
-    """GitLab REST API 客户端。"""
+    """GitLab REST API 客户端。
+    
+    封装了 GitLab API v4 的常用接口调用，处理分页、认证及基础的错误重试。
+    """
     
     def __init__(self, url: str, token: str, rate_limit: int = 10):
+        """初始化 GitLab 客户端。
+        
+        Args:
+            url (str): GitLab 实例的 URL (如 https://gitlab.com)。
+            token (str): 用户的 Private Token 或 Access Token。
+            rate_limit (int): 每秒请求数限制。默认为 10。
+        """
         super().__init__(
             base_url=f"{url.rstrip('/')}/api/v4",
             auth_headers={'PRIVATE-TOKEN': token},
@@ -14,6 +24,11 @@ class GitLabClient(BaseClient):
         )
     
     def test_connection(self) -> bool:
+        """测试与 GitLab 的连接状态。
+        
+        Returns:
+            bool: 如果连接成功且版本接口返回 200，则返回 True，否则返回 False。
+        """
         try:
             self._get("version")
             return True
@@ -21,9 +36,25 @@ class GitLabClient(BaseClient):
             return False
     
     def get_project(self, project_id: int) -> dict:
+        """获取单个项目的详细信息。
+        
+        Args:
+            project_id (int): GitLab 项目 ID。
+            
+        Returns:
+            dict: 项目详情字典。
+        """
         return self._get(f"projects/{project_id}", params={'statistics': True}).json()
     
     def get_group(self, group_id_or_path: str) -> dict:
+        """获取单个群组的详细信息。
+
+        Args:
+            group_id_or_path (str): 群组 ID 或 URL 编码后的路径。
+
+        Returns:
+            dict: 群组详情字典。
+        """
         return self._get(f"groups/{group_id_or_path}").json()
     
     def get_project_commits(
@@ -32,7 +63,18 @@ class GitLabClient(BaseClient):
         since: Optional[str] = None, 
         start_page: int = 1,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取项目的提交记录。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            since (Optional[str]): 仅获取该时间之后的提交 (ISO 8601 格式)。
+            start_page (int): 起始页码。默认为 1。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个提交记录的字典数据。
+        """
         page = start_page
         
         while True:
@@ -51,6 +93,15 @@ class GitLabClient(BaseClient):
             page += 1
     
     def get_commit_diff(self, project_id: int, commit_sha: str) -> List[dict]:
+        """获取指定提交的差异 (Diff) 信息。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            commit_sha (str): 提交的 SHA 哈希值。
+
+        Returns:
+            List[dict]: 包含文件变更差异列表。
+        """
         return self._get(f"projects/{project_id}/repository/commits/{commit_sha}/diff").json()
     
     def get_project_issues(
@@ -59,7 +110,18 @@ class GitLabClient(BaseClient):
         since: Optional[str] = None,
         start_page: int = 1,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取项目的 Issue 列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            since (Optional[str]): 仅获取该时间之后更新的 Issue (ISO 8601 格式)。
+            start_page (int): 起始页码。默认为 1。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个 Issue 的字典数据。
+        """
         page = start_page
         
         while True:
@@ -83,7 +145,18 @@ class GitLabClient(BaseClient):
         since: Optional[str] = None,
         start_page: int = 1,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取项目的合并请求 (MR) 列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            since (Optional[str]): 仅获取该时间之后更新的 MR (ISO 8601 格式)。
+            start_page (int): 起始页码。默认为 1。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个 MR 的字典数据。
+        """
         page = start_page
         
         while True:
@@ -106,7 +179,17 @@ class GitLabClient(BaseClient):
         project_id: int,
         start_page: int = 1,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取项目的流水线列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            start_page (int): 起始页码。默认为 1。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个流水线的字典数据。
+        """
         page = start_page
         
         while True:
@@ -126,7 +209,17 @@ class GitLabClient(BaseClient):
         project_id: int,
         start_page: int = 1,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取项目的部署记录列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            start_page (int): 起始页码。默认为 1。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个部署记录的字典数据。
+        """
         page = start_page
         
         while True:
@@ -146,7 +239,17 @@ class GitLabClient(BaseClient):
         project_id: int, 
         issue_iid: int,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取 Issue 的评论 (Notes)。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            issue_iid (int): Issue 的 IID。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个评论的字典数据。
+        """
         page = 1
         
         while True:
@@ -166,7 +269,17 @@ class GitLabClient(BaseClient):
         project_id: int, 
         mr_iid: int,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取合并请求的评论 (Notes)。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            mr_iid (int): MR 的 IID。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个评论的字典数据。
+        """
         page = 1
         
         while True:
@@ -182,18 +295,43 @@ class GitLabClient(BaseClient):
             page += 1
 
     def get_mr_approvals(self, project_id: int, mr_iid: int) -> dict:
-        """获取合并请求的审批详情。"""
+        """获取合并请求的审批详情。
+        
+        Args:
+            project_id (int): GitLab 项目 ID。
+            mr_iid (int): MR 的 IID。
+
+        Returns:
+            dict: 包含审批人信息的字典。
+        """
         return self._get(f"projects/{project_id}/merge_requests/{mr_iid}/approvals").json()
 
     def get_mr_pipelines(self, project_id: int, mr_iid: int) -> List[dict]:
-        """获取合并请求关联的流水线。"""
+        """获取合并请求关联的流水线。
+        
+        Args:
+            project_id (int): GitLab 项目 ID。
+            mr_iid (int): MR 的 IID。
+
+        Returns:
+            List[dict]: 流水线记录列表。
+        """
         return self._get(f"projects/{project_id}/merge_requests/{mr_iid}/pipelines").json()
     
     def get_project_tags(
         self, 
         project_id: int,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取项目的标签 (Tag) 列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个标签的字典数据。
+        """
         page = 1
         
         while True:
@@ -212,7 +350,16 @@ class GitLabClient(BaseClient):
         self, 
         project_id: int,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取项目的分支 (Branch) 列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个分支的字典数据。
+        """
         page = 1
         
         while True:
@@ -231,7 +378,16 @@ class GitLabClient(BaseClient):
         self, 
         project_id: int,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取项目的成员列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个成员的字典数据。
+        """
         page = 1
         
         while True:
@@ -250,8 +406,16 @@ class GitLabClient(BaseClient):
         self, 
         project_id: int,
         per_page: int = 100
-    ):
-        """获取项目里程碑 (Generator 模式)。"""
+    ) -> Generator[Dict, None, None]:
+        """获取项目的里程碑列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个里程碑的字典数据。
+        """
         page = 1
         
         while True:
@@ -267,9 +431,26 @@ class GitLabClient(BaseClient):
             page += 1
 
     def get_user(self, user_id: int) -> dict:
+        """获取单个用户的详细信息。
+
+        Args:
+            user_id (int): 用户 ID。
+
+        Returns:
+            dict: 用户详情字典。
+        """
         return self._get(f"users/{user_id}").json()
     
     def get_count(self, endpoint: str, params: Optional[Dict] = None) -> int:
+        """获取指定资源的数量 (通过 x-total 头)。
+
+        Args:
+            endpoint (str): API 端点。
+            params (Optional[Dict]): 查询参数。
+
+        Returns:
+            int: 资源总数。
+        """
         response = self._get(endpoint, params={**(params or {}), 'per_page': 1})
         return int(response.headers.get('x-total', 0))
 
@@ -277,7 +458,16 @@ class GitLabClient(BaseClient):
         self, 
         group_id: int,
         per_page: int = 100
-    ):
+    ) -> Generator[Dict, None, None]:
+        """获取群组的成员列表。
+
+        Args:
+            group_id (int): 群组 ID。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个成员的字典数据。
+        """
         page = 1
         
         while True:
@@ -296,8 +486,16 @@ class GitLabClient(BaseClient):
         self, 
         project_id: int,
         per_page: int = 100
-    ):
-        """获取项目制品库下的包列表。"""
+    ) -> Generator[Dict, None, None]:
+        """获取项目制品库下的包列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            per_page (int): 每页数量。默认为 100。
+
+        Yields:
+            dict: 单个包的字典数据。
+        """
         page = 1
         
         while True:
@@ -317,43 +515,150 @@ class GitLabClient(BaseClient):
         project_id: int,
         package_id: int
     ) -> List[dict]:
-        """获取包关联的文件列表。"""
+        """获取包关联的文件列表。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            package_id (int): 包 ID。
+
+        Returns:
+            List[dict]: 文件列表。
+        """
         return self._get(f"projects/{project_id}/packages/{package_id}/package_files").json()
 
     def create_group_label(self, group_id: int, label_data: Dict) -> dict:
-        """创建群组标签。"""
+        """创建群组标签。
+
+        Args:
+            group_id (int): 群组 ID。
+            label_data (Dict): 标签数据 (name, color, description)。
+
+        Returns:
+            dict: 创建后的标签详情。
+        """
         return self._post(f"groups/{group_id}/labels", data=label_data).json()
 
     def create_project_label(self, project_id: int, label_data: Dict) -> dict:
-        """创建项目标签。"""
+        """创建项目标签。
+
+        Args:
+            project_id (int): 项目 ID。
+            label_data (Dict): 标签数据 (name, color, description)。
+
+        Returns:
+            dict: 创建后的标签详情。
+        """
         return self._post(f"projects/{project_id}/labels", data=label_data).json()
 
     def add_issue_label(self, project_id: int, issue_iid: int, labels: List[str]) -> dict:
-        """为 Issue 添加标签。"""
+        """为 Issue 添加标签。
+
+        Args:
+            project_id (int): 项目 ID。
+            issue_iid (int): Issue 的 IID。
+            labels (List[str]): 要添加的标签名称列表。
+
+        Returns:
+            dict: 更新后的 Issue 详情。
+        """
         # GitLab API 支持使用 add_labels 参数
         return self._put(f"projects/{project_id}/issues/{issue_iid}", data={'add_labels': ','.join(labels)}).json()
 
     def add_issue_note(self, project_id: int, issue_iid: int, body: str) -> dict:
-        """为 Issue 添加评论。"""
+        """为 Issue 添加评论。
+
+        Args:
+            project_id (int): 项目 ID。
+            issue_iid (int): Issue 的 IID。
+            body (str): 评论内容。
+
+        Returns:
+            dict: 创建后的 Note 详情。
+        """
         return self._post(f"projects/{project_id}/issues/{issue_iid}/notes", data={'body': body}).json()
 
     def get_issue_state_events(self, project_id: int, issue_iid: int) -> Generator[Dict, None, None]:
-        """获取 Issue 的状态变更事件。"""
+        """获取 Issue 的状态变更事件。
+
+        Args:
+            project_id (int): 项目 ID。
+            issue_iid (int): Issue 的 IID。
+
+        Yields:
+            dict: 单个状态变更事件字典。
+        """
         return self._get_paged_data(f"projects/{project_id}/issues/{issue_iid}/resource_state_events")
 
     def get_issue_label_events(self, project_id: int, issue_iid: int) -> Generator[Dict, None, None]:
-        """获取 Issue 的标签变更事件。"""
+        """获取 Issue 的标签变更事件。
+
+        Args:
+            project_id (int): 项目 ID。
+            issue_iid (int): Issue 的 IID。
+
+        Yields:
+            dict: 单个标签变更事件字典。
+        """
         return self._get_paged_data(f"projects/{project_id}/issues/{issue_iid}/resource_label_events")
 
     def get_issue_milestone_events(self, project_id: int, issue_iid: int) -> Generator[Dict, None, None]:
-        """获取 Issue 的里程碑变更事件。"""
+        """获取 Issue 的里程碑变更事件。
+
+        Args:
+            project_id (int): 项目 ID。
+            issue_iid (int): Issue 的 IID。
+
+        Yields:
+            dict: 单个里程碑变更事件字典。
+        """
         return self._get_paged_data(f"projects/{project_id}/issues/{issue_iid}/resource_milestone_events")
 
     def get_project_wiki_events(self, project_id: int) -> Generator[Dict, None, None]:
-        """获取项目的 Wiki 事件。"""
+        """获取项目的 Wiki 事件。
+
+        Args:
+            project_id (int): 项目 ID。
+
+        Yields:
+            dict: 单个 Wiki 事件字典。
+        """
         # 利用 events 接口过滤 wiki_page
         return self._get_paged_data(f"projects/{project_id}/events", params={'target_type': 'wiki_page'})
 
     def get_project_dependencies(self, project_id: int) -> Generator[Dict, None, None]:
-        """获取项目依赖列表 (需开启 Dependency Scanning)。"""
+        """获取项目依赖列表 (需开启 Dependency Scanning)。
+
+        Args:
+            project_id (int): 项目 ID。
+
+        Yields:
+            dict: 单个依赖项字典。
+        """
         return self._get_paged_data(f"projects/{project_id}/dependencies")
+
+    def _get_paged_data(self, endpoint: str, params: Optional[Dict] = None) -> Generator[Dict, None, None]:
+        """(内部方法) 处理分页数据获取。
+
+        Args:
+            endpoint (str): API 端点。
+            params (Optional[Dict]): 附加的查询参数。
+
+        Yields:
+            dict: 每一项数据。
+        """
+        page = 1
+        per_page = 100
+        while True:
+            _params = {'per_page': per_page, 'page': page}
+            if params:
+                _params.update(params)
+            
+            response = self._get(endpoint, params=_params)
+            data = response.json()
+            if not data:
+                break
+                
+            for item in data:
+                yield item
+                
+            page += 1

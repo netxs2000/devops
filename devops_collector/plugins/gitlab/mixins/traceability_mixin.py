@@ -12,7 +12,11 @@ logger = logging.getLogger(__name__)
 
 
 class TraceabilityMixin:
-    """提供链路追溯提取逻辑。"""
+    """提供链路追溯提取逻辑。
+    
+    能够从 Commit Message 或 MR Description 中提取 Jira/ZenTao 等外部系统的单号，
+    并建立 TraceabilityLink 关联。
+    """
 
     def _apply_traceability_extraction(self, obj: Any) -> None:
         """从项目对象（Commit/MR）的文本内容中提取业务需求追溯信息。
@@ -20,6 +24,8 @@ class TraceabilityMixin:
         支持正则匹配:
         - Jira: [A-Z]+-\d+ (如 PROJ-123)
         - ZenTao: #\d+ (如 #456)
+        
+        提取到的 ID 会更新到对象的 metadata 中，并创建 TraceabilityLink 记录。
         
         Args:
             obj (Any): 提交记录 (Commit) 或合并请求 (MergeRequest) 实体。
@@ -49,10 +55,10 @@ class TraceabilityMixin:
         """保存提取到的追溯 ID 到对象并创建映射表记录。
         
         Args:
-            obj (Any): 目标实体对象。
+            obj (Any): 目标实体对象 (Commit 或 MergeRequest)。
             ids (List[str]): 提取到的外部 ID 列表。
             source (str): 来源系统类型 (jira, zentao)。
-            text_content (str): 原始文本内容，用于存证。
+            text_content (str): 原始文本内容，用于存证 (截取前200字符)。
         """
         if isinstance(obj, MergeRequest):
             # MR 通常只关联一个主需求，取第一个

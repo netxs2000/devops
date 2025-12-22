@@ -19,7 +19,14 @@ class AssetMixin:
     """提供 Tag, Branch, Milestone 等次要资产的同步逻辑。"""
 
     def _sync_tags(self, project: Project) -> int:
-        """同步 Git 标签。"""
+        """同步 Git 标签。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            
+        Returns:
+            int: 成功同步的标签数量。
+        """
         count = self._process_generator(
             self.client.get_project_tags(project.id),
             lambda batch: self._save_tags_batch(project, batch)
@@ -28,7 +35,12 @@ class AssetMixin:
         return count
 
     def _save_tags_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存标签。"""
+        """批量保存标签。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            batch (List[dict]): 包含多个 Tag 原始数据的列表。
+        """
         names = [item['name'] for item in batch]
         existing = self.session.query(Tag).filter(
             Tag.project_id == project.id,
@@ -46,14 +58,26 @@ class AssetMixin:
             tag.commit_sha = data.get('commit', {}).get('id')
 
     def _sync_branches(self, project: Project) -> int:
-        """同步分支元数据。"""
+        """同步分支元数据。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            
+        Returns:
+            int: 成功同步的分支数量。
+        """
         return self._process_generator(
             self.client.get_project_branches(project.id),
             lambda batch: self._save_branches_batch(project, batch)
         )
 
     def _save_branches_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存分支。"""
+        """批量保存分支。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            batch (List[dict]): 包含多个 Branch 原始数据的列表。
+        """
         names = [item['name'] for item in batch]
         existing = self.session.query(Branch).filter(
             Branch.project_id == project.id,
@@ -78,14 +102,26 @@ class AssetMixin:
                 branch.last_commit_date = parse_iso8601(commit_info['committed_date'])
 
     def _sync_milestones(self, project: Project) -> int:
-        """同步里程碑 (支持流式处理)。"""
+        """同步里程碑 (支持流式处理)。
+        
+        Args:
+            project (Project): 关联的项目实体。
+        
+        Returns:
+            int: 成功同步的里程碑数量。
+        """
         return self._process_generator(
             self.client.get_project_milestones(project.id),
             lambda batch: self._save_milestones_batch(project, batch)
         )
 
     def _save_milestones_batch(self, project: Project, batch: List[dict]) -> None:
-        """批量保存里程碑。"""
+        """批量保存里程碑。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            batch (List[dict]): 包含多个 Milestone 原始数据的列表。
+        """
         ids = [item['id'] for item in batch]
         existing = self.session.query(Milestone).filter(Milestone.id.in_(ids)).all()
         existing_map = {m.id: m for m in existing}
@@ -117,14 +153,26 @@ class AssetMixin:
             ms.updated_at = parse_iso8601(data.get('updated_at'))
 
     def _sync_packages(self, project: Project) -> int:
-        """同步项目的制品包。"""
+        """同步项目的制品包。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            
+        Returns:
+            int: 成功同步的包数量。
+        """
         return self._process_generator(
             self.client.get_packages(project.id),
             lambda batch: self._save_packages_batch(project, batch)
         )
 
     def _save_packages_batch(self, project: Project, batch: List[dict]) -> None:
-        """保存包及其关联文件。"""
+        """保存包及其关联文件。
+        
+        Args:
+            project (Project): 关联的项目实体。
+            batch (List[dict]): 包含多个 Package 原始数据的列表。
+        """
         ids = [item['id'] for item in batch]
         existing = self.session.query(GitLabPackage).filter(GitLabPackage.id.in_(ids)).all()
         existing_map = {p.id: p for p in existing}
@@ -152,7 +200,12 @@ class AssetMixin:
                 logger.warning(f"Failed to sync files for package {pkg.id}: {e}")
 
     def _sync_package_files(self, package: GitLabPackage, files_data: List[dict]) -> None:
-        """同步特定包下的文件。"""
+        """同步特定包下的文件。
+        
+        Args:
+            package (GitLabPackage): 关联的包实体。
+            files_data (List[dict]): 包文件列表原始数据。
+        """
         ids = [f['id'] for f in files_data]
         existing = {f.id for f in package.files}
         
@@ -173,7 +226,11 @@ class AssetMixin:
             self.session.add(f_obj)
 
     def _sync_wiki_logs(self, project: Project) -> None:
-        """同步 Wiki 事件日志。"""
+        """同步 Wiki 事件日志。
+        
+        Args:
+            project (Project): 关联的项目实体。
+        """
         for event in self.client.get_project_wiki_events(project.id):
             created_at = parse_iso8601(event['created_at'])
             
@@ -201,7 +258,11 @@ class AssetMixin:
             self.session.add(wiki_log)
 
     def _sync_dependencies(self, project: Project) -> None:
-        """同步项目的第三方/内部依赖关系。"""
+        """同步项目的第三方/内部依赖关系。
+        
+        Args:
+            project (Project): 关联的项目实体。
+        """
         for dep in self.client.get_project_dependencies(project.id):
             # 简单去重：按名称和版本
             existing = self.session.query(GitLabDependency).filter_by(

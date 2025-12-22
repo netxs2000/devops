@@ -13,10 +13,21 @@ logger = logging.getLogger(__name__)
 
 
 class MergeRequestMixin:
-    """提供 MR 相关的同步逻辑。"""
+    """提供 MR 相关的同步逻辑。
+    
+    包含 MR 的基础信息同步、数据转换以及深度协作分析功能。
+    """
 
     def _sync_merge_requests(self, project: Project, since: Optional[str]) -> int:
-        """从项目同步合并请求 (MR)。"""
+        """从项目同步合并请求 (MR)。
+
+        Args:
+            project (Project): 关联的项目实体。
+            since (Optional[str]): ISO 格式时间字符串，仅同步该时间后的 MR。
+
+        Returns:
+            int: 同步处理的 MR 总数。
+        """
         return self._process_generator(
             self.client.get_project_merge_requests(project.id, since=since),
             lambda batch: self._save_mrs_batch(project, batch)
@@ -27,6 +38,10 @@ class MergeRequestMixin:
         
         第一阶段：Extract & Load (Staging) - 原始数据落盘
         第二阶段：Transform & Load (DW) - 业务逻辑解析
+
+        Args:
+            project (Project): 关联的项目实体。
+            batch (List[dict]): 包含多个 MR 原始数据的列表。
         """
         # 1. 采集落盘 (ODS 层)
         for data in batch:
@@ -42,7 +57,12 @@ class MergeRequestMixin:
         self._transform_mrs_batch(project, batch)
 
     def _transform_mrs_batch(self, project: Project, batch: List[dict]) -> None:
-        """核心解析逻辑：将原始 JSON 转换为 MergeRequest 模型。"""
+        """核心解析逻辑：将原始 JSON 转换为 MergeRequest 模型。
+
+        Args:
+            project (Project): 关联的项目实体。
+            batch (List[dict]): 包含多个 MR 原始数据的列表。
+        """
         ids = [item['id'] for item in batch]
         existing = self.session.query(MergeRequest).filter(MergeRequest.id.in_(ids)).all()
         existing_map = {m.id: m for m in existing}
@@ -84,7 +104,15 @@ class MergeRequestMixin:
                     self._apply_mr_collaboration_analysis(project, mr)
 
     def _apply_mr_collaboration_analysis(self, project: Project, mr: MergeRequest) -> None:
-        """分析合并请求的协作深度与评审质量。"""
+        """分析合并请求的协作深度与评审质量。
+        
+        此方法会调用多个 API 端点以获取审批、评论和流水线信息，
+        用于计算 Review Cycles, First Response Time 等效能指标。
+
+        Args:
+            project (Project): 关联的项目实体。
+            mr (MergeRequest): 要分析的合并请求对象。
+        """
         try:
             # 1. 获取审批数
             approvals = self.client.get_mr_approvals(project.id, mr.iid)
