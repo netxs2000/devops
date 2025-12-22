@@ -16,7 +16,7 @@ class GitLabUserSchema(BaseModel):
         name: 显示名称
         email: 邮箱地址
         state: 用户状态 (active/blocked)
-        skype: Skype ID (alias for skypeid)
+        skype: Skype ID (alias for skypeid. equals department)
     """
     id: int
     username: str
