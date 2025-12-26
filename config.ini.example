@@ -1,0 +1,84 @@
+# DevOps Collector 配置文件示例
+# 复制此文件为 config.ini 并填写实际配置
+
+[database]
+# PostgreSQL 数据库连接 URI
+uri = postgresql://gitlab_collector:password@localhost:5432/gitlab_data
+
+# 原始数据保留天数 (用于 Staging 层数据清理)
+raw_data_retention_days = 30
+
+[gitlab]
+# GitLab 实例 URL
+url = https://gitlab.example.com
+
+# GitLab Personal Access Token (需要 api, read_repository 权限)
+private_token = glpat-xxxxxxxxxxxxxxxxxxxx
+
+[sonarqube]
+# SonarQube 服务器 URL
+url = https://sonar.example.com
+
+# SonarQube Token
+token = squ_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# 同步间隔 (小时)
+sync_interval_hours = 24
+
+# 是否同步 Issues (会增加数据量)
+sync_issues = false
+
+[jenkins]
+# Jenkins 服务器 URL
+url = http://jenkins.example.com
+
+# Jenkins 用户名
+user = admin
+
+# Jenkins API Token
+token = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# 同步间隔 (小时)
+sync_interval_hours = 12
+
+# 每个 Job 同步的最大构建数
+build_sync_limit = 100
+
+[rabbitmq]
+# RabbitMQ 主机地址
+host = localhost
+
+# 任务队列名称
+queue = gitlab_tasks
+
+[analysis]
+# 是否启用深度分析 (包括代码 Diff、Wiki 日志等)
+enable_deep_analysis = true
+
+# 忽略的文件模式 (逗号分隔)
+ignored_file_patterns = *.lock,*.min.js,*.min.css,node_modules/*,dist/*,build/*
+
+# 生产环境名称映射 (用于 DORA 指标计算)
+production_env_mapping = prod,production,prd,main
+
+[ratelimit]
+# API 请求速率限制 (每秒请求数)
+requests_per_second = 10
+
+[client]
+# HTTP 客户端超时时间 (秒)
+timeout = 10
+
+# 每页数据量
+per_page = 100
+
+# 最大重试次数
+max_retries = 5
+
+[scheduler]
+# 同步任务调度间隔 (分钟)
+sync_interval_minutes = 10
+
+[logging]
+# 日志级别 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+level = INFO
