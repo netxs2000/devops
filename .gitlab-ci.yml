@@ -1,0 +1,183 @@
+# GitLab CI/CD 配置文件
+# DevOps Collector 自动化测试与部署流程
+
+stages:
+  - lint
+  - test
+  - security
+  - build
+  - deploy
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  POSTGRES_DB: devops_test
+  POSTGRES_USER: test_user
+  POSTGRES_PASSWORD: test_password
+  POSTGRES_HOST_AUTH_METHOD: trust
+
+# 缓存配置
+cache:
+  paths:
+    - .cache/pip
+    - venv/
+
+# 默认配置
+default:
+  image: python:3.9
+  before_script:
+    - python -V
+    - pip install virtualenv
+    - virtualenv venv
+    - source venv/bin/activate
+    - pip install -r requirements.txt
+    - pip install -r requirements-dev.txt
+
+# ==================== 代码质量检查 ====================
+
+code-format-check:
+  stage: lint
+  script:
+    - black --check devops_collector/ tests/ scripts/ --line-length=100
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+
+flake8-lint:
+  stage: lint
+  script:
+    - flake8 devops_collector/ tests/ scripts/ --max-line-length=100 --statistics
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+
+type-check:
+  stage: lint
+  script:
+    - mypy devops_collector/ --ignore-missing-imports
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+
+# ==================== 单元测试 ====================
+
+unit-tests:
+  stage: test
+  services:
+    - postgres:13
+  variables:
+    DB_URI: "postgresql://test_user:test_password@postgres:5432/devops_test"
+  script:
+    - pip install pytest pytest-cov requests-mock
+    - pytest tests/ -v --cov=devops_collector --cov-report=term --cov-report=xml
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - htmlcov/
+    expire_in: 1 week
+  only:
+    - merge_requests
+    - main
+
+integration-tests:
+  stage: test
+  services:
+    - postgres:13
+  variables:
+    DB_URI: "postgresql://test_user:test_password@postgres:5432/devops_test"
+  script:
+    - pytest tests/integration/ -v --maxfail=1
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+
+# ==================== 安全扫描 ====================
+
+dependency-check:
+  stage: security
+  script:
+    - pip install safety
+    - safety check --json || true
+  allow_failure: true
+  only:
+    - schedules
+    - main
+
+secret-detection:
+  stage: security
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache git
+  script:
+    - |
+      echo "检查敏感信息泄露..."
+      if git grep -E "(password|secret|token|api_key)\s*=\s*['\"][^'\"]+['\"]" -- '*.py' '*.ini' '*.yaml'; then
+        echo "警告: 发现硬编码的敏感信息!"
+        exit 1
+      fi
+  allow_failure: true
+  only:
+    - merge_requests
+
+# ==================== 构建 ====================
+
+build-package:
+  stage: build
+  script:
+    - pip install build
+    - python -m build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 month
+  only:
+    - tags
+    - main
+
+# ==================== 数据验证 (定时任务) ====================
+
+data-integrity-check:
+  stage: test
+  script:
+    - |
+      if [ -n "$VERIFY_PROJECT_ID" ]; then
+        python scripts/verify_data_integrity.py --project-id $VERIFY_PROJECT_ID
+      else
+        echo "跳过数据验证: 未设置 VERIFY_PROJECT_ID"
+      fi
+  only:
+    - schedules
+  allow_failure: true
+
+# ==================== 部署 ====================
+
+deploy-staging:
+  stage: deploy
+  script:
+    - echo "部署到测试环境..."
+    - echo "TODO: 添加实际部署脚本"
+  environment:
+    name: staging
+    url: https://staging.devops.example.com
+  only:
+    - main
+  when: manual
+
+deploy-production:
+  stage: deploy
+  script:
+    - echo "部署到生产环境..."
+    - echo "TODO: 添加实际部署脚本"
+  environment:
+    name: production
+    url: https://devops.example.com
+  only:
+    - tags
+  when: manual
