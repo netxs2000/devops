@@ -1,4 +1,145 @@
+## 🗓️ 2025-12-28 每日工作总结 - netxs
 
+### 🎯 今日焦点与目标达成
+
+**前端认证闭环与实时交互增强**。今日重点完成了 Service Desk 前端的全面认证集成，彻底移除了遗留的非认证输入模式，实现了全局路由守卫，确保业务操作基于安全上下文。同时，大幅扩展了实时通知系统的覆盖范围，将“被动查询”转变为“主动推送”，覆盖了从用例执行到流水线监控的全生命周期事件。
+
+### ✅ 主要完成的工作 (Highlights)
+
+*   **前端认证集成闭环 (Frontend Integration)**:
+    *   **页面改造**: 重构了 `service_desk_bug.html` 和 `service_desk_requirement.html`，移除了传统的“申请人”手动输入字段，改为自动从当前登录的 Token 中解析 MDM 用户身份。
+    *   **路由守卫**: 在 `index.html` 中实现了全局统一的认证检查 (Auth Check)，确保未登录流量被安全拦截并重定向。
+    *   **独立性验证**: 验证了 `service_desk_track.html` 在新认证体系下的独立访问能力。
+
+*   **实时通知体系扩展 (Real-time Alerting Extension)**:
+    *   **场景全覆盖**: 规划并着手集成 SSE (Server-Sent Events) 到四大核心场景：
+        *   **测试执行**: 测试用例执行完毕后自动推送结果与执行人信息。
+        *   **需求评审**: 需求状态变更（如批准/拒绝）时实时通知相关干系人。
+        *   **质量门禁**: 质量红线被触发时立即广播告警。
+        *   **流水线监控**: GitLab Pipeline 失败时实时推送通知。
+    *   **上下文丰富**: 确保所有推送事件均携带完整的 MDM 用户详情（姓名、邮箱、部门），提升通知的可读性与行动力。
+
+*   **数据权限与视图 (Data Filter & Dashboard)**:
+    *   **部门级隔离**: 深入推进了 Dashboard 的数据过滤逻辑，基于用户的 MDM 部门属性实现“默认仅展示本部门关注内容”的个性化视图，降低信息噪音。
+
+### 🚧 遗留问题与障碍 (Blockers)
+
+*   **SSE 联调**: 多个新场景的实时推送逻辑尚处于后端集成阶段，需要配合前端进行完整的端到端验证。
+
+### 🚀 下一步计划 (Next Steps)
+
+1.  **SSE 落地**: 在 `devops_collector/main.py` 中完成上述四大场景的 `push_notification` 埋点代码。
+2.  **Dashboard 完善**: 完成前端 Dashboard 基于部门代码的自动过滤逻辑开发。
+3.  **用户体验优化**: 对接新的实时通知消息，在前端展示更友好的 Toast 或 Notification UI。
+
+---
+
+## 🗓️ 2025-12-27 每日工作总结 - netxs
+
+### 🎯 今日焦点与目标达成
+
+**MDM 主数据治理与认证体系重构**。今日核心攻坚任务是完成用户与组织架构的主数据管理 (MDM) 对齐，并将认证模块从业务逻辑中解耦，构建了独立、安全的身份认证中心。同时贯通了从"用户注册-审批绑定-服务台提单"的完整业务链路。
+
+### ✅ 主要完成的工作 (Highlights)
+
+*   **主数据治理 (MDM Refactoring)**：
+    *   **模型重构**: 严格遵循 `MDM_DATA_DICTIONARY` 标准，重构了 `User` (对齐 `mdm_identities`) 和 `Organization` (对齐 `mdm_organizations`) 核心模型，引入了 `employee_id`, `department_code`, `source_system` 等关键主数据字段。
+    *   **架构解耦**: 废弃了原有的基于文件的简易认证，完成了数据模型向数据库的迁移。
+
+*   **认证中心构建 (Auth Module Implementation)**：
+    *   **独立模块**: 创建 `devops_collector/auth/` 独立模块，封装了注册、登录、Token 签发与验证逻辑。
+    *   **安全机制**: 实现了基于 `OAuth2` + `JWT` (HS256) 的无状态认证机制，引入 `AuthToken` 表管理 Token 生命周期，支持密码哈希存储 (bcrypt)。
+    *   **API 落地**: 发布了 `/auth/register`, `/auth/login`, `/auth/verify` 等标准接口。
+
+*   **Service Desk 与测试管理闭环 (Service Desk & Test Hub)**：
+    *   **身份映射验证**: 编写并执行 `test_identity_mapping.py`，成功验证了"新用户注册 -> 管理员审批绑定 GitLab ID -> 用户登录 -> 提交对应的 Bug/需求"的全链路流程。
+    *   **各实体生命周期管理**: 
+        *   实现了 `Bug`、`Requirement` 实体在服务台的申报API (提交-关联GitLab Issue)。
+        *   落地了 `TestCase` 的管理逻辑 (`test_hub/main.py`)，包括 **测试步骤解析** (`TestStep`), **关联需求** (`requirement_id`), **关联缺陷** (`linked_bugs`) 以及 **执行结果回写**。
+        *   实现了基于 `status::satisfied` 和 `status::failed` 标签的 **需求健康度自动同步** (`sync_requirement_health_to_gitlab`)。
+
+*   **工程依赖更新**:
+    *   引入 `passlib[bcrypt]`, `python-jose`, `python-multipart` 等认证安全相关依赖库。
+
+### 🚧 遗留问题与障碍 (Blockers)
+
+*   **前端适配**: 目前认证与提单流程仅在 API 和测试脚本层面跑通，前端页面 (`test_hub/static/`) 尚未完全适配新的 Token 认证机制。
+
+### 🚀 下一步计划 (Next Steps)
+
+1.  **前端集成**: 更新 Service Desk 前端页面，对接新的登录与 Token 存储逻辑。
+2.  **数据迁移**: 如果有旧数据，需要考虑如何清洗并迁移至新的 MDM 结构（目前主要与新数据有关）。
+3.  **权限细化**: 基于新的 `Organization` 和 `User` 模型，规划更细粒度的 RBAC 权限控制。
+
+---
+
+## 🗓️ 2025-12-26 每日工作总结 - netxs
+
+### 🎯 今日焦点与目标达成
+
+**工程标准化与测试体系构建**。今日完成了从"代码实现"到"工程化实践"的关键跨越，建立了企业级 Python 项目的完整工程标准，并启动了系统健壮性测试体系的规划与设计。同时完成了 GitLab 测试管理模块的需求分析与技术方案设计。
+
+### ✅ 主要完成的工作 (Highlights)
+
+*   **工程标准化落地 (Engineering Standardization - P4)**：
+    *   **版本控制规范**: 创建标准 `.gitignore` 文件，排除敏感配置（`config.ini`, `.env`）和临时文件，防止敏感信息泄露。
+    *   **包管理现代化**: 建立 `pyproject.toml` (PEP 518/621 标准)，统一项目元数据、依赖管理和开发工具配置（pytest, black, mypy, coverage）。
+    *   **依赖管理规范**: 创建 `requirements.txt` (生产依赖) 和 `requirements-dev.txt` (开发依赖)，锁定精确版本并添加中文注释说明。
+    *   **开发流程自动化**: 编写 `Makefile`，提供 15+ 快捷命令覆盖环境管理、代码质量检查、数据库管理和服务运行。
+    *   **CI/CD 流水线**: 配置 `.gitlab-ci.yml`，实现代码质量检查 (lint)、自动化测试 (test)、安全扫描 (security)、构建打包 (build) 和多环境部署 (deploy) 的完整流程。
+    *   **配置管理**: 创建 `config.ini.example` 作为配置模板，包含完整配置项和中文说明。
+
+*   **文档体系重构 (Documentation Restructuring)**：
+    *   **目录结构优化**: 执行 `scripts/organize_docs.ps1`，将根目录文档迁移至 `docs/` 目录，建立 `analytics/`, `api/`, `architecture/`, `guides/` 四大子目录。
+    *   **工程标准化报告**: 编写 `ENGINEERING_STANDARDIZATION_REPORT.md`，详细记录标准化前后对比、工具配置说明和使用指南。
+    *   **数据验证指南**: 创建 `DATA_VERIFICATION_GUIDE.md`，定义数据完整性、业务逻辑准确性和字段级准确性三大验证维度。
+
+*   **测试体系规划 (Test Strategy Planning - P2 延伸)**：
+    *   **健壮性测试设计**: 规划了超越核心算法测试和 API 异常模拟的测试维度，包括：
+        *   **可靠性测试**: 幂等性验证 (`test_idempotency.py`)、中断恢复 (`test_interrupt_recovery.py`)、生命周期一致性 (`test_lifecycle_consistency.py`)。
+        *   **性能测试**: 高并发压力测试 (`test_high_volume_stress.py`)。
+        *   **指标验证**: DORA 场景测试 (`test_dora_scenarios.py`)、度量指标验证器 (`metric_validator.py`)。
+    *   **测试脚本骨架**: 创建测试模块文件结构，为后续测试实现奠定基础。
+
+*   **GitLab 测试管理模块设计 (Test Management Module Design)**：
+    *   **需求文档整理**: 将 Word 文档 `基于GITLAB社区版二开测试管理模块V2.docx` 转换为 Markdown 格式，便于版本控制和协作。
+    *   **技术方案评审**: 完成了基于 GitLab CE 二次开发的测试用例管理模块的完整技术方案，包括：
+        *   **技术栈选型**: Ruby on Rails (后端) + Vue.js + Apollo + GitLab UI (前端)。
+        *   **数据库设计**: `test_cases` 表结构设计，使用 JSONB 存储结构化测试步骤。
+        *   **GraphQL API**: 完整的 CRUD 接口设计（Types, Resolvers, Mutations）。
+        *   **前端组件**: 测试用例录入表单、详情页展示、Issue 关联列表等 Vue 组件设计。
+    *   **文档审查**: 对测试模块文档进行了全面审查，识别遗漏和改进点。
+
+*   **项目优先级评估 (Project Prioritization)**：
+    *   **多维度分析**: 评估了 P2 (数据验证)、P3 (Google Style 检查)、P4 (工程标准化)、P5 (知识转移文档) 的优先级。
+    *   **决策依据**: 确定 P4 (工程标准化) 为最高优先级，因其是后续所有工作的基础设施。
+
+### 🚧 遗留问题与障碍 (Blockers)
+
+*   **CI/CD 流水线验证**: `.gitlab-ci.yml` 已配置完成，但尚未在 GitLab Runner 上执行验证，需要确认各阶段任务的实际运行情况。
+*   **测试覆盖率提升**: 新增的可靠性和性能测试脚本仅为骨架，需要补充具体的测试用例实现。
+*   **Pre-commit Hooks**: 尚未配置 Git Pre-commit Hooks，无法在提交前自动执行代码格式化和检查。
+
+### 🚀 下一步计划 (Next Steps)
+
+1.  **P3 - 代码标准化检查**: 执行 `/google-style` 工作流，对全部代码进行 Google Python Style Guide 合规性检查。
+2.  **P2 - 数据验证实施**: 运行 `scripts/verify_data_integrity.py`，对已采集数据进行完整性和准确性验证。
+3.  **测试用例补充**: 完善 `tests/reliability/` 和 `tests/simulations/` 目录下的测试脚本，提升测试覆盖率至 80% 以上。
+4.  **CI/CD 流水线调试**: 在 GitLab 上触发首次 CI/CD 流水线，验证各阶段任务的正确性。
+
+### 📊 工程化成果 (Engineering Achievements)
+
+| 维度 | 标准化前 | 标准化后 | 改进 |
+|------|---------|---------|------|
+| **包管理** | 仅 requirements.txt | pyproject.toml + requirements.txt | ✅ 符合 PEP 标准 |
+| **版本控制** | 无 .gitignore | 完整 .gitignore | ✅ 防止敏感信息泄露 |
+| **依赖锁定** | 未锁定版本 | 精确版本锁定 | ✅ 环境一致性 |
+| **自动化测试** | 手动执行 | CI/CD 自动执行 | ✅ 质量保障 |
+| **代码格式** | 不统一 | black 自动格式化 | ✅ 代码可读性 |
+| **开发流程** | 命令分散 | Makefile 统一 | ✅ 操作便捷性 |
+| **配置管理** | 无示例 | config.ini.example | ✅ 部署便捷性 |
+
+---
 
 ## 🗓️ 2025-12-22 每日工作总结 - netxs
 

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Desk - 业务支持服务台</title>
+    <meta name="description" content="GitLab 测试管理中台 Service Desk - 业务方缺陷与需求提交平台">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --dark-bg: #0f0f23;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* 动态背景 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(245, 87, 108, 0.1) 0%, transparent 50%);
+            z-index: -1;
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundShift {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        /* 头部导航 */
+        header {
+            background: rgba(15, 15, 35, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        /* 主容器 */
+        main {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+            width: 100%;
+        }
+
+        /* 英雄区域 */
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* 服务卡片网格 */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .service-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: -1;
+        }
+
+        .service-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-lg);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .service-card:hover::before {
+            opacity: 0.1;
+        }
+
+        .service-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            background: var(--primary-gradient);
+        }
+
+        .service-card:nth-child(2) .service-icon {
+            background: var(--success-gradient);
+        }
+
+        .service-card:nth-child(3) .service-icon {
+            background: var(--secondary-gradient);
+        }
+
+        .service-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .service-card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .service-card .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .service-card .btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(4px);
+        }
+
+        /* 统计信息 */
+        .stats-section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .stats-section h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-item {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        /* 页脚 */
+        footer {
+            background: rgba(15, 15, 35, 0.8);
+            border-top: 1px solid var(--card-border);
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links a {
+                margin-left: 1rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* 动画 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .service-card {
+            animation: fadeInUp 0.6s ease-out backwards;
+        }
+
+        .service-card:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .service-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .service-card:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">🎯 Service Desk</div>
+            <nav class="nav-links">
+                <a href="/">返回主页</a>
+                <a href="service_desk_login.html">🔐 登录</a>
+                <a href="service_desk_register.html">📝 注册</a>
+                <a href="service_desk_my_tickets.html">📋 我的工单</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>业务支持服务台</h1>
+            <p>快速提交缺陷报告和需求建议，我们将为您提供专业的技术支持与反馈</p>
+        </section>
+
+        <section class="services-grid">
+            <div class="service-card" onclick="location.href='service_desk_bug.html'">
+                <div class="service-icon">🐛</div>
+                <h2>提交缺陷</h2>
+                <p>发现系统问题？立即提交缺陷报告，我们会尽快为您处理并反馈修复进度。</p>
+                <a href="service_desk_bug.html" class="btn">立即提交 →</a>
+            </div>
+
+            <div class="service-card" onclick="location.href='service_desk_requirement.html'">
+                <div class="service-icon">📋</div>
+                <h2>提交需求</h2>
+                <p>有新的功能建议或改进意见？提交您的需求，帮助我们持续优化产品。</p>
+                <a href="service_desk_requirement.html" class="btn">立即提交 →</a>
+            </div>
+
+            <div class="service-card" onclick="location.href='service_desk_track.html'">
+                <div class="service-icon">🔍</div>
+                <h2>追踪工单</h2>
+                <p>使用追踪码查询您提交的工单处理进度，实时了解最新状态。</p>
+                <a href="service_desk_track.html" class="btn">查询工单 →</a>
+            </div>
+        </section>
+
+        <section class="stats-section">
+            <h3>📊 服务统计</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalTickets">-</div>
+                    <div class="stat-label">累计工单</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="pendingTickets">-</div>
+                    <div class="stat-label">处理中</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="completedTickets">-</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">
+                        < 24h</div>
+                            <div class="stat-label">平均响应时间</div>
+                    </div>
+                </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2025 GitLab 测试管理中台 Service Desk | 技术支持团队竭诚为您服务</p>
+    </footer>
+
+    <script>
+        // 加载统计数据
+        async function loadStats() {
+            try {
+                const response = await fetch('/service-desk/tickets');
+                if (response.ok) {
+                    const tickets = await response.json();
+
+                    document.getElementById('totalTickets').textContent = tickets.length;
+
+                    const pending = tickets.filter(t => t.status === 'pending' || t.status === 'in-progress').length;
+                    document.getElementById('pendingTickets').textContent = pending;
+
+                    const completed = tickets.filter(t => t.status === 'completed').length;
+                    document.getElementById('completedTickets').textContent = completed;
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // 检查登录状态并更新导航
+        function checkLoginState() {
+            const token = localStorage.getItem('sd_token');
+            const nav = document.querySelector('.nav-links');
+
+            if (token) {
+                // 已登录
+                nav.innerHTML = `
+                    <a href="/">返回主页</a>
+                    <a href="service_desk_my_tickets.html">📋 我的工单</a>
+                    <a href="#" onclick="logout(event)">👋 退出</a>
+                `;
+            } else {
+                // 未登录
+                nav.innerHTML = `
+                    <a href="/">返回主页</a>
+                    <a href="service_desk_login.html">🔐 登录</a>
+                    <a href="service_desk_register.html">📝 注册</a>
+                `;
+            }
+        }
+
+        // 退出登录
+        function logout(event) {
+            event.preventDefault();
+            localStorage.removeItem('sd_token');
+            localStorage.removeItem('sd_email');
+            window.location.reload();
+        }
+
+        // 页面加载时执行
+        loadStats();
+        checkLoginState();
+    </script>
+</body>
+
+</html>

@@ -2,6 +2,21 @@
 
 所有对 DevOps Data Collector 的重要更改都将记录在此文件中。
 
+## [3.6.0] - 2025-12-29
+### 新增 (Added)
+*   **MDM_LOCATION地理位置主数据表**: 创建符合GB/T 2260国家标准的地理位置主数据表，支持省/市/区县三级层级结构，初始化34个省级行政区划数据。
+*   **P2实时通知定向推送**: 完善SSE实时通知系统，实现基于业务场景的精准定向推送功能：
+    *   质量门禁拦截：定向推送给项目干系人（区域负责人），替代全员广播模式
+    *   测试执行失败：自动通知执行者+用例创建者+需求负责人，实现多方协同
+    *   需求评审状态变更：实时通知需求提出者（排除评审人自己），闭环反馈
+*   **干系人查询辅助函数**: 新增 `get_project_stakeholders()`、`get_requirement_author()`、`get_testcase_author()` 三个辅助函数，支持定向通知。
+*   **地理位置数据初始化脚本**: 提供 `init_mdm_location.py` 脚本，自动创建表结构、初始化省份数据、迁移历史province字段。
+
+### 优化 (Improved)
+*   **User模型升级**: 将 `province` 字符串字段升级为 `location_id` 外键，关联mdm_location表，实现规范化地理位置管理。
+*   **数据过滤逻辑优化**: 调整 `get_province_quality` 和 `get_province_benchmarking` API，使用location对象获取省份信息，兼容location为空的情况。
+*   **通知元数据增强**: 所有通知消息增加完整的业务上下文元数据（project_id、executor、requirement_id等），提升可追溯性。
+
 ## [3.5.0] - 2025-12-20
 ### 新增 (Added)
 *   **内源共创指数 (InnerSource Impact)**: 实现了跨部门技术流动性的量化体系，建立 `view_pmo_innersource_reuse_heatmap` 视图。

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户注册 - Service Desk</title>
+    <meta name="description" content="Service Desk 用户注册申请">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --dark-bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --input-bg: rgba(15, 23, 42, 0.5);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        header {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1.5rem 2rem;
+        }
+
+        .header-content {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .register-container {
+            width: 100%;
+            max-width: 550px;
+        }
+
+        .register-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .register-header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .register-header p {
+            color: var(--text-secondary);
+        }
+
+        .register-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .register-btn {
+            width: 100%;
+            padding: 0.875rem;
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 1rem;
+        }
+
+        .register-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .register-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .login-link a {
+            color: #8b5cf6;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            background: rgba(15, 23, 42, 0.8);
+            border-top: 1px solid var(--card-border);
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group.full-width {
+                grid-column: span 1;
+            }
+
+            .register-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">📝 注册申请</div>
+            <a href="service_desk_login.html" class="back-link">← 返回登录</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="register-container">
+            <div class="register-header">
+                <h1>加入 Service Desk</h1>
+                <p>注册新账户，开启便捷的业务支持体验</p>
+            </div>
+
+            <div class="register-card">
+                <div id="alertBox" class="alert"></div>
+
+                <form id="registerForm">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>邮箱地址 (必填)</label>
+                            <input type="email" id="email" required placeholder="name@example.com" autocomplete="email">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>设置密码 (必填)</label>
+                            <input type="password" id="password" required placeholder="请设置登录密码"
+                                autocomplete="new-password">
+                        </div>
+
+                        <div class="form-group">
+                            <label>姓名 (必填)</label>
+                            <input type="text" id="fullName" required placeholder="真实姓名">
+                        </div>
+
+                        <div class="form-group">
+                            <label>员工 ID (可选)</label>
+                            <input type="text" id="employeeId" placeholder="工号/HR ID">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>所在部门 (可选)</label>
+                            <input type="text" id="departmentCode" placeholder="例如：产品部">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="register-btn" id="registerBtn">
+                        注册账号
+                    </button>
+                </form>
+
+                <div class="login-link">
+                    已有账号？ <a href="service_desk_login.html">前往登录</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 GitLab 测试管理中台 Service Desk</p>
+    </footer>
+
+    <script>
+        const registerForm = document.getElementById('registerForm');
+        const alertBox = document.getElementById('alertBox');
+        const registerBtn = document.getElementById('registerBtn');
+
+        function showAlert(message, type) {
+            alertBox.textContent = message;
+            alertBox.className = `alert ${type} show`;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const fullName = document.getElementById('fullName').value.trim();
+            const employeeId = document.getElementById('employeeId').value.trim();
+            const departmentCode = document.getElementById('departmentCode').value.trim();
+
+            registerBtn.disabled = true;
+            registerBtn.textContent = '注册中...';
+
+            try {
+                // 构建 JSON 请求体
+                const payload = {
+                    email: email,
+                    password: password,
+                    full_name: fullName,
+                    employee_id: employeeId || null,
+                    department_code: departmentCode || null
+                };
+
+                const response = await fetch('/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('✅ 注册成功！请使用新账号登录', 'success');
+                    registerForm.reset();
+                    registerForm.style.display = 'none';
+
+                    // 添加返回登录按钮
+                    const successAction = document.createElement('div');
+                    successAction.style.textAlign = 'center';
+                    successAction.style.marginTop = '2rem';
+                    successAction.innerHTML = `
+                        <a href="service_desk_login.html" class="register-btn" style="text-decoration: none; display: inline-block;">
+                            前往登录页面
+                        </a>
+                    `;
+                    document.querySelector('.register-card').appendChild(successAction);
+                } else {
+                    showAlert(`❌ ${result.detail || '注册失败，请稍后重试'}`, 'error');
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = '注册账号';
+                }
+            } catch (error) {
+                console.error(error);
+                showAlert(`❌ 网络错误，请检查连接`, 'error');
+                registerBtn.disabled = false;
+                registerBtn.textContent = '注册账号';
+            }
+        });
+    </script>
+</body>
+
+</html>

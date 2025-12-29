@@ -5,7 +5,7 @@
 我已经为您创建了以下文件：
 
 ### 1. 数据库迁移脚本
-**文件**: `migrations/add_dependency_check_tables.sql`
+**文件**: `devops_collector/plugins/dependency_check/add_dependency_check_tables.sql`
 - ✅ 创建 4 个核心表（dependency_scans, dependencies, dependency_cves, license_risk_rules）
 - ✅ 创建所有必要的索引
 - ✅ 预置 16 个常见开源许可证规则
@@ -37,7 +37,7 @@
 psql -h localhost -U your_user -d devops_db
 
 # 执行迁移脚本
-\i migrations/add_dependency_check_tables.sql
+\i devops_collector/plugins/dependency_check/add_dependency_check_tables.sql
 
 # 验证表创建成功
 \dt dependency*

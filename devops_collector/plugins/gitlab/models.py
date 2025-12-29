@@ -14,11 +14,12 @@ from datetime import datetime, timezone
 
 # 从公共基础模型导入 Base 和共享模型
 from devops_collector.models.base_models import Base, Organization, User, SyncLog
+from sqlalchemy.dialects.postgresql import UUID
 
 # 为 Organization 和 User 添加 GitLab 插件特定的关系
-Organization.users = relationship("User", back_populates="organization")
+Organization.users = relationship("User", back_populates="organization") # TODO: Verify if this is still needed or correct with new MDM
 Organization.projects = relationship("Project", back_populates="organization")
-User.organization = relationship("Organization", back_populates="users")
+# User.organization = relationship("Organization", back_populates="users") # Removed as User model changed significantly
 
 class GitLabGroup(Base):
     """GitLab 群组模型。
@@ -86,7 +87,7 @@ class GitLabGroupMember(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     group_id = Column(Integer, ForeignKey('gitlab_groups.id'))
-    user_id = Column(Integer, ForeignKey('users.id')) 
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id')) 
     gitlab_uid = Column(Integer)
     access_level = Column(Integer) 
     state = Column(String(20)) 
@@ -155,7 +156,7 @@ class Project(Base):
     tags_count = Column(Integer)
     branches_count = Column(Integer)
     
-    organization_id = Column(Integer, ForeignKey('organizations.id'))
+    organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     organization = relationship("Organization", back_populates="projects")
 
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -240,7 +241,7 @@ class MergeRequest(Base):
     ai_summary = Column(Text)          # AI 生成的业务价值摘要
     ai_confidence = Column(Float)      # AI 置信度
     
-    author_id = Column(Integer, ForeignKey('users.id'))
+    author_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     author = relationship("User")
     
     project = relationship("Project")
@@ -307,7 +308,7 @@ class Commit(Base):
     ai_summary = Column(Text)
     ai_confidence = Column(Float)
     
-    gitlab_user_id = Column(Integer, ForeignKey('users.id'))
+    gitlab_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     author_user = relationship("User")
     
     project = relationship("Project")
@@ -409,7 +410,7 @@ class Issue(Base):
     
     raw_data = Column(JSON)
     
-    author_id = Column(Integer, ForeignKey('users.id'))
+    author_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     author = relationship("User")
     
     project = relationship("Project")
@@ -418,6 +419,13 @@ class Issue(Base):
     # 敏捷效能分析关联
     transitions = relationship("IssueStateTransition", back_populates="issue", cascade="all, delete-orphan")
     blockages = relationship("Blockage", back_populates="issue", cascade="all, delete-orphan")
+
+    # 测试管理关联
+    associated_test_cases = relationship(
+        "TestCase",
+        secondary="test_case_issue_links",
+        back_populates="linked_issues"
+    )
 
 
 class GitLabIssueEvent(Base):
@@ -441,7 +449,7 @@ class GitLabIssueEvent(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     issue_id = Column(Integer, ForeignKey('issues.id'))
-    user_id = Column(Integer, ForeignKey('users.id')) 
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id')) 
     event_type = Column(String(50))   # state, label, milestone, iteration
     action = Column(String(50))       # add, remove, closed, reopened, update
     external_event_id = Column(Integer) # GitLab 原始 event id
@@ -589,7 +597,7 @@ class Note(Base):
     noteable_type = Column(String) 
     noteable_iid = Column(Integer) 
     body = Column(String)
-    author_id = Column(Integer) 
+    author_id = Column(UUID(as_uuid=True))  # 此时可能无法直接关联到 global_user_id，保留为 Integer 或视情况迁移 
     created_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True))
     system = Column(Boolean)
@@ -784,7 +792,7 @@ class GitLabWikiLog(Base):
     slug = Column(String(255))
     format = Column(String(20))
     action = Column(String(50)) # created, updated, deleted
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     created_at = Column(DateTime(timezone=True))
     
     project = relationship("Project")

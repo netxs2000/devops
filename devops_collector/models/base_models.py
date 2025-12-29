@@ -10,9 +10,11 @@
     from devops_collector.models.base_models import Base, Organization, User, SyncLog
 """
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, JSON, UniqueConstraint, Float, BigInteger
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, JSON, UniqueConstraint, Float, BigInteger, Index
 from sqlalchemy.orm import declarative_base, relationship, backref
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+
 
 # SQLAlchemy 声明式基类
 Base = declarative_base()
@@ -61,84 +63,141 @@ class RawDataStaging(Base):
 
 
 class Organization(Base):
-    """组织架构模型，支持多级树形结构 (公司 > 中心 > 部门 > 小组)。
+    """组织架构主数据 (mdm_organizations)。
     
-    用于部门绩效分析和用户归属管理。
+    建立全集团的汇报线与成本中心映射，支持指标按部门层级汇总。
+    采用 SCD Type 2 (保留历史版本)。
     
     Attributes:
-        id: 主键
-        name: 组织名称
-        level: 层级类型 ('Company', 'Center', 'Department', 'Group')
-        parent_id: 父节点 ID，用于构建树形结构
-        users: 关联的用户列表
-        projects: 关联的项目列表（由 GitLab 插件定义）
+        org_id: 组织唯一编码 (Global ID, e.g., ORG_FIN_001).
+        org_name: 组织/部门名称.
+        parent_org_id: 父级组织 ID.
+        org_level: 组织层级 (1-集团, 2-事业部, 3-部门).
+        manager_user_id: 部门负责人 ID (关联 mdm_identities).
+        cost_center: 财务成本中心代码.
+        is_deleted: 逻辑删除标记.
     """
-    __tablename__ = 'organizations'
+    __tablename__ = 'mdm_organizations'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(200), nullable=False)
-    level = Column(String(20))  # Company, Center, Department, Group
-    parent_id = Column(Integer, ForeignKey('organizations.id'))
+    org_id = Column(String(100), primary_key=True)
+    org_name = Column(String(200), nullable=False)
+    parent_org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     
-    # 财务与 HR 关联字段
-    finance_code = Column(String(100), unique=True) # 财务系统中的成本中心代码 (Cost Center Code)
-    external_id = Column(String(100))               # HR 系统中的组织唯一标识
+    org_level = Column(Integer)  # 1-Group, 2-BU, 3-Dept
+    
+    manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    
+    cost_center = Column(String(100)) # 财务成本中心代码
+    is_deleted = Column(Boolean, default=False)
     
     # 自关联关系
-    children = relationship("Organization", backref=backref('parent', remote_side=[id]))
+    children = relationship("Organization", backref=backref('parent', remote_side=[org_id]))
     
     # 关联服务
     services = relationship("Service", back_populates="organization")
 
     # 关联用户（双向关系）
     # 注意：这里不直接定义 relationship，而是在各插件 of User 模型中通过 back_populates 建立
-    # 这样可以避免循环导入问题
     
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class Location(Base):
+    """地理位置主数据 (mdm_location)。
+    
+    为支持省、市、区县三级层级结构，省级主数据表通常采用统一地址代码表结构（适配 GB/T 2260 国标）。
+    通过字段关联实现层级管理，支持地域维度的数据隔离和质量分析。
+    
+    Attributes:
+        location_id: 国家标准行政区划代码 (唯一标识)，如 '110105' (朝阳区)。
+        location_name: 全称（省/市/区县名称），如 '北京市朝阳区'。
+        location_type: 层级类型（province/city/district）。
+        parent_id: 父级行政区划代码（省级为NULL）。
+        short_name: 简称，如 '朝阳'。
+        region: 经济大区（如华东/华南/华北），用于区域性分析。
+        is_active: 是否启用（控制失效行政区）。
+        manager_user_id: 区域负责人ID（关联 mdm_identities），用于定向推送通知。
+    """
+    __tablename__ = 'mdm_location'
+    
+    location_id = Column(String(6), primary_key=True)  # 国家标准行政区划代码
+    location_name = Column(String(50), nullable=False)  # 全称（省/市/区县名称）
+    location_type = Column(String(20), nullable=False)  # 层级类型: province/city/district
+    parent_id = Column(String(6), ForeignKey('mdm_location.location_id'))  # 父级行政区划代码（省级为NULL）
+    short_name = Column(String(20), nullable=False)  # 简称
+    region = Column(String(10), nullable=False)  # 经济大区（如华东/华南/华北）
+    is_active = Column(Boolean, default=True)  # 是否启用（控制失效行政区）
+    manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))  # 区域负责人ID
+    
+    # 自关联关系：支持省 -> 市 -> 区县层级
+    children = relationship("Location", backref=backref('parent', remote_side=[location_id]))
+    
+    # 关联区域负责人
+    manager = relationship("User", foreign_keys=[manager_user_id])
+    
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+    
+    __table_args__ = (
+        Index('idx_location_type', location_type),
+        Index('idx_location_parent', parent_id),
+    )
 
 
 class User(Base):
-    """用户模型，全局唯一身份标识。
+    """人员主数据 (mdm_identities)。
     
-    聚合来自各个系统（GitLab, Jira, ZenTao等）的人员信息，作为效能分析的核心维度。
+    全局唯一标识，集团级唯一身份 ID (OneID).
     
     Attributes:
-        id: 自增主键。
-        username: 内部系统唯一用户名。
-        name: 用户真实姓名或显示名称。
-        email: 唯一邮箱，用于跨系统自动匹配用户身份。
-        state: 用户状态 (active, blocked)。
-        department: 所属部门名称。
-        organization_id: 关联的组织架构 ID。
-        raw_data: 原始 JSON 备份。
-        created_at: 记录创建时间。
-        updated_at: 记录更新时间。
-        identities: 该用户在各外部系统中的身份映射列表。
+        global_user_id: 全局唯一标识 (UUID).
+        employee_id: 集团 HR 系统工号 (核心锚点).
+        full_name: 法律姓名.
+        primary_email: 集团官方办公邮箱.
+        identity_map: 多系统账号映射关系 (JSONB).
+        match_confidence: 算法匹配置信度 (0.0-1.0).
+        is_survivor: 是否为当前生效的“生存者”黄金记录.
+        is_active: 账号状态 (在职/离职).
+        updated_at: 最后更新时间.
+        source_system: 标记该“生存者记录”的主来源系统.
+        sync_version: 乐观锁版本号.
     """
-    __tablename__ = 'users'
+    __tablename__ = 'mdm_identities'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(100), unique=True) # 内部唯一用户名
-    name = Column(String(200))
-    email = Column(String(200), unique=True)    # 唯一邮箱，用于自动匹配
+    global_user_id = Column(UUID(as_uuid=True), primary_key=True, default=func.uuid_generate_v4())
+    employee_id = Column(String(50), unique=True) # Unique HR ID
+    full_name = Column(String(200), nullable=False)
+    primary_email = Column(String(200), unique=True)
     
-    state = Column(String(20)) # active, blocked
-    department = Column(String(100))
-    organization_id = Column(Integer, ForeignKey('organizations.id'))
+    identity_map = Column(JSONB) # {"gitlab": 12, "jira": "J_01"}
     
-    # HR 与财务对齐字段
-    employee_id = Column(String(50), unique=True)  # HR 系统工号
-    job_title_level = Column(String(100))          # 岗位序列与级别 (用于通过平均费率计算成本)
-    hire_date = Column(DateTime)                   # 入职日期
-    termination_date = Column(DateTime)            # 离职日期
+    match_confidence = Column(Float)
+    is_survivor = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
     
-    raw_data = Column(JSON)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     
-    # 关联
-    identities = relationship("IdentityMapping", back_populates="user", cascade="all, delete-orphan")
+    source_system = Column(String(50)) # e.g., HRMS
+    sync_version = Column(BigInteger, default=1)
+    
+
+
+    # 组织与地域属性 (用于数据隔离与权限控制)
+    department_id = Column(UUID(as_uuid=True), ForeignKey('mdm_organizations.global_org_id'))  # 所属部门/组织
+    location_id = Column(String(6), ForeignKey('mdm_location.location_id'))  # 所属地理位置（关联 mdm_location）
+    
+    # 关联关系
+    department = relationship("Organization", foreign_keys=[department_id])
+    location = relationship("Location", foreign_keys=[location_id])
+    # identities = relationship("IdentityMapping", back_populates="user", cascade="all, delete-orphan") # Deprecated or kept for compat?
+    # Keeping IdentityMapping model for now but might need adjustment.
+    
+    __table_args__ = (
+        Index('idx_identity_map', identity_map, postgresql_using='gin'),
+    )
+
 
 
 class LaborRateConfig(Base, TimestampMixin):
@@ -162,7 +221,7 @@ class LaborRateConfig(Base, TimestampMixin):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     job_title_level = Column(String(100), nullable=False, index=True)
-    organization_id = Column(Integer, ForeignKey('organizations.id'), nullable=True)
+    organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True)
     
     daily_rate = Column(Float, nullable=False)
     hourly_rate = Column(Float)
@@ -190,7 +249,7 @@ class IdentityMapping(Base):
     __tablename__ = 'identity_mappings'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=False)
     
     source = Column(String(50), nullable=False)      # jira, zentao, gitlab, jenkins, sonarqube
     external_id = Column(String(200), nullable=False) # 外部系统的账号名或 ID
@@ -270,7 +329,8 @@ class Product(Base):
     product_line_name = Column(String(200)) # 冗余字段方便查询
     
     # 归属中心
-    organization_id = Column(Integer, ForeignKey('organizations.id'))
+    # 归属中心
+    organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     finance_code = Column(String(100)) # 关联财务系统的预算科目或项目代码
     
     # 关联的技术项目 ID (由具体插件定义意义)
@@ -282,10 +342,11 @@ class Product(Base):
     source_system = Column(String(50))      # zentao, jira
     
     # 角色负责人 (关联到全局 User)
-    product_manager_id = Column(Integer, ForeignKey('users.id'))
-    dev_manager_id = Column(Integer, ForeignKey('users.id'))
-    test_manager_id = Column(Integer, ForeignKey('users.id'))
-    release_manager_id = Column(Integer, ForeignKey('users.id'))
+    # 角色负责人 (关联到全局 User)
+    product_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    dev_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    test_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    release_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     
     # 关系
     children = relationship("Product", backref=backref('parent', remote_side=[id]))
@@ -331,8 +392,9 @@ class OKRObjective(Base, TimestampMixin):
     description = Column(Text)
 
     # 责任人与归属
-    owner_id = Column(Integer, ForeignKey('users.id'))
-    organization_id = Column(Integer, ForeignKey('organizations.id'))
+    # 责任人与归属
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
 
     # 周期与状态
     period = Column(String(50))
@@ -408,7 +470,7 @@ class Service(Base, TimestampMixin):
     tier = Column(String(20)) # P0, P1, P2, P3
     description = Column(Text)
     
-    organization_id = Column(Integer, ForeignKey('organizations.id'))
+    organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     product_id = Column(Integer, ForeignKey('products.id'))
     
     raw_data = Column(JSON)
@@ -696,7 +758,7 @@ class ResourceCost(Base, TimestampMixin):
     # 归属维度（多选一或组合）
     project_id = Column(Integer)      # 关联 GitLab 项目 ID
     product_id = Column(Integer)      # 关联全局产品 ID
-    organization_id = Column(Integer)  # 关联组织架构 ID (部门/中心)
+    organization_id = Column(String(100))  # 关联组织架构 ID (部门/中心)
     
     # 时间维度
     period = Column(String(50), nullable=False) # 周期：2025-01, 2025-Q1, 2025-Annual
@@ -756,7 +818,7 @@ class UserActivityProfile(Base, TimestampMixin):
     __tablename__ = 'user_activity_profiles'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=False)
     period = Column(String(50), nullable=False) # 统计周期：2025-01, 2025-Q1
     
     # 协作深度指标
@@ -822,7 +884,7 @@ class RevenueContract(Base, TimestampMixin):
     
     # 关联业务维度
     product_id = Column(Integer, ForeignKey('products.id'))
-    organization_id = Column(Integer, ForeignKey('organizations.id'))
+    organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     
     status = Column(String(50), default='Active')
     raw_data = Column(JSON)
@@ -924,4 +986,40 @@ class PurchaseContract(Base, TimestampMixin):
 
 
 
+
+
+
+class UserCredential(Base, TimestampMixin):
+
+    """"&1WQa	vt?(mdm_credentials)?
+
+    
+
+    p:jMP"&1W(Rj0fVtO}m?mdm_identities RU\O[DhuO&1 D6ncmQutp ?
+
+    
+
+    Attributes:
+
+        user_id: O[N(RS^p "&1W ID (UUID).
+
+        password_hash: TrvZ^k5pUrEWJ?
+
+        last_login_at: ȓ Z^j0fi?
+
+    """
+
+    __tablename__ = 'mdm_credentials'
+
+    
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), primary_key=True)
+
+    password_hash = Column(String(200), nullable=False)
+
+    last_login_at = Column(DateTime(timezone=True))
+
+    
+
+    user = relationship("User", backref=backref("credential", uselist=False, cascade="all, delete-orphan"))
 

@@ -111,7 +111,23 @@ graph TD
 *   **产出对齐**: 收入合同挂载收款节点，每个节点映射一个 GitLab Milestone。当里程碑关闭时，视为产出动作达成。
 *   **ROI 计算**: `(合同回款额 / 投入成本)` 决定项目在波士顿矩阵中的 Y 轴坐标。
 
-## 5. 关键技术决策 (Key Decisions)
+## 5. 服务台交互架构 (Service Desk & Interaction Architecture) 🌟 (New)
+
+### 5.1 独立认证中心 (Auth Center)
+彻底解耦了即时通讯工具（如企微）的依赖，构建了基于 **OAuth2 + Bearer Token** 的独立认证体系：
+*   **Token Store**: `auth_tokens` 表持久化管理会话，支持过期自动刷新。
+*   **Security Context**: 前端 (`/static/*.html`) 通过 Token 获取当前用户信息 (User ID, Dept)，实现"零手动输入"提单。
+
+### 5.2 实时推送总线 (Real-time Bus)
+引入 **SSE (Server-Sent Events)** 技术，建立服务器到端的单向即时通道：
+*   **Event Patterns**:
+    *   `execution_result`: 测试用例执行完毕后推送。
+    *   `requirement_review`: 需求状态变更时推送。
+    *   `pipeline_status`: 流水线失败时推送。
+    *   `quality_gate`: 质量红线告警。
+*   **Connection**: 客户端通过 `/api/v1/notifications/stream` 保持长连接，服务器基于 RabbitMQ 消息触发 SSE 推送。
+
+## 6. 关键技术决策 (Key Decisions)
 
 *   **为什么全用 SQL View 做报表？**
     *   **性能**: 对于数百万级 Commits 的聚合，数据库（尤其是 PG）比 Python Pandas 更高效，且无需数据搬运。
@@ -127,7 +143,7 @@ graph TD
     *   **Generator Stream**: 内存占用 O(1)。
     *   **Batch Commit**: 兼顾写入性能与事务安全。
 
-## 5. 扩展性设计 (Extensibility)
+## 7. 扩展性设计 (Extensibility)
 系统采用“注册驱动”模式。如需添加新指标（如“代码注释率”）：
 1.  **Schema**: 修改 `models/` 增加字段。
 2.  **Plugin**: 在插件目录下扩展 `analyzer.py` 或 `identity.py` 逻辑。

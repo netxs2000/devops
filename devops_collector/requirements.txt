@@ -7,3 +7,9 @@ tenacity
 pytest
 requests-mock
 
+requests-mock
+
+# Auth dependencies
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart

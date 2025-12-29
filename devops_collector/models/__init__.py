@@ -13,6 +13,7 @@ from .base_models import (
     Base,
     Organization,
     User,
+    Location,  # MDM地理位置主数据表
     SyncLog,
     RawDataStaging,
     IdentityMapping,
@@ -27,6 +28,11 @@ from .base_models import (
     UserActivityProfile,
     TimestampMixin,
     RawDataMixin
+)
+# 从测试管理模块导入
+from .test_management import (
+    TestCase,
+    TestCaseIssueLink
 )
 # 从 GitLab 插件导入特定模型
 from devops_collector.plugins.gitlab.models import (
@@ -115,7 +121,7 @@ except ImportError:
 
 __all__ = [
     # 公共基础模型
-    'Base', 'Organization', 'User', 'SyncLog', 'RawDataStaging', 'IdentityMapping', 'Product',
+    'Base', 'Organization', 'User', 'Location', 'SyncLog', 'RawDataStaging', 'IdentityMapping', 'Product',
     'OKRObjective', 'OKRKeyResult', 'TraceabilityLink',
     'TestExecutionSummary', 'PerformanceRecord', 'Incident', 'ResourceCost',
     'UserActivityProfile',
@@ -139,5 +145,7 @@ __all__ = [
     # Nexus 模型
     'NexusComponent', 'NexusAsset',
     # ZenTao 模型
-    'ZenTaoProduct', 'ZenTaoIssue', 'ZenTaoExecution'
+    'ZenTaoProduct', 'ZenTaoIssue', 'ZenTaoExecution',
+    # 测试管理
+    'TestCase', 'TestCaseIssueLink'
 ]
