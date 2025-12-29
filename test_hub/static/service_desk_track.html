@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>追踪工单 - Service Desk</title>
+    <meta name="description" content="查询工单处理进度">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-color: #00f2fe;
+            --warning-color: #ffa500;
+            --danger-color: #f5576c;
+            --dark-bg: #0f0f23;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --input-bg: rgba(255, 255, 255, 0.08);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        header {
+            background: rgba(15, 15, 35, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1.5rem 2rem;
+        }
+
+        .header-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        main {
+            flex: 1;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            width: 100%;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 1.125rem;
+        }
+
+        /* 搜索框 */
+        .search-section {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            margin-bottom: 2rem;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .search-btn {
+            padding: 1rem 2rem;
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* 工单详情卡片 */
+        .ticket-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            backdrop-filter: blur(10px);
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .ticket-card.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .ticket-title {
+            flex: 1;
+        }
+
+        .ticket-title h2 {
+            font-size: 1.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .ticket-meta {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: rgba(255, 165, 0, 0.2);
+            color: var(--warning-color);
+            border: 1px solid var(--warning-color);
+        }
+
+        .status-in-progress {
+            background: rgba(79, 172, 254, 0.2);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        .status-completed {
+            background: rgba(0, 242, 254, 0.2);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        .status-rejected {
+            background: rgba(245, 87, 108, 0.2);
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+        }
+
+        .ticket-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-item {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .info-value {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+
+        .gitlab-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+
+        .gitlab-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(4px);
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* 错误提示 */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .alert.error {
+            background: rgba(245, 87, 108, 0.1);
+            border: 1px solid rgba(245, 87, 108, 0.3);
+            color: #f5576c;
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        footer {
+            background: rgba(15, 15, 35, 0.8);
+            border-top: 1px solid var(--card-border);
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .search-form {
+                flex-direction: column;
+            }
+
+            .ticket-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .ticket-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">🔍 追踪工单</div>
+            <a href="service_desk.html" class="back-link">← 返回服务台</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="page-header">
+            <h1>工单追踪</h1>
+            <p>输入追踪码查询您的工单处理进度</p>
+        </div>
+
+        <div class="search-section">
+            <form class="search-form" id="searchForm">
+                <input type="text" id="trackingCode" class="search-input"
+                    placeholder="请输入追踪码（例如：BUG-20251227-001 或 REQ-20251227-001）" required>
+                <button type="submit" class="search-btn" id="searchBtn">查询工单</button>
+            </form>
+        </div>
+
+        <div id="errorAlert" class="alert error" style="display: none;"></div>
+
+        <div id="ticketCard" class="ticket-card">
+            <div class="ticket-header">
+                <div class="ticket-title">
+                    <h2 id="ticketTitle">-</h2>
+                    <div class="ticket-meta">
+                        <span id="ticketType">-</span> |
+                        追踪码: <strong id="displayTrackingCode">-</strong>
+                    </div>
+                </div>
+                <div id="ticketStatus" class="status-badge">-</div>
+            </div>
+
+            <div class="ticket-info">
+                <div class="info-item">
+                    <div class="info-label">提交人</div>
+                    <div class="info-value" id="requesterName">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">联系邮箱</div>
+                    <div class="info-value" id="requesterEmail">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">创建时间</div>
+                    <div class="info-value" id="createdAt">-</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">最后更新</div>
+                    <div class="info-value" id="updatedAt">-</div>
+                </div>
+            </div>
+
+            <a id="gitlabLink" href="#" target="_blank" class="gitlab-link" style="display: none;">
+                🔗 在 GitLab 中查看详情 →
+            </a>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+            <div class="empty-state-icon">📦</div>
+            <p>请输入追踪码查询工单信息</p>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 GitLab 测试管理中台 Service Desk</p>
+    </footer>
+
+    <script>
+        const searchForm = document.getElementById('searchForm');
+        const searchBtn = document.getElementById('searchBtn');
+        const trackingCodeInput = document.getElementById('trackingCode');
+        const ticketCard = document.getElementById('ticketCard');
+        const emptyState = document.getElementById('emptyState');
+        const errorAlert = document.getElementById('errorAlert');
+
+        // 状态映射
+        const statusMap = {
+            'pending': { text: '待处理', class: 'status-pending' },
+            'in-progress': { text: '处理中', class: 'status-in-progress' },
+            'completed': { text: '已完成', class: 'status-completed' },
+            'rejected': { text: '已拒绝', class: 'status-rejected' }
+        };
+
+        const typeMap = {
+            'bug': '🐛 缺陷报告',
+            'requirement': '📋 需求提交'
+        };
+
+        // 从 URL 参数获取追踪码
+        const urlParams = new URLSearchParams(window.location.search);
+        const codeFromUrl = urlParams.get('code');
+        if (codeFromUrl) {
+            trackingCodeInput.value = codeFromUrl;
+            searchTicket(codeFromUrl);
+        }
+
+        function showError(message) {
+            errorAlert.textContent = `❌ ${message}`;
+            errorAlert.style.display = 'block';
+            setTimeout(() => {
+                errorAlert.style.display = 'none';
+            }, 5000);
+        }
+
+        function formatDateTime(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        async function searchTicket(trackingCode) {
+            try {
+                searchBtn.disabled = true;
+                searchBtn.innerHTML = '查询中<span class="loading"></span>';
+
+                const response = await fetch(`/service-desk/track/${encodeURIComponent(trackingCode)}`);
+
+                if (response.ok) {
+                    const ticket = await response.json();
+                    displayTicket(ticket);
+                } else if (response.status === 404) {
+                    showError('工单不存在，请检查追踪码是否正确');
+                    emptyState.style.display = 'block';
+                    ticketCard.classList.remove('show');
+                } else {
+                    const error = await response.json();
+                    showError(error.detail || '查询失败');
+                    emptyState.style.display = 'block';
+                    ticketCard.classList.remove('show');
+                }
+            } catch (error) {
+                showError(`网络错误：${error.message}`);
+                emptyState.style.display = 'block';
+                ticketCard.classList.remove('show');
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.textContent = '查询工单';
+            }
+        }
+
+        function displayTicket(ticket) {
+            // 隐藏空状态，显示工单卡片
+            emptyState.style.display = 'none';
+            ticketCard.classList.add('show');
+
+            // 填充数据
+            document.getElementById('ticketTitle').textContent = ticket.title || '无标题';
+            document.getElementById('displayTrackingCode').textContent = ticket.tracking_code;
+            document.getElementById('ticketType').textContent = typeMap[ticket.ticket_type] || ticket.ticket_type;
+
+            // 状态徽章
+            const statusInfo = statusMap[ticket.status] || { text: ticket.status, class: 'status-pending' };
+            const statusBadge = document.getElementById('ticketStatus');
+            statusBadge.textContent = statusInfo.text;
+            statusBadge.className = `status-badge ${statusInfo.class}`;
+
+            // 基本信息
+            document.getElementById('requesterName').textContent = ticket.requester_name || '-';
+            document.getElementById('requesterEmail').textContent = ticket.requester_email || '-';
+            document.getElementById('createdAt').textContent = formatDateTime(ticket.created_at);
+            document.getElementById('updatedAt').textContent = formatDateTime(ticket.updated_at);
+
+            // GitLab 链接
+            const gitlabLink = document.getElementById('gitlabLink');
+            if (ticket.gitlab_issue_url) {
+                gitlabLink.href = ticket.gitlab_issue_url;
+                gitlabLink.style.display = 'inline-flex';
+            } else {
+                gitlabLink.style.display = 'none';
+            }
+        }
+
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const code = trackingCodeInput.value.trim();
+            if (code) {
+                searchTicket(code);
+            }
+        });
+    </script>
+</body>
+
+</html>

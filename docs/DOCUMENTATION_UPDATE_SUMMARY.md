@@ -87,7 +87,7 @@ devops/
 ├── DEPENDENCY_CHECK_COMPLETE.md                 🌟 新增
 ├── DEPENDENCY_CHECK_PERSISTENT_STORAGE_GUIDE.md 🌟 新增
 ├── migrations/
-│   └── add_dependency_check_tables.sql          🌟 新增
+│   └── devops_collector/plugins/dependency_check/add_dependency_check_tables.sql 🌟 新增
 ├── devops_collector/
 │   ├── models/
 │   │   └── dependency.py                        🌟 新增

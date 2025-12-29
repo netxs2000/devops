@@ -80,6 +80,29 @@
 *   **收入合同与收款**: 支持 3-4-3 等多种回款计划。
 *   **技术-财务对齐**: 将合同收款节点与 GitLab Milestone 挂钩。里程碑关闭即视为回款条件达成（或风险预警）。
 
+#### 2.1.9 GitLab 测试管理中台 (Test Hub) 🚀 (New)
+针对 GitLab 社区版 (CE) 缺乏原生测试用例管理的痛点，系统提供了一个**非侵入式的轻量级测试管理解决方案**。
+*   **测试用例库 (Test Case Repository)**:
+    *   **结构化录入**: 支持标题、优先级、测试类型、预置条件、以及动态增减的结构化测试步骤。
+    *   **议题驱动存储**: 用例以 Markdown 模板形式存储在 GitLab Issues 中，利用 `type::test` 标签进行自动识别，无需维护第三方数据库即可实现数据持久化。
+*   **执行与反馈 (Execution Feedback)**:
+    *   **状态追踪**: 支持 Passed, Failed, Blocked 状态一键切换，并自动同步 GitLab 标签。
+    *   **自动化审计线索 (Audit Trail)**: 每次执行不仅更新标签，还会自动在 Issue 下发表评论（Comment），记录执行人、结果、关联的流水线 ID 及时间戳。
+*   **缺陷生命周期管理 (Defects Kanban)**:
+    *   **一键报障**: 失败用例支持快捷生成 GitLab Bug Issue 链接，自动预填测试上下文（步骤、预期结果）。
+    *   **缺陷看板**: 提供专门的 Defects 视图，集中展示项目中所有 Bug 的修复状态、优先级、修复时长等指标，计算**缺陷修复率**。
+*   **CI/CD 与质量报告**:
+    *   **流水线实时联动**: 通过 Webhook 实时监听 GitLab Pipeline 事件，在测试执行时自动关联当前的构建任务 (Pipeline ID) 和部署环境。
+    *   **一键导出质量报告**: 自动生成 Markdown 格式的《项目质量报告》，包含质量仪表盘（通过率等）、缺陷全景图、详细执行记录。
+*   **地域质量分析与 AI 证言 (Province Analytics & AI Testimony) 🚀 (New)**:
+    *   **地域热力扫描**: 自动识别 Issue 中的 `province::*` 标签，构建极坐标热力图 (Polar Area Chart)，直观定位各省份的缺陷积压与分布情况。
+    *   **智能质量证言**: 系统基于需求覆盖率、通过率及地域分布数据，自动生成结构化的《版本质量证言》，点名高风险地域并给出专业 QA 准入建议。
+
+#### 2.1.10 服务台与认证 (Service Desk & Auth) 🌟 (New)
+*   **独立认证**: 不再依赖第三方 IM 验证，内置基于 OAuth2 的用户注册/登录模块，支持 Token 自动续期。
+*   **极简提单**: 提单页面 (`frontend/service_desk_*.html`) 自动透传登录态，业务人员无需重复输入姓名、部门等基础信息。
+*   **实时交互**: 引入 **Server-Sent Events (SSE)**，将测试执行结果、需求评审意见、流水线失败告警等高频事件，以毫秒级延迟推送到用户浏览器。
+
 ### 2.2 智能数据处理 (Intelligent Processing)
 
 #### 2.2.1 统一身份归一化 (Identity Matcher)
@@ -516,6 +539,13 @@ python tests/simulations/run_jira_integration.py
 # 执行异常场景与容错重试仿真
 python tests/simulations/run_error_scenarios.py
 ```
+
+---
+
+### 5.7 服务台部署 (Service Desk Deployment)
+*   **前置条件**: 确保 `auth` 模块已启用，数据库已执行 `alembic upgrade head` (或初始化脚本) 以创建 User/AuthToken 表。
+*   **静态资源**: 将 `test_hub/static/` 下的 HTML 文件部署至 Nginx 或直接通过 FastAPI StaticFiles 挂载（默认路径 `/static`）。
+*   **环境变量**: 确保 `SECRET_KEY` 已设置，用于 JWT 签名。
 
 ---
 

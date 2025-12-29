@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - Service Desk</title>
+    <meta name="description" content="Service Desk 登录">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --dark-bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --input-bg: rgba(15, 23, 42, 0.5);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        header {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1.5rem 2rem;
+        }
+
+        .header-content {
+            max-width: 500px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header p {
+            color: var(--text-secondary);
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 0.875rem;
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 0.5rem;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+            font-size: 0.9rem;
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .register-prompt {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .register-prompt a {
+            color: #8b5cf6;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .register-prompt a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            background: rgba(15, 23, 42, 0.8);
+            border-top: 1px solid var(--card-border);
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">🔐 登录</div>
+            <a href="service_desk.html" class="back-link">← 返回首页</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="login-container">
+            <div class="login-header">
+                <h1>Service Desk</h1>
+                <p>请登录以访问 DevOps 服务台</p>
+            </div>
+
+            <div class="login-card">
+                <div id="alertBox" class="alert"></div>
+
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>邮箱地址</label>
+                        <input type="email" id="email" required placeholder="name@example.com" autocomplete="email">
+                    </div>
+
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" id="password" required placeholder="请输入您的密码" autocomplete="current-password">
+                    </div>
+
+                    <button type="submit" class="login-btn" id="loginBtn">
+                        登 录
+                    </button>
+                </form>
+
+                <div class="register-prompt">
+                    还没有账号？ <a href="service_desk_register.html">注册新账户</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 GitLab 测试管理中台 Service Desk</p>
+    </footer>
+
+    <script src="auth_utils.js"></script>
+    <script>
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginForm = document.getElementById('loginForm');
+        const alertBox = document.getElementById('alertBox');
+
+        function showAlert(message, type) {
+            alertBox.textContent = message;
+            alertBox.className = `alert ${type} show`;
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 5000);
+        }
+
+        // 登录
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                showAlert('请填写账号和密码', 'error');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+
+            try {
+                // 构建 OAuth2PasswordRequestForm 格式的表单数据
+                const formData = new URLSearchParams();
+                formData.append('username', email);
+                formData.append('password', password);
+
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showAlert('✅ 登录成功！正在跳转...', 'success');
+
+                    // 使用 Auth 工具类保存令牌
+                    Auth.setToken(result.access_token);
+                    
+                    // 清除旧的用户缓存，确保下次获取的是最新信息
+                    localStorage.removeItem('sd_user');
+
+                    // 跳转到门户首页
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 800);
+                } else {
+                    showAlert(`❌ ${result.detail || '用户名或密码错误'}`, 'error');
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = '登 录';
+                }
+            } catch (error) {
+                console.error(error);
+                showAlert(`❌ 网络错误，请检查连接`, 'error');
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登 录';
+            }
+        });
+
+        // 检查是否已登录
+        window.addEventListener('load', () => {
+            if (Auth.isLoggedIn()) {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+
+</html>

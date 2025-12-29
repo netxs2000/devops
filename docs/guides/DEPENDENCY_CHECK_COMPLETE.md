@@ -9,7 +9,7 @@
 ## ✅ 已完成的工作清单
 
 ### 1. 数据库层（100%）
-- ✅ `migrations/add_dependency_check_tables.sql` - 数据库迁移脚本
+- ✅ `devops_collector/plugins/dependency_check/add_dependency_check_tables.sql` - 数据库迁移脚本
   - 4 个核心表
   - 所有索引和约束
   - 16 个预置许可证规则
@@ -72,7 +72,7 @@
 psql -h localhost -U your_user -d devops_db
 
 # 执行迁移
-\i migrations/add_dependency_check_tables.sql
+\i devops_collector/plugins/dependency_check/add_dependency_check_tables.sql
 
 # 验证
 SELECT COUNT(*) FROM license_risk_rules;  -- 应该返回 16

@@ -139,7 +139,21 @@ python scripts/reprocess_staging_data.py
 
 ---
 
-## 4. 常见问题 (FAQ)
+## 4. 服务台使用指南 (Service Desk) 🌟 (New)
+
+### 4.1 自动身份识别
+*   不再需要手动输入“申请人”和“部门”。
+*   系统会根据您的登录 Token 自动识别身份。如果您是外部人员，请确保已通过 `auth/register` 完成注册。
+
+### 4.2 提单极简流程
+1.  **访问**: 打开 `service_desk_bug.html` (报缺陷) 或 `service_desk_requirement.html` (提需求)。
+2.  **填写**: 仅需填写标题、描述、优先级等业务字段。
+3.  **追踪**: 提交后自动跳转至 `service_desk_my_tickets.html` 查看进度。
+4.  **通知**: 保持 Dashboard 打开，当工单状态变更时，右上角会弹出实时通知 (SSE)。
+
+---
+
+## 5. 常见问题 (FAQ)
 
 ### Q: 为什么我的项目被标记为 "Problem Children"?
 A: 这意味着您的项目虽然提交活跃（速度快），但 Bug 多或 Sonar 问题多（质量差）。建议安排专门的“技术债偿还周”。

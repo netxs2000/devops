@@ -8,8 +8,9 @@ from typing import List, Optional, Dict
 
 from devops_collector.core.utils import parse_iso8601
 from devops_collector.plugins.gitlab.models import (
-    Project, Issue, GitLabIssueEvent, IssueStateTransition, Blockage
+    Project, Issue, GitLabIssueEvent, IssueStateTransition, Blockage, TestCase
 )
+from devops_collector.plugins.gitlab.parser import GitLabTestParser
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,10 @@ class IssueMixin:
                 if self.user_resolver:
                     uid = self.user_resolver.resolve(data['author']['id'])
                     issue.author_id = uid
+
+            # 3. 处理测试用例 (GitLab 二开集成)
+            if 'type::test' in issue.labels:
+                self._sync_test_case_from_issue(project, issue, data)
             
             # 如果开启了深度分析，则同步 Issue 事件历史（CALMS 文化扫描）
             # 注意：此部分涉及 API 调用，若为纯离线 Replay 可能无法执行
@@ -259,3 +264,51 @@ class IssueMixin:
                 
                 if last_block:
                     last_block.end_time = event_time
+
+    def _sync_test_case_from_issue(self, project: Project, issue: Issue, data: dict) -> None:
+        """从 Issue 描述解析并同步测试用例。
+        
+        Args:
+            project: 关联的项目。
+            issue: 已转换的 Issue 对象。
+            data: 原始 Issue 数据。
+        """
+        # 1. 解析描述
+        parsed = GitLabTestParser.parse_description(issue.description or "")
+        
+        # 2. 检查现有测试用例 (使用 GitLab Issue ID 作为唯一关联)
+        # 这里复用 TestCase 表，但我们需要一个能稳定关联 Issue 的方式
+        # 根据 test_management.py，我们有关联表，但 TestCase 自身也需要存在
+        
+        test_case = self.session.query(TestCase).filter_by(
+            project_id=project.id,
+            iid=issue.iid
+        ).first()
+        
+        if not test_case:
+            test_case = TestCase(
+                project_id=project.id,
+                iid=issue.iid,
+                author_id=issue.author_id
+            )
+            self.session.add(test_case)
+            
+        # 3. 更新字段
+        test_case.title = issue.title
+        test_case.priority = parsed['priority']
+        test_case.test_type = parsed['test_type']
+        test_case.pre_conditions = parsed['pre_conditions']
+        test_case.test_steps = parsed['test_steps']
+        test_case.description = issue.description
+        
+        # 4. 建立与需求的关联 (如果有)
+        req_iid = GitLabTestParser.extract_requirement_id(issue.description or "")
+        if req_iid:
+            # 查找目标需求 Issue
+            req_issue = self.session.query(Issue).filter_by(
+                project_id=project.id,
+                iid=req_iid
+            ).first()
+            if req_issue and req_issue not in test_case.linked_issues:
+                test_case.linked_issues.append(req_issue)
+                logger.debug(f"Linked TestCase !{issue.iid} to Requirement !{req_iid}")

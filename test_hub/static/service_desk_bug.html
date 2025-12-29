@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提交缺陷 - Service Desk</title>
+    <meta name="description" content="提交系统缺陷报告">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --danger-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --dark-bg: #0f0f23;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --input-bg: rgba(255, 255, 255, 0.08);
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 50%, rgba(245, 87, 108, 0.1) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        header {
+            background: rgba(15, 15, 35, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 1.5rem 2rem;
+        }
+
+        .header-content {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--danger-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        main {
+            flex: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            width: 100%;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .form-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-header p {
+            color: var(--text-secondary);
+            font-size: 1.125rem;
+        }
+
+        .form-container {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 3rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .required {
+            color: #f5576c;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .help-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--danger-gradient);
+            border: none;
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 1rem;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 成功/错误提示 */
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        .alert.success {
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            color: #00f2fe;
+        }
+
+        .alert.error {
+            background: rgba(245, 87, 108, 0.1);
+            border: 1px solid rgba(245, 87, 108, 0.3);
+            color: #f5576c;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        footer {
+            background: rgba(15, 15, 35, 0.8);
+            border-top: 1px solid var(--card-border);
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .form-container {
+                padding: 2rem 1.5rem;
+            }
+
+            .form-header h1 {
+                font-size: 2rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ... 保持原有样式已压缩 ... */
+        .reporter-info {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .reporter-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--primary-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">🐛 提交缺陷</div>
+            <a href="service_desk.html" class="back-link">← 返回服务台</a>
+        </div>
+    </header>
+
+    <main>
+        <div class="form-header">
+            <h1>缺陷报告</h1>
+            <p>请详细描述您遇到的问题，我们会尽快为您处理</p>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+
+        <div class="form-container">
+            <div id="reporterSection" class="reporter-info" style="display:none;">
+                <div class="reporter-avatar" id="reporterAvatar">?</div>
+                <div>
+                    <div style="font-size: 0.875rem; color: var(--text-secondary);">报告人</div>
+                    <div id="reporterName" style="font-weight: 600;">加载中...</div>
+                </div>
+            </div>
+            <form id="bugForm">
+                <div class="form-group">
+                    <label>GitLab 项目 ID <span class="required">*</span></label>
+                    <input type="number" id="projectId" required placeholder="例如：123">
+                    <div class="help-text">请输入缺陷所属的 GitLab 项目 ID</div>
+                </div>
+
+                <div class="form-group">
+                    <label>缺陷标题 <span class="required">*</span></label>
+                    <input type="text" id="title" required placeholder="简要描述问题">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>严重程度 <span class="required">*</span></label>
+                        <select id="severity" required>
+                            <option value="">请选择</option>
+                            <option value="S0">S0 - 致命（系统崩溃）</option>
+                            <option value="S1">S1 - 严重（核心功能不可用）</option>
+                            <option value="S2">S2 - 一般（功能受限）</option>
+                            <option value="S3">S3 - 轻微（体验问题）</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>优先级 <span class="required">*</span></label>
+                        <select id="priority" required>
+                            <option value="P0">P0 - 紧急</option>
+                            <option value="P1">P1 - 高</option>
+                            <option value="P2" selected>P2 - 中</option>
+                            <option value="P3">P3 - 低</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>省份/地域</label>
+                        <input type="text" id="province" value="nationwide" placeholder="例如：广东、nationwide">
+                    </div>
+                    <div class="form-group">
+                        <label>环境 <span class="required">*</span></label>
+                        <select id="environment" required>
+                            <option value="">请选择</option>
+                            <option value="production">生产环境</option>
+                            <option value="staging">预发布环境</option>
+                            <option value="test">测试环境</option>
+                            <option value="development">开发环境</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>复现步骤 <span class="required">*</span></label>
+                    <textarea id="stepsToRepro" required
+                        placeholder="请详细描述如何重现该问题：&#10;1. 打开...&#10;2. 点击...&#10;3. 观察到..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>实际结果 <span class="required">*</span></label>
+                    <textarea id="actualResult" required placeholder="描述实际发生的情况"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>期望结果 <span class="required">*</span></label>
+                    <textarea id="expectedResult" required placeholder="描述您期望的正确行为"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>附件链接（可选）</label>
+                    <input type="text" id="attachments" placeholder="截图或日志的 URL，多个链接用逗号分隔">
+                    <div class="help-text">建议先上传到图床或文件存储服务</div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    提交缺陷报告
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <p>© 2025 GitLab 测试管理中台 Service Desk</p>
+    </footer>
+
+    <script src="auth_utils.js"></script>
+    <script>
+        const form = document.getElementById('bugForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const alertBox = document.getElementById('alertBox');
+
+        async function initPage() {
+            if (!Auth.isLoggedIn()) {
+                window.location.href = 'service_desk_login.html';
+                return;
+            }
+
+            const user = await Auth.getCurrentUser();
+            if (user) {
+                document.getElementById('reporterSection').style.display = 'flex';
+                document.getElementById('reporterName').innerText = `${user.full_name || user.username} (${user.organization_name || 'Individual'})`;
+                document.getElementById('reporterAvatar').innerText = (user.full_name || user.username).charAt(0).toUpperCase();
+            }
+        }
+
+        function showAlert(message, type) {
+            alertBox.textContent = message;
+            alertBox.className = `alert ${type} show`;
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 5000);
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '提交中<span class="loading"></span>';
+
+            const formData = {
+                title: document.getElementById('title').value.trim(),
+                severity: document.getElementById('severity').value,
+                priority: document.getElementById('priority').value,
+                province: document.getElementById('province').value.trim(),
+                environment: document.getElementById('environment').value,
+                steps_to_repro: document.getElementById('stepsToRepro').value.trim(),
+                actual_result: document.getElementById('actualResult').value.trim(),
+                expected_result: document.getElementById('expectedResult').value.trim(),
+                attachments: document.getElementById('attachments').value
+                    ? document.getElementById('attachments').value.split(',').map(s => s.trim())
+                    : []
+            };
+
+            const projectId = document.getElementById('projectId').value;
+
+            try {
+                const url = `/service-desk/submit-bug?project_id=${projectId}`;
+                const result = await Api.post(url, formData);
+
+                showAlert(`✅ ${result.message}`, 'success');
+                setTimeout(() => {
+                    alert(`追踪码：${result.tracking_code}\n\n请保存。`);
+                    window.location.href = `service_desk_track.html?code=${result.tracking_code}`;
+                }, 1000);
+            } catch (error) {
+                showAlert(`❌ 提交失败：${error.message || '网络错误'}`, 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '提交缺陷报告';
+            }
+        });
+
+        window.addEventListener('load', initPage);
+    </script>
+</body>
+
+</html>

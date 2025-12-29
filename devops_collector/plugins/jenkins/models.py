@@ -4,6 +4,7 @@
 """
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, Boolean, BigInteger
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 # 从公共基础模型导入 Base
@@ -75,7 +76,7 @@ class JenkinsBuild(Base):
     # 构建原因/触发者 (可能是用户、GitLab Webhook 等)
     trigger_type = Column(String(50))
     trigger_user = Column(String(100))
-    trigger_user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    trigger_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
     
     # 关联 GitLab 提交 (如果能获取到)
     commit_sha = Column(String(100))

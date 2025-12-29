@@ -4,6 +4,7 @@
 """
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Boolean
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 # 从公共基础模型导入 Base
@@ -159,8 +160,8 @@ class SonarIssue(Base):
     # 负责人
     assignee = Column(String(100))
     author = Column(String(100))
-    assignee_user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
-    author_user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    assignee_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
+    author_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
     
     # 原始数据
     raw_data = Column(JSON)

@@ -148,6 +148,13 @@
 | `last_committer` | 最后责任人 | 最近一次修改代码的人员姓名 |
 | `contributors` | 贡献者名单 | `姓名(提交数)` 格式，按贡献度降序排列。如：`张三(50), 李四(12)` |
 
+### 3.14 服务台效能 (Service Desk Efficiency) 🌟 (New)
+| 字段名 | 业务含义 | 说明 |
+| :--- | :--- | :--- |
+| `ticket_volume` | 工单提交量 | 按部门/类型统计的工单总数 (对应 GitLab Issues `type::ticket`)。 |
+| `avg_resolution_time` | 平均解决时长 | 从工单提交到 Closed 的时长 (Service Level Agreement)。 |
+| `dept_demand_ratio` | 部门需求占比 | 各业务部门提交的需求/缺陷在总池子中的占比，反映业务活跃度或系统稳定性痛点。 |
+
 ---
 
 ## 4. 数据视图位置
