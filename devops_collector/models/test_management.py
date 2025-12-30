@@ -8,8 +8,10 @@ Typical Usage:
     session.add(test_case)
 """
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table, JSON
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table, JSON, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import UUID
 from devops_collector.models.base_models import Base, TimestampMixin
 
 
@@ -139,3 +141,29 @@ class RequirementTestCaseLink(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<RequirementTestCaseLink(req={self.requirement_id}, tc={self.test_case_id})>"
+
+class TestExecutionRecord(Base, TimestampMixin):
+    """测试执行完整审计记录模型。
+    
+    用于记录每次测试执行的详细结果、执行人及环境信息，支持追溯与审计。
+    """
+    __tablename__ = 'test_execution_records'
+
+    id = Column(Integer, primary_key=True)
+    project_id = Column(Integer, ForeignKey('projects.id', on_delete='CASCADE'), nullable=False)
+    test_case_iid = Column(Integer, nullable=False, index=True)
+    
+    result = Column(String(20), nullable=False) # passed, failed, blocked
+    executed_at = Column(DateTime(timezone=True), default=func.now())
+    executor_name = Column(String(100))
+    executor_uid = Column(UUID(as_uuid=True)) # 关联 MDM global_user_id
+    
+    comment = Column(Text)
+    pipeline_id = Column(Integer)
+    environment = Column(String(50), default="Default")
+    
+    # 冗余字段方便查询
+    title = Column(String(255))
+
+    def __repr__(self) -> str:
+        return f"<TestExecutionRecord(iid={self.test_case_iid}, result={self.result})>"

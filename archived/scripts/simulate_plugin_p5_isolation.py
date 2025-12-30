@@ -65,7 +65,7 @@ def verify_isolation_logic(user_email: str):
     """模拟后端 API 逻辑进行隔离校验。"""
     db = SessionLocal()
     try:
-        from test_hub.main import get_user_org_scope_ids
+        from devops_portal.main import get_user_org_scope_ids
         
         user = db.query(User).filter_by(primary_email=user_email).first()
         print(f"\n--- Testing for User: {user.full_name} ({user.role}) ---")

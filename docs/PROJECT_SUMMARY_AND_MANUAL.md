@@ -548,7 +548,7 @@ python tests/simulations/run_error_scenarios.py
 
 ### 5.7 服务台部署 (Service Desk Deployment)
 *   **前置条件**: 确保 `auth` 模块已启用，数据库已执行 `alembic upgrade head` (或初始化脚本) 以创建 User/AuthToken 表。
-*   **静态资源**: 将 `test_hub/static/` 下的 HTML 文件部署至 Nginx 或直接通过 FastAPI StaticFiles 挂载（默认路径 `/static`）。
+*   **静态资源**: 将 `devops_portal/static/` 下的 HTML 文件部署至 Nginx 或直接通过 FastAPI StaticFiles 挂载（默认路径 `/static`）。
 *   **环境变量**: 确保 `SECRET_KEY` 已设置，用于 JWT 签名。
 
 ---

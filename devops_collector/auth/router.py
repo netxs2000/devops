@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from devops_collector.auth import services, schemas
 from devops_collector.models.base_models import User
 # Assuming we have a get_db dependency somewhere, typically in api/deps.py or similar. 
-# For now I'll check test_hub/main.py or create a simple one if needed.
+# For now I'll check devops_portal/main.py or create a simple one if needed.
 # devops_collector/config.py might have SessionLocal
 from devops_collector.auth.database import SessionLocal
 

@@ -32,7 +32,8 @@ from .base_models import (
 # 从测试管理模块导入
 from .test_management import (
     TestCase,
-    TestCaseIssueLink
+    TestCaseIssueLink,
+    TestExecutionRecord
 )
 # 从 GitLab 插件导入特定模型
 from devops_collector.plugins.gitlab.models import (

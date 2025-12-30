@@ -26,7 +26,7 @@
 
 1.  在 GitLab 项目中找一个标签为 `type::test` 的 Issue。
 2.  修改其实施状态（如手动添加 `test-result::passed` 标签并指派给某人）。
-3.  检查您运行 `test_hub` 的终端。
+3.  检查您运行 `devops_portal` 的终端。
     *   您应当能看到类似以下的日志输出：
     ```text
     INFO: Webhook Received: Test Case #123 was update

@@ -177,7 +177,7 @@
 ### 1. 启动服务
 
 ```bash
-cd c:\Users\netxs\devops\devops\test_hub
+cd c:\Users\netxs\devops\devops\devops_portal
 python main.py
 ```
 

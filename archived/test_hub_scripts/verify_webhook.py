@@ -56,7 +56,7 @@ def run_simulation():
             
     except Exception as e:
         print(f"Simulation error: {e}")
-        print("Note: Ensure test_hub/main.py is running.")
+        print("Note: Ensure devops_portal/main.py is running.")
 
 if __name__ == "__main__":
     run_simulation()

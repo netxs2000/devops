@@ -274,7 +274,7 @@ Bug 提交: http://localhost:8000/static/service_desk_bug.html
 ### 启动服务
 
 ```bash
-cd c:\Users\netxs\devops\devops\test_hub
+cd c:\Users\netxs\devops\devops\devops_portal
 python main.py
 ```
 

@@ -63,3 +63,25 @@ def parse_iso8601(date_str: Optional[str]) -> Optional[datetime]:
     except ValueError as e:
         logger.warning(f"Failed to parse date string '{date_str}': {e}")
         return None
+
+from pathlib import Path
+from devops_collector.config import settings
+
+def resolve_data_path(filename: str) -> Path:
+    """获取数据文件的绝对持久化路径。
+    
+    自动确保父目录存在。
+    
+    Args:
+        filename: 文件名 (如 'users.json')
+        
+    Returns:
+        Path: 完整的绝对路径
+    """
+    data_dir = Path(settings.storage.data_dir)
+    try:
+        data_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.error(f"Failed to create data directory {data_dir}: {e}")
+        
+    return data_dir / filename

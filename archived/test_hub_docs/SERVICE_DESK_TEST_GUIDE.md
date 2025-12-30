@@ -5,7 +5,7 @@
 ### 1. 启动服务
 
 ```bash
-cd c:\Users\netxs\devops\devops\test_hub
+2. 检查文件：`devops_portal/service_desk_tickets.json`
 python main.py
 ```
 

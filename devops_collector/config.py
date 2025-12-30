@@ -1,105 +1,302 @@
-"""DevOps 数据采集服务配置模块
+"""DevOps 数据采集服务配置模块 (Pydantic V2 版)
 
-支持从 config.ini 文件和环境变量加载配置，优先级：
-1. config.ini 文件
-2. 环境变量
-3. 默认值
+采用 pydantic-settings 实现强类型配置管理，支持：
+1. 从 config.ini 自动加载 (保持向下兼容)
+2. 环境变量覆盖 (高优先级)
+3. 自动类型转换与校验
 
 使用方式:
-    from devops_collector.config import Config
-    print(Config.GITLAB_URL)
-    print(Config.SONARQUBE_URL)
+    from devops_collector.config import settings
+    print(settings.gitlab.url)
 """
 import os
+from typing import List, Optional
+from pydantic import Field, HttpUrl, RedisDsn, PostgresDsn, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 import configparser
 
-# Load config from config.ini
-config_parser = configparser.ConfigParser()
-config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
-config_parser.read(config_path)
+# 传统的 config.ini 路径
+CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), 'config.ini')
+
+class GitLabSettings(BaseSettings):
+    """GitLab connection settings.
+
+    Attributes:
+        url (str): The base URL of the GitLab instance.
+        private_token (str): The private access token for authentication.
+    """
+    url: str = "https://gitlab.com"
+    private_token: str = ""
+
+class DatabaseSettings(BaseSettings):
+    """Database connection and retention settings.
+
+    Attributes:
+        uri (str): The database connection URI (e.g., postgresql://user:pass@host/db).
+        raw_data_retention_days (int): The number of days to retain raw data.
+    """
+    uri: str = "postgresql://gitlab_collector:password@localhost/gitlab_data"
+    raw_data_retention_days: int = 30
+
+class RabbitMQSettings(BaseSettings):
+    """RabbitMQ connection settings.
+
+    Attributes:
+        host (str): The RabbitMQ server host.
+        queue (str): The default queue name.
+        user (str): The username for authentication.
+        password (str): The password for authentication.
+    """
+    host: str = "rabbitmq"
+    queue: str = "gitlab_tasks"
+    user: str = "user"
+    password: str = "password"
+    
+    @property
+    def url(self) -> str:
+        """Constructs the AMQP URL from settings.
+
+        Returns:
+            str: The full AMQP connection string.
+        """
+        return f"amqp://{self.user}:{self.password}@{self.host}:5672/"
+
+class AnalysisSettings(BaseSettings):
+    """Code analysis configuration.
+
+    Attributes:
+        enable_deep_analysis (bool): Whether to enable deep code analysis features.
+        ignored_file_patterns (List[str]): Glob patterns for files to ignore during analysis.
+        production_env_mapping (List[str]): Environment names considered as production.
+    """
+    enable_deep_analysis: bool = False
+    ignored_file_patterns: List[str] = [
+        '*.lock', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
+        '*.min.js', '*.min.css', '*.map',
+        'node_modules/*', 'dist/*', 'build/*', 'vendor/*',
+        '*.svg', '*.png', '*.jpg', '*.jpeg', '*.gif', '*.ico',
+        '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx',
+        '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',
+        '*.exe', '*.dll', '*.so', '*.dylib'
+    ]
+    production_env_mapping: List[str] = ["prod", "production", "prd", "main"]
+
+    @field_validator('ignored_file_patterns', 'production_env_mapping', mode='before')
+    @classmethod
+    def split_str(cls, v):
+        """Splits comma-separated strings into lists.
+
+        Args:
+            v (Union[str, List[str]]): The input value.
+
+        Returns:
+            List[str]: The list of strings.
+        """
+        if isinstance(v, str):
+            return [i.strip() for i in v.split(',') if i.strip()]
+        return v
+
+class RateLimitSettings(BaseSettings):
+    """Rate limiting configuration.
+
+    Attributes:
+        requests_per_second (int): Maximum number of requests allowed per second.
+    """
+    requests_per_second: int = 10
+
+class ClientSettings(BaseSettings):
+    """HTTP client configuration.
+
+    Attributes:
+        timeout (int): Request timeout in seconds.
+        per_page (int): Number of items per page for paginated requests.
+        max_retries (int): Maximum number of retries for failed requests.
+    """
+    timeout: int = 10
+    per_page: int = 100
+    max_retries: int = 5
+
+class SchedulerSettings(BaseSettings):
+    """Task scheduler configuration.
+
+    Attributes:
+        sync_interval_minutes (int): Interval in minutes between synchronization tasks.
+    """
+    sync_interval_minutes: int = 10
+
+class LoggingSettings(BaseSettings):
+    """Logging configuration.
+
+    Attributes:
+        level (str): The logging level (e.g., INFO, DEBUG).
+    """
+    level: str = "INFO"
+
+class SonarQubeSettings(BaseSettings):
+    """SonarQube integration settings.
+
+    Attributes:
+        url (str): The SonarQube server URL.
+        token (str): The authentication token.
+        sync_interval_hours (int): Interval in hours between synchronization tasks.
+        sync_issues (bool): Whether to synchronize issues.
+    """
+    url: str = ""
+    token: str = ""
+    sync_interval_hours: int = 24
+    sync_issues: bool = False
+
+class JenkinsSettings(BaseSettings):
+    """Jenkins integration settings.
+
+    Attributes:
+        url (str): The Jenkins server URL.
+        user (str): The username for authentication.
+        token (str): The authentication token or API key.
+        sync_interval_hours (int): Interval in hours between synchronization tasks.
+        build_sync_limit (int): Maximum number of builds to sync per job.
+    """
+    url: str = ""
+    user: str = ""
+    token: str = ""
+    sync_interval_hours: int = 12
+    build_sync_limit: int = 100
+
+class AISettings(BaseSettings):
+    """AI service configuration.
+
+    Attributes:
+        api_key (str): The API key for the LLM service.
+        base_url (str): The base URL of the LLM API.
+        model (str): The name of the model to use.
+    """
+    api_key: str = ""
+    base_url: str = "https://api.openai.com/v1"
+    model: str = "gpt-4o"
+
+class StorageSettings(BaseSettings):
+    """Local storage configuration.
+
+    Attributes:
+        data_dir (str): The directory path for persistent data storage.
+    """
+    data_dir: str = "./data"
+    
+    @field_validator('data_dir')
+    @classmethod
+    def make_absolute(cls, v):
+        """Ensures the data directory path is absolute.
+
+        Args:
+            v (str): The input path.
+
+        Returns:
+            str: The absolute path.
+        """
+        if not os.path.isabs(v):
+            return os.path.join(os.getcwd(), v)
+        return v
+
+class Settings(BaseSettings):
+    """Global application configuration model.
+
+    Aggregates all specific setting sections into a single configuration object.
+
+    Attributes:
+        gitlab (GitLabSettings): GitLab settings.
+        database (DatabaseSettings): Database settings.
+        rabbitmq (RabbitMQSettings): RabbitMQ settings.
+        analysis (AnalysisSettings): Analysis settings.
+        ratelimit (RateLimitSettings): Rate limiting settings.
+        client (ClientSettings): HTTP client settings.
+        scheduler (SchedulerSettings): Scheduler settings.
+        logging (LoggingSettings): Logging settings.
+        sonarqube (SonarQubeSettings): SonarQube settings.
+        jenkins (JenkinsSettings): Jenkins settings.
+        ai (AISettings): AI settings.
+        storage (StorageSettings): Storage settings.
+    """
+    gitlab: GitLabSettings = GitLabSettings()
+    database: DatabaseSettings = DatabaseSettings()
+    rabbitmq: RabbitMQSettings = RabbitMQSettings()
+    analysis: AnalysisSettings = AnalysisSettings()
+    ratelimit: RateLimitSettings = RateLimitSettings()
+    client: ClientSettings = ClientSettings()
+    scheduler: SchedulerSettings = SchedulerSettings()
+    logging: LoggingSettings = LoggingSettings()
+    sonarqube: SonarQubeSettings = SonarQubeSettings()
+    jenkins: JenkinsSettings = JenkinsSettings()
+    ai: AISettings = AISettings()
+    storage: StorageSettings = StorageSettings()
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_nested_delimiter="__",
+        extra="ignore"
+    )
+
+    @classmethod
+    def load_from_ini(cls, path: str):
+        """Loads configuration from a legacy config.ini file.
+
+        Compatible with the `configparser` format.
+
+        Args:
+            path (str): The absolute path to the config.ini file.
+
+        Returns:
+            Settings: A populated Settings instance.
+        """
+        cp = configparser.ConfigParser()
+        cp.read(path)
+        
+        data = {}
+        for section in cp.sections():
+            data[section] = dict(cp.items(section))
+            
+        return cls.model_validate(data)
+
+# 实例化全局配置
+try:
+    if os.path.exists(CONFIG_FILE_PATH):
+        settings = Settings.load_from_ini(CONFIG_FILE_PATH)
+    else:
+        settings = Settings()
+except Exception as e:
+    print(f"⚠️ Warning: Failed to load config.ini, using defaults. Error: {e}")
+    settings = Settings()
 
 class Config:
-    """配置类，聚合所有系统参数。
+    """向下兼容层，映射旧的全局变量名。
     
-    分类：
-    - GitLab: API 连接信息
-    - Database: PostgreSQL 连接 URI
-    - RabbitMQ: 消息队列连接信息
-    - Analysis: 深度分析开关和忽略文件模式
-    - Rate Limit: API 速率限制
-    - Client: HTTP 客户端参数
-    - Scheduler: 同步调度参数
-    - Logging: 日志级别
+    建议新代码直接使用：from devops_collector.config import settings
     """
-    # GitLab
-    GITLAB_URL = config_parser.get('gitlab', 'url', fallback=os.getenv('GITLAB_URL', 'https://gitlab.com'))
-    GITLAB_PRIVATE_TOKEN = config_parser.get('gitlab', 'private_token', fallback=os.getenv('GITLAB_PRIVATE_TOKEN', ''))
-    
-    # Database
-    DB_URI = config_parser.get('database', 'uri', fallback=os.getenv('DB_URI', 'postgresql://gitlab_collector:password@localhost/gitlab_data'))
-    RAW_DATA_RETENTION_DAYS = config_parser.getint('database', 'raw_data_retention_days', fallback=30)
-    
-    # RabbitMQ
-    RABBITMQ_HOST = config_parser.get('rabbitmq', 'host', fallback=os.getenv('RABBITMQ_HOST', 'rabbitmq'))
-    RABBITMQ_QUEUE = config_parser.get('rabbitmq', 'queue', fallback=os.getenv('RABBITMQ_QUEUE', 'gitlab_tasks'))
-    RABBITMQ_URL = os.getenv('RABBITMQ_URL', f'amqp://user:password@{RABBITMQ_HOST}:5672/')
-    
-    # Deep Analysis Configuration
-    ENABLE_DEEP_ANALYSIS = config_parser.getboolean('analysis', 'enable_deep_analysis', fallback=os.getenv('ENABLE_DEEP_ANALYSIS', 'False').lower() == 'true')
-    
-    _patterns = config_parser.get('analysis', 'ignored_file_patterns', fallback='')
-    if _patterns:
-        IGNORED_FILE_PATTERNS = [p.strip() for p in _patterns.split(',') if p.strip()]
-    else:
-        # Fallback to default list if not in config
-        IGNORED_FILE_PATTERNS = [
-            '*.lock', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
-            '*.min.js', '*.min.css', '*.map',
-            'node_modules/*', 'dist/*', 'build/*', 'vendor/*',
-            '*.svg', '*.png', '*.jpg', '*.jpeg', '*.gif', '*.ico',
-            '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx',
-            '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',
-            '*.exe', '*.dll', '*.so', '*.dylib'
-        ]
-    
-    # DORA Production Environment Mapping
-    _env_mapping = config_parser.get('analysis', 'production_env_mapping', fallback=os.getenv('PRODUCTION_ENV_MAPPING', 'prod,production,prd,main'))
-    PRODUCTION_ENV_MAPPING = [m.strip().lower() for m in _env_mapping.split(',') if m.strip()]
-    
-    # Rate Limiting
-    REQUESTS_PER_SECOND = config_parser.getint('ratelimit', 'requests_per_second', fallback=int(os.getenv('REQUESTS_PER_SECOND', '10')))
-
-    # Client
-    CLIENT_TIMEOUT = config_parser.getint('client', 'timeout', fallback=10)
-    CLIENT_PER_PAGE = config_parser.getint('client', 'per_page', fallback=100)
-    CLIENT_MAX_RETRIES = config_parser.getint('client', 'max_retries', fallback=5)
-    
-    # Scheduler
-    SYNC_INTERVAL_MINUTES = config_parser.getint('scheduler', 'sync_interval_minutes', fallback=10)
-    
-    # Logging
-    LOG_LEVEL = config_parser.get('logging', 'level', fallback='INFO').upper()
-    
-    # ============================================
-    # SonarQube Configuration (NEW)
-    # ============================================
-    SONARQUBE_URL = config_parser.get('sonarqube', 'url', fallback=os.getenv('SONARQUBE_URL', ''))
-    SONARQUBE_TOKEN = config_parser.get('sonarqube', 'token', fallback=os.getenv('SONARQUBE_TOKEN', ''))
-    SONARQUBE_SYNC_INTERVAL_HOURS = config_parser.getint('sonarqube', 'sync_interval_hours', fallback=24)
-    SONARQUBE_SYNC_ISSUES = config_parser.getboolean('sonarqube', 'sync_issues', fallback=False)
-
-    # ============================================
-    # Jenkins Configuration (NEW)
-    # ============================================
-    JENKINS_URL = config_parser.get('jenkins', 'url', fallback=os.getenv('JENKINS_URL', ''))
-    JENKINS_USER = config_parser.get('jenkins', 'user', fallback=os.getenv('JENKINS_USER', ''))
-    JENKINS_TOKEN = config_parser.get('jenkins', 'token', fallback=os.getenv('JENKINS_TOKEN', ''))
-    JENKINS_SYNC_INTERVAL_HOURS = config_parser.getint('jenkins', 'sync_interval_hours', fallback=12)
-    JENKINS_BUILD_SYNC_LIMIT = config_parser.getint('jenkins', 'build_sync_limit', fallback=100)
-
-    # ============================================
-    # AI / LLM Configuration (NEW)
-    # ============================================
-    AI_API_KEY = config_parser.get('ai', 'api_key', fallback=os.getenv('AI_API_KEY', ''))
-    AI_BASE_URL = config_parser.get('ai', 'base_url', fallback=os.getenv('AI_BASE_URL', 'https://api.openai.com/v1'))
-    AI_MODEL = config_parser.get('ai', 'model', fallback=os.getenv('AI_MODEL', 'gpt-4o'))
+    GITLAB_URL = settings.gitlab.url
+    GITLAB_PRIVATE_TOKEN = settings.gitlab.private_token
+    DB_URI = settings.database.uri
+    RAW_DATA_RETENTION_DAYS = settings.database.raw_data_retention_days
+    RABBITMQ_HOST = settings.rabbitmq.host
+    RABBITMQ_QUEUE = settings.rabbitmq.queue
+    RABBITMQ_URL = settings.rabbitmq.url
+    ENABLE_DEEP_ANALYSIS = settings.analysis.enable_deep_analysis
+    IGNORED_FILE_PATTERNS = settings.analysis.ignored_file_patterns
+    PRODUCTION_ENV_MAPPING = settings.analysis.production_env_mapping
+    REQUESTS_PER_SECOND = settings.ratelimit.requests_per_second
+    CLIENT_TIMEOUT = settings.client.timeout
+    CLIENT_PER_PAGE = settings.client.per_page
+    CLIENT_MAX_RETRIES = settings.client.max_retries
+    SYNC_INTERVAL_MINUTES = settings.scheduler.sync_interval_minutes
+    LOG_LEVEL = settings.logging.level
+    SONARQUBE_URL = settings.sonarqube.url
+    SONARQUBE_TOKEN = settings.sonarqube.token
+    SONARQUBE_SYNC_INTERVAL_HOURS = settings.sonarqube.sync_interval_hours
+    SONARQUBE_SYNC_ISSUES = settings.sonarqube.sync_issues
+    JENKINS_URL = settings.jenkins.url
+    JENKINS_USER = settings.jenkins.user
+    JENKINS_TOKEN = settings.jenkins.token
+    JENKINS_SYNC_INTERVAL_HOURS = settings.jenkins.sync_interval_hours
+    JENKINS_BUILD_SYNC_LIMIT = settings.jenkins.build_sync_limit
+    AI_API_KEY = settings.ai.api_key
+    AI_BASE_URL = settings.ai.base_url
+    AI_MODEL = settings.ai.model
+    DATA_DIR = settings.storage.data_dir

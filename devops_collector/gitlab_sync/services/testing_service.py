@@ -12,9 +12,11 @@ import re
 import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+import asyncio
 
 from devops_collector.gitlab_sync.services.gitlab_client import GitLabClient
-from devops_collector.models import schemas
+from devops_collector.models import schemas as internal_schemas # Keep existing if used
+from devops_portal import schemas # Use portal schemas for API response compatibility
 from devops_collector.gitlab_sync.services.security import IssueSecurityProvider
 from devops_collector.gitlab_sync.services.ai_client import AIClient
 
@@ -177,7 +179,7 @@ class TestingService(GitLabClient):
             issue.save()
 
             # [Real-time Optimization] 触发全员看板实时更新
-            from test_hub.main import push_notification
+            from devops_portal.main import push_notification
             await push_notification(
                 user_ids="ALL",
                 message=f"Test Case #{issue_iid} updated to {result}",
@@ -311,7 +313,7 @@ class TestingService(GitLabClient):
             issue.notes.create({'body': f"This bug was discovered while executing test case #{related_test_case_iid}"})
 
         # [Real-time Optimization] 触发全员看板实时更新
-        from test_hub.main import push_notification
+        from devops_portal.main import push_notification
         await push_notification(
             user_ids="ALL",
             message=f"New Bug reported: {title}",
@@ -374,7 +376,7 @@ class TestingService(GitLabClient):
         })
 
         # [Real-time Optimization] 触发全员看板实时更新
-        from test_hub.main import push_notification
+        from devops_portal.main import push_notification
         await push_notification(
             user_ids="ALL",
             message=f"New Requirement created: {title}",
@@ -480,7 +482,7 @@ class TestingService(GitLabClient):
         issue.save()
         
         # [Real-time] 同样触发全员实时通知
-        from test_hub.main import push_notification
+        from devops_portal.main import push_notification
         await push_notification(
             user_ids="ALL",
             message=f"Ticket #{ticket_iid} has been rejected by {actor_name}",
@@ -799,7 +801,7 @@ class TestingService(GitLabClient):
                 logger.info(f"Marked test case #{test.iid} as STALE due to req #{requirement_iid} change")
                 
                 # [Real-time] 推送精准通知
-                from test_hub.main import push_notification
+                from devops_portal.main import push_notification
                 await push_notification(
                     user_ids="STAKEHOLDERS", # 推送给项目相关人员
                     message=f"Requirement #{requirement_iid} changed. Associated test cases have been flagged.",
@@ -858,3 +860,80 @@ class TestingService(GitLabClient):
             return [item.strip() for item in items if item.strip()]
         except Exception:
             return []
+
+    async def list_requirements(self, project_id: int, current_user: Any, db: Any = None) -> List[portal_schemas.RequirementSummary]:
+        """获取项目中的所有需求 (支持 P1 数据隔离)。"""
+        from devops_collector.core.security import filter_issues_by_privacy
+        from devops_collector.auth.database import SessionLocal
+        
+        project = self.get_project(project_id)
+        if not project:
+            return []
+
+        # 1. 获取 GitLab Issues
+        issues = project.issues.list(labels=['type::requirement'], state='all', get_all=True)
+        # Convert objects to dicts for filtering logic
+        issues_dicts = [i.attributes for i in issues]
+
+        # 2. P1 Data Isolation
+        if db:
+            filtered_issues = filter_issues_by_privacy(db, issues_dicts, current_user)
+        else:
+            with SessionLocal() as session:
+                filtered_issues = filter_issues_by_privacy(session, issues_dicts, current_user)
+
+        reqs = []
+        for issue in filtered_issues:
+            labels = issue.get('labels', [])
+            review_state = "draft"
+            for label in labels:
+                if label.startswith("review-state::"):
+                    review_state = label.split("::")[1]
+                    break
+            
+            reqs.append(portal_schemas.RequirementSummary(
+                iid=issue['iid'],
+                title=issue['title'],
+                state=issue['state'],
+                review_state=review_state
+            ))
+        return reqs
+
+    async def get_requirement_detail(self, project_id: int, iid: int) -> Optional[portal_schemas.RequirementDetail]:
+        """获取单个需求的详情及其关联的测试用例。"""
+        project = self.get_project(project_id)
+        if not project:
+            return None
+            
+        try:
+            req_issue = project.issues.get(iid)
+            req_data = req_issue.attributes
+            
+            # Extract review state
+            review_state = "draft"
+            for label in req_data.get('labels', []):
+                if label.startswith("review-state::"):
+                    review_state = label.split("::")[1]
+                    break
+            
+            # Get linked test cases
+            test_issues = project.issues.list(
+                labels=['type::test'],
+                search=f"#{iid}", # Simple search
+                get_all=True
+            )
+            
+            test_cases = [self.parse_markdown_to_test_case(issue.attributes) for issue in test_issues]
+            
+            return portal_schemas.RequirementDetail(
+                id=req_data['id'],
+                iid=req_data['iid'],
+                title=req_data['title'],
+                description=req_data.get('description'),
+                state=req_data['state'],
+                review_state=review_state,
+                test_cases=test_cases
+            )
+        except Exception as e:
+            logger.error(f"Error fetching requirement {iid}: {e}")
+            return None

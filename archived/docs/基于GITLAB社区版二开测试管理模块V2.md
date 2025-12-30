@@ -1332,4 +1332,4 @@ gitlab_client.post_issue_comment(project_id, issue_iid, comment_body)
 2.  **极度灵活**：使用 Python 生态，可以快速集成 AI 分析、定制化报表。
 3.  **数据安全**：所有核心数据（用例、缺陷）依然留在 GitLab 内部，享有同等的备份和权限管理机制。
 
-> **当前状态**：该方案已在 `test_hub/` 目录下完成 MVP 实现，包含 FastAPI 后端、响应式前端及一整套 GitLab API 适配逻辑。
+> **当前状态**：该方案已在 `devops_portal/` 目录下完成 MVP 实现，包含 FastAPI 后端、响应式前端及一整套 GitLab API 适配逻辑。

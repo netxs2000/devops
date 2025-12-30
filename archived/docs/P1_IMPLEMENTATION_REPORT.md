@@ -44,7 +44,7 @@ province = Column(String(50))  # 所属省份代码 (如 'guangdong', 'beijing',
 
 ### 2. **API 权限改造** ✅
 
-**文件**: `test_hub/main.py`
+| `devops_portal/main.py` | 🔧 修改 | `get_province_benchmarking` 添加数据隔离逻辑 |
 
 **修改的API端点**:
 
