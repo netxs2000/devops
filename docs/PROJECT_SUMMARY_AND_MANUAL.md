@@ -455,6 +455,10 @@
 *   **ORM 层**: SQLAlchemy (Declarative Mapping)
 *   **数据库**: PostgreSQL (生产环境推荐)
 *   **依赖管理**: `requirements.txt` (tenacity, requests, sqlalchemy, psycopg2, pika)
+*   **工程标准 (Engineering Standards)**: 🌟 (New)
+    *   **深度 AI 集成**: 核心业务 (AC-to-Steps) 由 LLM 驱动，支持 [ai] 节段式配置。
+    *   **Pydantic V2 架构**: 全量采用 V2 特性（`from_attributes`, `field_validator`, `validation_alias`），实现零拷贝的 ORM 映射。
+    *   **Google Python Style**: 核心代码遵循 Google 风格指南，包含严格的 Docstrings 规范。
 
 ### 4.2 架构分层
 1.  **采集层**: `plugins/` 目录，封装 API Client，实现数据拉取与适配。

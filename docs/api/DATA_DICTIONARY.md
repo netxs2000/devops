@@ -10,7 +10,7 @@
 
 本数据字典基于系统最新的 SQLAlchemy ORM 模型自动生成，确保与实际数据库结构的一致性。
 
-**重要提示**: 本文档为自动生成，请勿手动编辑！如需更新，请修改模型定义后重新运行生成脚本。
+**重要提示**: 本文档主要基于 SQLAlchemy ORM 模型及其对应的 **Pydantic V2 (DTO Layer)** 定义。系统采用 `from_attributes=True` 实现零拷贝的自动映射。
 
 **变更历史**:
 - **v2.0 (2025-12-28)**: 基于最新模型重新生成，废弃旧版数据字典
@@ -250,6 +250,7 @@ GROUP BY r.id, r.title;
 2. **定期更新**: 每次模型变更后，请运行 `python scripts/generate_data_dictionary.py` 重新生成
 3. **废弃数据**: 旧版数据字典已归档至 `DATA_DICTIONARY_DEPRECATED_20251228.md`
 4. **待完善字段**: 部分表可能缺少 `department_id`, `province` 等字段，需根据业务需求补充
+5. **Pydantic V2 映射策略**: 所有 `id` 字段在 DTO 层通过 `validation_alias` 与物理表的 `global_issue_id` 或 `gitlab_issue_iid` 自动绑定。
 
 ---
 

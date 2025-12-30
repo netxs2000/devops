@@ -1,8 +1,8 @@
 # P1 任务完成报告：仪表盘数据的部门级隔离
 
 > **任务编号**: P1 (最高优先级)  
-> **完成时间**: 2025-12-29 00:10  
-> **状态**: ✅ 已完成  
+> **完成时间**: 2025-12-29 22:30  
+> **状态**: ✅ 已完成 (含 P5 级深度加固)  
 > **实施人员**: DevOps 效能团队
 
 ---
@@ -13,9 +13,9 @@
 
 **核心需求**:
 - 根据用户的 `province` 属性自动过滤省份维度的质量数据
-- 支持两种权限模式：
-  - **全国权限** (`province='nationwide'`): 查看所有省份数据
-  - **省份权限** (`province='guangdong'`): 仅查看指定省份数据
+- **[P5 增强]** 实现基于 `department_id` 的 **无限级组织树递归过滤**
+- **[P5 增强]** 对第三方插件（禅道、Jira、SonarQube）实现相同维度的权限对齐
+- **[P5 增强]** 挂载 RBAC 角色权限校验，保护核心写操作接口
 
 ---
 
@@ -105,7 +105,26 @@ async def get_province_benchmarking(project_id: int, current_user = Depends(get_
 
 ---
 
-### 3. **工具脚本** ✅
+---
+
+### 3. **[P5 专项] 组织架构递归隔离与 RBAC** ✅
+
+**核心函数**: `get_user_org_scope_ids` & `filter_issues_by_privacy`
+
+**变更内容**:
+1. **无限级递归**: 实现了 `get_user_org_scope_ids`，通过 MDM 组织树递归获取用户管理的所有子部门。
+2. **多维过滤器**: 升级 `filter_issues_by_privacy`，同时校验 `province::` (地域) 和 `dept::` (组织) 标签。
+3. **插件安全中间件**: 在 `devops_collector/core/security.py` 中实现了 `apply_privacy_filter`，使 ZenTao/Jira/SonarQube 自动继承 MDM 权限策略。
+
+**RBAC 拦截清单**:
+- **测试执行**: 限制 `tester`, `maintainer`, `admin`
+- **需求审批**: 限制 `maintainer`, `admin`
+- **工单流转**: 限制 `operator`, `maintainer`
+- **资产导入**: 限制 `maintainer`
+
+---
+
+### 4. **工具脚本** ✅
 
 #### 3.1 模型字段添加脚本
 **文件**: `scripts/add_user_department_fields.py`
@@ -119,7 +138,17 @@ python scripts/add_user_department_fields.py
 
 ---
 
-#### 3.2 数据隔离验证测试脚本
+#### 3.2 插件 P5 隔离验证脚本
+**文件**: `scripts/simulate_plugin_p5_isolation.py`
+
+**功能**: 
+- 模拟层级组织架构（总部 -> 中心 -> 团队）
+- 验证跨部门、跨层级的数据过滤准确性 (对标禅道/Jira 数据场景)
+- 验证 RBAC 角色越权拦截
+
+---
+
+#### 3.3 数据隔离验证测试脚本
 **文件**: `scripts/test_province_isolation.py`
 
 **功能**: 
@@ -295,12 +324,12 @@ python scripts/test_province_isolation.py
 P1 任务已圆满完成！通过 **扩展 User 模型** + **API 权限改造**，成功实现了基于用户部门属性的 Dashboard 数据自动隔离功能。
 
 **核心价值**:
-1. ✅ **数据安全**: 确保用户仅能访问授权范围内的数据
-2. ✅ **用户体验**: 自动过滤，无需前端手动配置
-3. ✅ **可扩展性**: 框架可复用到其他API和数据维度
-4. ✅ **可审计性**: 日志记录用户的数据访问行为
+1. ✅ **多维安全**: 实现了地域+组织的垂直/水平双向隔离
+2. ✅ **深度递归**: 支持总部视角到基层的无限级数据穿透
+3. ✅ **插件对齐**: 解决了第三方系统合规性孤岛问题
+4. ✅ **审计完备**: 完成了从“谁能看”到“谁能改”的闭环审计基础
 
-**下一步行动**: 建议执行 **P2: 完善实时通知 (SSE) 的定向推送逻辑**，进一步提升系统智能化水平！
+**下一步行动**: 建议执行 **P6: 自动化质量月报与 DORA 指标生成**，利用已隔离的部门数据进行效能赛马！
 
 ---
 

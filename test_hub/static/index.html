@@ -8,1056 +8,29 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="auth_utils.js"></script>
-    <script>
-        // Check for authentication immediately
-        if (!Auth.isLoggedIn()) {
-            window.location.href = 'service_desk_login.html';
-        }
-    </script>
-    <style>
-        :root {
-            --primary: #6366f1;
-            --primary-glow: rgba(99, 102, 241, 0.3);
-            --bg-dark: #0f172a;
-            --card-dark: #1e293b;
-            --card-dark-hover: #334155;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-            --passed: #10b981;
-            --failed: #ef4444;
-            --blocked: #f59e0b;
-            --pending: #64748b;
-            --accent: #8b5cf6;
-            --glass: rgba(30, 41, 59, 0.7);
-        }
-
-        * {
-            box-sizing: border-box;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            background-color: var(--bg-dark);
-            background-image: radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.1) 0, transparent 50%),
-                radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.1) 0, transparent 50%);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-        }
-
-        .layout {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Sidebar Glassmorphism */
-        .sidebar {
-            width: 260px;
-            background: var(--glass);
-            backdrop-filter: blur(12px);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 30px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 40px;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-        }
-
-        .logo {
-            font-size: 22px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            box-shadow: 0 4px 12px var(--primary-glow);
-        }
-
-        .nav-menu {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .nav-link {
-            padding: 12px 16px;
-            border-radius: 12px;
-            color: var(--text-dim);
-            text-decoration: none;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .nav-link.active {
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-main);
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-link:hover:not(.active) {
-            color: var(--text-main);
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        .user-profile {
-            margin-top: auto;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            background: var(--primary-gradient);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            color: white;
-        }
-
-        .user-info {
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .user-name {
-            font-size: 14px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .user-dept {
-            font-size: 11px;
-            color: var(--text-dim);
-        }
-
-        .logout-btn {
-            background: none;
-            border: none;
-            color: var(--text-dim);
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 5px;
-        }
-
-        .logout-btn:hover {
-            color: var(--failed);
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            padding: 40px;
-            max-width: 1400px;
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 40px;
-        }
-
-        .page-info h1 {
-            margin: 0;
-            font-size: 32px;
-            font-weight: 700;
-        }
-
-        .page-info p {
-            margin: 8px 0 0;
-            color: var(--text-dim);
-            font-size: 16px;
-        }
-
-        .controls {
-            display: flex;
-            gap: 12px;
-        }
-
-        .input-wrapper {
-            position: relative;
-        }
-
-        input {
-            background: var(--card-dark);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-main);
-            padding: 12px 18px;
-            border-radius: 12px;
-            font-family: inherit;
-            font-size: 14px;
-            width: 240px;
-            outline: none;
-        }
-
-        input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 4px var(--primary-glow);
-        }
-
-        button.btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--accent));
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 12px var(--primary-glow);
-        }
-
-        button.btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px var(--primary-glow);
-        }
-
-        /* Dashboards */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-
-        .stat-card {
-            background: var(--card-dark);
-            border-radius: 16px;
-            padding: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .stat-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .stat-title {
-            color: var(--text-dim);
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-        }
-
-        .stat-indicator {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        /* Test Case Cards */
-        .test-list {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .test-card {
-            background: var(--card-dark);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            overflow: hidden;
-        }
-
-        .test-card:hover {
-            border-color: rgba(255, 255, 255, 0.15);
-            background: var(--card-dark-hover);
-        }
-
-        .test-header {
-            padding: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .test-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .status-blob {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-        }
-
-        .blob-passed {
-            background: var(--passed);
-            box-shadow: 0 0 10px var(--passed);
-        }
-
-        .blob-failed {
-            background: var(--failed);
-            box-shadow: 0 0 10px var(--failed);
-        }
-
-        .blob-blocked {
-            background: var(--blocked);
-            box-shadow: 0 0 10px var(--blocked);
-        }
-
-        .blob-pending {
-            background: var(--pending);
-        }
-
-        .test-title-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .test-iid {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            color: var(--text-dim);
-        }
-
-        .test-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .test-badges {
-            display: flex;
-            gap: 8px;
-        }
-
-        .tag-badge {
-            padding: 4px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--text-dim);
-        }
-
-        .tag-priority-P0 {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--failed);
-        }
-
-        .tag-priority-P1 {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--blocked);
-        }
-
-        .test-actions {
-            display: flex;
-            gap: 12px;
-        }
-
-        .btn-action {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn-action:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Test Content (Expanded) */
-        .test-content {
-            padding: 0 24px 24px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            display: none;
-            animation: slideDown 0.3s ease-out;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .test-content.active {
-            display: block;
-        }
-
-        .grid-detail {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 40px;
-            margin-top: 24px;
-        }
-
-        .section-label {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-        }
-
-        .steps-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .step-item {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            padding: 16px;
-            display: flex;
-            gap: 16px;
-        }
-
-        .step-count {
-            width: 24px;
-            height: 24px;
-            background: var(--primary);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
-        .step-text {
-            flex: 1;
-        }
-
-        .step-action-text {
-            font-weight: 500;
-            margin-bottom: 4px;
-        }
-
-        .step-expected-text {
-            font-size: 14px;
-            color: var(--text-dim);
-        }
-
-        .meta-pill {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 12px;
-        }
-
-        .meta-pill b {
-            display: block;
-            font-size: 12px;
-            color: var(--text-dim);
-            margin-bottom: 4px;
-        }
-
-        /* Scope Badge Styles */
-        .scope-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            color: #c7d2fe;
-            margin-top: 10px;
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        .scope-icon {
-            font-size: 14px;
-        }
-
-        .scope-label {
-            color: var(--text-dim);
-            font-weight: 500;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .execution-shelf {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-
-        button.btn-shelf {
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 14px;
-            cursor: pointer;
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-success {
-            background: var(--passed);
-            color: white;
-        }
-
-        .btn-error {
-            background: var(--failed);
-            color: white;
-        }
-
-        .btn-warn {
-            background: var(--blocked);
-            color: white;
-        }
-
-        /* Helpers */
-        .glass-panel {
-            background: var(--glass);
-            backdrop-filter: blur(8px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 24px;
-        }
-
-        #loading {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--primary);
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-weight: 600;
-            display: none;
-            z-index: 2000;
-            box-shadow: 0 4px 12px var(--primary-glow);
-        }
-
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 3000;
-        }
-
-        .modal {
-            background: var(--card-dark);
-            border-radius: 20px;
-            width: 700px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 30px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-dim);
-            margin-bottom: 8px;
-        }
-
-        .form-control {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 12px;
-            border-radius: 10px;
-            font-family: inherit;
-        }
-
-        .step-row {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .btn-add-step {
-            background: transparent;
-            border: 1px dashed rgba(255, 255, 255, 0.3);
-            color: var(--text-dim);
-            width: 100%;
-            padding: 10px;
-            border-radius: 10px;
-            cursor: pointer;
-        }
-
-        /* Matrix Styles */
-        .matrix-container {
-            overflow-x: auto;
-            background: var(--card-dark);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 20px;
-        }
-
-        .matrix-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        .matrix-table th {
-            text-align: left;
-            padding: 15px;
-            color: var(--text-dim);
-            font-weight: 600;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .matrix-table td {
-            padding: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            vertical-align: middle;
-        }
-
-        .req-id-pill {
-            font-family: 'JetBrains Mono';
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--primary);
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .coverage-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-
-        .case-link {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.03);
-            padding: 6px 12px;
-            border-radius: 8px;
-            margin-bottom: 5px;
-            font-size: 13px;
-            text-decoration: none;
-            color: var(--text-main);
-        }
-
-        .case-link:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        /* Batch Actions */
-        .batch-controls {
-            display: none;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid var(--primary);
-            padding: 12px 24px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            justify-content: space-between;
-            align-items: center;
-            animation: slideDown 0.3s ease-out;
-        }
-
-        .custom-checkbox {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 6px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            flex-shrink: 0;
-            margin-right: 15px;
-        }
-
-        .custom-checkbox.checked {
-            background: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .custom-checkbox.checked::after {
-            content: '✓';
-            color: white;
-            font-size: 14px;
-            font-weight: 900;
-        }
-
-        /* Quick Bug Styles */
-        .bug-form-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .context-pill {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--failed);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-
-        /* Benchmarking Table Styles */
-        .bench-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-            background: rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        .bench-table th {
-            background: rgba(255, 255, 255, 0.02);
-            padding: 12px;
-            text-align: left;
-            color: var(--text-dim);
-        }
-
-        .bench-table td {
-            padding: 12px;
-            border-top: 1px solid rgba(255, 255, 255, 0.03);
-        }
-
-        .risk-bar-bg {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 3px;
-        }
-
-        .risk-bar {
-            height: 100%;
-            border-radius: 3px;
-        }
-
-        /* Asset Card Styles */
-        .asset-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 16px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .asset-card:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: var(--primary);
-        }
-
-        .asset-info h4 {
-            margin: 0 0 5px 0;
-            font-size: 15px;
-        }
-
-        .asset-meta {
-            font-size: 12px;
-            color: var(--text-dim);
-            display: flex;
-            gap: 15px;
-        }
-
-        .image-paste-area {
-            border: 2px dashed rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            color: var(--text-dim);
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .image-paste-area:hover {
-            border-color: var(--failed);
-            background: rgba(239, 68, 68, 0.05);
-        }
-
-        .image-preview {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 8px;
-            margin-top: 10px;
-            display: none;
-        }
-
-        /* Quality Dashboard Styles */
-        .quality-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .chart-container {
-            background: var(--card-dark);
-            border-radius: 16px;
-            padding: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            min-height: 350px;
-        }
-
-        .testimony-card {
-            grid-column: span 2;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-            border: 1px solid var(--primary);
-            border-radius: 20px;
-            padding: 30px;
-        }
-
-        /* Quality Gate */
-        .gate-card {
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            backdrop-filter: blur(10px);
-        }
-
-        .gate-status-group {
-            display: flex;
-            gap: 24px;
-        }
-
-        .gate-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            color: var(--text-dim);
-        }
-
-        .gate-icon {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-        }
-
-        .gate-pass {
-            color: var(--passed);
-        }
-
-        .gate-fail {
-            color: var(--failed);
-        }
-
-        .gate-icon.bg-pass {
-            background: rgba(16, 185, 129, 0.2);
-            border: 1px solid var(--passed);
-        }
-
-        .gate-icon.bg-fail {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid var(--failed);
-        }
-
-        .gate-stamp {
-            padding: 12px 30px;
-            border-radius: 12px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            transform: rotate(-5deg);
-            border: 3px solid;
-            font-size: 20px;
-        }
-
-        .stamp-pass {
-            border-color: var(--passed);
-            color: var(--passed);
-            background: rgba(16, 185, 129, 0.1);
-        }
-
-        .stamp-fail {
-            border-color: var(--failed);
-            color: var(--failed);
-            background: rgba(239, 68, 68, 0.1);
-        }
-
-        /* Global Alerts Styling */
-        .live-alerts-panel {
-            background: rgba(239, 68, 68, 0.05);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 25px;
-        }
-
-        .alert-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 14px;
-        }
-
-        .alert-item:last-child {
-            border: none;
-        }
-
-        .alert-province {
-            background: var(--failed);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 700;
-            min-width: 60px;
-            text-align: center;
-        }
-
-        .alert-pulse {
-            width: 8px;
-            height: 8px;
-            background: var(--failed);
-            border-radius: 50%;
-            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            animation: pulse-red 2s infinite;
-        }
-
-        @keyframes pulse-red {
-            0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-            }
-
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
-            }
-
-            100% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-            }
-        }
-
-        .testimony-text {
-            font-family: 'JetBrains Mono', monospace;
-            white-space: pre-wrap;
-            color: var(--text-main);
-            line-height: 1.6;
-            margin: 20px 0;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            font-size: 14px;
-        }
-
-        .scope-badge {
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-    </style>
+    <script src="js/core.js"></script>
 </head>
 
 <body>
     <div class="layout">
+        <!-- Toast Notification Container for Real-time Pulse -->
+        <div id="toast-container"></div>
+
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="page-info">
                 <h1>Test Management Hub</h1>
                 <p>Enterprise Grade Quality Assurance & DevOps Analytics</p>
                 <!-- P3: Data Scope Badge -->
+                <div id="data-scope-badge-v2"
+                    style="display: none; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px; color: #c7d2fe; margin-top: 10px;">
+                    <span id="scope-icon-v2">📍</span>
+                    <span style="opacity: 0.6;">数据范围:</span>
+                    <strong id="scope-value-v2">Loading...</strong>
+                </div>
                 <div id="data-scope-badge" style="display:none" class="scope-badge">
                     <span class="scope-icon">🛡️</span>
                     <span class="scope-label">Data Scope:</span>
@@ -1065,7 +38,7 @@
                 </div>
             </div>
 
-            <div class="controls">
+            <nav class="controls">
                 <a href="#" class="nav-link active">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="7" height="7"></rect>
@@ -1075,7 +48,7 @@
                     </svg>
                     Dashboard
                 </a>
-                <a href="#" class="nav-link" id="nav-tests" onclick="switchView('tests')">
+                <a href="#" class="nav-link" id="nav-tests" onclick="switchView('test-cases')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -1100,6 +73,14 @@
                     </svg>
                     Requirements
                 </a>
+                <a href="#" class="nav-link" id="nav-support" onclick="switchView('servicedesk')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        <path d="M8 9h8"></path>
+                        <path d="M8 13h6"></path>
+                    </svg>
+                    Support Center
+                </a>
                 <a href="#" class="nav-link" id="nav-matrix" onclick="switchView('matrix')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2v20M2 12h20"></path>
@@ -1116,30 +97,36 @@
                 </a>
                 <div
                     style="margin: 20px 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); opacity: 0.6;">
-                    Service Desk</div>
-                <a href="service_desk_my_tickets.html" class="nav-link" id="nav-tickets">
+                    Business Service Desk</div>
+                <a href="#" class="nav-link" id="nav-sd-submit" onclick="switchView('sd_submit')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    New Feedback
+                </a>
+                <a href="#" class="nav-link" id="nav-sd-my" onclick="switchView('sd_my')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                     </svg>
-                    My Tickets
+                    My Requests
                 </a>
-                </nav>
+            </nav>
 
-                <div class="user-profile">
-                    <div class="user-avatar" id="user-avatar">?</div>
-                    <div class="user-info">
-                        <div class="user-name" id="user-display-name">Loading...</div>
-                        <div class="user-dept" id="user-display-dept">Please wait</div>
-                    </div>
-                    <button class="logout-btn" onclick="Auth.logout()" title="Logout">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" y1="12" x2="9" y2="12"></line>
-                        </svg>
-                    </button>
+            <div class="user-profile">
+                <div class="user-avatar" id="user-avatar">?</div>
+                <div class="user-info">
+                    <div class="user-name" id="user-display-name">Loading...</div>
+                    <div class="user-dept" id="user-display-dept">Please wait</div>
                 </div>
+                <button class="logout-btn" onclick="Auth.logout()" title="Logout">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
         </aside>
 
         <!-- Main Workspace -->
@@ -1179,6 +166,28 @@
                         </svg>
                         Batch Pass
                     </button>
+                    <div class="header-actions">
+                        <button class="btn-primary" onclick="openReqModal()"
+                            style="background:var(--accent); display:flex; align-items:center; gap:8px;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Requirement
+                        </button>
+                        <button class="btn-primary"
+                            style="background:var(--card-dark); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:8px;"
+                            onclick="loadRequirements()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M23 4v6h-6"></path>
+                                <path d="M1 20v-6h6"></path>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                            Sync
+                        </button>
+                    </div>
                     <button class="btn-primary"
                         style="background: var(--card-dark); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px;"
                         onclick="runDeduplicationScan()">
@@ -1211,6 +220,17 @@
                         Browse Assets
                     </button>
                     <button class="btn-primary"
+                        style="background: var(--pending); color: white; border: none; display: flex; align-items: center; gap: 8px;"
+                        onclick="openImportModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Bulk Import
+                    </button>
+                    <button class="btn-primary"
                         style="background: var(--card-dark); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px;"
                         onclick="exportReport()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1231,8 +251,6 @@
                 <div class="stat-card">
                     <div class="stat-header">
                         <span class="stat-title">Success Rate</span>
-                        <span class="stat-indicator"
-                            style="background: rgba(16, 185, 129, 0.1); color: var(--passed);">+2.4%</span>
                     </div>
                     <div class="stat-value" id="stat-rate">0%</div>
                 </div>
@@ -1275,16 +293,6 @@
             </div>
 
             <div id="bugView" style="display:none;">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <span class="stat-title">Fixed Rate</span>
-                        <div class="stat-value" id="bug-fix-rate" style="color:var(--passed);">0%</div>
-                    </div>
-                    <div class="stat-card">
-                        <span class="stat-title">Open Bugs</span>
-                        <div class="stat-value" id="bug-open-count" style="color:var(--failed);">0</div>
-                    </div>
-                </div>
                 <div class="test-list" id="bugResults" style="margin-top:20px;">
                     <!-- Bug list here -->
                 </div>
@@ -1314,121 +322,83 @@
                 </div>
             </div>
 
+            <!-- ServiceDesk Support View (For RD to Review) -->
+            <section id="view-servicedesk" style="display:none;">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">Support Center</h2>
+                        <p class="section-desc">Feedback and requests from internal business users.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn-primary"
+                            style="background:var(--card-dark); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:8px;"
+                            onclick="loadServiceDeskTickets()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M23 4v6h-6"></path>
+                                <path d="M1 20v-6h6"></path>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                            Sync Feedback
+                        </button>
+                    </div>
+                </div>
+                <div id="servicedesk-list" class="test-list">
+                    <!-- Tickets will be loaded here -->
+                </div>
+            </section>
+
             <!-- Reports View -->
             <div id="reportsView" style="display:none;">
                 <!-- Global Quality Alerts Panel -->
                 <div class="live-alerts-panel" id="globalAlertsPanel" style="display:none;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3 style="margin:0; display:flex; align-items:center; gap:10px;">
-                            🚨 全网质量同步预警 (Global Quality Alerts)
-                            <span style="font-size:12px; color:var(--text-dim); font-weight:400;">实时跨地域失败感知</span>
-                        </h3>
-                        <button class="btn-primary" style="font-size:12px; padding:6px 12px;"
-                            onclick="refreshGlobalAlerts()">刷新</button>
-                    </div>
-                    <div id="globalAlertsList">
-                        <!-- Alerts injected here -->
-                    </div>
-                </div>
-
-                <!-- Quality Gate Central Control -->
-                <div class="gate-card" id="qualityGateBoard">
-                    <div style="flex:1">
-                        <h2 style="margin:0 0 15px 0; display:flex; align-items:center; gap:10px;">
-                            🛡️ 准发布合规门禁 (Release Quality Gate)
-                        </h2>
-                        <div class="gate-status-group">
-                            <div class="gate-item" id="gate-req">
-                                <span class="gate-icon">?</span> 需求覆盖率 > 80%
-                            </div>
-                            <div class="gate-item" id="gate-p0">
-                                <span class="gate-icon">?</span> S0 缺陷清零
-                            </div>
-                            <div class="gate-item" id="gate-pipe">
-                                <span class="gate-icon">?</span> 流水线底座稳固
-                            </div>
-                            <div class="gate-item" id="gate-region">
-                                <span class="gate-icon">?</span> 地域零风险积压
-                            </div>
-                        </div>
-                    </div>
-                    <div id="gate-stamp-container">
-                        <!-- Stamp injected here -->
-                    </div>
+                    <div id="globalAlertsList"></div>
                 </div>
 
                 <div class="quality-grid">
-                    <div class="chart-container" style="grid-column: span 1;">
-                        <span class="section-label">Quality Radar / Module Coverage</span>
-                        <canvas id="qualityRadarChart"></canvas>
+                    <div class="chart-container">
+                        <span class="section-label">工单优先级分布 (Priority)</span>
+                        <canvas id="priorityChart"></canvas>
                     </div>
-                    <div class="chart-container" style="grid-column: span 1;">
-                        <span class="section-label">Province Quality Heatmap (Bugs)</span>
-                        <canvas id="provinceHeatmapChart"></canvas>
-                    </div>
-                    <div class="chart-container" style="grid-column: span 2;">
-                        <span class="section-label">Requirement Pass Rate Trend</span>
-                        <canvas id="trendLineChart"></canvas>
+                    <div class="chart-container">
+                        <span class="section-label">工单类型分布 (Issue Type)</span>
+                        <canvas id="typeChart"></canvas>
                     </div>
                     <div class="testimony-card" style="grid-column: span 2;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3 style="margin:0">✨ 自动化版本质量证言 (Quality Testimony)</h3>
-                            <button class="btn-primary" style="font-size:12px; padding:6px 12px;"
-                                onclick="copyTestimony()">Copy Content</button>
-                        </div>
-                        <div id="testimony-content" class="testimony-text">Analyzing version data...</div>
-                        <p style="margin:0; font-size:11px; color:var(--text-dim);">* This testimony is generated based
-                            on real-time execution data and coverage matrix.</p>
+                        <div id="testimony-content" class="testimony-text">Generating quality assessment...</div>
                     </div>
-
-                    <!-- Regional Benchmarking Card -->
                     <div class="chart-container" style="grid-column: span 2;">
-                        <span class="section-label">Regional Quality Benchmarking (Horizontal Comparison)</span>
                         <table class="bench-table">
                             <thead>
                                 <tr>
-                                    <th>Rank</th>
-                                    <th>Region/Province</th>
-                                    <th>Bugs (Res/Total)</th>
-                                    <th>Resolution %</th>
-                                    <th>Risk Score (0-100)</th>
+                                    <th>ID</th>
+                                    <th>Title</th>
+                                    <th>Dept</th>
+                                    <th>State</th>
+                                    <th>Updated</th>
                                 </tr>
                             </thead>
-                            <tbody id="bench-body">
-                                <!-- Data injected via JS -->
-                            </tbody>
+                            <tbody id="bench-body"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
 
-    <!-- Asset Library Modal -->
-    <div class="modal-overlay" id="assetModalOverlay">
-        <div class="modal" style="width: 800px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
-                <h2 style="margin:0;">📚 Test Asset Library (Baseline)</h2>
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <select id="assetFilter" class="form-control" style="width:180px; margin:0;"
-                        onchange="loadAssetLibrary()">
-                        <option value="">All Categories</option>
-                        <option value="test-type::Functional">Functional</option>
-                        <option value="test-type::Regression">Regression</option>
-                        <option value="test-type::Security">Security</option>
-                        <option value="test-type::Performance">Performance</option>
-                    </select>
-                    <button class="btn-primary" style="background:var(--card-dark-hover);"
-                        onclick="closeAssetModal()">Close</button>
+            <!-- Service Desk Webview (Integrated Content) -->
+            <div id="sdSubmitView" style="display:none; height: calc(100vh - 200px);">
+                <div class="glass-panel" style="height: 100%; padding: 0; overflow: hidden;">
+                    <iframe id="sdFrame" src=""
+                        style="width:100%; height:100%; border:none; border-radius: 20px;"></iframe>
                 </div>
             </div>
-            <p style="color:var(--text-dim); margin-bottom:20px;">Pick reusable test cases from the organizational
-                baseline project and clone them into your current project.</p>
-            <div id="assetList" style="max-height: 500px; overflow-y: auto;">
-                <!-- Assets loaded here -->
-                <div style="text-align:center; padding:40px; color:var(--text-dim);">Loading common assets...</div>
+
+            <div id="sdMyView" style="display:none; height: calc(100vh - 200px);">
+                <div class="glass-panel" style="height: 100%; padding: 0; overflow: hidden;">
+                    <iframe id="sdMyFrame" src=""
+                        style="width:100%; height:100%; border:none; border-radius: 20px;"></iframe>
+                </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <!-- Create Case Modal -->
@@ -1442,7 +412,11 @@
                 </div>
                 <div class="form-group">
                     <label>Requirement IID</label>
-                    <input type="number" id="new_req_iid" placeholder="Optional" style="width:100%;">
+                    <div style="display:flex; gap:8px;">
+                        <input type="number" id="new_req_iid" placeholder="Associated ID" style="flex:1;">
+                        <button class="btn-primary" style="background:var(--accent); font-size:12px; padding:4px 10px;"
+                            onclick="generateMagicSteps()" title="AI Generative Steps from AC">🪄 AI</button>
+                    </div>
                 </div>
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
@@ -1473,12 +447,12 @@
             <div class="form-group">
                 <label>Test Steps</label>
                 <div id="stepsContainer">
-                    <div class="step-row">
-                        <input type="text" placeholder="Action" class="form-control" style="flex:2;">
-                        <input type="text" placeholder="Expected" class="form-control" style="flex:1;">
+                    <div class="step-row" style="display:flex; gap:8px; margin-bottom:8px;">
+                        <input type="text" placeholder="Action" class="form-control step-action" style="flex:2;">
+                        <input type="text" placeholder="Expected" class="form-control step-expected" style="flex:1;">
                     </div>
                 </div>
-                <button class="btn-add-step" onclick="addStepRow()">+ Add Step Step</button>
+                <button class="btn-add-step" onclick="addStepRow()">+ Add Step</button>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:30px;">
                 <button class="btn-primary" style="background:transparent; border:1px solid rgba(255,255,255,0.1);"
@@ -1492,1556 +466,144 @@
     <div class="modal-overlay" id="bugModalOverlay">
         <div class="modal" style="width: 600px; border-top: 4px solid var(--failed);">
             <div class="page-info" style="margin-bottom: 20px;">
-                <h2 style="color: var(--failed); display: flex; align-items: center; gap: 8px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6L6 18M6 6l12 12"></path>
-                    </svg>
-                    Report New Defect
-                </h2>
+                <h2 style="color: var(--failed);">Report New Defect</h2>
                 <p>Capturing failure context for <span id="bug-target-id" style="font-weight: 700;">#0</span></p>
             </div>
-
-            <div class="bug-form-container">
-                <div class="context-pill" id="bug-context-info">
-                    Linking to Case #0 and Requirement #0
-                </div>
-
+            <div class="form-group">
+                <label>Bug Summary (Title)</label>
+                <input type="text" id="quick-bug-title" class="form-control" placeholder="What went wrong?"
+                    style="width: 100%;">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                 <div class="form-group">
-                    <label>Bug Summary (Title)</label>
-                    <input type="text" id="quick-bug-title" class="form-control" placeholder="What went wrong?"
-                        style="width: 100%;">
+                    <label>Severity</label>
+                    <select id="bug_severity" class="form-control" style="width:100%;">
+                        <option value="S1">S1 - Critical</option>
+                        <option value="S2" selected>S2 - Major</option>
+                        <option value="S3">S3 - Minor</option>
+                    </select>
                 </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
-                    <div class="form-group">
-                        <label>Severity</label>
-                        <select id="bug_severity" class="form-control" style="width:100%;">
-                            <option value="S1">S1 - Critical</option>
-                            <option value="S2" selected>S2 - Major</option>
-                            <option value="S3">S3 - Minor</option>
-                            <option value="S4">S4 - Trivial</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Priority</label>
-                        <select id="bug_priority" class="form-control" style="width:100%;">
-                            <option value="P0">P0 - Emergency</option>
-                            <option value="P1">P1 - High</option>
-                            <option value="P2" selected>P2 - Medium</option>
-                            <option value="P3">P3 - Low</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Environment</label>
-                        <input type="text" id="bug_env" class="form-control" value="Staging" style="width:100%;">
-                    </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
-                    <div class="form-group">
-                        <label>Category</label>
-                        <select id="bug_category" class="form-control" style="width:100%;">
-                            <option value="code-error" selected>Code Error</option>
-                            <option value="test-script">Test Script</option>
-                            <option value="configuration">Configuration</option>
-                            <option value="design-defect">Design Defect</option>
-                            <option value="performance">Performance</option>
-                            <option value="security">Security</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Source</label>
-                        <select id="bug_source" class="form-control" style="width:100%;">
-                            <option value="non-production" selected>Non-Prod</option>
-                            <option value="production">Production (Escape)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Province</label>
-                        <select id="bug_province" class="form-control" style="width:100%;">
-                            <option value="beijing">Beijing</option>
-                            <option value="shanghai">Shanghai</option>
-                            <option value="guangdong">Guangdong</option>
-                            <option value="zhejiang">Zhejiang</option>
-                            <option value="jiangsu">Jiangsu</option>
-                            <option value="nationwide" selected>Nationwide</option>
-                        </select>
-                    </div>
-                </div>
-
                 <div class="form-group">
-                    <label>Steps to Reproduce</label>
-                    <textarea id="bug_steps" class="form-control" rows="3" placeholder="1. Go to... 2. Click..."
-                        style="width: 100%; resize: vertical;"></textarea>
+                    <label>Environment</label>
+                    <input type="text" id="bug_env" class="form-control" value="Staging" style="width:100%;">
                 </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div class="form-group">
-                        <label>Expected Result</label>
-                        <textarea id="bug_expected" class="form-control" rows="2"
-                            style="width: 100%; resize: vertical;"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Actual Result</label>
-                        <textarea id="bug_actual" class="form-control" rows="2"
-                            style="width: 100%; resize: vertical;"></textarea>
-                    </div>
-                </div>
-
-                <div class="image-paste-area" id="paste-area">
-                    📸 Click or Paste Screenshot here (Optional)
-                    <img id="img-preview" class="image-preview" style="display:none; max-height:150px;">
-                </div>
-
-                <div style="display:flex; justify-content: flex-end; gap: 12px; margin-top: 15px;">
-                    <button class="btn-primary"
-                        style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-dim);"
-                        onclick="closeBugModal()">Cancel</button>
-                    <button class="btn-primary" style="background: var(--failed);" onclick="submitQuickBug()">Submit
-                        Defect</button>
-                </div>
+            </div>
+            <div class="form-group">
+                <label>Steps to Reproduce</label>
+                <textarea id="bug_steps" class="form-control" rows="3" style="width: 100%;"></textarea>
+            </div>
+            <div class="image-paste-area" id="paste-area"
+                style="border: 2px dashed rgba(255,255,255,0.1); padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 15px;">
+                📸 Click or Paste Screenshot here
+                <img id="img-preview" style="display:none; max-height:150px; margin-top:10px;">
+            </div>
+            <div style="display:flex; justify-content: flex-end; gap: 12px;">
+                <button class="btn-primary" style="background: transparent; border: 1px solid rgba(255,255,255,0.1);"
+                    onclick="closeBugModal()">Cancel</button>
+                <button class="btn-primary" style="background: var(--failed);" onclick="submitQuickBug()">Submit
+                    Defect</button>
             </div>
         </div>
     </div>
 
-    <!-- Code Preview Modal -->
-    <div class="modal-overlay" id="codeModalOverlay">
-        <div class="modal" style="width: 800px; border-top: 4px solid var(--accent);">
-            <div class="page-info" style="margin-bottom: 20px;">
-                <h2 style="color: var(--accent); display: flex; align-items: center; gap: 8px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="16 18 22 12 16 6"></polyline>
-                        <polyline points="8 6 2 12 8 18"></polyline>
-                    </svg>
-                    Magic Unit Test Generator
-                </h2>
-                <p>Derived from steps of Case <span id="code-target-id" style="font-weight: 700;">#0</span></p>
+    <!-- Bulk Import Modal -->
+    <div class="modal-overlay" id="importModalOverlay">
+        <div class="modal" style="width: 500px;">
+            <h2 style="margin:0 0 15px;">Bulk Import</h2>
+            <div class="form-group"
+                style="border: 2px dashed rgba(255,255,255,0.1); padding: 30px; text-align: center; border-radius: 12px;">
+                <input type="file" id="importFile" accept=".xlsx, .csv" style="display:none;"
+                    onchange="updateFileName(this)">
+                <label for="importFile" style="cursor:pointer;">
+                    <div id="fileNameDisplay" style="color:var(--text-main); font-weight:600;">Click to select file
+                    </div>
+                </label>
             </div>
-
-            <div class="testimony-text" id="generated-code-box"
-                style="background:#0f172a; border:1px solid rgba(255,255,255,0.1); font-size:13px; height:400px; overflow-y:auto; color: #a5b4fc;">
-                Generating magic...
-            </div>
-
-            <div style="display:flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
-                <button class="btn-primary"
-                    style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: var(--text-dim);"
-                    onclick="closeCodeModal()">Close</button>
-                <button class="btn-primary" style="background: var(--accent);" onclick="copyCode()">Copy Code</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Conflict Modal -->
-    <div class="modal-overlay" id="conflictModalOverlay">
-        <div class="modal" style="width: 550px; border-top: 4px solid var(--failed);">
-            <div class="page-info" style="margin-bottom: 20px;">
-                <h2 style="color: var(--failed); display: flex; align-items: center; gap: 8px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path
-                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
-                        </path>
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12" y2="17.01"></line>
-                    </svg>
-                    Requirement Conflict Sentry
-                </h2>
-                <p>We detected potential logical contradictions with existing requirements.</p>
-            </div>
-            <div id="conflict-list" style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
-                <!-- Conflicts go here -->
+            <div style="margin: 25px 0; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+                <h3 style="font-size:14px; margin-bottom:12px;">Option 2: Clone from Another Project</h3>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="sourceProjectId" class="form-control" placeholder="Source Project ID"
+                        style="flex:1;">
+                    <button class="btn-primary" style="background:var(--accent); font-size:12px;"
+                        onclick="submitClone()">Clone</button>
+                </div>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:12px;">
                 <button class="btn-primary" style="background:transparent; border:1px solid rgba(255,255,255,0.1);"
-                    onclick="document.getElementById('conflictModalOverlay').style.display='none'">I'll Review</button>
-                <button class="btn-primary"
-                    style="background:var(--card-dark); border:1px solid var(--failed); color:var(--failed);"
-                    onclick="document.getElementById('conflictModalOverlay').style.display='none'">Ignore & Force
-                    Save</button>
+                    onclick="closeImportModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitImport()">Start Import</button>
             </div>
         </div>
     </div>
 
-    <!-- Deduplication Modal -->
-    <div class="modal-overlay" id="dedupModalOverlay">
-        <div class="modal" style="width: 650px; border-top: 4px solid var(--passed);">
-            <div class="page-info" style="margin-bottom: 20px;">
-                <h2 style="color: var(--passed); display: flex; align-items: center; gap: 8px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path
-                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
-                        </path>
-                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                    </svg>
-                    Asset Optimization Center
-                </h2>
-                <p>AI scan found redundant test cases. Merging them can optimize registration efficiency.</p>
+    <div class="modal-overlay" id="reqModalOverlay">
+        <div class="modal" style="width: 600px; border-top: 4px solid var(--accent);">
+            <h2 style="margin:0 0 20px;">New Requirement</h2>
+            <div class="form-group">
+                <label>Title</label>
+                <input type="text" id="req_title" class="form-control" style="width:100%;">
             </div>
-
-            <div id="dedup-summary"
-                style="background:rgba(16,185,129,0.1); padding:15px; border-radius:8px; margin-bottom:20px; display:flex; justify-content:space-around; text-align:center;">
-                <div>
-                    <div style="font-size:10px; opacity:0.6; text-transform:uppercase;">Optimization Potential</div>
-                    <div id="dedup-saving-val" style="font-size:24px; font-weight:700; color:var(--passed);">0%</div>
-                </div>
-                <div>
-                    <div style="font-size:10px; opacity:0.6; text-transform:uppercase;">Redundant Groups</div>
-                    <div id="dedup-group-count" style="font-size:24px; font-weight:700; color:var(--text-main);">0</div>
-                </div>
+            <div class="form-group">
+                <label>Description / AC (Markdown)</label>
+                <textarea id="req_value" class="form-control" rows="8" placeholder="## 验收标准\n- [ ] AC1..."
+                    style="width:100%;"></textarea>
             </div>
-
-            <div id="dedup-results-list"
-                style="max-height:300px; overflow-y:auto; display:flex; flex-direction:column; gap:15px;">
-                <!-- Dedup groups here -->
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:25px;">
+            <div style="display:flex; justify-content:flex-end; gap:12px;">
                 <button class="btn-primary" style="background:transparent; border:1px solid rgba(255,255,255,0.1);"
-                    onclick="document.getElementById('dedupModalOverlay').style.display='none'">Keep All</button>
-                <button class="btn-primary" style="background:var(--passed);"
-                    onclick="alert('In a real scenario, this would trigger GitLab Issue merging/deletion.')">Apply
-                    Optimization</button>
+                    onclick="closeReqModal()">Cancel</button>
+                <button class="btn-primary" style="background:var(--accent);" onclick="submitRequirement()">Deploy
+                    Requirement</button>
             </div>
         </div>
     </div>
 
+    <!-- Asset Library & Others -->
+    <div class="modal-overlay" id="assetModalOverlay">
+        <div class="modal">
+            <div id="assetList"></div>
+            <div style="text-align:right; margin-top:20px;"><button class="btn-primary"
+                    onclick="closeAssetModal()">Close</button></div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="codeModalOverlay">
+        <div class="modal">
+            <div id="code-display"
+                style="background:#0f172a; padding:20px; border-radius:8px; font-family:monospace; white-space:pre-wrap; max-height:400px; overflow-y:auto;">
+            </div><button class="btn-primary" style="margin-top:20px;" onclick="closeCodeModal()">Close</button>
+        </div>
+    </div>
+    <div class="modal-overlay" id="conflictModalOverlay">
+        <div class="modal">
+            <div id="conflictResults"></div><button class="btn-primary" onclick="closeConflictModal()">Close</button>
+        </div>
+    </div>
+    <div class="modal-overlay" id="dedupModalOverlay">
+        <div class="modal">
+            <div id="dedup-results-list"></div><button class="btn-primary" onclick="closeDedupModal()">Close</button>
+        </div>
+    </div>
+    <div class="modal-overlay" id="rcaModalOverlay">
+        <div class="modal">
+            <div id="rca-suggestions" style="line-height:1.6; color:var(--text-main);"></div><button class="btn-primary"
+                style="margin-top:20px;"
+                onclick="document.getElementById('rcaModalOverlay').style.display='none'">Close</button>
+        </div>
+    </div>
+
+    <!-- Core Scripts -->
+    <script src="js/app.js"></script>
+    <script src="js/utils.js"></script>
+
+    <!-- Business Modules -->
+    <script src="js/modules/test-cases.js"></script>
+    <script src="js/modules/defects.js"></script>
+    <script src="js/modules/requirements.js"></script>
+    <script src="js/modules/service-desk.js"></script>
+    <script src="js/modules/reports.js"></script>
+
     <script>
-        function switchView(view) {
-            const navTests = document.getElementById('nav-tests');
-            const navDefects = document.getElementById('nav-defects');
-            const navReqs = document.getElementById('nav-reqs');
-            const navMatrix = document.getElementById('nav-matrix');
-            const navReports = document.getElementById('nav-reports');
-
-            const testsView = document.getElementById('results');
-            const statsGrid = document.getElementById('statsGrid');
-            const bugView = document.getElementById('bugView');
-            const matrixView = document.getElementById('matrixView');
-            const reqView = document.getElementById('requirementsView');
-            const reportsView = document.getElementById('reportsView');
-
-            // Reset
-            [navTests, navDefects, navReqs, navMatrix, navReports].forEach(n => n.classList.remove('active'));
-            [testsView, statsGrid, bugView, matrixView, reqView, reportsView].forEach(v => v.style.display = 'none');
-
-            const activeNav = document.getElementById(`nav-${view === 'test-cases' ? 'tests' : (view === 'requirements' ? 'reqs' : view)}`);
-            if (activeNav) activeNav.classList.add('active');
-
-            if (view === 'test-cases') {
-                testsView.style.display = 'flex';
-                statsGrid.style.display = 'grid';
-            } else if (view === 'defects') {
-                bugView.style.display = 'block';
-                loadBugs();
-            } else if (view === 'matrix') {
-                matrixView.style.display = 'block';
-                loadMatrix();
-            } else if (view === 'requirements') {
-                reqView.style.display = 'block';
-                loadRequirements();
-            } else if (view === 'reports') {
-                reportsView.style.display = 'block';
-                renderReportDashboard();
-            }
-        }
-
-        async function loadBugs() {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return;
-
-            const res = await fetch(`/projects/${projectId}/bugs`);
-            const bugs = await res.json();
-            const container = document.getElementById('bugResults');
-
-            const open = bugs.filter(b => b.state === 'opened');
-            const closed = bugs.filter(b => b.state === 'closed');
-            const rate = bugs.length > 0 ? Math.round((closed.length / bugs.length) * 100) : 0;
-
-            document.getElementById('bug-fix-rate').innerText = `${rate}%`;
-            document.getElementById('bug-open-count').innerText = open.length;
-
-            container.innerHTML = bugs.map(b => `
-                <div class="test-card">
-                    <div class="test-header" style="cursor:default">
-                        <div class="test-info">
-                            <div class="status-blob blob-${b.state === 'closed' ? 'passed' : 'failed'}"></div>
-                            <div class="test-title-group">
-                                <span class="test-iid">#${b.iid}</span>
-                                <a href="${b.web_url}" target="_blank" class="test-title" style="text-decoration:none; color:white;">${b.title}</a>
-                            </div>
-                        </div>
-                        <div class="test-badges">
-                            ${b.labels.map(l => `<span class="tag-badge">${l}</span>`).join('')}
-                            <span class="tag-badge" style="background:${b.state === 'opened' ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)'}">${b.state.toUpperCase()}</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('') || '<div class="empty-state">No bugs tracking for this project.</div>';
-        }
-
-        // Modal Logic
-        function openModal() { document.getElementById('modalOverlay').style.display = 'flex'; }
-        function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
-        function addStepRow() {
-            const row = document.createElement('div');
-            row.className = 'step-row';
-            row.innerHTML = `<input type="text" placeholder="Action" class="form-control" style="flex:2;"><input type="text" placeholder="Expected" class="form-control" style="flex:1;">`;
-            document.getElementById('stepsContainer').appendChild(row);
-        }
-
-        async function submitNewCase() {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return alert("Select a project first");
-
-            const steps = Array.from(document.querySelectorAll('#stepsContainer .step-row')).map(row => ({
-                action: row.querySelectorAll('input')[0].value,
-                expected: row.querySelectorAll('input')[1].value
-            })).filter(s => s.action);
-
-            const payload = {
-                title: document.getElementById('new_title').value,
-                priority: document.getElementById('new_priority').value,
-                test_type: document.getElementById('new_type').value,
-                pre_conditions: document.getElementById('new_pre').value,
-                steps: steps,
-                requirement_iid: document.getElementById('new_req_iid').value ? parseInt(document.getElementById('new_req_iid').value) : null
-            };
-
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.innerText = "🚀 Synchronizing with GitLab...";
-            loadingDiv.style.display = 'block';
-
-            try {
-                const res = await fetch(`/projects/${projectId}/test-cases`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) throw new Error("Creation failed");
-
-                closeModal();
-                loadTestCases(); // Refresh
-            } catch (e) {
-                alert(e.message);
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        function toggleTestCase(iid) {
-            const content = document.getElementById(`content-${iid}`);
-            const allContent = document.querySelectorAll('.test-content');
-
-            // Close others
-            allContent.forEach(c => {
-                if (c.id !== `content-${iid}`) c.classList.remove('active');
-            });
-
-            content.classList.toggle('active');
-        }
-
-        async function executeTest(issueIid, result) {
-            const projectId = document.getElementById('projectId').value;
-            const btn = event.target;
-            const originalHtml = btn.innerHTML;
-
-            btn.disabled = true;
-            btn.innerHTML = "Submitting...";
-
-            try {
-                const response = await fetch(`/projects/${projectId}/test-cases/${issueIid}/execute?result=${result}`, {
-                    method: 'POST'
-                });
-                const data = await response.json();
-
-                if (data.status === 'success') {
-                    // Update UI locally instead of full reload for "Premium" feel
-                    const blob = document.querySelector(`.card-${issueIid} .status-blob`);
-                    blob.className = `status-blob blob-${result}`;
-                    loadTestCases(true); // Silent reload
-                } else {
-                    alert("Execution Error: " + (data.detail || "API Failure"));
-                    btn.disabled = false;
-                    btn.innerHTML = originalHtml;
-                }
-            } catch (err) {
-                alert("Network Error: " + err.message);
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
-        }
-
-        async function loadTestCases(silent = false) {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return alert("Project ID Required");
-
-            const resultsDiv = document.getElementById('results');
-            const loadingDiv = document.getElementById('loading');
-            const statsGrid = document.getElementById('statsGrid');
-
-            if (!silent) {
-                resultsDiv.innerHTML = '<div class="empty-state">Decoding GitLab Objects...</div>';
-                loadingDiv.style.display = 'block';
-            }
-
-            try {
-                const [casesRes, summaryRes] = await Promise.all([
-                    fetch(`/projects/${projectId}/test-cases`),
-                    fetch(`/projects/${projectId}/test-summary`)
-                ]);
-
-                const data = await casesRes.json();
-                const summary = await summaryRes.json();
-
-                loadingDiv.style.display = 'none';
-
-                // Update Project Title
-                document.getElementById('projectTitle').innerText = `Viewing Suite for PID: ${projectId} • ${data.length} Scenarios`;
-
-                // Update Stats
-                let totalBugs = 0;
-                data.forEach(item => totalBugs += (item.linked_bugs ? item.linked_bugs.length : 0));
-
-                document.getElementById('stat-passed').innerText = summary.passed;
-                document.getElementById('stat-failed').innerText = summary.failed;
-                document.getElementById('stat-total').innerText = summary.total;
-                document.getElementById('stat-bugs').innerText = totalBugs;
-
-                if (totalBugs > 5) document.getElementById('bug-alert-icon').style.display = 'block';
-                else document.getElementById('bug-alert-icon').style.display = 'none';
-
-                const rate = summary.total > 0 ? Math.round((summary.passed / summary.total) * 100) : 0;
-                document.getElementById('stat-rate').innerText = `${rate}%`;
-                statsGrid.style.display = 'grid';
-
-                if (data.length === 0) {
-                    resultsDiv.innerHTML = '<div class="empty-state">No structured "type::test" issues found in this project.</div>';
-                    return;
-                }
-
-                resultsDiv.innerHTML = ''; // Clear for rebuild
-                data.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = `test-card card-${item.iid}`;
-
-                    const stepsHtml = item.steps.map(s => `
-                        <div class="step-item">
-                            <div class="step-count">${s.step_number}</div>
-                            <div class="step-text">
-                                <div class="step-action-text">${s.action}</div>
-                                <div class="step-expected-text">${s.expected_result}</div>
-                            </div>
-                        </div>
-                    `).join('');
-
-                    card.innerHTML = `
-                        <div class="test-header">
-                            <div class="test-info">
-                                <div class="custom-checkbox" onclick="toggleSelection(${item.iid}, event)"></div>
-                                <div class="status-blob blob-${item.result}"></div>
-                                <div class="test-title-group" onclick="toggleTestCase(${item.iid})">
-                                    <span class="test-iid">#${item.iid}</span>
-                                    <span class="test-title">${item.title}</span>
-                                </div>
-                            </div>
-                            <div class="test-badges">
-                                <span class="tag-badge tag-priority-${item.priority}">${item.priority}</span>
-                                <span class="tag-badge">${item.test_type}</span>
-                                <div class="btn-action">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="trend-${item.iid}" style="padding: 0 24px 10px; display: flex; gap: 4px;">
-                            <!-- Dots for execution trend -->
-                        </div>
-                        <div class="test-content" id="content-${item.iid}">
-                            <div class="grid-detail">
-                                <div class="flow-zone">
-                                    <div class="section-label">Execution Flow</div>
-                                    <div class="steps-list">
-                                        ${stepsHtml || '<p style="color:var(--text-dim);">No structured steps detected.</p>'}
-                                    </div>
-                                </div>
-                                <div class="meta-zone">
-                                    <div class="section-label">Traceability</div>
-                                    <div class="meta-pill">
-                                        <b>Linked Requirement</b>
-                                        <span>${item.requirement_id ? '<span style="color:var(--primary); font-family:JetBrains Mono;">#' + item.requirement_id + '</span>' : 'None linked'}</span>
-                                    </div>
-                                    <div class="meta-pill">
-                                        <b>Linked Defects (Bugs)</b>
-                                        <div>
-                                            ${item.linked_bugs && item.linked_bugs.length > 0
-                            ? item.linked_bugs.map(b => `<span style="display:inline-block; margin:2px 4px 2px 0; padding:2px 8px; background:rgba(239, 68, 68, 0.1); color:var(--failed); border-radius:6px; font-size:12px; font-family:JetBrains Mono;">#${b.iid}</span>`).join('')
-                            : '<span style="font-size:12px; color:var(--text-dim);">No defects found</span>'}
-                                        </div>
-                                    </div>
-                                    <div class="meta-pill">
-                                        <b>Pre-conditions</b>
-                                        <p style="font-size:14px; margin:5px 0 0; color:var(--text-dim); line-height:1.5;">
-                                            ${item.pre_conditions.length > 0 ? item.pre_conditions.join('<br>') : 'No prerequisites defined.'}
-                                        </p>
-                                    </div>
-                                    <a href="${item.web_url}" target="_blank" style="color:var(--text-dim); font-size:12px; text-decoration:none; display:flex; align-items:center; gap:5px;">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                                        View in GitLab
-                                    </a>
-                                    
-                                    <div id="history-container-${item.iid}" style="margin-top:20px;">
-                                        <div class="section-label">Audit Trail</div>
-                                        <div id="history-${item.iid}" style="font-size:12px; display:flex; flex-direction:column; gap:8px;">
-                                            <!-- History records -->
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="execution-shelf">
-                                <button class="btn-shelf" id="bug-btn-${item.iid}" style="display:none; background:rgba(239, 68, 68, 0.2); color:var(--failed); border:1px solid var(--failed);" onclick="createBug(${item.iid})">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v5"></path><path d="M14 10a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v10"></path><path d="M10 10.5a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2V21"></path><path d="M18 8a2 2 0 1 1 4 0v11a1 1 0 0 1-1 1h-7a4 4 0 0 1-4-4v-3"></path></svg>
-                                    Report Bug
-                                </button>
-                                <button class="btn-shelf btn-warn" onclick="executeTest(${item.iid}, 'blocked')">Block</button>
-                                <button class="btn-shelf btn-error" onclick="executeTest(${item.iid}, 'failed')">Fail</button>
-                                <button class="btn-shelf" style="background:rgba(139, 92, 246, 0.1); color:var(--accent); border:1px solid var(--accent); display:flex; align-items:center; gap:6px;" onclick="generateMagicCode(${item.iid})">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-                                    Magic Code
-                                </button>
-                                <button class="btn-shelf btn-success" onclick="executeTest(${item.iid}, 'passed')">Pass Case</button>
-                            </div>
-                        </div>
-                    `;
-                    resultsDiv.appendChild(card);
-                });
-
-                // Fetch extra data like trends and recent projects
-                loadExtraData();
-            } catch (err) {
-                loadingDiv.style.display = 'none';
-                console.error(err);
-                alert("Sync Failed: " + err.message);
-            }
-        }
-
-        async function loadExtraData() {
-            // Load Recent Projects
-            try {
-                const recentRes = await fetch('/recent-projects');
-                const projects = await recentRes.json();
-                const container = document.getElementById('recentProjects');
-                container.innerHTML = projects.map(id => `
-                    <div class="nav-link" style="cursor:pointer; font-size:13px; padding:8px 12px; border-radius:8px;" onclick="document.getElementById('projectId').value=${id}; loadTestCases();">
-                        <span style="opacity:0.5">#</span> PID ${id}
-                    </div>
-                `).join('');
-            } catch (e) { }
-
-            // Load Pipeline Status
-            try {
-                const pipeRes = await fetch(`/projects/${document.getElementById('projectId').value}/pipeline-status`);
-                const pipe = await pipeRes.json();
-                const monitor = document.getElementById('pipelineMonitor');
-                if (pipe.status !== 'unknown') {
-                    monitor.style.display = 'block';
-                    document.getElementById('pipe-info').innerText = `#${pipe.id} [${pipe.sha}]`;
-                    const dot = document.getElementById('pipe-status-dot');
-                    dot.className = `status-blob blob-${pipe.status === 'success' ? 'passed' : (pipe.status === 'failed' ? 'failed' : 'pending')}`;
-                } else {
-                    monitor.style.display = 'none';
-                }
-            } catch (e) { }
-
-            // Load histories for visible items
-            const visibleIids = Array.from(document.querySelectorAll('.test-card')).map(c => c.className.match(/card-(\d+)/)[1]);
-            for (let iid of visibleIids) {
-                updateItemHistory(iid);
-            }
-        }
-
-        async function updateItemHistory(iid) {
-            try {
-                const res = await fetch(`/projects/${document.getElementById('projectId').value}/test-cases/${iid}/history`);
-                const history = await res.json();
-
-                // Update dots (Trend)
-                const trend = document.getElementById(`trend-${iid}`);
-                if (trend) {
-                    trend.innerHTML = history.slice(0, 10).reverse().map(h => `
-                        <div class="status-blob blob-${h.result}" style="width:6px; height:6px; opacity:0.6" title="${h.result} @ ${new Date(h.executed_at).toLocaleString()}"></div>
-                    `).join('');
-                }
-
-                // Update Audit Trail List
-                const list = document.getElementById(`history-${iid}`);
-                if (list) {
-                    list.innerHTML = history.slice(0, 3).map(h => {
-                        const isRobot = h.executor.includes('Robot');
-                        return `
-                        <div style="color:var(--text-dim); display:flex; align-items:center; gap:4px;">
-                            ${isRobot ? '<span>🤖</span>' : ''}
-                            <span style="color:${h.result === 'passed' ? 'var(--passed)' : 'var(--failed)'}; font-weight:600;">${h.result.toUpperCase()}</span> 
-                            by ${h.executor.split(' ')[0]} 
-                            <span style="opacity:0.4; font-size:10px; margin-left:5px;">${new Date(h.executed_at).toLocaleTimeString()}</span>
-                        </div>
-                    `}).join('');
-                }
-
-                // Show bug button if last execution was a failure
-                const bugBtn = document.getElementById(`bug-btn-${iid}`);
-                if (bugBtn && history[0] && history[0].result === 'failed') {
-                    bugBtn.style.display = 'flex';
-                } else if (bugBtn) {
-                    bugBtn.style.display = 'none';
-                }
-            } catch (e) { }
-        }
-
-        let currentBugItemId = null;
-        let currentRequirementId = null;
-        let currentPastedBlob = null; // 用于存储待上传的图片文件
-
-        async function createBug(iid) {
-            currentBugItemId = iid;
-            currentPastedBlob = null; // 重置
-            const projectId = document.getElementById('projectId').value;
-
-            // Fetch test case details to get requirement link
-            // In a real app we'd get this from the data already loaded
-            const card = document.querySelector(`.card-${iid}`);
-            const title = card.querySelector('.test-title').innerText;
-            const contextInfo = document.getElementById('bug-context-info');
-
-            document.getElementById('bug-target-id').innerText = `#${iid}`;
-            document.getElementById('quick-bug-title').value = `[BUG] Failure in #${iid}: ${title}`;
-
-            // Reset preview
-            document.getElementById('img-preview').style.display = 'none';
-            document.getElementById('bugModalOverlay').style.display = 'flex';
-        }
-
-        function closeBugModal() {
-            document.getElementById('bugModalOverlay').style.display = 'none';
-        }
-
-        async function submitQuickBug() {
-            const projectId = document.getElementById('projectId').value;
-            const title = document.getElementById('quick-bug-title').value;
-            const severity = document.getElementById('bug_severity').value;
-            const priority = document.getElementById('bug_priority').value;
-            const category = document.getElementById('bug_category').value;
-            const source = document.getElementById('bug_source').value;
-            const province = document.getElementById('bug_province').value;
-            const env = document.getElementById('bug_env').value;
-            const steps = document.getElementById('bug_steps').value;
-            const expected = document.getElementById('bug_expected').value;
-            const actual = document.getElementById('bug_actual').value;
-
-            const btn = event.currentTarget;
-
-            if (!title) return alert("Title required");
-
-            btn.disabled = true;
-            btn.innerText = "Reporting...";
-
-            try {
-                let imageMarkdown = "";
-
-                // --- 核心增强：先行上传图片 ---
-                if (currentPastedBlob) {
-                    btn.innerText = "Uploading Evidence...";
-                    const formData = new FormData();
-                    formData.append('file', currentPastedBlob, 'screenshot.png');
-
-                    const uploadRes = await fetch(`/projects/${projectId}/upload`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (uploadRes.ok) {
-                        const uploadData = await uploadRes.json();
-                        imageMarkdown = `\n\n### 🖼️ Evidence Snapshot\n${uploadData.markdown}\n`;
-                    }
-                }
-
-                // Construct Professional Bug Schema
-                const fullDesc = `
-## 🐞 Defect Context
-- **Target Test Case**: #${currentBugItemId}
-- **Detected Environment**: ${env}
-- **Severity**: ${severity}
-- **Priority**: ${priority}
-- **Category**: ${category}
-- **Source**: ${source}
-- **Province**: ${province}
-- **Observed At**: ${new Date().toLocaleString()}
-
-## 📝 Steps to Reproduce
-${steps || "No reproduction steps provided."}
-
-## ✅ Expected Result
-${expected || "No expected result provided."}
-
-## ❌ Actual Result
-${actual || "No actual result provided."}
-${imageMarkdown}
-
----
-*Automatically captured via TestHub Professional Defect Logic*`;
-
-                const res = await fetch(`${Config.GITLAB_URL}/api/v4/projects/${projectId}/issues`, {
-                    method: 'POST',
-                    headers: {
-                        'PRIVATE-TOKEN': Config.GITLAB_PRIVATE_TOKEN,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        title: title,
-                        description: fullDesc,
-                        labels: `type::bug,status::confirmed,severity::${severity},priority::${priority},bug-category::${category},bug-source::${source},province::${province}`
-                    })
-                });
-
-                if (res.ok) {
-                    const bug = await res.json();
-                    alert(`Professional Bug #${bug.iid} created successfully!`);
-                    closeBugModal();
-
-                    // Clear form
-                    document.getElementById('bug_steps').value = '';
-                    document.getElementById('bug_expected').value = '';
-                    document.getElementById('bug_actual').value = '';
-                    currentPastedBlob = null;
-                    document.getElementById('img-preview').style.display = 'none';
-
-                    loadTestCases(true);
-                } else {
-                    throw new Error("GitLab API rejected the report");
-                }
-            } catch (err) {
-                alert("Failed to report bug: " + err.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "Submit Defect";
-            }
-        }
-
-        // Paste Image Support
-        document.addEventListener('paste', function (e) {
-            if (document.getElementById('bugModalOverlay').style.display !== 'flex') return;
-
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-            for (let index in items) {
-                const item = items[index];
-                if (item.kind === 'file' && item.type.includes('image')) {
-                    const blob = item.getAsFile();
-                    currentPastedBlob = blob; // 关键修复：将图片存入缓存变量
-                    const reader = new FileReader();
-                    reader.onload = function (event) {
-                        const preview = document.getElementById('img-preview');
-                        preview.src = event.target.result;
-                        preview.style.display = 'block';
-                    };
-                    reader.readAsDataURL(blob);
-                }
-            }
-        });
-
-        async function loadMatrix() {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return;
-
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.style.display = 'block';
-
-            try {
-                // 1. Fetch all requirements
-                const reqsRes = await fetch(`/projects/${projectId}/requirements`);
-                if (!reqsRes.ok) throw new Error("Failed to fetch requirements");
-                const requirements = await reqsRes.json();
-
-                const container = document.getElementById('matrixResults');
-                if (requirements.length === 0) {
-                    container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:40px; color:var(--text-dim);">No requirements found. Add some in GitLab with "type::requirement" label.</td></tr>';
-                    return;
-                }
-
-                // 2. Fetch details for each requirement
-                const details = await Promise.all(requirements.map(req =>
-                    fetch(`/projects/${projectId}/requirements/${req.iid}`).then(r => r.json())
-                ));
-
-                // Filter Approved Only
-                const approvedReqs = details.filter(r => r.review_state === 'approved');
-
-                if (approvedReqs.length === 0) {
-                    container.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:40px; color:var(--text-dim);">No <b>Approved</b> requirements found. Approve them in the Requirements tab first.</td></tr>';
-                    return;
-                }
-
-                container.innerHTML = approvedReqs.map(req => {
-                    const statusColor = req.state === 'satisfied' || req.state === 'closed' ? 'var(--passed)' : (req.state === 'failed' ? 'var(--failed)' : 'var(--pending)');
-
-                    const caseLinksHtml = req.test_cases.map(tc => `
-                        <a href="${tc.web_url}" target="_blank" class="case-link">
-                            <span class="coverage-dot blob-${tc.result}"></span>
-                            #${tc.iid} ${tc.title}
-                        </a>
-                    `).join('');
-
-                    return `
-                        <tr>
-                            <td><span class="req-id-pill">#${req.iid}</span></td>
-                            <td style="font-weight:600;">${req.title}</td>
-                            <td>
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <div class="status-blob" style="width:8px; height:8px; background:${statusColor}; box-shadow:0 0 5px ${statusColor}"></div>
-                                    <span style="font-size:11px; text-transform:uppercase; font-weight:700; color:${statusColor}">${req.state}</span>
-                                </div>
-                            </td>
-                            <td>
-                                ${caseLinksHtml || '<span style="font-size:12px; color:var(--text-dim);">No test cases linked</span>'}
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-
-            } catch (err) {
-                console.error(err);
-                alert("Matrix Load Failed: " + err.message);
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        async function loadRequirements() {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return;
-
-            const container = document.getElementById('reqResults');
-            container.innerHTML = '<div class="empty-state">Loading Requirements...</div>';
-
-            try {
-                // 1. Fetch Basic List
-                const res = await fetch(`/projects/${projectId}/requirements`);
-                const reqs = await res.json();
-
-                // 2. Fetch Stats & Analysis
-                const statsRes = await fetch(`/projects/${projectId}/requirements/stats`);
-                const stats = await statsRes.json();
-
-                // 3. Update Stats UI
-                document.getElementById('req-coverage-rate').innerText = `${stats.coverage_rate}%`;
-                document.getElementById('req-pass-rate').innerText = `${stats.pass_rate}%`;
-                document.getElementById('req-risk-count').innerText = stats.risk_requirements.length;
-                document.getElementById('req-approved-total').innerText = stats.approved_count;
-
-                const riskIids = stats.risk_requirements.map(r => r.iid);
-
-                container.innerHTML = reqs.map(r => {
-                    const statusInfo = {
-                        'draft': { label: 'Draft', color: 'var(--pending)', next: 'under-review', nextLabel: 'Submit for Review' },
-                        'under-review': { label: 'Reviewing', color: 'var(--blocked)', next: 'approved', nextLabel: 'Approve' },
-                        'approved': { label: 'Approved', color: 'var(--passed)', next: 'rejected', nextLabel: 'Reset/Reject' },
-                        'rejected': { label: 'Rejected', color: 'var(--failed)', next: 'draft', nextLabel: 'Back to Draft' }
-                    }[r.review_state];
-
-                    const isRisk = riskIids.includes(r.iid) && r.review_state === 'approved';
-
-                    return `
-                        <div class="test-card" style="${isRisk ? 'border-left: 4px solid var(--failed);' : ''}">
-                            <div class="test-header" style="cursor:default">
-                                <div class="test-info">
-                                    <div class="status-blob" style="background:${statusInfo.color}; box-shadow: 0 0 10px ${statusInfo.color}"></div>
-                                    <div class="test-title-group">
-                                        <div style="display:flex; align-items:center; gap:8px;">
-                                            <span class="test-iid">#${r.iid}</span>
-                                            ${isRisk ? '<span style="font-size:10px; color:var(--failed); font-weight:700;">⚠ AT RISK</span>' : ''}
-                                        </div>
-                                        <span class="test-title">${r.title}</span>
-                                    </div>
-                                </div>
-                                <div style="display:flex; gap:12px; align-items:center;">
-                                    <span class="tag-badge" style="background:${statusInfo.color}22; color:${statusInfo.color}">${statusInfo.label}</span>
-                                    <button class="btn-shelf" style="padding:4px 12px; font-size:11px; background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1);" 
-                                            onclick="updateReviewStatus(${r.iid}, '${statusInfo.next}')">
-                                        ${statusInfo.nextLabel}
-                                    </button>
-                                    <button class="btn-shelf" style="padding:4px 8px; font-size:11px; background:rgba(255,255,255,0.05); color:white; border:1px solid rgba(255,255,255,0.1);" 
-                                            onclick="checkConflictsForId(${r.iid})" title="Check conflicts">
-                                        ⚖️
-                                    </button>
-                                    ${r.review_state === 'under-review' ? `
-                                        <button class="btn-shelf" style="padding:4px 12px; font-size:11px; background:rgba(239,68,68,0.2); color:var(--failed); border:1px solid var(--failed);" 
-                                                onclick="updateReviewStatus(${r.iid}, 'rejected')">
-                                            Reject
-                                        </button>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }).join('') || '<div class="empty-state">No requirements. Click "+ Req" to add.</div>';
-            } catch (e) {
-                container.innerHTML = `<div class="empty-state" style="color:var(--failed)">Failed to load: ${e.message}</div>`;
-            }
-        }
-
-        async function checkConflictsForId(iid) {
-            const projectId = document.getElementById('projectId').value;
-            const res = await fetch(`/projects/${projectId}/requirements/${iid}`);
-            const data = await res.json();
-
-            checkConflicts({ title: data.title, description: "" });
-        }
-
-        async function checkConflicts(reqData) {
-            const projectId = document.getElementById('projectId').value;
-            const res = await fetch(`/projects/${projectId}/requirements/check-conflicts`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(reqData)
-            });
-            const data = await res.json();
-
-            if (data.conflicts && data.conflicts.length > 0) {
-                renderConflicts(data.conflicts);
-            } else {
-                alert("No conflicts detected. The requirement logic seems consistent.");
-            }
-        }
-
-        function renderConflicts(conflicts) {
-            const list = document.getElementById('conflict-list');
-            list.innerHTML = conflicts.map(c => `
-                <div style="background:rgba(239,68,68,0.1); border-left:3px solid var(--failed); padding:12px; border-radius:4px;">
-                    <b style="color:var(--failed); font-size:13px;">[Conflict with #${c.iid}]</b>
-                    <div style="font-size:14px; margin:4px 0;">${c.title}</div>
-                    <div style="font-size:12px; opacity:0.7;">Reason: ${c.reason}</div>
-                </div>
-            `).join('');
-            document.getElementById('conflictModalOverlay').style.display = 'flex';
-        }
-
-        function closeReqModal() {
-            document.getElementById('reqModalOverlay').style.display = 'none';
-        }
-
-        async function createNewRequirement() {
-            document.getElementById('req_title').value = '';
-            document.getElementById('req_desc').value = '';
-            document.getElementById('reqModalOverlay').style.display = 'flex';
-        }
-
-        async function submitNewRequirement() {
-            const projectId = document.getElementById('projectId').value;
-            const title = document.getElementById('req_title').value;
-            const desc = document.getElementById('req_desc').value;
-            const priority = document.getElementById('req_priority').value;
-            const type = document.getElementById('req_type').value;
-            const province = document.getElementById('req_province').value;
-
-            if (!title) return alert("Title is mandatory");
-
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.innerText = "🛡️ Sentry checking for conflicts...";
-            loadingDiv.style.display = 'block';
-
-            try {
-                // 1. 先行冲突检测
-                const conflictRes = await fetch(`/projects/${projectId}/requirements/check-conflicts`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, description: desc, priority, type })
-                });
-                const conflicts = await conflictRes.json();
-
-                if (conflicts.length > 0) {
-                    loadingDiv.style.display = 'none';
-                    renderConflicts(conflicts); // 显示冲突警告
-                    return; // 拦截创建
-                }
-
-                // 2. 无冲突，创建正式需求 Issue
-                loadingDiv.innerText = "🚀 Deploying Requirement to GitLab...";
-
-                const fullDesc = `
-# 📝 Requirement Specification
-## Background / User Story
-${desc || "No background provided."}
-
-## 🏷️ Metadata
-- **Priority**: ${priority}
-- **Category**: ${type.toUpperCase()}
-- **Province**: ${province.toUpperCase()}
-
----
-*Created via TestHub Professional Requirement Engine*`;
-
-                const res = await fetch(`${Config.GITLAB_URL}/api/v4/projects/${projectId}/issues`, {
-                    method: 'POST',
-                    headers: {
-                        'PRIVATE-TOKEN': Config.GITLAB_PRIVATE_TOKEN,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        title: title,
-                        description: fullDesc,
-                        labels: `type::feature,status::draft,priority::${priority},requirement-type::${type},province::${province}`
-                    })
-                });
-
-                if (res.ok) {
-                    alert("Professional Requirement created and passed Sentry check!");
-                    closeReqModal();
-                    loadRequirements(); // 刷新需求列表
-                }
-            } catch (e) {
-                alert("Creation failed: " + e.message);
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        async function runDeduplicationScan() {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return alert("Select a project first");
-
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.innerText = "🧠 AI analyzing test asset redundancy...";
-            loadingDiv.style.display = 'block';
-
-            try {
-                const res = await fetch(`/projects/${projectId}/test-cases/deduplication-report`);
-                const data = await res.json();
-
-                document.getElementById('dedup-saving-val').innerText = data.estimated_saving;
-                document.getElementById('dedup-group-count').innerText = data.groups.length;
-
-                const list = document.getElementById('dedup-results-list');
-                if (data.groups.length === 0) {
-                    list.innerHTML = '<div style="text-align:center; padding:20px; opacity:0.5;">Great! No redundant test cases found.</div>';
-                } else {
-                    list.innerHTML = data.groups.map(group => `
-                        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); padding:12px; border-radius:8px;">
-                            <div style="font-size:12px; font-weight:700; margin-bottom:8px; color:var(--primary);">Similarity Group</div>
-                            ${group.map((c, idx) => `
-                                <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:4px 0; ${idx > 0 ? 'border-top:1px dashed rgba(255,255,255,0.05);' : ''}">
-                                    <span>#${c.iid} ${c.title}</span>
-                                    ${c.similarity ? `<span style="font-size:11px; background:rgba(99,102,241,0.2); color:var(--accent); padding:2px 6px; border-radius:4px;">${c.similarity}% Match</span>` : '<span style="font-size:11px; opacity:0.5;">Base Case</span>'}
-                                </div>
-                            `).join('')}
-                        </div>
-                    `).join('');
-                }
-
-                document.getElementById('dedupModalOverlay').style.display = 'flex';
-            } catch (e) {
-                alert("Scan failed: " + e.message);
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        async function generateMagicCode(iid) {
-            const projectId = document.getElementById('projectId').value;
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.style.display = 'block';
-
-            try {
-                const res = await fetch(`/projects/${projectId}/test-cases/${iid}/generate-code`, { method: 'POST' });
-                const data = await res.json();
-
-                document.getElementById('code-target-id').innerText = `#${iid}`;
-                document.getElementById('generated-code-box').innerText = data.code;
-                document.getElementById('codeModalOverlay').style.display = 'flex';
-            } catch (err) {
-                alert("Magic failed: " + err.message);
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        function closeCodeModal() {
-            document.getElementById('codeModalOverlay').style.display = 'none';
-        }
-
-        function copyCode() {
-            const content = document.getElementById('generated-code-box').innerText;
-            navigator.clipboard.writeText(content).then(() => alert("Code copied to clipboard!"));
-        }
-
-        let selectedIids = new Set();
-
-        function toggleSelection(iid, event) {
-            event.stopPropagation();
-            const checkbox = event.currentTarget;
-            if (selectedIids.has(iid)) {
-                selectedIids.delete(iid);
-                checkbox.classList.remove('checked');
-            } else {
-                selectedIids.add(iid);
-                checkbox.classList.add('checked');
-            }
-        }
-
-        async function executeBatchPass() {
-            if (selectedIids.size === 0) return alert("Please select test cases first");
-            const projectId = document.getElementById('projectId').value;
-
-            if (!confirm(`Are you sure you want to mark ${selectedIids.size} cases as PASSED?`)) return;
-
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.innerText = `🚀 Batch Processing ${selectedIids.size} items...`;
-            loadingDiv.style.display = 'block';
-
-            try {
-                const tasks = Array.from(selectedIids).map(iid =>
-                    fetch(`/projects/${projectId}/test-cases/${iid}/execute?result=passed`, { method: 'POST' })
-                );
-
-                await Promise.all(tasks);
-
-                selectedIids.clear();
-                alert("Batch execution completed successfully!");
-                loadTestCases();
-            } catch (err) {
-                alert("Batch execution failed: " + err.message);
-            } finally {
-                loadingDiv.innerText = "✨ Synchronizing Data...";
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        async function updateReviewStatus(iid, nextState) {
-            const projectId = document.getElementById('projectId').value;
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.style.display = 'block';
-
-            try {
-                const res = await fetch(`/projects/${projectId}/requirements/${iid}/review?review_state=${nextState}`, {
-                    method: 'POST'
-                });
-                if (!res.ok) throw new Error("Update failed");
-                loadRequirements();
-            } catch (e) {
-                alert(e.message);
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        async function createNewRequirement() {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return alert("Select a project first");
-
-            const title = prompt("Enter Requirement Title:");
-            if (!title) return;
-
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.style.display = 'block';
-
-            try {
-                const res = await fetch(`/projects/${projectId}/requirements`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, description: "New Requirement" })
-                });
-                if (!res.ok) throw new Error("Creation failed");
-                loadRequirements();
-            } catch (e) {
-                alert(e.message);
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        async function exportRTMReport() {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return alert("Project ID Required for Export");
-
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.innerText = "📅 Generating RTM Matrix...";
-            loadingDiv.style.display = 'block';
-
-            try {
-                const response = await fetch(`/projects/${projectId}/rtm-report`);
-                if (!response.ok) throw new Error("RTM Report generation failed");
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `RTM_Report_P${projectId}.md`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                a.remove();
-            } catch (err) {
-                alert("Export Failed: " + err.message);
-            } finally {
-                loadingDiv.innerText = "✨ Synchronizing Data...";
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        async function exportReport() {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return alert("Project ID Required for Export");
-
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.innerText = "🚀 Generating Report...";
-            loadingDiv.style.display = 'block';
-
-            try {
-                const response = await fetch(`/projects/${projectId}/test-report`);
-                if (!response.ok) throw new Error("Report generation failed");
-
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `test_report_p${projectId}.md`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                a.remove();
-            } catch (err) {
-                alert("Export Failed: " + err.message);
-            } finally {
-                loadingDiv.innerText = "✨ Synchronizing Data...";
-                loadingDiv.style.display = 'none';
-            }
-        }
-        let radarChart = null;
-        let provinceChart = null;
-
-        async function renderReportDashboard() {
-            const projectId = document.getElementById('projectId').value;
-            if (!projectId) return;
-
-            // 1. Fetch All Required Data
-            const [statsRes, provinceRes, gateRes, benchRes] = await Promise.all([
-                fetch(`/projects/${projectId}/requirements/stats`),
-                fetch(`/projects/${projectId}/province-quality`),
-                fetch(`/projects/${projectId}/quality-gate`),
-                fetch(`/projects/${projectId}/province-benchmarking`)
-            ]);
-
-            const stats = await statsRes.json();
-            const provinceData = await provinceRes.json();
-            const gate = await gateRes.json();
-            const benchData = await benchRes.json();
-
-            // 2. Render Quality Gate Central Board
-            const updateGateItem = (id, passed) => {
-                const el = document.getElementById(id);
-                const icon = el.querySelector('.gate-icon');
-                if (passed) {
-                    el.classList.add('gate-pass');
-                    el.classList.remove('gate-fail');
-                    icon.innerHTML = '✓';
-                    icon.className = 'gate-icon bg-pass';
-                } else {
-                    el.classList.add('gate-fail');
-                    el.classList.remove('gate-pass');
-                    icon.innerHTML = '✕';
-                    icon.className = 'gate-icon bg-fail';
-                }
-            };
-
-            updateGateItem('gate-req', gate.requirements_covered);
-            updateGateItem('gate-p0', gate.p0_bugs_cleared);
-            updateGateItem('gate-pipe', gate.pipeline_stable);
-            updateGateItem('gate-region', gate.regional_risk_free);
-
-            const stampContainer = document.getElementById('gate-stamp-container');
-            if (gate.is_passed) {
-                stampContainer.innerHTML = '<div class="gate-stamp stamp-pass">PASSED / 准予发布</div>';
-            } else {
-                stampContainer.innerHTML = '<div class="gate-stamp stamp-fail">REJECTED / 质量拦截</div>';
-            }
-
-            // 2.1 Render Regional Benchmarking Table
-            const benchBody = document.getElementById('bench-body');
-            benchBody.innerHTML = benchData.map((d, i) => {
-                const rankBg = i < 3 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)';
-                const rankColor = i < 3 ? 'var(--failed)' : 'var(--text-dim)';
-                const resColor = d.resolution_rate > 80 ? 'var(--passed)' : 'var(--failed)';
-                const barColor = d.risk_score > 60 ? 'var(--failed)' : 'var(--primary)';
-                const barColorEnd = d.risk_score > 60 ? '#f87171' : 'var(--accent)';
-                const scoreColor = d.risk_score > 60 ? 'var(--failed)' : 'var(--text-main)';
-
-                return '<tr>' +
-                    '<td><span class="req-id-pill" style="background:' + rankBg + '; color:' + rankColor + '">#' + (i + 1) + '</span></td>' +
-                    '<td style="font-weight:600;">' + d.province.toUpperCase() + '</td>' +
-                    '<td>' + d.resolved_count + '/' + d.bug_count + '</td>' +
-                    '<td><span style="color:' + resColor + '">' + d.resolution_rate + '%</span></td>' +
-                    '<td>' +
-                    '<div style="display:flex; align-items:center; gap:10px;">' +
-                    '<div class="risk-bar-bg" style="width:60px;">' +
-                    '<div class="risk-bar" style="width:' + d.risk_score + '%; background:linear-gradient(90deg, ' + barColor + ', ' + barColorEnd + ')"></div>' +
-                    '</div>' +
-                    '<span style="font-weight:700; color:' + scoreColor + '">' + d.risk_score + '</span>' +
-                    '</div>' +
-                    '</td>' +
-                    '</tr>';
-            }).join('');
-
-            // 3. Generate Quality Testimony
-            const sortedProvinceData = [...provinceData].sort((a, b) => b.bug_count - a.bug_count);
-            const highRiskProvinces = sortedProvinceData.filter(d => d.bug_count > 0).slice(0, 3);
-            let riskSection = "";
-            if (highRiskProvinces.length > 0) {
-                const provList = highRiskProvinces.map(p => "**" + p.province.toUpperCase() + "**(" + p.bug_count + "项)").join(', ');
-                riskSection = "● **地域风险下钻**:\n  - 检测到高频缺陷省份: " + provList + "\n  - 建议优先对上述地区的部署基线进行合规性回溯。";
-            } else {
-                riskSection = "● **地域风险下钻**:\n  - 各省份质量分布均匀，未发现明显的地域性缺陷聚集。";
-            }
-
-            const testimony = "📜 **版本质量证言 (Quality Testimony)**\n" +
-                "─────────────────────────────────────────────\n" +
-                "● **核心数据总结**:\n" +
-                "  - 本次发布共涉及已审核需求: **" + stats.approved_count + "** 项\n" +
-                "  - 需求追溯覆盖率: **" + stats.coverage_rate + "**%\n" +
-                "  - 最近验证通过率: **" + stats.pass_rate + "**%\n" +
-                "  - 当前拦截缺陷: **" + document.getElementById('stat-bugs').innerText + "** 个\n\n" +
-                riskSection + "\n\n" +
-                "● **准入合规性判定**:\n" +
-                (stats.risk_requirements.length === 0 ? "✅ **质量极优**: 所有需求已完成覆盖且测试通过。" : "⚠ **风险提醒**: 仍有 **" + stats.risk_requirements.length + "** 项需求存在风险或未覆盖。") + "\n\n" +
-                "● **QA 团队建议**:\n" +
-                "  基于以上客观数据，版本质量" + (stats.pass_rate > 90 ? "符合准发布标准，建议准予转产。" : "仍有待提升，建议修复核心风险后再行评估。") + "\n" +
-                "─────────────────────────────────────────────\n" +
-                "*Generated by TestHub AI Intelligence*";
-
-            document.getElementById('testimony-content').innerText = testimony;
-
-            // 4. Render Radar Chart
-            const ctx = document.getElementById('qualityRadarChart').getContext('2d');
-            if (radarChart) radarChart.destroy();
-            radarChart = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['Requirement Coverage', 'Test Execution', 'Defect Fix Rate', 'CI/CD Stability', 'Audit Compliance'],
-                    datasets: [{
-                        label: 'Current Release Quality',
-                        data: [stats.coverage_rate, stats.pass_rate, 85, 92, 100],
-                        fill: true,
-                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                        borderColor: 'rgb(99, 102, 241)',
-                        pointBackgroundColor: 'rgb(99, 102, 241)',
-                        pointBorderColor: '#fff'
-                    }]
-                },
-                options: {
-                    scales: {
-                        r: {
-                            angleLines: { color: 'rgba(255,255,255,0.1)' },
-                            grid: { color: 'rgba(255,255,255,0.1)' },
-                            suggestedMin: 0,
-                            suggestedMax: 100,
-                            ticks: { display: false }
-                        }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-
-            // 5. Render Province Heatmap
-            const pCtx = document.getElementById('provinceHeatmapChart').getContext('2d');
-            if (provinceChart) provinceChart.destroy();
-            const topProvinces = sortedProvinceData.slice(0, 8);
-            provinceChart = new Chart(pCtx, {
-                type: 'polarArea',
-                data: {
-                    labels: topProvinces.map(d => d.province.toUpperCase()),
-                    datasets: [{
-                        data: topProvinces.map(d => d.bug_count),
-                        backgroundColor: topProvinces.map((_, i) => "hsla(" + (i * 30) + ", 70%, 50%, 0.6)"),
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    scales: {
-                        r: {
-                            grid: { color: 'rgba(255,255,255,0.05)' },
-                            ticks: { display: false }
-                        }
-                    },
-                    plugins: {
-                        legend: { position: 'right', labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } } }
-                    }
-                }
-            });
-
-            // 6. Load Global Quality Alerts
-            refreshGlobalAlerts();
-        }
-
-        function copyTestimony() {
-            const content = document.getElementById('testimony-content').innerText;
-            navigator.clipboard.writeText(content).then(() => alert("Testimony copied to clipboard!"));
-        }
-
-        // 全网同步预警黑科技
-        async function refreshGlobalAlerts() {
-            try {
-                const response = await fetch('/global/alerts');
-                const alerts = await response.json();
-
-                const panel = document.getElementById('globalAlertsPanel');
-                const listDiv = document.getElementById('globalAlertsList');
-
-                if (alerts.length === 0) {
-                    panel.style.display = 'none';
-                    return;
-                }
-
-                panel.style.display = 'block';
-                listDiv.innerHTML = alerts.map(a => {
-                    const levelIcon = a.level === 'critical' ? '🔥' : '⚠️';
-                    const evidenceIcon = a.has_evidence ? '📸' : '';
-                    return `
-                        <div class="alert-item">
-                            <div class="alert-pulse"></div>
-                            <span class="alert-province">${a.province}</span>
-                            <span style="flex:1; color:var(--text-main);">${levelIcon} ${a.title} ${evidenceIcon}</span>
-                            <span style="color:var(--text-dim); font-size:12px;">${a.time}</span>
-                        </div>
-                    `;
-                }).join('');
-            } catch (e) {
-                console.error('Failed to load global alerts:', e);
-            }
-        }
-
-        // 自动刷新全网预警 (每30秒)
-        setInterval(() => {
-            const reportsView = document.getElementById('reportsView');
-            if (reportsView.style.display !== 'none') {
-                refreshGlobalAlerts();
-            }
-        }, 30000);
-
-        async function loadAssetLibrary() {
-            const loadingDiv = document.getElementById('loading');
-            const filterLabel = document.getElementById('assetFilter')?.value || "";
-            loadingDiv.style.display = 'block';
-            try {
-                const url = filterLabel ? `/ assets / test - cases ? label = ${encodeURIComponent(filterLabel)}` : '/assets/test-cases';
-                const res = await fetch(url);
-                const assets = await res.json();
-                const list = document.getElementById('assetList');
-
-                if (assets.length === 0) {
-                    list.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-dim);">No reusable assets found in baseline project.</div>';
-                } else {
-                    list.innerHTML = assets.map(a => `
-            < div class= "asset-card" >
-                            <div class="asset-info">
-                                <h4>${a.title}</h4>
-                                <div class="asset-meta">
-                                    <span>${a.priority}</span>
-                                    <span>${a.test_type}</span>
-                                    <span>${a.steps_count} Steps</span>
-                                </div>
-                            </div>
-                            <button class="btn-primary" style="padding:8px 16px; font-size:12px;" 
-                                onclick="importAsset(${a.iid}, ${a.project_id})">Import</button>
-                        </div >
-                `).join('');
-                }
-                document.getElementById('assetModalOverlay').style.display = 'flex';
-            } catch (e) {
-                alert("Failed to load asset library");
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        function closeAssetModal() {
-            document.getElementById('assetModalOverlay').style.display = 'none';
-        }
-
-        async function importAsset(iid, assetProjectId) {
-            const targetProjectId = document.getElementById('projectId').value;
-            if (!targetProjectId) return alert("Select a target project first");
-
-            const loadingDiv = document.getElementById('loading');
-            loadingDiv.innerText = "🚚 Cloning Asset...";
-            loadingDiv.style.display = 'block';
-
-            try {
-                const res = await fetch(`/ projects / ${targetProjectId} / test - cases /import -from - asset ? asset_iid = ${iid} & asset_project_id=${assetProjectId}`, {
-                    method: 'POST'
-                });
-                const data = await res.json();
-                if (data.status === 'success') {
-                    alert("Asset imported successfully!");
-                    closeAssetModal();
-                    loadTestCases();
-                } else {
-                    throw new Error(data.detail || "Import failed");
-                }
-            } catch (e) {
-                alert(e.message);
-            } finally {
-                loadingDiv.innerText = "✨ Synchronizing Data...";
-                loadingDiv.style.display = 'none';
-            }
-        }
-
-        // Initialize User Info and Global Interceptors
-        window.addEventListener('load', async () => {
-            const user = await Auth.getCurrentUser();
-            if (user) {
-                document.getElementById('user-display-name').innerText = user.full_name || user.username;
-                document.getElementById('user-display-dept').innerText = user.organization_name || 'Individual';
-                document.getElementById('user-avatar').innerText = (user.full_name || user.username).charAt(0).toUpperCase();
-
-                // Store user for form autofill
-                window.currentUser = user;
-            }
-        });
-
-        // 修改 fetch 调用，使用统一工具类（部分核心逻辑示例，后续需全量替换）
-        async function apiCall(url, options = {}) {
-            return Api.request(url, options);
-        }
-
-    </script>
-    <script>
-        // Frontend Initialization & User Info Population
-        window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const user = await Auth.getCurrentUser();
-                if (user) {
-                    // Update Sidebar
-                    const nameEl = document.getElementById('user-display-name');
-                    if (nameEl) nameEl.innerText = user.full_name;
-
-                    const dept = user.department_code || 'No Dept';
-                    const loc = (user.location && user.location.location_name) ? user.location.location_name : 'Global';
-                    const deptEl = document.getElementById('user-display-dept');
-                    if (deptEl) deptEl.innerText = `${dept} • ${loc}`;
-
-                    // Update Header Badge
-                    if (user.location && user.location.location_name) {
-                        const badge = document.getElementById('data-scope-badge');
-                        const provSpan = document.getElementById('user-province');
-                        if (badge && provSpan) {
-                            provSpan.innerText = user.location.location_name;
-                            badge.style.display = 'flex';
-                        }
-                    }
-
-                    // Also update avatar if possible (optional)
-                    const avatar = document.getElementById('user-avatar');
-                    if (avatar) avatar.innerText = user.full_name.charAt(0).toUpperCase();
-                }
-            } catch (e) {
-                console.error("Failed to init user info", e);
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("🚀 Test Hub Modularized Core Initialized.");
         });
     </script>
 </body>

@@ -8,7 +8,7 @@ from devops_collector.models.base_models import User
 # Assuming we have a get_db dependency somewhere, typically in api/deps.py or similar. 
 # For now I'll check test_hub/main.py or create a simple one if needed.
 # devops_collector/config.py might have SessionLocal
-from devops_collector.config import SessionLocal
+from devops_collector.auth.database import SessionLocal
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 

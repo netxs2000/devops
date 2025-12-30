@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional, List
 from uuid import UUID
 
@@ -25,8 +25,13 @@ class LocationInfo(BaseModel):
     location_name: str
     region: Optional[str] = None
     
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
+class DepartmentInfo(BaseModel):
+    org_id: str
+    org_name: str
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class UserResponse(BaseModel):
     global_user_id: UUID
@@ -35,6 +40,7 @@ class UserResponse(BaseModel):
     employee_id: Optional[str]
     is_active: bool
     location: Optional[LocationInfo] = None
+    department: Optional[DepartmentInfo] = None
 
     class Config:
         orm_mode = True

@@ -70,3 +70,30 @@ def authenticate_user(db: Session, email: str, password: str):
     if not verify_password(password, user.credential.password_hash):
         return False
     return user
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    # Note: get_db_placeholder is a trick to avoid circular import if needed, 
+    # but here we'll assume it's passed or handled.
+    from devops_collector.auth.database import SessionLocal # Local import to avoid circular issues
+    
+    auth_db = SessionLocal()
+    try:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            email: str = payload.get("sub")
+            if email is None:
+                raise HTTPException(status_code=401, detail="Could not validate credentials")
+        except JWTError:
+            raise HTTPException(status_code=401, detail="Could not validate credentials")
+            
+        user = get_user_by_email(auth_db, email=email)
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    finally:
+        auth_db.close()
+
+def get_current_active_user(current_user: User = Depends(get_current_user)):
+    if not current_user.is_active:
+        raise HTTPException(status_code=400, detail="Inactive user")
+    return current_user

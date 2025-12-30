@@ -367,6 +367,32 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label>📎 需求原型/说明附件</label>
+                    <div id="uploadArea" style="
+                        border: 2px dashed var(--card-border);
+                        border-radius: 12px;
+                        padding: 2rem;
+                        text-align: center;
+                        cursor: pointer;
+                        transition: all 0.3s;
+                        background: rgba(255, 255, 255, 0.02);
+                        margin-bottom: 1rem;
+                    " onmouseover="this.style.borderColor='#4facfe';this.style.background='rgba(79, 172, 254, 0.05)'"
+                        onmouseout="this.style.borderColor='var(--card-border)';this.style.background='rgba(255, 255, 255, 0.02)'"
+                        onclick="document.getElementById('fileInput').click()">
+                        <div style="font-size: 2rem; margin-bottom: 1rem;">📁</div>
+                        <div style="font-weight: 500;">点击或拖拽需求文档至此处上传</div>
+                        <div style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 0.5rem;">支持 PDF,
+                            Word, 图片等</div>
+                        <input type="file" id="fileInput" style="display:none" multiple
+                            onchange="handleFileUpload(event)">
+                    </div>
+                    <div id="filePreview"
+                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem;">
+                    </div>
+                </div>
+
                 <button type="submit" class="submit-btn" id="submitBtn">
                     提交需求
                 </button>
@@ -383,6 +409,7 @@
         const form = document.getElementById('requirementForm');
         const submitBtn = document.getElementById('submitBtn');
         const alertBox = document.getElementById('alertBox');
+        let uploadedAttachments = [];
 
         async function initPage() {
             if (!Auth.isLoggedIn()) {
@@ -395,6 +422,41 @@
                 document.getElementById('reporterSection').style.display = 'flex';
                 document.getElementById('reporterName').innerText = `${user.full_name || user.username} (${user.organization_name || 'Individual'})`;
                 document.getElementById('reporterAvatar').innerText = (user.full_name || user.username).charAt(0).toUpperCase();
+            }
+        }
+
+        async function handleFileUpload(event) {
+            const files = event.target.files;
+            const projectId = document.getElementById('projectId').value;
+
+            if (!projectId) {
+                alert('请先输入项目 ID，以便我们将附件归档至正确的项目。');
+                return;
+            }
+
+            for (const file of files) {
+                const previewItem = document.createElement('div');
+                previewItem.style = "position:relative; background: var(--input-bg); border-radius: 8px; padding: 0.5rem; text-align: center;";
+                previewItem.innerHTML = `<div class="loading" style="width:16px; height:16px; margin: 10px auto;"></div><div style="font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</div>`;
+                document.getElementById('filePreview').appendChild(previewItem);
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch(`/service-desk/upload?project_id=${projectId}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+
+                    if (result.markdown) {
+                        uploadedAttachments.push(result.markdown);
+                        previewItem.innerHTML = `<div style="font-size: 1.5rem;">📄</div><div style="font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</div><div style="color: #00f2fe; font-size: 0.75rem;">已准备</div>`;
+                    }
+                } catch (error) {
+                    previewItem.innerHTML = `<div style="color: #f5576c;">❌</div><div style="font-size: 0.75rem;">失败</div>`;
+                }
             }
         }
 
@@ -417,7 +479,8 @@
                 req_type: document.getElementById('reqType').value,
                 priority: document.getElementById('priority').value,
                 province: document.getElementById('province').value.trim(),
-                expected_delivery: document.getElementById('expectedDelivery').value || null
+                expected_delivery: document.getElementById('expectedDelivery').value || null,
+                attachments: uploadedAttachments
             };
 
             const projectId = document.getElementById('projectId').value;

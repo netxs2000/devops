@@ -1,6 +1,12 @@
 # DevOps Collector 配置文件示例
 # 复制此文件为 config.ini 并填写实际配置
 
+[ai]
+# LLM Deepseek实例 URL
+base_url = https://platform.deepseek.com
+# Deepseek Access Token
+api_key = sk-d71dad8ac0dc4ad490099a729c561172
+
 [database]
 # PostgreSQL 数据库连接 URI
 uri = postgresql://gitlab_collector:password@localhost:5432/gitlab_data

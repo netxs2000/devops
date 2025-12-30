@@ -1,7 +1,7 @@
 # DevOps 效能平台需求规格说明书 (SRS)
 
 **项目名称**: DevOps Data Collector & Analytics Platform
-**版本**: 3.3.0 (FinOps & AI Extension)
+**版本**: 3.7.0 (AI QA & Pydantic V2)
 **日期**: 2025-12-20
 **密级**: 内部公开
 
@@ -135,9 +135,9 @@
 *   **描述**: 追踪任务在各状态的停留时间，识别“忙碌的等待”。
 *   **验收标准**: 自动提取 'blocked' 标签时间，计算 Flow Efficiency = (Cycle Time - Wait Time) / Cycle Time。
 
-#### R-ANALYTICS-13: AI 智能归因 (AI Work Item Analysis) (New)
-*   **描述**: 利用 LLM 对非结构化 Commit Message 和 Issue Description 进行语义分析。
-*   **验收标准**: 自动填充 `ai_category` (Feature/Maintenance/Internal) 准确率需 > 80%，并提供摘要。
+#### R-ANALYTICS-13: AI 智能归因与测试生成 (AI QA) (New)
+*   **描述**: 利用 LLM 对非结构化 Commit Message 和 Issue Description 进行语义分析，并驱动 **AI 自动化测试用例生成 (AC-to-Steps)**。
+*   **验收标准**: 自动填充 `ai_category` 准确率 > 80%；自动生成的测试步骤应覆盖 100% 的验收标准 (Acceptance Criteria)。
 #### R-NOTIFY-01: 多渠道风险告警
 *   **描述**: 支持基于异常指标（进度落后、质量红线、跨项目阻塞）的自动推送。
 *   **验收标准**: 支持企业微信、飞书、钉钉三方渠道，延迟 < 5min。

@@ -96,3 +96,10 @@ class Config:
     JENKINS_TOKEN = config_parser.get('jenkins', 'token', fallback=os.getenv('JENKINS_TOKEN', ''))
     JENKINS_SYNC_INTERVAL_HOURS = config_parser.getint('jenkins', 'sync_interval_hours', fallback=12)
     JENKINS_BUILD_SYNC_LIMIT = config_parser.getint('jenkins', 'build_sync_limit', fallback=100)
+
+    # ============================================
+    # AI / LLM Configuration (NEW)
+    # ============================================
+    AI_API_KEY = config_parser.get('ai', 'api_key', fallback=os.getenv('AI_API_KEY', ''))
+    AI_BASE_URL = config_parser.get('ai', 'base_url', fallback=os.getenv('AI_BASE_URL', 'https://api.openai.com/v1'))
+    AI_MODEL = config_parser.get('ai', 'model', fallback=os.getenv('AI_MODEL', 'gpt-4o'))

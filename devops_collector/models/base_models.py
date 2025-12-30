@@ -185,17 +185,19 @@ class User(Base):
 
 
     # 组织与地域属性 (用于数据隔离与权限控制)
-    department_id = Column(UUID(as_uuid=True), ForeignKey('mdm_organizations.global_org_id'))  # 所属部门/组织
+    department_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))  # 所属部门/组织
     location_id = Column(String(6), ForeignKey('mdm_location.location_id'))  # 所属地理位置（关联 mdm_location）
+    
+    # [P5] RBAC 权限角色
+    role = Column(String(50), default="guest") # admin, maintainer, tester, guest
     
     # 关联关系
     department = relationship("Organization", foreign_keys=[department_id])
     location = relationship("Location", foreign_keys=[location_id])
-    # identities = relationship("IdentityMapping", back_populates="user", cascade="all, delete-orphan") # Deprecated or kept for compat?
-    # Keeping IdentityMapping model for now but might need adjustment.
     
     __table_args__ = (
         Index('idx_identity_map', identity_map, postgresql_using='gin'),
+        Index('idx_user_role', role),
     )
 
 
