@@ -5,7 +5,7 @@
 # LLM Deepseek实例 URL
 base_url = https://platform.deepseek.com
 # Deepseek Access Token
-api_key = sk-d71dad8ac0dc4ad490099a729c561172
+api_key = sk-XXXXXXXXXXXXXX
 
 [database]
 # PostgreSQL 数据库连接 URI
