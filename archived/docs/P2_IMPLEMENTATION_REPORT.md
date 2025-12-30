@@ -80,7 +80,7 @@ python scripts/init_mdm_location.py
 
 ### 2. **调整数据过滤逻辑** ✅
 
-**文件**: `test_hub/main.py`
+| `devops_portal/main.py` | 🔧 修改 | `update_requirement_review_state`: 需求评审通知 |
 
 **修改的API端点**:
 - `get_province_quality` (第398行)
@@ -109,7 +109,7 @@ if user_province != '全国' and province != user_province:
 
 ### 3. **新增干系人查询辅助函数** ✅
 
-**文件**: `test_hub/main.py` (第135-230行)
+| `devops_portal/main.py` | 🔧 修改 | `update_requirement_review_state`: 需求评审通知 | (第135-230行)
 
 #### 3.1 `get_project_stakeholders()`
 **功能**: 获取项目干系人的用户ID列表
@@ -152,7 +152,7 @@ async def get_project_stakeholders(project_id: int) -> List[str]:
 
 ### 4. **质量门禁场景改造** ✅
 
-**文件**: `test_hub/main.py`  
+| `devops_portal/main.py` | 🔧 修改 | `update_requirement_review_state`: 需求评审通知 |  
 **函数**: `get_quality_gate` (第543-607行)
 
 **变更内容**:
@@ -194,7 +194,7 @@ if not is_all_passed:
 
 ### 5. **测试执行失败场景改造** ✅
 
-**文件**: `test_hub/main.py`  
+| `devops_portal/main.py` | 🔧 修改 | `update_requirement_review_state`: 需求评审通知 |  
 **函数**: `execute_test_case` (第809-963行)
 
 **变更内容**:
@@ -248,7 +248,7 @@ asyncio.create_task(push_notification(
 
 ### 6. **需求评审场景改造** ✅
 
-**文件**: `test_hub/main.py`  
+| `devops_portal/main.py` | 🔧 修改 | `update_requirement_review_state`: 需求评审通知 |  
 **函数**: `update_requirement_review_state` (第1825-1905行)
 
 **新增内容**:

@@ -91,7 +91,7 @@ def test_province_data_isolation():
     print("\n" + "=" * 80)
     print("测试完成！")
     print("\n【手动验证步骤】:")
-    print("1. 启动TestHub服务: cd test_hub && uvicorn main:app --reload --port 8001")
+    print("1. 启动DevOpsPortal服务: cd devops_portal && uvicorn main:app --reload --port 8001")
     print("2. 注册两个测试用户（一个province='nationwide'，一个province='guangdong'）")
     print("3. 登录获取Token并替换本脚本中的 REPLACE_WITH_ACTUAL_TOKEN")
     print("4. 重新运行本脚本: python scripts/test_province_isolation.py")

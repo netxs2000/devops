@@ -48,7 +48,7 @@ python scripts/init_purchase_contracts.py
 python scripts/init_revenue_contracts.py
 
 ### 2.5 服务台门户部署 (Service Desk Web Portal)
-*   **资源部署**: 将 `test_hub/static/` 目录下的所有 HTML/CSS/JS 文件部署至 Nginx 静态服务目录，或确保 FastAPI 应用已挂载静态目录。
+*   **资源部署**: 将 `devops_portal/static/` 目录下的所有 HTML/CSS/JS 文件部署至 Nginx 静态服务目录，或确保 FastAPI 应用已挂载静态目录。
 *   **认证配置**: 确保 `config.ini` 中 `[security]` 章节已配置 `secret_key` (用于 JWT 签名) 和 `token_expire_minutes`。
 *   **通知服务**: 确保 RabbitMQ 服务运行正常，该组件负责支撑 SSE 实时推送功能。
 ```

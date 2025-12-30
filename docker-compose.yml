@@ -1,0 +1,81 @@
+services:
+  # 1. 后端 API 服务 (FastAPI + Test Hub)
+  api:
+    build: .
+    image: devops-platform:latest
+    container_name: devops-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./persistence_data:/app/data
+    environment:
+      - STORAGE__DATA_DIR=/app/data
+      - DB_HOST=db
+      - RABBIT_HOST=mq
+      - DATABASE__URI=postgresql://postgres:devops123@db:5432/devops_db
+      - RABBITMQ__HOST=mq
+      - RABBITMQ__USER=guest
+      - RABBITMQ__PASSWORD=guest
+    depends_on:
+      - db
+      - mq
+    command: uvicorn devops_portal.main:app --host 0.0.0.0 --port 8000
+
+  # 2. 数据异步采集 Worker
+  worker:
+    build: .
+    image: devops-platform:latest
+    container_name: devops-worker
+    volumes:
+      - .:/app
+      - ./persistence_data:/app/data
+    environment:
+      - STORAGE__DATA_DIR=/app/data
+      - DB_HOST=db
+      - RABBIT_HOST=mq
+      - DATABASE__URI=postgresql://postgres:devops123@db:5432/devops_db
+    depends_on:
+      - db
+      - mq
+    command: python -m devops_collector.worker
+
+  # 3. 任务调度器
+  scheduler:
+    build: .
+    image: devops-platform:latest
+    container_name: devops-scheduler
+    environment:
+      - DB_HOST=db
+      - RABBIT_HOST=mq
+    depends_on:
+      - db
+      - mq
+    command: python -m devops_collector.scheduler
+
+  # 4. PostgreSQL 数据库
+  db:
+    image: postgres:15-alpine
+    container_name: devops-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=devops123
+      - POSTGRES_DB=devops_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 5. RabbitMQ 消息队列
+  mq:
+    image: rabbitmq:3-management-alpine
+    container_name: devops-mq
+    ports:
+      - "5672:5672"
+      - "15672:15672" # 管理后台
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  postgres_data:
+  rabbitmq_data:

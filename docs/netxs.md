@@ -14,7 +14,7 @@
 *   **Pydantic V2 全面重构 (Architecture Modernization)**:
     *   **零拷贝映射**: 引入 `from_attributes=True`，实现了 SQLAlchemy ORM 模型到 Pydantic DTO 的自动、高性能转换，消灭了大量冗余的手动拼装代码。
     *   **语义解耦映射**: 利用 `validation_alias` 和 `Field` 别名机制，成功实现了数据库物理字段（如 `global_issue_id`）与业务逻辑字段（如 `id`）的优雅解耦。
-    *   **V2 标准对齐**: 升级了 `auth`、`core` 和 `test_hub` 目录下的全量 Schema，将旧版 `Config` 类迁移至 `model_config` 和 `field_validator`。
+    *   **V2 标准对齐**: 升级了 `auth`、`core` 和 `devops_portal` 目录下的全量 Schema，将旧版 `Config` 类迁移至 `model_config` 和 `field_validator`。
 
 *   **配置与分页治理 (Robustness & Standards)**:
     *   **配置标准化**: 适配了 `config.ini` 中的 `[ai]` 配置段，确保代码与环境配置的工业级一致性。
@@ -92,7 +92,7 @@
     *   **身份映射验证**: 编写并执行 `test_identity_mapping.py`，成功验证了"新用户注册 -> 管理员审批绑定 GitLab ID -> 用户登录 -> 提交对应的 Bug/需求"的全链路流程。
     *   **各实体生命周期管理**: 
         *   实现了 `Bug`、`Requirement` 实体在服务台的申报API (提交-关联GitLab Issue)。
-        *   落地了 `TestCase` 的管理逻辑 (`test_hub/main.py`)，包括 **测试步骤解析** (`TestStep`), **关联需求** (`requirement_id`), **关联缺陷** (`linked_bugs`) 以及 **执行结果回写**。
+        *   落地了 `TestCase` 的管理逻辑 (`devops_portal/main.py`)，包括 **测试步骤解析** (`TestStep`), **关联需求** (`requirement_id`), **关联缺陷** (`linked_bugs`) 以及 **执行结果回写**。
         *   实现了基于 `status::satisfied` 和 `status::failed` 标签的 **需求健康度自动同步** (`sync_requirement_health_to_gitlab`)。
 
 *   **工程依赖更新**:
@@ -100,7 +100,7 @@
 
 ### 🚧 遗留问题与障碍 (Blockers)
 
-*   **前端适配**: 目前认证与提单流程仅在 API 和测试脚本层面跑通，前端页面 (`test_hub/static/`) 尚未完全适配新的 Token 认证机制。
+*   **前端适配**: 目前认证与提单流程仅在 API 和测试脚本层面跑通，前端页面 (`devops_portal/static/`) 尚未完全适配新的 Token 认证机制。
 
 ### 🚀 下一步计划 (Next Steps)
 
@@ -307,8 +307,8 @@
 ### ✅ 主要完成的工作 (Highlights)
 
 *   **测试枢纽原型开发 (Test Management Hub Prototyping)**：
-    *   **后端逻辑**: 基于 FastAPI 开发 `test_hub/main.py`，实现 Issue 智能解析引擎，将 Markdown 描述自动转化为结构化测试步骤。
-    *   **全栈交互**: 构建 `test_hub/static/index.html` 仪表盘，支持实时执行测试、自动更新 GitLab 状态及 MR 评审统计看板。
+    *   **后端逻辑**: 基于 FastAPI 开发 `devops_portal/main.py`，实现 Issue 智能解析引擎，将 Markdown 描述自动转化为结构化测试步骤。
+    *   **全栈交互**: 构建 `devops_portal/static/index.html` 仪表盘，支持实时执行测试、自动更新 GitLab 状态及 MR 评审统计看板。
     *   **实时同步**: 配置 Webhook 处理机制，实现 GitLab 与本地枢纽的双向同步。
 
 *   **标签自动化与质量守门员 (Labeling & Quality Gate)**：
@@ -318,7 +318,7 @@
 *   **流程标准化与文档化 (Standardization & Documentation)**：
     *   **高标准模板**: 在 `.gitlab/` 集成 `Bug.md`, `Requirement.md`, `TestCase.md` 及 MR 默认模板，强制引导结构化输入。
     *   **权威文档**: 发布 `GITLAB_METRICS_DATA_SOURCES.md`（度量溯源）与 `ISSUE_LABEL_ENFORCEMENT_GUIDE.md`（标签指南）。
-    *   **部署指南**: 编写 `test_hub/WEBHOOK_SETUP_GUIDE.md`，打通研发与测试的协同配置路径。
+    *   **部署指南**: 编写 `devops_portal/WEBHOOK_SETUP_GUIDE.md`，打通研发与测试的协同配置路径。
 
 *   **环境治理与清理 (Cleanliness & Governance)**：
     *   **代码库瘦身**: 删除了 `devops_collector/models/` 目录下过时的架构分析与重构报告，确保核心代码库的简洁与聚焦。

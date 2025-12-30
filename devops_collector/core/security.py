@@ -63,3 +63,90 @@ def apply_plugin_privacy_filter(db: Session, query: Query, model_class: Any, cur
         return query.filter(User.department_id.in_(scope_ids))
 
     return query
+
+
+def get_user_data_scope_ids(user: User) -> List[str]:
+    """[P4] 获取用户数据权限范围内的所有地点 ID (含子级)。"""
+    user_location = getattr(user, 'location', None)
+    if not user_location:
+        return [] # 全国权限（通过短名称 '全国' 判断，此处返回 ID 为空）
+    
+    # 递归收集所有子级 ID
+    scope_ids = [user_location.location_id]
+    
+    def collect_children(loc):
+        for child in loc.children:
+            scope_ids.append(child.location_id)
+            collect_children(child)
+            
+    collect_children(user_location)
+    return scope_ids
+
+def filter_issues_by_province(db: Session, issues: List[dict], current_user: User) -> List[dict]:
+    """[P4 升级版] 基于 MDM Location 树进行数据权限隔离。
+    
+    - 全国权限 (Global): user.location 为空 -> 返回全量
+    - 级联权限 (Regional): 返回用户所属地点及其所有下级地点的数据
+    """
+    user_location = getattr(current_user, 'location', None)
+    
+    # 如果没有 location 记录，视为集团/全国权限
+    if not user_location:
+        return issues
+        
+    # 获取用户的数据覆盖范围 (当前地点 + 所有子地点)
+    scope_loc_ids = get_user_data_scope_ids(current_user)
+    
+    # 获取用户地点的短名称列表
+    from devops_collector.models.base_models import Location
+    scope_short_names = [
+        loc.short_name for loc in db.query(Location.short_name).filter(Location.location_id.in_(scope_loc_ids)).all()
+    ]
+
+    filtered = []
+    for issue in issues:
+        labels = issue.get('labels', [])
+        province_tag = "nationwide"
+        for l in labels:
+            if l.startswith("province::"):
+                province_tag = l.split("::")[1]
+                break
+        
+        # 匹配逻辑：如果标签中的地点名称在用户的数据范围内，则允许访问
+        if province_tag in scope_short_names:
+            filtered.append(issue)
+            
+    return filtered
+
+def filter_issues_by_privacy(db: Session, issues: List[dict], current_user: User) -> List[dict]:
+    """综合维度数据权限隔离（地域 + 组织）。
+
+    依据登录用户的 MDM 属性应用双重过滤机制：
+    1. 地域过滤：基于地理位置树进行级联控制 (Region Tree)。
+    2. 组织过滤：基于部门 ID 进行无限级向下递归控制 (Dept Tree)。
+    """
+    # 1. 地域过滤
+    filtered_by_loc = filter_issues_by_province(db, issues, current_user)
+    
+    # 2. 组织过滤
+    user_dept_id = getattr(current_user, 'department_id', None)
+    if not user_dept_id:
+        return filtered_by_loc
+        
+    scope_org_ids = get_user_org_scope_ids(db, current_user)
+    
+    final_filtered = []
+    for issue in filtered_by_loc:
+        labels = issue.get('labels', [])
+        dept_tag = None
+        for l in labels:
+            if l.startswith("dept::"):
+                dept_tag = l.split("::")[1]
+                break
+        
+        # 如果没有部门标签，视为公共数据或尚未归类，保留输出
+        # 如果有部门标签，则必须在授权范围内
+        if not dept_tag or dept_tag in scope_org_ids:
+            final_filtered.append(issue)
+            
+    return final_filtered

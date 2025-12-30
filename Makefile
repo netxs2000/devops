@@ -1,88 +1,51 @@
-.PHONY: help install install-dev test lint format clean init-db deploy-views run-scheduler run-worker verify-data
+# DevOps Platform 自动化运维方案
 
-# 默认目标
-help:
-	@echo "DevOps Collector - 常用命令"
-	@echo ""
-	@echo "环境管理:"
-	@echo "  make install          - 安装生产依赖"
-	@echo "  make install-dev      - 安装开发依赖"
-	@echo "  make clean            - 清理临时文件"
-	@echo ""
-	@echo "数据库管理:"
-	@echo "  make init-db          - 初始化数据库和组织架构"
-	@echo "  make deploy-views     - 部署分析视图到数据库"
-	@echo ""
-	@echo "代码质量:"
-	@echo "  make test             - 运行单元测试"
-	@echo "  make test-cov         - 运行测试并生成覆盖率报告"
-	@echo "  make lint             - 代码检查 (flake8)"
-	@echo "  make format           - 代码格式化 (black)"
-	@echo "  make type-check       - 类型检查 (mypy)"
-	@echo ""
-	@echo "运行服务:"
-	@echo "  make run-scheduler    - 启动调度器"
-	@echo "  make run-worker       - 启动数据采集 Worker"
-	@echo ""
-	@echo "数据验证:"
-	@echo "  make verify-data      - 运行数据完整性验证"
+.PHONY: help init test build up down logs sync-all
 
-# 环境管理
-install:
+# 颜色定义
+YELLOW := \033[1;33m
+GREEN := \033[1;32m
+RESET := \033[0m
+
+help: ## 显示帮助信息
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(YELLOW)%-20s$(RESET) %s\n", $$1, $$2}'
+
+init: ## 初始化系统（安装依赖、初始化数据库）
+	@echo "$(GREEN)🚀 Initializing DevOps Platform...$(RESET)"
 	pip install -r requirements.txt
-
-install-dev:
-	pip install -r requirements.txt
-	pip install -r requirements-dev.txt
-	pip install -e .
-
-clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.log" -delete
-	rm -rf .pytest_cache .coverage htmlcov/ dist/ build/ *.egg-info
-
-# 数据库管理
-init-db:
 	python scripts/init_discovery.py
 	python scripts/init_cost_codes.py
 	python scripts/init_labor_rates.py
+	python scripts/init_purchase_contracts.py
+	python scripts/init_revenue_contracts.py
 
-deploy-views:
-	@echo "请手动执行以下命令部署视图:"
-	@echo "psql -d devops_db -f devops_collector/sql/PROJECT_OVERVIEW.sql"
-	@echo "psql -d devops_db -f devops_collector/sql/PMO_ANALYTICS.sql"
-	@echo "psql -d devops_db -f devops_collector/sql/HR_ANALYTICS.sql"
+test: ## 运行所有测试
+	@echo "$(GREEN)🧪 Running unit and integration tests...$(RESET)"
+	pytest tests/
 
-# 代码质量
-test:
-	pytest tests/ -v
+build: ## 构建 Docker 镜像
+	@echo "$(GREEN)📦 Building Docker images...$(RESET)"
+	docker-compose build
 
-test-cov:
-	pytest tests/ --cov=devops_collector --cov-report=html --cov-report=term
+up: ## 启动 Docker 容器
+	@echo "$(GREEN)🆙 Starting services...$(RESET)"
+	docker-compose up -d
 
-lint:
-	flake8 devops_collector/ tests/ scripts/ --max-line-length=100 --exclude=__pycache__
+down: ## 停止并移除容器
+	@echo "$(GREEN)🛑 Stopping services...$(RESET)"
+	docker-compose down
 
-format:
-	black devops_collector/ tests/ scripts/ --line-length=100
+logs: ## 查看实时日志
+	docker-compose logs -f
 
-type-check:
-	mypy devops_collector/ --ignore-missing-imports
+sync-all: ## 手动触发全量数据同步
+	@echo "$(GREEN)🔄 Triggering full sync...$(RESET)"
+	python -m devops_collector.scheduler --force-all
+	python -m devops_collector.worker --once
 
-# 运行服务
-run-scheduler:
-	python -m devops_collector.scheduler
-
-run-worker:
-	python -m devops_collector.worker
-
-# 数据验证
-verify-data:
-	@echo "请指定项目 ID: make verify-data PROJECT_ID=123"
-	@if [ -z "$(PROJECT_ID)" ]; then \
-		echo "错误: 请设置 PROJECT_ID 参数"; \
-		exit 1; \
-	fi
-	python scripts/verify_data_integrity.py --project-id $(PROJECT_ID)
+clean: ## 清理临时文件
+	@echo "$(GREEN)🧹 Cleaning temporary files...$(RESET)"
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	find . -type f -name "*.pyo" -delete
+	find . -type f -name "*.log" -delete

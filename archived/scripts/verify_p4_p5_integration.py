@@ -33,7 +33,7 @@ class TestMDMIntegration(unittest.TestCase):
 
     def test_p4_data_scope_ids_recursion(self):
         """验证 P4 级联 ID 收集逻辑 (递归)"""
-        from test_hub.main import get_user_data_scope_ids
+        from devops_portal.main import get_user_data_scope_ids
         
         # 广东用户应该能看到：广东、深圳
         gd_scopes = get_user_data_scope_ids(self.prov_user)
@@ -48,7 +48,7 @@ class TestMDMIntegration(unittest.TestCase):
     @patch('devops_collector.auth.database.SessionLocal')
     def test_filter_issues_by_province_p4(self, mock_db):
         """验证 P4 级联隔离过滤逻辑"""
-        from test_hub.main import filter_issues_by_province
+        from devops_portal.main import filter_issues_by_province
         
         # 模拟数据库行为：返回 ID 对应的 short_name
         mock_query = mock_db.return_value.query.return_value.filter.return_value.all

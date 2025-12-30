@@ -149,7 +149,7 @@ Service Desk 是 GitLab 测试管理中台的业务支持服务台模块，允�
 ## 📂 文件结构
 
 ```
-test_hub/
+devops_portal/
 ├── main.py                          # 主应用（已优化）
 ├── service_desk_tickets.json        # 工单数据持久化文件（自动生成）
 ├── test_service_desk.py             # 功能测试脚本
@@ -168,7 +168,7 @@ test_hub/
 ### 1. 启动服务
 
 ```bash
-cd c:\Users\netxs\devops\devops\test_hub
+cd c:\Users\netxs\devops\devops\devops_portal
 python main.py
 ```
 

@@ -137,7 +137,15 @@ class ServiceDeskService(GitLabClient):
             return query.filter(ServiceDeskTicket.requester_email == current_user.primary_email).all()
 
     def get_ticket_by_id(self, db: Session, ticket_id: int) -> Optional[ServiceDeskTicket]:
-        """通过数据库 ID 获取工单。"""
+        """通过数据库 ID 获取工单。
+
+        Args:
+            db (Session): 数据库会话。
+            ticket_id (int): 工单的数据库 ID。
+
+        Returns:
+            Optional[ServiceDeskTicket]: 找到的工单对象，如果不存在则返回 None。
+        """
         return db.query(ServiceDeskTicket).filter(ServiceDeskTicket.id == ticket_id).first()
 
     async def update_ticket_status(self, 

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
+, Any
 from typing import List, Optional, Dict
 from datetime import datetime
 
@@ -216,3 +217,10 @@ class JenkinsBuildSummary(BaseModel):
     timestamp: Optional[datetime]
     url: Optional[str]
     trigger_user: Optional[str]
+
+class AIResponse(BaseModel):
+    """统一的 AI 接口返回模型"""
+    status: str = "success"
+    data: Optional[Dict[str, Any]] = None
+    message: Optional[str] = None
+

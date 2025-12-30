@@ -163,7 +163,7 @@ def print_manual_test_guide():
     print("""
 【前置条件】
 1. 启动TestHub服务:
-   cd test_hub && uvicorn main:app --reload --port 8001
+   cd devops_portal && uvicorn main:app --reload --port 8001
 
 2. 注册并登录用户，获取JWT Token:
    POST /auth/register
