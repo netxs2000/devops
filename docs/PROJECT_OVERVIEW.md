@@ -134,6 +134,7 @@
 | :--- | :--- | :--- |
 | `ai_primary_category`| 主导分类 | AI 判定该项目最近 30 天属于功能开发、架构调整还是故障维护 |
 | `ai_value_brief` | 业务价值摘要 | 使用 LLM 总结该项目本月对公司的核心业务贡献 (One-liner) |
+| `ai_qa_steps_count`| AI 生成步骤数 | 由 LLM 自 AC 提取出的标准化测试步骤数量 |
 
 ### 3.13 个人效能画像 (Ability Hexagon) 🌟 (New)
 | 字段名 | 业务含义 | 构成维度 |

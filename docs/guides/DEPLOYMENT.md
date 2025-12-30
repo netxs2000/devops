@@ -101,6 +101,7 @@ python scripts/init_revenue_contracts.py
 | `ai_provider` | AI 服务商 (openai/azure/local) | `openai` |
 | `api_key` | API Key | `sk-xxxx` |
 | `model_name` | 使用的模型名称 | `gpt-4o-mini` |
+| `enable_ai_qa` | 是否开启 AI 自动化测试生成 | `true` |
 
 ### [notifiers] (New)
 | 参数 | 说明 | 示例 |

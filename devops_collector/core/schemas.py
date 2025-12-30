@@ -5,7 +5,7 @@
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 class GitLabUserSchema(BaseModel):
     """GitLab 用户原始数据结构校验
@@ -23,7 +23,8 @@ class GitLabUserSchema(BaseModel):
     name: str
     email: Optional[str] = None
     state: str = "active"
-    skype: Optional[str] = Field(None, alias="skypeid") # 演示别名映射
+    skype: Optional[str] = Field(None, alias="skypeid")
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 class GitLabMRSchema(BaseModel):
     """GitLab Merge Request 原始数据结构校验
@@ -48,8 +49,10 @@ class GitLabMRSchema(BaseModel):
     author: GitLabUserSchema
     created_at: datetime
     merged_at: Optional[datetime] = None
-    
-    @validator('state')
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('state')
+    @classmethod
     def validate_state(cls, v):
         allowed = {'opened', 'closed', 'merged', 'locked'}
         if v not in allowed:

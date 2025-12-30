@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict
 from datetime import datetime
 
@@ -10,16 +10,18 @@ class TestStep(BaseModel):
 
 class TestCase(BaseModel):
     """测试用例核心模型"""
-    id: int
-    iid: int
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(validation_alias="global_issue_id")
+    iid: int = Field(validation_alias="gitlab_issue_iid")
     title: str
-    priority: str
-    test_type: str
-    requirement_id: Optional[str]
-    pre_conditions: List[str]
-    steps: List[TestStep]
-    result: str
-    web_url: str
+    priority: Optional[str] = "P2"
+    test_type: Optional[str] = Field(default="Functional", validation_alias="issue_type")
+    requirement_id: Optional[str] = None
+    pre_conditions: List[str] = []
+    steps: List[TestStep] = []
+    result: str = "pending"
+    web_url: Optional[str] = None
     linked_bugs: List[Dict[str, str]] = []
 
 class ExecutionRecord(BaseModel):
@@ -28,6 +30,7 @@ class ExecutionRecord(BaseModel):
     result: str
     executed_at: datetime
     executor: str
+    executor_uid: Optional[str] = None # MDM global_user_id
     comment: Optional[str] = None
     pipeline_id: Optional[int] = None
     environment: Optional[str] = None
@@ -136,6 +139,7 @@ class ServiceDeskRequirementSubmit(BaseModel):
     req_type: str = "feature"
     province: str = "nationwide"
     expected_delivery: Optional[str] = None
+    attachments: Optional[List[str]] = []
 
 class ServiceDeskTicket(BaseModel):
     """Service Desk 工单模型"""
@@ -191,3 +195,24 @@ class MRSummary(BaseModel):
     rejected: int
     avg_discussions: float
     avg_merge_time_hours: float
+
+class JenkinsJobSummary(BaseModel):
+    """Jenkins 任务摘要"""
+    id: int
+    name: str
+    full_name: str
+    url: Optional[str]
+    description: Optional[str]
+    color: Optional[str]
+    gitlab_project_id: Optional[int]
+    last_synced_at: Optional[datetime]
+    sync_status: str
+
+class JenkinsBuildSummary(BaseModel):
+    """Jenkins 构建摘要"""
+    number: int
+    result: Optional[str]
+    duration: Optional[int]
+    timestamp: Optional[datetime]
+    url: Optional[str]
+    trigger_user: Optional[str]

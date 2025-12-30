@@ -169,7 +169,8 @@ const NotificationSystem = {
         this.eventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                this.show(data.message, data.type || 'info');
+                // Pass metadata if available
+                this.show(data.message, data.type || 'info', data.metadata);
             } catch (e) {
                 console.error("SSE Message parsing error", e);
             }
@@ -182,7 +183,7 @@ const NotificationSystem = {
         };
     },
 
-    show(message, type = 'info') {
+    show(message, type = 'info', metadata = null) {
         this.init();
         const container = document.getElementById('notification-container');
 
@@ -195,22 +196,24 @@ const NotificationSystem = {
         };
 
         toast.style.cssText = `
-            background: rgba(15, 15, 35, 0.9);
+            background: rgba(15, 15, 35, 0.95);
             border-left: 4px solid ${colors[type]};
             color: white;
-            padding: 12px 20px;
+            padding: 12px 16px;
             border-radius: 8px;
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
-            backdrop-filter: blur(8px);
-            font-family: sans-serif;
+            backdrop-filter: blur(12px);
+            font-family: 'Outfit', sans-serif;
             font-size: 14px;
-            min-width: 250px;
+            min-width: 280px;
+            max-width: 400px;
             transform: translateX(120%);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             pointer-events: auto;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            align-items: flex-start;
+            gap: 12px;
+            line-height: 1.5;
         `;
 
         const icon = {
@@ -220,17 +223,42 @@ const NotificationSystem = {
             warning: '⚠️'
         }[type];
 
-        toast.innerHTML = `<span>${icon}</span><span>${message}</span>`;
+        let contentHtml = `<div style="flex:1;">
+            <div style="font-weight:600; margin-bottom:2px;">${message}</div>`;
+
+        if (metadata) {
+            contentHtml += `<div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:4px; display:flex; flex-direction:column; gap:2px;">`;
+
+            if (metadata.failure_reason) {
+                contentHtml += `<div>Reason: <span style="color:#fca5a5;">${metadata.failure_reason}</span></div>`;
+            }
+            if (metadata.test_case_title) {
+                contentHtml += `<div>Case: ${metadata.test_case_title}</div>`;
+            }
+            if (metadata.requirement_title) {
+                contentHtml += `<div>Req: ${metadata.requirement_title}</div>`;
+            }
+            if (metadata.executor) {
+                contentHtml += `<div>By: ${metadata.executor.split(' ')[0]}</div>`;
+            }
+
+            contentHtml += `</div>`;
+        }
+
+        contentHtml += `</div>`;
+
+        toast.innerHTML = `<span style="font-size:18px; position:relative; top:1px;">${icon}</span>${contentHtml}`;
         container.appendChild(toast);
 
         // Animate in
         setTimeout(() => toast.style.transform = 'translateX(0)', 10);
 
-        // Auto remove
+        // Auto remove (longer duration for errors/metadata)
+        const duration = (type === 'error' || metadata) ? 8000 : 5000;
         setTimeout(() => {
             toast.style.transform = 'translateX(120%)';
             setTimeout(() => toast.remove(), 300);
-        }, 5000);
+        }, duration);
     }
 };
 

@@ -2,6 +2,20 @@
 
 所有对 DevOps Data Collector 的重要更改都将记录在此文件中。
 
+## [3.7.0] - 2025-12-30
+### 新增 (Added)
+*   **AI 赋能测试生成 (AC-to-Steps)**: 核心服务 `TestingService` 接入 LLM，支持从需求验收标准 (Acceptance Criteria) 自动生成结构化测试步骤。
+*   **AIClient 依赖注入**: 为 `TestingService` 等核心服务引入依赖注入模式，提升了系统的可测试性和灵活性。
+
+### 优化 (Improved)
+*   **Pydantic V2 全面重构**: 将全量 Schema（Auth, Core, TestHub）升级至 Pydantic V2 标准。
+    *   使用 `model_config` 和 `ConfigDict(from_attributes=True)` 替换旧版 ORM 模式。
+    *   引入 `validation_alias` 实现数据库字段（如 `global_issue_id`）与 DTO（如 `id`）的自动解耦映射。
+*   **大模型配置标准化**: `config.py` 适配 `[ai]` 节段配置，支持 `api_key` 和 `base_url` 的工业级配置规范。
+*   **API 分页健壮性**: 在统计 MR、Issue 等关键指标时，强制使用 `get_all=True` 处理全量分页数据，确保统计精度。
+
+---
+
 ## [3.6.0] - 2025-12-29
 ### 新增 (Added)
 *   **MDM_LOCATION地理位置主数据表**: 创建符合GB/T 2260国家标准的地理位置主数据表，支持省/市/区县三级层级结构，初始化34个省级行政区划数据。

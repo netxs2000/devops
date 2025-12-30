@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Hub | AI-Driven DevOps Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar">
+            <div class="logo-area" style="padding:0 24px 32px;">
+                <h1 style="font-size:20px; color:var(--accent);">TEST HUB</h1>
+                <p style="font-size:10px; opacity:0.5;">DEVOPS QUALITY CO-PILOT</p>
+            </div>
+
+            <div class="nav-links">
+                <div class="nav-link active" onclick="switchView('test-cases')">Repository</div>
+                <div class="nav-link" onclick="switchView('defectsView')">Defects</div>
+                <div class="nav-link" onclick="switchView('requirementsView')">Requirements</div>
+                <div class="nav-sep">INTELLIGENCE</div>
+                <div class="nav-link" onclick="switchView('reportsView')">Insights</div>
+                <div class="nav-sep">SUPPORT</div>
+                <div class="nav-link" onclick="switchView('sdSubmitView')">New Feedback</div>
+                <div class="nav-link" onclick="switchView('sdMyView')">My Requests</div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="main-header">
+                <div>
+                    <h2 id="projectTitle">Select Project</h2>
+                    <div id="user-scope-badge" class="scope-badge">
+                        <span>Global Access</span>
+                    </div>
+                </div>
+                <div class="header-controls" style="display:flex; gap:12px;">
+                    <input type="number" id="projectId" placeholder="Project ID" class="form-control"
+                        style="width:120px;">
+                    <button class="btn-primary" onclick="loadTestCases()">Sync Repo</button>
+                    <button class="btn-primary" style="background:var(--accent); color:black;"
+                        onclick="openRcaAssistant()">AI RCA</button>
+                </div>
+            </header>
+
+            <!-- View Containers -->
+            <div id="view-test-cases" class="view-panel">
+                <div id="results"></div>
+            </div>
+
+            <div id="view-reports" class="view-panel" style="display:none;">
+                <div class="glass-panel" id="testimony-content"></div>
+            </div>
+
+            <!-- (Other view panels...) -->
+        </main>
+    </div>
+
+    <!-- Modals (Simplified via JS dynamic loading or standard structure) -->
+    <!-- ... -->
+
+    <!-- Core Scripts -->
+    <script src="js/core.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Entry point
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.isLoggedIn()) Auth.logout();
+            initPulse(); // From core or app
+        });
+    </script>
+</body>
+
+</html>

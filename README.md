@@ -1,6 +1,6 @@
 # DevOps Data Collector (研发效能数据采集器)
 
-![Version](https://img.shields.io/badge/version-3.3.0-blue)
+![Version](https://img.shields.io/badge/version-3.7.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-green)
 ![PostgreSQL](https://img.shields.io/badge/postgres-13+-blue)
 
@@ -12,7 +12,8 @@
 *   **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）、SPACE 框架指标及 **流动效能 (Flow Efficiency)**。
 *   **GitLab 测试管理中台 (Test Management Hub)**: 专为 GitLab 社区版设计的轻量级测试管理工具，支持测试用例库、执行追踪、缺陷看板及质量报告。
 *   **战略决策支持 (ROI)**: 提供波士顿矩阵（明星/现金牛项目识别）和 **ROI 投入产出比分析**，对接财务合同数据。
-*   **智能化分类 (AI Enrichment)**: 利用 LLM 自动识别研发产出的业务价值分类，支持智能化效能评估。
+*   **智能化生成的测试管理 (AI Generative QA)**: 利用 LLM 自动将需求 AC 转化为标准化测试步骤，提升 50%+ 的用例设计效率。
+*   **Pydantic V2 零拷贝架构**: 全量采用 V2 特性，实现数据库到 DTO 的极速、优雅转换。
 *   **人才洞察**: 识别高潜人才、技术专家和离职风险。
 *   **组织效能分析**: 依托企业组织架构，透视各部门的人力投入与产出。
 

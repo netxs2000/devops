@@ -9,7 +9,7 @@ DevOps Data Collector 采用模块化的**ETL (Extract, Transform, Load)** 架�
 2.  **暂存层 (Staging Layer)** 🌟: 近实时地将原始 JSON 响应落盘至 `raw_data_staging` 表，作为 ETL 的 ODS 层，确保数据的原始性与可重放性。
 3.  **核心层 (Core Layer)**: 负责数据清洗、实体关联、身份归一化、任务分发 (RabbitMQ) 和 **Transform/Load**。
 4.  **存储层 (Storage Layer)**: 关系型数据库 (PostgreSQL) 存储结构化基础数据 (Fact Tables)。
-5.  **增强层 (Enrichment Layer)** 🌟: 利用 **LLM (大语言模型)** 对 Work Items 和 Commits 进行自动分类与摘要，为 ROI 分析提供业务语义。
+5.  **增强层 (Enrichment Layer)** 🌟: 利用 **LLM (大语言模型)** 对 Work Items 进行自动分类与摘要，并在测试管理中驱动 **AI Generative QA (AC-to-Steps)** 逻辑。
 6.  **财务层 (FinOps Layer)** 🌟: 建立 CBS (Cost Breakdown Structure) 科目树，将技术里程碑与合同回款节点挂钩。
 7.  **服务层 (Service Layer)**: 数据集市 (Data Mart)，通过 SQL Views 封装复杂的分析逻辑（如 DORA, 战略矩阵），直接对接 BI。
 8.  **推送层 (Notification Layer)** 🌟: 周期性扫描异常指标，多渠道（企微/飞书/钉钉）实时送达负责人。
@@ -28,7 +28,7 @@ graph TD
     subgraph Core Processing [核心处理与清洗]
         IM[Identity Matcher]
         OM[Org Manager]
-        SCH[Pydantic Validation]
+        SCH[Pydantic V2 Validation<br>model_validate]
     end
 
     subgraph Storage & Analytics [存储与分析]
