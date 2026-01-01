@@ -1,0 +1,96 @@
+[ai]
+# LLM Deepseek实例 URL
+base_url = https://platform.deepseek.com
+# Deepseek Access Token
+api_key = sk-XXXXXXXXXXXXX
+
+[storage]
+# 指定容器内的数据持久化挂载目录
+data_dir = /app/data
+
+[gitlab]
+url = https://gitlab.com
+# Replace with your actual GitLab private token
+private_token = change_me
+# OAuth Configuration (for Portal)
+client_id = your_oauth_client_id
+client_secret = your_oauth_client_secret
+redirect_uri = http://localhost:8000/auth/gitlab/callback
+
+[database]
+uri = postgresql://gitlab_collector:password@localhost/gitlab_data
+# Retention period for raw API responses in days
+raw_data_retention_days = 30
+
+[rabbitmq]
+# Hostname for RabbitMQ (e.g., 'rabbitmq' in docker-compose)
+host = rabbitmq
+queue = gitlab_tasks
+
+[analysis]
+enable_deep_analysis = false
+# Comma-separated list of file patterns to ignore during deep analysis
+ignored_file_patterns = *.lock,package-lock.json,yarn.lock,pnpm-lock.yaml,*.min.js,*.min.css,*.map,node_modules/*,dist/*,build/*,vendor/*,*.svg,*.png,*.jpg,*.jpeg,*.gif,*.ico,*.pdf,*.doc,*.docx,*.xls,*.xlsx,*.ppt,*.pptx,*.zip,*.tar,*.gz,*.rar,*.7z,*.exe,*.dll,*.so,*.dylib
+# DORA: Comma-separated list of environment names identified as production
+production_env_mapping = prod,production,prd,main
+
+[ratelimit]
+requests_per_second = 10
+
+[client]
+# Timeout for API requests in seconds
+timeout = 10
+# Number of items to fetch per page
+per_page = 100
+# Maximum retries for failed requests
+max_retries = 3
+
+[scheduler]
+# Interval to sync projects in minutes
+sync_interval_minutes = 60
+
+[logging]
+# Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+level = INFO
+
+[sonarqube]
+# SonarQube server URL
+url = https://sonarqube.example.com
+# SonarQube user token (generate at: User > My Account > Security)
+token = squ_change_me
+# Sync interval in hours
+sync_interval_hours = 24
+# Whether to sync individual issues (may be slow for large projects)
+sync_issues = false
+
+[jenkins]
+# Jenkins server URL
+url = http://jenkins.example.com
+# Jenkins username
+user = admin
+# Jenkins API token (generate at: User > Configure > API Token)
+token = j_change_me
+# Sync interval in hours
+sync_interval_hours = 12
+# Number of builds to sync per job (incremental)
+build_sync_limit = 100
+
+[jira]
+url = https://your-domain.atlassian.net
+user = your-email@example.com
+token = jira_api_token
+# Comma-separated project keys to sync
+sync_projects = DEMO,PROJ
+
+[zentao]
+url = http://zentao.example.com
+user = admin
+password = zentao_password
+# Whether to sync action logs
+sync_actions = true
+
+[jfrog]
+url = https://jfrog.example.com/artifactory
+token = jfrog_identity_token
+# Comma-separated repo list to sync
+sync_repos = docker-local,maven-remote

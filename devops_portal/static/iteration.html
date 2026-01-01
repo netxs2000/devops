@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>迭代管理工作台 - DevOps Portal</title>
+    <!-- 引入 Shared CSS check static folder if exists, else inline -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --border-color: #334155;
+            --success-color: #22c55e;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 顶部导航 */
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        select {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button.secondary {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+        }
+
+        button.secondary:hover {
+            background-color: var(--bg-card-hover);
+        }
+
+        button.release-btn {
+            background-color: var(--success-color);
+        }
+
+        button.release-btn:hover {
+            background-color: #16a34a;
+        }
+
+        /* 主工作区 */
+        main {
+            display: flex;
+            flex: 1;
+            padding: 2rem;
+            gap: 2rem;
+            overflow: hidden;
+        }
+
+        /* 列容器 */
+        .column {
+            flex: 1;
+            background-color: var(--bg-card);
+            border-radius: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .column-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .column-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .count-badge {
+            background-color: var(--bg-body);
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* 列表区域 */
+        .issue-list {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        /* 拖拽状态 */
+        .issue-list.drag-over {
+            background-color: rgba(59, 130, 246, 0.1);
+            border: 2px dashed var(--accent-color);
+        }
+
+        /* Issue 卡片 */
+        .issue-card {
+            background-color: var(--bg-body);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .issue-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-color: var(--accent-color);
+        }
+
+        .issue-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .issue-id {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .issue-title {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+
+        .labels {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .label {
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            background-color: var(--bg-card-hover);
+            color: var(--text-secondary);
+        }
+
+        .weight-badge {
+            background-color: var(--bg-card-hover);
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            color: var(--warning-color);
+            font-weight: 600;
+        }
+
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-card-hover);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* 模态框 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 400px;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal h2 {
+            margin-top: 0;
+        }
+
+        .modal-actions {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        /* 状态标签颜色 */
+        .label.bug {
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .label.req {
+            color: #60a5fa;
+            background: rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-left">
+            <h1>🚀 迭代管理工作台</h1>
+            <div class="controls">
+                <select id="projectSelect">
+                    <option value="" disabled selected>选择项目...</option>
+                    <!-- 动态加载 -->
+                </select>
+                <select id="milestoneSelect">
+                    <option value="" disabled selected>选择迭代...</option>
+                    <!-- 动态加载 -->
+                </select>
+            </div>
+        </div>
+        <div>
+            <button class="secondary" onclick="loadData()">🔄 刷新</button>
+            <button id="releaseBtn" class="release-btn" onclick="showReleaseModal()" disabled>🚀 执行发布</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- 左侧：待办池 -->
+        <div class="column">
+            <div class="column-header">
+                <div class="column-title">
+                    📦 待办需求池 (Backlog)
+                    <span class="count-badge" id="backlogCount">0</span>
+                </div>
+                <!-- 可以加筛选器 -->
+            </div>
+            <div class="issue-list" id="backlogList" ondrop="drop(event)" ondragover="allowDrop(event)">
+                <!-- Issues go here -->
+            </div>
+        </div>
+
+        <!-- 中间：规划箭头/操作区 (可选，这里简化为直接左右拖拽) -->
+
+        <!-- 右侧：当前迭代 -->
+        <div class="column">
+            <div class="column-header">
+                <div class="column-title">
+                    🚩 当前迭代 (Sprint)
+                    <span class="count-badge" id="sprintCount">0</span>
+                </div>
+                <!-- V2: 进度详情展示 -->
+                <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); width: 100%;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span>Progress: <span id="progressText"
+                                style="color: var(--text-primary); font-weight: 600;">0%</span></span>
+                        <span><span id="closedCount" style="color: var(--success-color)">0</span> / <span
+                                id="totalSprintIssues">0</span> Done</span>
+                    </div>
+                    <div
+                        style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                        <div id="progressBar"
+                            style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--success-color), #4ade80); transition: width 0.5s ease; box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);">
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-bar"
+                    style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; width: 100%;">
+                    <span>总权重: <b id="totalWeight" style="color: var(--text-primary)">0</b></span>
+                </div>
+            </div>
+            <div class="issue-list" id="sprintList" ondrop="drop(event)" ondragover="allowDrop(event)">
+                <!-- Issues go here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- 发布确认弹窗 -->
+    <div id="releaseModal" class="modal-overlay">
+        <div class="modal">
+            <h2>🚀 确认发布版本?</h2>
+            <p>将对迭代 <b><span id="releaseVersion">v1.0.0</span></b> 执行以下操作：</p>
+            <ul style="color: var(--text-secondary)">
+                <li>为代码库打 Tag</li>
+                <li>生成 Release Notes</li>
+                <li>关闭 GitLab 里程碑</li>
+            </ul>
+            <div class="modal-actions">
+                <button class="secondary" onclick="closeReleaseModal()">取消</button>
+                <button class="release-btn" onclick="executeRelease()">确认发布</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 绑定提示弹窗 -->
+    <div id="bindGitLabModal" class="modal-overlay">
+        <div class="modal">
+            <h2>🔗 关联 GitLab 账号</h2>
+            <p>为了保障安全，您的系统账号尚未绑定 GitLab 身份。</p>
+            <p>绑定后，您可以使用“个人身份”进行拖拽规划、新建迭代和发布操作，且所有操作将以您的名义记录审计日志。</p>
+            <div class="modal-actions">
+                <button class="secondary"
+                    onclick="document.getElementById('bindGitLabModal').style.display='none'">稍后</button>
+                <button class="release-btn" onclick="window.location.href='/auth/gitlab/bind'">前往绑定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建迭代弹窗 -->
+    <div id="createSprintModal" class="modal-overlay">
+        <div class="modal">
+            <h2>📅 新建迭代 (Sprint)</h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label>迭代名称 (如 v1.1.0)</label>
+                    <input type="text" id="newSprintTitle" style="width: 100%; padding: 0.5rem;" placeholder="v1.1.0">
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <div style="flex: 1;">
+                        <label>开始日期</label>
+                        <input type="date" id="newSprintStart" style="width: 100%; padding: 0.5rem;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label>截止日期</label>
+                        <input type="date" id="newSprintDue" style="width: 100%; padding: 0.5rem;">
+                    </div>
+                </div>
+                <div>
+                    <label>描述</label>
+                    <textarea id="newSprintDesc" style="width: 100%; padding: 0.5rem;" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary"
+                    onclick="document.getElementById('createSprintModal').style.display='none'">取消</button>
+                <button class="release-btn" onclick="executeCreateSprint()">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结转确认弹窗 -->
+    <div id="rolloverModal" class="modal-overlay">
+        <div class="modal">
+            <h2>⚠️ 检测到未完成任务</h2>
+            <p id="rolloverMsg" style="color: var(--danger-color); margin-bottom: 1rem;"></p>
+            <p>是否将未完成的任务自动移动到下一个规划中的 Milestone（或 Backlog），并继续发布？</p>
+            <div class="modal-actions">
+                <button class="secondary"
+                    onclick="document.getElementById('rolloverModal').style.display='none'">取消</button>
+                <button class="release-btn" onclick="handleRollover()">确认结转并发布</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 状态管理
+        let currentProjectId = null;
+        let currentMilestoneId = null;
+        let currentMilestoneTitle = null;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            const projectSelect = document.getElementById('projectSelect');
+            const milestoneSelect = document.getElementById('milestoneSelect');
+
+            // Add create button next to milestone select
+            const controlsDiv = document.querySelector('.controls');
+            const createBtn = document.createElement('button');
+            createBtn.className = 'secondary';
+            createBtn.innerHTML = '+ 新建迭代';
+            createBtn.style.marginLeft = '0.5rem';
+            createBtn.onclick = () => {
+                if (!currentProjectId) {
+                    alert('请先选择项目');
+                    return;
+                }
+                document.getElementById('createSprintModal').style.display = 'flex';
+            };
+            controlsDiv.appendChild(createBtn);
+
+            // Check bind status
+            checkBindStatus();
+
+            // 1. 动态加载项目列表
+            try {
+                const res = await fetch('/agile/projects');
+                if (res.ok) {
+                    const projects = await res.json();
+                    projectSelect.innerHTML = '<option value="" disabled selected>选择项目...</option>';
+                    projects.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = `${p.path} (ID: ${p.id})`;
+                        projectSelect.appendChild(option);
+                    });
+                } else {
+                    console.error('Failed to load projects');
+                }
+            } catch (e) {
+                console.error('Error loading projects:', e);
+            }
+
+            // 绑定事件
+            projectSelect.addEventListener('change', (e) => {
+                currentProjectId = e.target.value;
+                loadMilestones(currentProjectId);
+                // 清空迭代
+                milestoneSelect.innerHTML = '<option value="" disabled selected>选择迭代...</option>';
+                document.getElementById('backlogList').innerHTML = '';
+                document.getElementById('sprintList').innerHTML = '';
+            });
+
+            milestoneSelect.addEventListener('change', (e) => {
+                const selectedOption = e.target.selectedOptions[0];
+                currentMilestoneId = e.target.value;
+                // 修正：后端 API 返回的 title 字段
+                currentMilestoneTitle = selectedOption.getAttribute('data-title');
+
+                document.getElementById('releaseBtn').disabled = false;
+                loadData();
+            });
+        });
+
+        // 加载里程碑
+        async function loadMilestones(projectId) {
+            const msSelect = document.getElementById('milestoneSelect');
+            msSelect.innerHTML = '<option value="" disabled selected>加载中...</option>';
+
+            try {
+                const res = await fetch(`/agile/projects/${projectId}/milestones`);
+                if (res.ok) {
+                    const milestones = await res.json();
+                    msSelect.innerHTML = '<option value="" disabled selected>选择迭代...</option>';
+
+                    if (milestones.length === 0) {
+                        const option = document.createElement('option');
+                        option.disabled = true;
+                        option.textContent = "无进行中的里程碑";
+                        msSelect.appendChild(option);
+                        // Don't return, keep empty select ready
+                    }
+
+                    milestones.forEach(m => {
+                        const option = document.createElement('option');
+                        option.value = m.id;
+                        option.textContent = `${m.title} (Due: ${m.due_date ? m.due_date.split('T')[0] : 'N/A'})`;
+                        option.setAttribute('data-title', m.title);
+                        msSelect.appendChild(option);
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading milestones:', e);
+                msSelect.innerHTML = '<option value="" disabled selected>加载失败</option>';
+            }
+        }
+
+        async function executeCreateSprint() {
+            const title = document.getElementById('newSprintTitle').value;
+            const start = document.getElementById('newSprintStart').value;
+            const due = document.getElementById('newSprintDue').value;
+            const desc = document.getElementById('newSprintDesc').value;
+
+            if (!title) { alert('请输入迭代名称'); return; }
+
+            try {
+                const res = await fetch(`/agile/projects/${currentProjectId}/milestones`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: title,
+                        start_date: start || null,
+                        due_date: due || null,
+                        description: desc || null
+                    })
+                });
+
+                if (res.ok) {
+                    alert('迭代创建成功！');
+                    document.getElementById('createSprintModal').style.display = 'none';
+                    loadMilestones(currentProjectId); // Refresh list
+                } else {
+                    const err = await res.json();
+                    alert('创建失败: ' + err.detail);
+                }
+            } catch (e) {
+                alert('系统错误');
+            }
+        }
+
+        // 加载看板数据
+        async function loadData() {
+            if (!currentProjectId || !currentMilestoneTitle) return;
+
+            // 1. Load Backlog
+            const backlogRes = await fetch(`/agile/projects/${currentProjectId}/backlog`);
+            const backlogIssues = await backlogRes.json();
+            renderList('backlogList', backlogIssues, 'backlogCount');
+
+            // 2. Load Sprint
+            const sprintRes = await fetch(`/agile/projects/${currentProjectId}/sprint/${currentMilestoneTitle}`);
+            const sprintIssues = await sprintRes.json();
+            renderList('sprintList', sprintIssues, 'sprintCount');
+
+            // Calculate Stats & Progress
+            const totalWeight = sprintIssues.reduce((sum, i) => sum + (i.weight || 0), 0);
+            document.getElementById('totalWeight').innerText = totalWeight;
+
+            // Progress Calculation (Enhanced)
+            // Backend now returns ALL issues (open + closed) for sprint
+            const totalCount = sprintIssues.length;
+            const closedCount = sprintIssues.filter(i => i.state === 'closed').length;
+            const progress = totalCount > 0 ? Math.round((closedCount / totalCount) * 100) : 0;
+
+            document.getElementById('totalSprintIssues').innerText = totalCount;
+            document.getElementById('closedCount').innerText = closedCount;
+            document.getElementById('progressText').innerText = `${progress}%`;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+        }
+
+        function renderList(containerId, issues, countBatchId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            document.getElementById(countBatchId).innerText = issues.length;
+
+            issues.forEach(issue => {
+                const card = document.createElement('div');
+                card.className = 'issue-card';
+                if (issue.state === 'closed') {
+                    card.style.opacity = '0.6';
+                    card.style.borderLeft = '4px solid var(--success-color)';
+                }
+                card.draggable = true;
+                card.dataset.iid = issue.iid; // Use IID for GitLab
+                card.dataset.id = issue.id;
+
+                // 样式处理
+                let typeLabel = '';
+                if ((issue.labels || []).includes('type::bug')) {
+                    typeLabel = '<span class="label bug">Bug</span>';
+                } else {
+                    typeLabel = '<span class="label req">Feature</span>';
+                }
+
+                card.innerHTML = `
+                <div class="card-header">
+                    <span class="issue-id">#${issue.iid}</span>
+                    <div class="labels">${typeLabel}</div>
+                </div>
+                <div class="issue-title">${issue.title}</div>
+                <div class="card-footer">
+                    <span>${issue.author?.name || 'Unknown'}</span>
+                    ${issue.weight ? `<span class="weight-badge">${issue.weight} pts</span>` : ''}
+                </div>
+            `;
+
+                // Drag Events
+                card.addEventListener('dragstart', drag);
+                container.appendChild(card);
+            });
+        }
+
+        // Drag & Drop Logic
+        function allowDrop(ev) {
+            ev.preventDefault();
+            ev.currentTarget.classList.add('drag-over');
+        }
+
+        // Clean up style
+        document.querySelectorAll('.issue-list').forEach(el => {
+            el.addEventListener('dragleave', (ev) => ev.currentTarget.classList.remove('drag-over'));
+        });
+
+        function drag(ev) {
+            ev.dataTransfer.setData("iid", ev.currentTarget.dataset.iid);
+            ev.dataTransfer.setData("source", ev.currentTarget.parentElement.id);
+        }
+
+        async function drop(ev) {
+            ev.preventDefault();
+            const targetList = ev.currentTarget;
+            targetList.classList.remove('drag-over');
+
+            const iid = ev.dataTransfer.getData("iid");
+            const sourceListId = ev.dataTransfer.getData("source");
+            const targetListId = targetList.id;
+
+            if (sourceListId === targetListId) return;
+
+            // Optimistic UI Update (Verify later)
+            // Move DOM element? Better reload to be safe and accurate with sorting
+            // But for UX, let's wait for API
+
+            if (targetListId === 'sprintList') {
+                // Backlog -> Sprint
+                const res = await fetch(`/agile/projects/${currentProjectId}/plan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        issue_iid: parseInt(iid),
+                        milestone_id: parseInt(currentMilestoneId)
+                    })
+                });
+                if (res.ok) loadData();
+            } else {
+                // Sprint -> Backlog
+                const res = await fetch(`/agile/projects/${currentProjectId}/remove`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        issue_iid: parseInt(iid)
+                    })
+                });
+                if (res.ok) loadData();
+            }
+        }
+
+        // Release Logic
+        function showReleaseModal() {
+            document.getElementById('releaseVersion').innerText = currentMilestoneTitle;
+            document.getElementById('releaseModal').style.display = 'flex';
+        }
+
+        function closeReleaseModal() {
+            document.getElementById('releaseModal').style.display = 'none';
+        }
+
+        async function executeRelease() {
+            const btn = document.querySelector('.release-btn');
+            btn.disabled = true;
+            btn.innerText = "🚀 发布中...";
+
+            try {
+                const res = await fetch(`/agile/projects/${currentProjectId}/release`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        version: currentMilestoneTitle,
+                        ref_branch: 'main' // default
+                    })
+                });
+
+                if (res.ok) {
+                    alert('发布成功！');
+                    closeReleaseModal();
+                    loadData(); // Refresh state
+                } else if (res.status === 409) {
+                    // Smart Rollover Trigger
+                    const err = await res.json();
+                    const detail = err.detail || "";
+                    // Parse "CHECK_FAILED: ..." usually frontend just shows the msg
+                    document.getElementById('rolloverMsg').innerText = detail.split('|')[0] || detail; // Simple display
+
+                    // Hide release modal first
+                    closeReleaseModal();
+                    // Show rollover modal
+                    document.getElementById('rolloverModal').style.display = 'flex';
+
+                    return; // Stop here, wait for user action
+                } else if (res.status === 403) {
+                    // Not bound
+                    document.getElementById('bindGitLabModal').style.display = 'flex';
+                } else {
+                    const err = await res.json();
+                    alert('发布失败: ' + err.detail);
+                }
+            } catch (e) {
+                alert('系统错误');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "🚀 执行发布";
+            }
+        }
+
+        async function handleRollover() {
+            // Re-trigger release with auto_rollover = true
+            const btn = document.querySelector('#rolloverModal .release-btn');
+            btn.disabled = true;
+            btn.innerText = "🔄 结转发布中...";
+
+            try {
+                const res = await fetch(`/agile/projects/${currentProjectId}/release`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        version: currentMilestoneTitle,
+                        ref_branch: 'main',
+                        auto_rollover: true,
+                        target_milestone_id: null // 默认移回 Backlog，V2可加选择框
+                    })
+                });
+
+                if (res.ok) {
+                    alert('结转并发布成功！');
+                    document.getElementById('rolloverModal').style.display = 'none';
+                    loadData();
+                } else {
+                    const err = await res.json();
+                    alert('发布失败: ' + err.detail);
+                }
+            } catch (e) {
+                alert('系统错误: ' + e);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "确认结转并发布";
+            }
+        }
+
+        async function checkBindStatus() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('bind_success')) {
+                // Remove param
+                window.history.replaceState({}, document.title, window.location.pathname);
+                alert('🎉 GitLab 账号绑定成功！现在您可以完整使用迭代规划功能了。');
+            }
+        }
+    </script>
+
+</body>
+
+</html>

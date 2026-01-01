@@ -1,7 +1,7 @@
-# 📊 DevOps 效能平台 - 数据字典 (Data Dictionary v2.0)
+# 📊 DevOps 效能平台 - 数据字典 (Data Dictionary v2.1)
 
-> **生成时间**: 2025-12-28 23:56:50  
-> **版本**: v2.0 (企业级标准版 - 自动生成)  
+> **生成时间**: 2026-01-01 04:15:00  
+> **版本**: v2.1 (模型标准化重构版)  
 > **状态**: ✅ 有效 (Active)
 
 ---
@@ -13,6 +13,8 @@
 **重要提示**: 本文档主要基于 SQLAlchemy ORM 模型及其对应的 **Pydantic V2 (DTO Layer)** 定义。系统采用 `from_attributes=True` 实现零拷贝的自动映射。
 
 **变更历史**:
+
+- **v2.1 (2026-01-01)**: 模型全量标准化重构，适配 Google Python Style Guide，完善所有插件模型定义。
 - **v2.0 (2025-12-28)**: 基于最新模型重新生成，废弃旧版数据字典
 - **v1.x (已废弃)**: 归档至 `DATA_DICTIONARY_DEPRECATED_20251228.md`
 
@@ -20,59 +22,67 @@
 
 ## 📋 数据表清单
 
-本系统共包含 **30** 个核心数据表：
-
+本系统包含 **60+** 个核心及插件数据表：
 
 ### 🏢 核心主数据域 (Core Master Data Domain)
+>
 > **源文件**: `base_models.py`
 
 | 表名 | 模型类 | 业务描述 |
 |:-----|:-------|:---------|
-| `contract_payment_nodes` | ContractPaymentNode | 合同回款节点/里程碑模型。 |
-| `cost_codes` | CostCode | 成本分解结构模型 (Cost Breakdown Structure - CBS Tree)。 |
-| `identity_mappings` | IdentityMapping | 身份映射表，记录不同系统的账号归属。 |
-| `incidents` | Incident | 运维事故/故障记录模型。 |
-| `labor_rate_configs` | LaborRateConfig | 人工费率配置模型 (Labor Rate Configuration)。 |
-| `mdm_identities` | User | 人员主数据 (mdm_identities)。 |
-| `mdm_organizations` | Organization | 组织架构主数据 (mdm_organizations)。 |
-| `okr_key_results` | OKRKeyResult | OKR 关键结果模型 (Key Result)。 |
-| `okr_objectives` | OKRObjective | OKR 目标模型 (Objective)。 |
-| `performance_records` | PerformanceRecord | 性能基准测试记录模型。 |
-| `products` | Product | 全局产品模型，支持“产品线 -> 产品”的层级结构。 |
-| `purchase_contracts` | PurchaseContract | 采购合同模型 (Purchase Contract)。 |
-| `raw_data_staging` | RawDataStaging | 原始数据落盘表 (Staging Layer)。 |
-| `resource_costs` | ResourceCost | 资源与成本统计模型。 |
-| `revenue_contracts` | RevenueContract | 收入合同模型 (Revenue Contract)。 |
-| `service_project_mappings` | ServiceProjectMapping | 服务与技术项目映射表。 |
-| `services` | Service | 服务目录模型 (Service Catalog)。 |
-| `slos` | SLO | 服务等级目标模型 (SLO)。 |
-| `sync_logs` | SyncLog | 同步日志模型，记录每次同步任务的执行结果。 |
-| `test_execution_summaries` | TestExecutionSummary | 测试执行汇总记录模型。 |
-| `traceability_links` | TraceabilityLink | 通用链路追溯映射表。 |
-| `user_activity_profiles` | UserActivityProfile | 用户行为特征画像模型。 |
+| `mdm_identities` | User | 人员主数据 (OneID)。 |
+| `mdm_organizations` | Organization | 组织架构主数据。 |
+| `products` | Product | 全局产品模型，支持“产品线 -> 产品”结构。 |
+| `services` | Service | 服务目录模型。 |
+| `identity_mappings` | IdentityMapping | 跨系统账号映射表。 |
+| `sync_logs` | SyncLog | 任务采集同步日志。 |
+| `test_execution_summaries` | TestExecutionSummary | 测试执行全量汇总记录。 |
+| `labor_rate_configs` | LaborRateConfig | 人工费率与成本标准。 |
+| `revenue_contracts` | RevenueContract | 收入合同模型。 |
+| `purchase_contracts` | PurchaseContract | 采购合同模型。 |
 
-
-### 🔍 依赖与安全域 (Dependency & Security Domain)
-> **源文件**: `dependency.py`
+### 🔐 权限管理域 (Auth & RBAC Domain)
+>
+> **源文件**: `base_models.py`
 
 | 表名 | 模型类 | 业务描述 |
 |:-----|:-------|:---------|
-| `dependencies` | Dependency | 依赖清单表 |
-| `dependency_cves` | DependencyCVE | CVE 漏洞详情表 |
-| `dependency_scans` | DependencyScan | 依赖扫描记录表 |
-| `license_risk_rules` | LicenseRiskRule | 许可证风险规则表 |
+| `roles` | Role | 系统角色表。 |
+| `permissions` | Permission | 细粒度功能权限表。 |
+| `role_permissions` | RolePermission | 角色与权限关联表。 |
+| `user_roles` | UserRole | 用户与角色关联表。 |
+| `user_oauth_tokens` | UserOAuthToken | OAuth2 统一认证令牌存储。 |
 
+### 🛠️ 研发工具插件域 (DevOps Tooling Domain)
+>
+> **源文件**: `plugins/*/models.py`
+
+| 表名 | 模型类 | 业务描述 |
+|:-----|:-------|:---------|
+| `jira_issues` | JiraIssue | Jira 任务/需求详细模型。 |
+| `jenkins_builds` | JenkinsBuild | Jenkins 构建记录详细模型。 |
+| `sonar_projects` | SonarProject | SonarQube 代码质量项目模型。 |
+| `zentao_products` | ZenTaoProduct | 禅道产品全生命周期模型。 |
+| `jfrog_artifacts` | JFrogArtifact | JFrog 制品追溯模型。 |
+| `nexus_components` | NexusComponent | Nexus 仓库组件映射模型。 |
 
 ### 🧪 测试管理域 (Test Management Domain)
+>
 > **源文件**: `test_management.py`
 
 | 表名 | 模型类 | 业务描述 |
 |:-----|:-------|:---------|
-| `requirement_test_case_links` | RequirementTestCaseLink | 需求与测试用例的关联表。 |
-| `requirements` | Requirement | 需求模型。 |
-| `test_case_issue_links` | TestCaseIssueLink | 测试用例与 Issue 的关联表。 |
-| `test_cases` | TestCase | 测试用例模型。 |
+| `test_cases` | TestCase | 结构化测试用例库。 |
+| `test_execution_records` | TestExecutionRecord | 单次测试执行明细。 |
+| `requirements` | Requirement | 需求模型及其可追溯性关系。 |
 
+### 🎫 服务台域 (Service Desk Domain)
+>
+> **源文件**: `service_desk.py`
+
+| 表名 | 模型类 | 业务描述 |
+|:-----|:-------|:---------|
+| `service_desk_tickets` | ServiceDeskTicket | 服务台工单，支持跨部门标签与归责。 |
 
 ---
 
@@ -80,31 +90,26 @@
 
 ### 核心主数据表
 
-#### mdm_identities (用户主数据表)
-**业务描述**: 人员主数据库 (Master Data Management for Identities)，集团级唯一身份标识系统。
+#### mdm_identities (人员主数据表)
+
+**业务描述**: 人员主数据库 (Master Data Management for Identities)，全局 OneID 唯一身份识别系统。
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `global_user_id` | UUID | PK | 否 | uuid_generate_v4() | 全局唯一标识 (OneID) |
-| `employee_id` | String(50) | UNIQUE | 是 | - | 集团 HR 系统工号（核心锚点） |
-| `full_name` | String(200) | | 否 | - | 法律姓名 |
-| `primary_email` | String(200) | UNIQUE | 是 | - | 集团官方办公邮箱 |
-| `identity_map` | JSONB | GIN_INDEX | 是 | - | 多系统账号映射 (如 {"gitlab": 12, "jira": "J_01"}) |
-| `match_confidence` | Float | | 是 | - | 算法匹配置信度 (0.0-1.0) |
-| `is_survivor` | Boolean | | 是 | true | 是否为当前生效的"生存者"黄金记录 |
-| `is_active` | Boolean | | 是 | true | 账号状态 (在职/离职) |
-| `created_at` | DateTime | | 是 | NOW() | 创建时间 |
-| `updated_at` | DateTime | | 是 | - | 最后更新时间（自动更新） |
-| `source_system` | String(50) | | 是 | - | 标记该"生存者记录"的主来源系统 (如 HRMS) |
-| `sync_version` | BigInteger | | 是 | 1 | 乐观锁版本号 |
-
-**索引**: 
-- PRIMARY KEY: `global_user_id`
-- GIN INDEX: `identity_map` (支持 JSONB 查询)
+| `employee_id` | String(50) | UNIQUE | 是 | - | HR 系统工号 |
+| `full_name` | String(200) | | 否 | - | 法律/登记姓名 |
+| `primary_email` | String(200) | UNIQUE | 是 | - | 集团办公邮箱 |
+| `identity_map` | JSONB | GIN_INDEX | 是 | - | 各工具账号映射 |
+| `match_confidence` | Float | | 是 | 1.0 | 语义匹配置信度 |
+| `is_active` | Boolean | | 是 | true | 是否在职 |
+| `created_at` | DateTime | | 是 | NOW() | 系统录入时间 |
+| `updated_at` | DateTime | | 是 | - | 最后更新时间 |
 
 ---
 
 #### mdm_organizations (组织主数据表)
+
 **业务描述**: 组织架构主数据 (部门、分公司、项目组等)。
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
@@ -122,80 +127,96 @@
 
 ---
 
+#### roles & permissions (RBAC 体系)
+
+**业务描述**: 基于角色的访问控制模型。
+
+| 表名 | 关键字段 | 说明 |
+|:-----|:---------|:-----|
+| `roles` | `id`, `name`, `code` | 系统定义角色 (如: Admin, PM, Developer)。 |
+| `permissions` | `id`, `name`, `code` | 细粒度资源权限 (如: project.read, test.execute)。 |
+| `user_roles` | `user_id`, `role_id` | 用户与角色的多对多映射。 |
+
+---
+
 ### 测试管理域
 
 #### test_cases (测试用例表)
-**业务描述**: 结构化测试用例库，与 GitLab Issue 双向同步。
+
+**业务描述**: 研发效能测试中心的核心用例库。
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK, AUTO_INCREMENT | 否 | - | 主键 |
-| `gitlab_issue_id` | Integer | UNIQUE | 否 | - | 关联的 GitLab Issue ID |
-| `project_id` | Integer | | 否 | - | GitLab 项目 ID |
-| `title` | String(500) | | 否 | - | 用例标题 |
-| `priority` | String(10) | | 是 | 'P2' | 优先级 (P0/P1/P2/P3) |
-| `test_type` | String(50) | | 是 | 'Functional' | 测试类型（功能/性能/安全...） |
-| `steps` | JSONB | | 是 | - | 测试步骤（JSON 数组） |
-| `expected_result` | Text | | 是 | - | 期望结果 |
-| `author_id` | UUID | FK(mdm_identities) | 否 | - | 创建者 ID |
-| `created_at` | DateTime | | 是 | NOW() | 创建时间 |
-| `updated_at` | DateTime | | 是 | - | 更新时间 |
+| `id` | Integer | PK | 否 | - | 数据中心自增 ID |
+| `project_id` | Integer | FK | 否 | - | 所属 GitLab 技术项目 ID |
+| `author_id` | UUID | FK | 否 | - | 编写人 OneID |
+| `iid` | Integer | | 否 | - | 工具侧 (GitLab) 内部编号 |
+| `title` | String(500) | | 否 | - | 用例简述 |
+| `priority` | String(10) | | 是 | 'P2' | 优先级 (P0-P3) |
+| `test_type` | String(50) | | 是 | - | 测试类型 (功能/自动/性能) |
+| `pre_conditions` | Text | | 是 | - | 前置条件 |
+| `test_steps` | JSONB | | 是 | - | 结构化测试步骤序列 |
 
 ---
 
-#### requirements (需求表)
-**业务描述**: 需求管理，支持与测试用例的可追溯性矩阵 (RTM)。
+#### requirements (需求模型)
+
+**业务描述**: 核心需求模型，支持 RTM 追溯矩阵。
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK, AUTO_INCREMENT | 否 | - | 主键 |
-| `gitlab_issue_id` | Integer | UNIQUE | 否 | - | 关联的 GitLab Issue ID |
-| `project_id` | Integer | | 否 | - | GitLab 项目 ID |
+| `id` | Integer | PK | 否 | - | 内部 ID |
+| `iid` | Integer | | 否 | - | 工单系统原始 IID |
 | `title` | String(500) | | 否 | - | 需求标题 |
-| `status` | String(50) | | 是 | 'draft' | 状态（draft/approved/satisfied...） |
-| `review_state` | String(50) | | 是 | 'pending' | 评审状态 |
-| `author_id` | UUID | FK(mdm_identities) | 否 | - | 创建者 ID |
-| `created_at` | DateTime | | 是 | NOW() | 创建时间 |
-| `updated_at` | DateTime | | 是 | - | 更新时间 |
+| `status` | String(50) | | 是 | - | 流程状态 (draft/closed/resolved) |
+| `review_state` | String(50) | | 是 | - | 评审状态 (pending/approved) |
 
 ---
 
-### 认证与授权域
+### 运维与工具域
 
-#### user_credentials (用户凭证表)
-**业务描述**: 存储用户登录凭证（密码哈希），与 mdm_identities 分离以提高安全性。
+#### jira_issues (Jira 任务详情)
 
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK, AUTO_INCREMENT | 否 | - | 主键 |
-| `user_id` | UUID | FK(mdm_identities), UNIQUE | 否 | - | 关联用户 ID |
-| `password_hash` | String(255) | | 否 | - | BCrypt 密码哈希 |
-| `last_password_change` | DateTime | | 是 | - | 上次密码修改时间 |
-| `created_at` | DateTime | | 是 | NOW() | 创建时间 |
-| `updated_at` | DateTime | | 是 | - | 更新时间 |
+**业务描述**: 深度同步 Jira 端任务状态与行为特征。
+
+| 字段名 | 数据类型 | 约束 | 可空 | 说明 |
+|:-------|:---------|:-----|:-----|:-----|
+| `key` | String(50) | UNIQUE | 否 | Jira 关键字 (如 PROJ-101) |
+| `reopening_count` | Integer | | 否 | 任务重开次数 (协作稳定性指标) |
+| `time_spent` | BigInteger | | 是 | 实际工时投入 (秒) |
+| `original_estimate` | BigInteger | | 是 | 原始预估工时 (秒) |
+
+---
+
+#### service_desk_tickets (服务台工单)
+
+**业务描述**: 跨部门协作服务工单，支持精细化归责。
+
+| 字段名 | 数据类型 | 约束 | 可空 | 说明 |
+|:-------|:---------|:-----|:-----|:-----|
+| `origin_dept_name` | String(100) | | 是 | 需求发起部门 |
+| `target_dept_name` | String(100) | | 是 | 目标响应部门 |
+| `status` | String(50) | | 否 | 工单实时状态 |
 
 ---
 
 ## 📐 数据模型关系图
 
-```
-mdm_identities (用户)
-    ├─ 1:1 → user_credentials (凭证)
-    ├─ 1:N → test_cases (创建的用例)
-    ├─ 1:N → requirements (创建的需求)
-    └─ 1:N → organizations (管理的组织)
-
-mdm_organizations (组织)
-    ├─ 1:N → SELF (子组织)
-    └─ N:1 → mdm_identities (负责人)
-
-test_cases (测试用例)
-    ├─ N:1 → mdm_identities (创建者)
-    └─ N:M → requirements (可追溯性关联)
-
-requirements (需求)
-    ├─ N:1 → mdm_identities (创建者)
-    └─ N:M → test_cases (可追溯性关联)
+```mermaid
+graph LR
+    User[mdm_identities] --- Creds[mdm_credentials]
+    User --- UserRole[user_roles]
+    UserRole --- Role[roles]
+    Role --- RolePerm[role_permissions]
+    RolePerm --- Perm[permissions]
+    
+    User --- TestCase[test_cases]
+    TestCase --- RTC[req_test_case_links]
+    RTC --- Req[requirements]
+    
+    Product[products] --- Project[projects]
+    Project --- Jira[jira_issues]
+    Project --- Jenkins[jenkins_builds]
 ```
 
 ---
@@ -203,22 +224,29 @@ requirements (需求)
 ## 🔐 数据治理策略
 
 ### 数据安全
-- **敏感字段加密**: `user_credentials.password_hash` 使用 BCrypt 单向哈希
-- **行级权限控制**: 基于 `mdm_identities` 的部门/角色属性实现 RLS
-- **审计追踪**: 所有表包含 `created_at` 和 `updated_at` 时间戳
+
+- **物理分离**: 账号数据 (`mdm_identities`) 与凭证数据 (`mdm_credentials`) 物理分离。
+- **动态脱敏**: 界面展示根据权限级别对 `primary_email` 进行掩码处理。
+- **审计追踪**: 除 `created_at` 外，引入 `sync_logs` 对单次采集任务进行闭环审计。
 
 ### 数据质量
+
 - **主键唯一性**: 所有表均定义主键约束
 - **外键完整性**: 跨表关系通过 FK 约束保证数据一致性
 - **乐观锁**: 关键表（如 `mdm_identities`）使用 `sync_version` 防止并发冲突
 
 ### 数据生命周期
+
 - **软删除**: 关键业务表使用 `is_active` 标志位，不物理删除
 - **历史归档**: 通过 `updated_at` 时间戳支持数据变更历史追踪
 
 ---
 
 ## 📚 使用指南
+
+### 模型检索策略 (Model Retrieval)
+
+开发者应优先使用 `OneID` (`global_user_id`) 进行多系统关联，避免直接使用 Email 或工号作为关联主键。
 
 ### 查询最佳实践
 
@@ -238,9 +266,14 @@ GROUP BY r.id, r.title;
 ```
 
 ### API 集成规范
+
 - **认证方式**: 所有 API 请求必须携带 JWT Bearer Token
 - **用户上下文**: 从 Token 解析 `mdm_identities.global_user_id`
 - **数据隔离**: 根据用户的部门属性自动过滤数据范围
+
+### Pydantic V2 映射策略
+
+所有 `id` 字段在 DTO 层通过 `validation_alias` 与物理表的 `global_issue_id` 或 `gitlab_issue_iid` 自动绑定。
 
 ---
 
@@ -255,5 +288,6 @@ GROUP BY r.id, r.title;
 ---
 
 **维护者**: DevOps 效能团队  
-**最后生成**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  
+**最后生成**: 2026-01-01  
+**生成规范**: [Google Python Style Guide]
 **生成脚本**: `scripts/generate_data_dictionary.py`
