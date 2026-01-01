@@ -23,10 +23,16 @@ class GitLabSettings(BaseSettings):
 
     Attributes:
         url (str): The base URL of the GitLab instance.
-        private_token (str): The private access token for authentication.
+        private_token (str): The private access token for authentication (System-level).
+        client_id (str): OAuth2 Application ID.
+        client_secret (str): OAuth2 Application Secret.
+        redirect_uri (str): OAuth2 Callback URL (e.g., http://portal/auth/callback).
     """
     url: str = "https://gitlab.com"
     private_token: str = ""
+    client_id: str = ""
+    client_secret: str = ""
+    redirect_uri: str = ""
 
 class DatabaseSettings(BaseSettings):
     """Database connection and retention settings.
@@ -248,7 +254,7 @@ class Settings(BaseSettings):
             Settings: A populated Settings instance.
         """
         cp = configparser.ConfigParser()
-        cp.read(path)
+        cp.read(path, encoding='utf-8')
         
         data = {}
         for section in cp.sections():
@@ -272,7 +278,10 @@ class Config:
     建议新代码直接使用：from devops_collector.config import settings
     """
     GITLAB_URL = settings.gitlab.url
-    GITLAB_PRIVATE_TOKEN = settings.gitlab.private_token
+    GITLAB_TOKEN = settings.gitlab.private_token # Alias for backward compatibility
+    GITLAB_CLIENT_ID = settings.gitlab.client_id
+    GITLAB_CLIENT_SECRET = settings.gitlab.client_secret
+    GITLAB_REDIRECT_URI = settings.gitlab.redirect_uri
     DB_URI = settings.database.uri
     RAW_DATA_RETENTION_DAYS = settings.database.raw_data_retention_days
     RABBITMQ_HOST = settings.rabbitmq.host

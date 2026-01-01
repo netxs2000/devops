@@ -59,18 +59,27 @@ def check_permission(required_roles: List[str]):
     
     校验逻辑：
     1. 必须是已登录用户。
-    2. 用户所属 MDM 角色必须在 required_roles 列表中。
-    3. 'admin' 角色默认拥有全量权限。
+    2. 如果用户具备 'SYSTEM_ADMIN' 角色，则拥有全量权限。
+    3. 否则，用户所属的角色编码 (Role.code) 必须在 required_roles 列表中。
     """
     async def permission_checker(current_user: User = Depends(get_current_user)):
-        if current_user.role == 'admin':
+        user_role_codes = [r.code for r in current_user.roles]
+        
+        # 1. 超级管理员绿灯
+        if 'SYSTEM_ADMIN' in user_role_codes:
             return current_user
         
-        if current_user.role not in required_roles:
-            logger.warning(f"Access Denied: User {current_user.primary_email} (Role: {current_user.role}) attempted restricted action.")
+        # 2. 角色匹配校验
+        has_permission = any(role_code in required_roles for role_code in user_role_codes)
+        
+        if not has_permission:
+            logger.warning(
+                f"Access Denied: User {current_user.primary_email} (Roles: {user_role_codes}) "
+                f"attempted restricted action. Required roles: {required_roles}"
+            )
             raise HTTPException(
                 status_code=403, 
-                detail=f"Permission Denied: Required roles: {required_roles}, but your role is '{current_user.role}'"
+                detail=f"Permission Denied: Required roles: {required_roles}"
             )
         return current_user
     return permission_checker

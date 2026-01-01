@@ -41,6 +41,7 @@ class UserResponse(BaseModel):
     is_active: bool
     location: Optional[LocationInfo] = None
     department: Optional[DepartmentInfo] = None
+    gitlab_connected: bool = False
 
     class Config:
         orm_mode = True

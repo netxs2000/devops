@@ -662,3 +662,85 @@ class GitLabClient(BaseClient):
                 yield item
                 
             page += 1
+
+    def update_issue(self, project_id: int, issue_iid: int, data: Dict) -> dict:
+        """更新 Issue 属性 (如里程碑、标题等)。
+
+        Args:
+            project_id (int): 项目 ID。
+            issue_iid (int): Issue 的 IID。
+            data (Dict): 要更新的字段字典。
+
+        Returns:
+            dict: 更新后的 Issue 详情。
+        """
+        return self._put(f"projects/{project_id}/issues/{issue_iid}", data=data).json()
+
+    def create_project_tag(self, project_id: int, tag_name: str, ref: str, message: str = None) -> dict:
+        """创建项目标签 (Tag)。
+
+        Args:
+            project_id (int): 项目 ID。
+            tag_name (str): 标签名 (如 v1.0.0)。
+            ref (str): 基于的分支或 SHA (如 main)。
+            message (str): 标签消息。
+
+        Returns:
+            dict: 创建后的 Tag 详情。
+        """
+        data = {'tag_name': tag_name, 'ref': ref}
+        if message:
+            data['message'] = message
+        return self._post(f"projects/{project_id}/repository/tags", data=data).json()
+
+    def create_project_release(self, project_id: int, tag_name: str, description: str, milestones: List[str] = None) -> dict:
+        """创建项目发布 (Release)。
+
+        Args:
+            project_id (int): 项目 ID。
+            tag_name (str): 标签名 (必须已存在或同时创建)。
+            description (str): 发布说明 (Release Notes)。
+            milestones (List[str]): 关联的里程碑标题列表。
+
+        Returns:
+            dict: 创建后的 Release 详情。
+        """
+        data = {'tag_name': tag_name, 'description': description}
+        if milestones:
+            data['milestones'] = milestones
+        return self._post(f"projects/{project_id}/releases", data=data).json()
+
+    def update_project_milestone(self, project_id: int, milestone_id: int, data: Dict) -> dict:
+        """更新项目里程碑 (如关闭里程碑)。
+
+        Args:
+            project_id (int): 项目 ID。
+            milestone_id (int): 里程碑 ID。
+            data (Dict): 要更新的字段 (如 {'state_event': 'close'})。
+
+        Returns:
+            dict: 更新后的里程碑详情。
+        """
+        return self._put(f"projects/{project_id}/milestones/{milestone_id}", data=data).json()
+
+    def create_project_milestone(self, project_id: int, title: str, start_date: str = None, due_date: str = None, description: str = None) -> dict:
+        """创建项目里程碑。
+
+        Args:
+            project_id (int): 项目 ID。
+            title (str): 里程碑标题。
+            start_date (str): 开始日期 (YYYY-MM-DD)。
+            due_date (str): 截止日期 (YYYY-MM-DD)。
+            description (str): 描述。
+
+        Returns:
+            dict: 创建后的里程碑详情。
+        """
+        data = {'title': title}
+        if start_date:
+            data['start_date'] = start_date
+        if due_date:
+            data['due_date'] = due_date
+        if description:
+            data['description'] = description
+        return self._post(f"projects/{project_id}/milestones", data=data).json()

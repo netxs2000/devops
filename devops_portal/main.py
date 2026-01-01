@@ -38,6 +38,7 @@ from devops_portal.dependencies import get_current_user
 from devops_portal.routers import quality as quality_router
 from devops_portal.routers import service_desk as service_desk_router
 from devops_portal.routers import test_management as test_management_router
+from devops_portal.routers import iteration as iteration_router
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ app.include_router(auth_router.router)
 app.include_router(quality_router.router)
 app.include_router(service_desk_router.router)
 app.include_router(test_management_router.router)
+app.include_router(iteration_router.router)
 
 # 挂载前端静态文件
 app.mount("/static", StaticFiles(directory="devops_portal/static"), name="static")
