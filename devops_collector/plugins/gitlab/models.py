@@ -16,7 +16,7 @@ from devops_collector.config import settings
 
 from sqlalchemy import (
     JSON, BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Integer,
-    String, Text, select, cast
+    String, Text, select, cast, and_
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import backref, relationship
@@ -113,7 +113,7 @@ class GitLabGroupMember(Base):
     expires_at = Column(DateTime(timezone=True))
     
     group = relationship("GitLabGroup", back_populates="members")
-    user = relationship("User")
+    user = relationship("User", primaryjoin="and_(User.global_user_id==GitLabGroupMember.user_id, User.is_current==True)")
 
     def __repr__(self) -> str:
         return f"<GitLabGroupMember(group_id={self.group_id}, gitlab_uid={self.gitlab_uid})>"
@@ -182,7 +182,7 @@ class Project(Base):
     organization_id = Column(
         String(100), ForeignKey('mdm_organizations.org_id')
     )
-    organization = relationship("Organization", back_populates="projects")
+    organization = relationship("Organization", primaryjoin="and_(Organization.org_id==Project.organization_id, Organization.is_current==True)", back_populates="projects")
 
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -344,7 +344,7 @@ class ProjectMember(Base):
     expires_at = Column(DateTime(timezone=True))
     
     project = relationship("Project", back_populates="members")
-    user = relationship("User", back_populates="project_memberships")
+    user = relationship("User", primaryjoin="and_(User.global_user_id==ProjectMember.user_id, User.is_current==True)", back_populates="project_memberships")
 
     def __repr__(self) -> str:
         return f"<ProjectMember(project_id={self.project_id}, user_id={self.user_id})>"
@@ -476,7 +476,7 @@ class MergeRequest(Base):
     author_id = Column(
         UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id')
     )
-    author = relationship("User")
+    author = relationship("User", primaryjoin="and_(User.global_user_id==MergeRequest.author_id, User.is_current==True)")
     
     project = relationship("Project", back_populates="merge_requests")
 
@@ -585,7 +585,7 @@ class Commit(Base):
     gitlab_user_id = Column(
         UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id')
     )
-    author_user = relationship("User")
+    author_user = relationship("User", primaryjoin="and_(User.global_user_id==Commit.gitlab_user_id, User.is_current==True)")
     
     project = relationship("Project", back_populates="commits")
 
@@ -698,7 +698,7 @@ class Issue(Base):
     author_id = Column(
         UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id')
     )
-    author = relationship("User")
+    author = relationship("User", primaryjoin="and_(User.global_user_id==Issue.author_id, User.is_current==True)")
     
     project = relationship("Project", back_populates="issues")
     events = relationship("GitLabIssueEvent", back_populates="issue", cascade="all, delete-orphan")

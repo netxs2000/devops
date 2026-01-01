@@ -67,8 +67,8 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin,
         """
         super().__init__(session, client)
         self.enable_deep_analysis = enable_deep_analysis
-        self.user_resolver = None # Initialize to avoid AttributeError
-        self.identity_matcher = None
+        self.identity_matcher = IdentityMatcher(session)
+        self.user_resolver = UserResolver(session, client)
     
     def process_task(self, task: dict):
         """处理 GitLab 同步任务。
@@ -229,8 +229,6 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin,
 
     def _match_identities(self, project: Project) -> None:
         """匹配项目内未关联用户的提交记录。"""
-        if not self.identity_matcher:
-            self.identity_matcher = IdentityMatcher(self.session)
         
         # 此处简单实现，实际可优化为批量处理
         # 为避免循环依赖问题，Commit 已在 CommitMixin 中处理了同步

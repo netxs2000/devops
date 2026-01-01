@@ -1,10 +1,12 @@
-"""GitLab 身份识别与匹配模块"""
+"""GitLab 身份识别与匹配模块 (支持 SCD Type 2)"""
 import logging
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 from sqlalchemy.orm import Session
-from devops_collector.models import IdentityMapping, User, Organization, Commit
+from devops_collector.models import IdentityMapping, User, Organization
+# 延迟导入以避免循环依赖
+# from devops_collector.plugins.gitlab.models import Commit 
+
 from devops_collector.core.identity_manager import IdentityManager
-from .client import GitLabClient
 
 logger = logging.getLogger(__name__)
 
@@ -17,35 +19,39 @@ class IdentityMatcher:
     
     def _build_index(self):
         """构建 GitLab 用户身份索引以进行规则匹配。"""
-        mappings = self.session.query(IdentityMapping).filter_by(source='gitlab').all()
+        mappings = self.session.query(IdentityMapping).filter_by(source_system='gitlab').all()
         
         self.email_map = {}
         self.username_map = {}
         self.name_map = {}
         
         for m in mappings:
-            if m.email:
-                self.email_map[m.email.lower()] = m.user_id
-            if m.external_id:
-                self.username_map[m.external_id.lower()] = m.user_id
-            if m.external_name:
-                self.name_map[m.external_name.lower()] = m.user_id
+            if m.external_email:
+                self.email_map[m.external_email.lower()] = m.global_user_id
+            if m.external_user_id:
+                self.username_map[m.external_user_id.lower()] = m.global_user_id
+            if m.external_username:
+                self.name_map[m.external_username.lower()] = m.global_user_id
     
-    def match(self, commit: Commit) -> Optional[int]:
-        """按 4 级规则匹配 Commit 作者到内部用户 ID。"""
+    def match(self, commit: Any) -> Optional[Any]:
+        """按 4 级规则匹配 Commit 作者到内部用户 OneID (UUID)。"""
         email = commit.author_email.lower() if commit.author_email else ""
         name = commit.author_name.lower() if commit.author_name else ""
         
+        global_id = None
         if email in self.email_map:
-            return self.email_map[email]
-        if name in self.username_map:
-            return self.username_map[name]
-        if name in self.name_map:
-            return self.name_map[name]
-        if email and '@' in email:
+            global_id = self.email_map[email]
+        elif name in self.username_map:
+            global_id = self.username_map[name]
+        elif name in self.name_map:
+            global_id = self.name_map[name]
+        elif email and '@' in email:
             prefix = email.split('@')[0]
             if prefix in self.username_map:
-                return self.username_map[prefix]
+                global_id = self.username_map[prefix]
+        
+        if global_id:
+            return global_id
         
         user = IdentityManager.get_or_create_user(
             self.session, 
@@ -54,29 +60,29 @@ class IdentityMatcher:
             email=commit.author_email,
             name=commit.author_name
         )
-        return user.id
+        return user.global_user_id
 
 
 class UserResolver:
-    """用户解析器，将 gitlab_id 映射到内部用户 ID。"""
+    """用户解析器，将 gitlab_id 映射到内部用户 OneID。"""
     
-    def __init__(self, session: Session, client: GitLabClient):
+    def __init__(self, session: Session, client: Any):
         self.session = session
         self.client = client
-        self.cache: Dict[int, int] = {} 
+        self.cache: Dict[int, Any] = {} 
         self._load_cache()
     
     def _load_cache(self):
         """加载现有 GitLab 映射到缓存。"""
-        mappings = self.session.query(IdentityMapping).filter_by(source='gitlab').all()
+        mappings = self.session.query(IdentityMapping).filter_by(source_system='gitlab').all()
         for m in mappings:
             try:
-                self.cache[int(m.external_id)] = m.user_id
-            except ValueError:
+                self.cache[int(m.external_user_id)] = m.global_user_id
+            except (ValueError, TypeError):
                 continue
     
-    def resolve(self, gitlab_id: int) -> Optional[int]:
-        """解析 GitLab 用户 ID 到内部 ID。"""
+    def resolve(self, gitlab_id: int) -> Optional[Any]:
+        """解析 GitLab 用户 ID 到内部 OneID。"""
         if gitlab_id in self.cache:
             return self.cache[gitlab_id]
         
@@ -88,25 +94,33 @@ class UserResolver:
                 external_id=str(gitlab_id),
                 email=user_data.get('email'),
                 name=user_data.get('name'),
-                username=user_data.get('username')
+                employee_id=user_data.get('username')
             )
             
-            # 特色逻辑：从 skype 字段提取部门
+            # 特色逻辑：从 skype 字段提取部门 (SCD Type 2 适配)
             dept_name = user_data.get('skype')
             if dept_name:
-                user.department = dept_name
+                # 查找当前有效组织
                 org = self.session.query(Organization).filter_by(
-                    name=dept_name, level='Center'
+                    org_name=dept_name, is_current=True
                 ).first()
                 if not org:
-                    org = Organization(name=dept_name, level='Center')
+                    org = Organization(
+                        org_id=dept_name, 
+                        org_name=dept_name, 
+                        org_level=2,
+                        sync_version=1,
+                        is_current=True
+                    )
                     self.session.add(org)
                     self.session.flush()
-                user.organization_id = org.id
+                
+                # 如果用户部门发生变化，可以考虑触发 SCD 更新，这里简单赋值 business key
+                user.department_id = org.org_id
             
             self.session.flush()
-            self.cache[gitlab_id] = user.id
-            return user.id
+            self.cache[gitlab_id] = user.global_user_id
+            return user.global_user_id
         except Exception as e:
             logger.warning(f"Failed to resolve user {gitlab_id}: {e}")
             return None

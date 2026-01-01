@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, BigInteger, Float
+from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, BigInteger, Float, and_
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime, timezone
@@ -72,7 +72,7 @@ class JFrogArtifact(Base):
     created_by_name = Column(String(100))
     product_id = Column(Integer, ForeignKey('products.id'))
     
-    created_by = relationship("User")
+    created_by = relationship("User", primaryjoin="and_(User.global_user_id==JFrogArtifact.created_by_id, User.is_current==True)")
     product = relationship("Product")
     
     created_at = Column(DateTime(timezone=True))

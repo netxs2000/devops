@@ -14,10 +14,10 @@ from typing import List, Optional
 
 from sqlalchemy import (
     JSON, BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Index,
-    Integer, String, Text, UniqueConstraint, select
+    Integer, String, Text, UniqueConstraint, select, and_
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import declarative_base, relationship, backref
+from sqlalchemy.orm import declarative_base, relationship, backref, foreign
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
@@ -106,44 +106,66 @@ class Organization(Base):
         projects (List[Project]): 该组织关联的技术项目列表 (由插件注入)。
     """
     __tablename__ = 'mdm_organizations'
-    
-    org_id = Column(String(100), primary_key=True)
+
+    # ---------- 主键与唯一标识 ----------
+    # 为支持多版本历史记录，使用自增 surrogate 主键 `id`
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    # 业务自然键仍保持唯一（当前有效记录），但不再强制唯一约束，以便保存历史
+    org_id = Column(String(100), nullable=False)
+
+    # ---------- 基础属性 ----------
     org_name = Column(String(200), nullable=False)
     parent_org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
-    
     org_level = Column(Integer)  # 1-Group, 2-BU, 3-Dept
-    
     manager_user_id = Column(
         UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id')
     )
-    
-    cost_center = Column(String(100)) # 财务成本中心代码
-    is_deleted = Column(Boolean, default=False)
-    
-    # 层级关系
+    cost_center = Column(String(100))  # 财务成本中心代码
+
+    # ---------- SCD Type2 必备字段 ----------
+    # 乐观锁版本号（每次更新 +1）
+    sync_version = Column(BigInteger, default=1, nullable=False)
+    # 软删除标记：True 表示该版本已失效（历史），当前有效记录为 False
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    # 有效期起止，当前记录的 effective_to 为 NULL 表示仍在生效
+    effective_from = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    effective_to = Column(DateTime(timezone=True), nullable=True)
+    # 是否为当前最新版本（便于快速查询）
+    is_current = Column(Boolean, default=True, nullable=False)
+
+    # ---------- 关系映射 ----------
+    # 层级关系（子组织）
     children = relationship(
-        "Organization", 
+        "Organization",
+        primaryjoin="and_(Organization.org_id==foreign(Organization.parent_org_id), Organization.is_current==True)",
         backref=backref('parent', remote_side=[org_id]),
         foreign_keys=[parent_org_id]
     )
-    
-    # 业务关联
+
+    # 业务关联：服务目录
     services = relationship("Service", back_populates="organization")
-    
-    # 负责人关联 (双向关系)
+
+    # 负责人关联（双向）
     manager = relationship(
-        "User", 
+        "User",
+        primaryjoin="and_(User.global_user_id==Organization.manager_user_id, User.is_current==True)",
         foreign_keys=[manager_user_id],
         back_populates="managed_organizations",
         post_update=True
     )
-    
-    # MDM 聚合关系 (补全双向)
-    users = relationship("User", foreign_keys="[User.department_id]", back_populates="department")
+
+    # MDM 聚合关系（补全双向）
+    users = relationship(
+        "User", 
+        primaryjoin="and_(User.department_id==Organization.org_id, User.is_current==True)",
+        foreign_keys="[User.department_id]", 
+        back_populates="department"
+    )
     products = relationship("Product", back_populates="organization")
     okr_objectives = relationship("OKRObjective", back_populates="organization")
     revenue_contracts = relationship("RevenueContract", back_populates="organization")
-    
+
+    # 时间戳（创建/更新）
     created_at = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
@@ -191,7 +213,11 @@ class Location(Base):
     )
     
     # 关联负责人
-    manager = relationship("User", foreign_keys=[manager_user_id])
+    manager = relationship(
+        "User", 
+        primaryjoin="and_(User.global_user_id==Location.manager_user_id, User.is_current==True)",
+        foreign_keys=[manager_user_id]
+    )
     
     created_at = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
@@ -385,12 +411,15 @@ class User(Base):
     """
     __tablename__ = 'mdm_identities'
     
-    global_user_id = Column(
-        UUID(as_uuid=True), primary_key=True, default=func.uuid_generate_v4()
-    )
-    employee_id = Column(String(50), unique=True)
+    # ---------- 主键 ----------
+    # 为支持历史版本，使用自增 surrogate 主键 `id`
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    # 业务自然键保持唯一（当前有效记录），不再强制唯一约束，以便保存历史
+    global_user_id = Column(UUID(as_uuid=True), nullable=False)
+
+    employee_id = Column(String(50))
     full_name = Column(String(200), nullable=False)
-    primary_email = Column(String(200), unique=True)
+    primary_email = Column(String(200))
     
     identity_map = Column(JSONB)
     
@@ -398,15 +427,21 @@ class User(Base):
     is_survivor = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     
-    updated_at = Column(
-        DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc)
-    )
+    # ---------- SCD Type2 必备字段 ----------
+    sync_version = Column(BigInteger, default=1, nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    effective_from = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    effective_to = Column(DateTime(timezone=True), nullable=True)
+    is_current = Column(Boolean, default=True, nullable=False)
+
     created_at = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
+    updated_at = Column(
+        DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc)
+    )
     
     source_system = Column(String(50))
-    sync_version = Column(BigInteger, default=1)
     
     # 组织与地域属性
     department_id = Column(
@@ -416,13 +451,19 @@ class User(Base):
         String(6), ForeignKey('mdm_location.location_id')
     )
     
-    # 关联关系
-    department = relationship("Organization", foreign_keys=[department_id], back_populates="users")
+    # ---------- 关系映射 ----------
+    department = relationship(
+        "Organization", 
+        primaryjoin="and_(Organization.org_id==User.department_id, Organization.is_current==True)",
+        foreign_keys=[department_id], 
+        back_populates="users"
+    )
     location = relationship("Location", foreign_keys=[location_id])
     
     # [RBAC] 管理的组织 (作为负责人)
     managed_organizations = relationship(
         "Organization", 
+        primaryjoin="and_(Organization.manager_user_id==User.global_user_id, Organization.is_current==True)",
         back_populates="manager", 
         foreign_keys="[Organization.manager_user_id]"
     )
@@ -496,7 +537,10 @@ class LaborRateConfig(Base, TimestampMixin):
     )
     is_active = Column(Boolean, default=True)
     
-    organization = relationship("Organization")
+    organization = relationship(
+        "Organization", 
+        primaryjoin="and_(Organization.org_id==LaborRateConfig.organization_id, Organization.is_current==True)"
+    )
 
     def __repr__(self) -> str:
         return f"<LaborRateConfig(level='{self.job_title_level}', rate={self.daily_rate})>"
@@ -687,12 +731,16 @@ class Product(Base):
     
     # 关系
     children = relationship("Product", backref=backref('parent', remote_side=[id]))
-    organization = relationship("Organization", back_populates="products")
+    organization = relationship(
+        "Organization", 
+        primaryjoin="and_(Organization.org_id==Product.organization_id, Organization.is_current==True)",
+        back_populates="products"
+    )
     
-    product_manager = relationship("User", foreign_keys=[product_manager_id], back_populates="managed_products_as_pm")
-    dev_manager = relationship("User", foreign_keys=[dev_manager_id], back_populates="managed_products_as_dm")
-    test_manager = relationship("User", foreign_keys=[test_manager_id], back_populates="managed_products_as_tm")
-    release_manager = relationship("User", foreign_keys=[release_manager_id], back_populates="managed_products_as_rm")
+    product_manager = relationship("User", primaryjoin="and_(User.global_user_id==Product.product_manager_id, User.is_current==True)", foreign_keys=[product_manager_id], back_populates="managed_products_as_pm")
+    dev_manager = relationship("User", primaryjoin="and_(User.global_user_id==Product.dev_manager_id, User.is_current==True)", foreign_keys=[dev_manager_id], back_populates="managed_products_as_dm")
+    test_manager = relationship("User", primaryjoin="and_(User.global_user_id==Product.test_manager_id, User.is_current==True)", foreign_keys=[test_manager_id], back_populates="managed_products_as_tm")
+    release_manager = relationship("User", primaryjoin="and_(User.global_user_id==Product.release_manager_id, User.is_current==True)", foreign_keys=[release_manager_id], back_populates="managed_products_as_rm")
     
     # 财务与合同 (双向)
     revenue_contracts = relationship("RevenueContract", back_populates="product")
@@ -746,8 +794,12 @@ class OKRObjective(Base, TimestampMixin):
 
     # 关系映射
     product = relationship("Product", back_populates="objectives")
-    owner = relationship("User", back_populates="okr_objectives")
-    organization = relationship("Organization", back_populates="okr_objectives")
+    owner = relationship("User", primaryjoin="and_(User.global_user_id==OKRObjective.owner_id, User.is_current==True)", back_populates="okr_objectives")
+    organization = relationship(
+        "Organization", 
+        primaryjoin="and_(Organization.org_id==OKRObjective.organization_id, Organization.is_current==True)",
+        back_populates="okr_objectives"
+    )
     children = relationship("OKRObjective", backref=backref('parent', remote_side=[id]))
     key_results = relationship("OKRKeyResult", back_populates="objective", cascade="all, delete-orphan")
 
@@ -816,7 +868,11 @@ class Service(Base, TimestampMixin):
     raw_data = Column(JSON)
     
     # 关系映射
-    organization = relationship("Organization", back_populates="services")
+    organization = relationship(
+        "Organization", 
+        primaryjoin="and_(Organization.org_id==Service.organization_id, Organization.is_current==True)",
+        back_populates="services"
+    )
     product = relationship("Product")
     slos = relationship("SLO", back_populates="service", cascade="all, delete-orphan")
     projects = relationship("ServiceProjectMapping", back_populates="service", cascade="all, delete-orphan")
@@ -1217,7 +1273,11 @@ class UserActivityProfile(Base, TimestampMixin):
     avg_lint_errors_per_kloc = Column(Float)
     code_review_acceptance_rate = Column(Float)
     
-    user = relationship("User", back_populates="activity_profiles")
+    user = relationship(
+        "User", 
+        primaryjoin="and_(User.global_user_id==UserActivityProfile.user_id, User.is_current==True)",
+        back_populates="activity_profiles"
+    )
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
@@ -1266,7 +1326,11 @@ class RevenueContract(Base, TimestampMixin):
     raw_data = Column(JSON)
     
     product = relationship("Product", back_populates="revenue_contracts")
-    organization = relationship("Organization", back_populates="revenue_contracts")
+    organization = relationship(
+        "Organization", 
+        primaryjoin="and_(Organization.org_id==RevenueContract.organization_id, Organization.is_current==True)",
+        back_populates="revenue_contracts"
+    )
     payment_nodes = relationship("ContractPaymentNode", back_populates="contract", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
@@ -1374,8 +1438,10 @@ class UserCredential(Base, TimestampMixin):
     
     user = relationship(
         "User", 
+        primaryjoin="and_(User.global_user_id==UserCredential.user_id, User.is_current==True)",
         backref=backref(
-            "credential", uselist=False, cascade="all, delete-orphan"
+            "credential", uselist=False, cascade="all, delete-orphan",
+            primaryjoin="and_(User.global_user_id==foreign(UserCredential.user_id), User.is_current==True)"
         )
     )
 

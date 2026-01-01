@@ -220,10 +220,9 @@ class JenkinsWorker(BaseWorker):
                         u = IdentityManager.get_or_create_user(
                             self.session, 'jenkins', 
                             build.trigger_user,
-                            name=build.trigger_user,
-                            username=build.trigger_user
+                            name=build.trigger_user
                         )
-                        build.trigger_user_id = u.id
+                        build.trigger_user_id = u.global_user_id
         
         build.raw_data = b_data
         

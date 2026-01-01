@@ -26,7 +26,10 @@ def get_user_org_scope_ids(db: Session, user: User) -> List[str]:
     scope_ids = [user_dept_id]
     
     def collect_children_orgs(parent_id, db_session):
-        children = db_session.query(Organization.org_id).filter(Organization.parent_org_id == parent_id).all()
+        children = db_session.query(Organization.org_id).filter(
+            Organization.parent_org_id == parent_id,
+            Organization.is_current == True
+        ).all()
         for child_row in children:
             child_id = child_row[0]
             scope_ids.append(child_id)
@@ -58,9 +61,13 @@ def apply_plugin_privacy_filter(db: Session, query: Query, model_class: Any, cur
         from devops_collector.plugins.gitlab.models import Project
         return query.join(Project).filter(Project.organization_id.in_(scope_ids))
         
-    # 4. 特殊处理用户模型（仅能看到自己部门的人）
+    # 4. 特殊处理用户模型（仅能看到自己部门的人，且仅看当前有效用户）
     if model_class == User:
-        return query.filter(User.department_id.in_(scope_ids))
+        return query.filter(User.department_id.in_(scope_ids), User.is_current == True)
+
+    # 5. 特殊处理组织模型
+    if model_class == Organization:
+        return query.filter(Organization.org_id.in_(scope_ids), Organization.is_current == True)
 
     return query
 

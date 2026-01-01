@@ -227,6 +227,9 @@ class ZenTaoTestCase(Base):
     status = Column(String(20))
     
     opened_by = Column(String(100))
+    opened_by_user_id = Column(
+        UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True
+    )
     opened_date = Column(DateTime)
     
     last_run_result = Column(String(20))
@@ -321,6 +324,9 @@ class ZenTaoRelease(Base):
     date = Column(DateTime)
     status = Column(String(50))
     opened_by = Column(String(100))
+    opened_by_user_id = Column(
+        UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True
+    )
     
     product = relationship("ZenTaoProduct", back_populates="releases")
     raw_data = Column(JSON)

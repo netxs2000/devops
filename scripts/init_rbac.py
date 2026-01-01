@@ -99,7 +99,7 @@ def create_super_admin(session):
     
     logger.info(f"Checking Super Admin account ({admin_email})...")
     
-    user = session.query(User).filter_by(primary_email=admin_email).first()
+    user = session.query(User).filter_by(primary_email=admin_email, is_current=True).first()
     if not user:
         logger.info("Creating new Super Admin user...")
         # 1. 创建 User (mdm_identities)
@@ -108,7 +108,10 @@ def create_super_admin(session):
             full_name="Super Admin",
             primary_email=admin_email,
             is_active=True,
-            is_survivor=True
+            is_survivor=True,
+            sync_version=1,
+            is_current=True,
+            is_deleted=False
         )
         session.add(user)
         session.flush()
