@@ -157,12 +157,12 @@ class SonarDataTransformer:
         issue.assignee = i_data.get('assignee')
         if issue.assignee:
             u = IdentityManager.get_or_create_user(self.session, 'sonarqube', issue.assignee)
-            issue.assignee_user_id = u.id
+            issue.assignee_user_id = u.global_user_id
             
         issue.author = i_data.get('author')
         if issue.author:
             u = IdentityManager.get_or_create_user(self.session, 'sonarqube', issue.author)
-            issue.author_user_id = u.id
+            issue.author_user_id = u.global_user_id
             
         issue.raw_data = i_data
         

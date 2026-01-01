@@ -86,7 +86,7 @@ class JFrogWorker(BaseWorker):
         created_by = data.get('created_by')
         if created_by:
             u = IdentityManager.get_or_create_user(self.session, 'jfrog', created_by)
-            artifact.created_by_id = u.id
+            artifact.created_by_id = u.global_user_id
             artifact.created_by_name = u.name
             
         # 提取属性 (Properties)

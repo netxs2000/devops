@@ -8,7 +8,7 @@ Typical Usage:
     session.add(test_case)
 """
 
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table, JSON, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table, JSON, DateTime, and_
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
@@ -59,7 +59,7 @@ class TestCase(Base, TimestampMixin):
     test_steps = Column(JSON, default=[])
 
     # 关系映射
-    author = relationship("User", back_populates="test_cases")
+    author = relationship("User", primaryjoin="and_(User.global_user_id==TestCase.author_id, User.is_current==True)", back_populates="test_cases")
     project = relationship("Project", back_populates="test_cases")
     linked_issues = relationship(
         "Issue",
@@ -154,7 +154,7 @@ class Requirement(Base, TimestampMixin):
     state = Column(String(20), default="opened")
 
     # 关系映射
-    author = relationship("User", back_populates="requirements")
+    author = relationship("User", primaryjoin="and_(User.global_user_id==Requirement.author_id, User.is_current==True)", back_populates="requirements")
     project = relationship("Project", back_populates="requirements")
     test_cases = relationship(
         "TestCase",

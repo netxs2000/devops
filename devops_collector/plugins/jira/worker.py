@@ -10,6 +10,7 @@ from devops_collector.core.registry import PluginRegistry
 from .client import JiraClient
 from .models import JiraProject, JiraBoard, JiraSprint, JiraIssue, JiraIssueHistory
 from devops_collector.core.identity_manager import IdentityManager
+from devops_collector.core.services import close_current_and_insert_new
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +177,7 @@ class JiraWorker(BaseWorker):
                 self.session, 'jira', fields['assignee']['accountId'], 
                 fields['assignee'].get('emailAddress'), fields['assignee'].get('displayName')
             )
-            issue.assignee_user_id = u.id
+            issue.assignee_user_id = u.global_user_id
             issue.assignee_name = u.name
             
         if fields.get('reporter'):
@@ -184,7 +185,7 @@ class JiraWorker(BaseWorker):
                 self.session, 'jira', fields['reporter']['accountId'], 
                 fields['reporter'].get('emailAddress'), fields['reporter'].get('displayName')
             )
-            issue.reporter_user_id = u.id
+            issue.reporter_user_id = u.global_user_id
             issue.reporter_name = u.name
             
         if fields.get('creator'):
@@ -192,7 +193,7 @@ class JiraWorker(BaseWorker):
                 self.session, 'jira', fields['creator']['accountId'], 
                 fields['creator'].get('emailAddress'), fields['creator'].get('displayName')
             )
-            issue.creator_user_id = u.id
+            issue.creator_user_id = u.global_user_id
             issue.creator_name = u.name
         
         if fields.get('created'):
@@ -299,14 +300,37 @@ class JiraWorker(BaseWorker):
         self.session.flush()
 
     def _sync_groups(self) -> None:
-        """同步 Jira 用户组到公共 Organization 表。"""
+        """同步 Jira 用户组到公共 Organization 表 (支持 SCD Type 2)。"""
         groups = self.client.get_groups()
         for g in groups:
-            # 可以在这里增加过滤逻辑，只同步感兴趣的组
-            org = self.session.query(Organization).filter_by(name=g['name']).first()
+            group_name = g['name']
+            # Jira Group Name 映射为 Org ID (假设全局唯一)
+            org = self.session.query(Organization).filter_by(
+                org_id=group_name, 
+                is_current=True
+            ).first()
+            
             if not org:
-                org = Organization(name=g['name'], level='Group')
+                org = Organization(
+                    org_id=group_name,
+                    org_name=group_name,
+                    org_level=1,  # 默认层级
+                    sync_version=1,
+                    is_current=True,
+                    is_deleted=False
+                )
                 self.session.add(org)
+                logger.info(f"Created new Organization from Jira Group: {group_name}")
+            else:
+                # 如果名称或其他属性发生变化，则触发 SCD Type 2 更新
+                # 这里仅示例名称变化
+                if org.org_name != group_name:
+                    close_current_and_insert_new(
+                        self.session,
+                        Organization,
+                        {"org_id": group_name},
+                        {"org_name": group_name, "sync_version": org.sync_version}
+                    )
         self.session.flush()
 
     def _sync_all_users(self) -> None:

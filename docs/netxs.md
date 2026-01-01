@@ -2,31 +2,36 @@
 
 ### 🎯 今日焦点与目标达成
 
-**数据模型全面标准化与文档工程大成**。今日正式发布了 **Version 3.8.0 (Modernized Data Models)**，完成了对系统中全部 11 个核心及插件模型模块的系统化重构。通过严格对齐 **Google Python Style Guide**，实现了全量代码的 Docstrings 覆盖、`__repr__` 调试增强，以及全文档体系的同步刷新，标志着平台在工程化程度和可维护性上达到了行业顶尖水平。
+**SCD Type 2 深度适配与身份管理全链路闭环**。今日核心攻坚任务是完成 `User` (人员) 与 `Organization` (组织) 模型从“覆盖更新”向“历史留痕 (SCD Type 2)”的底层架构转型。通过重构身份管理中心与全量采集插件，实现了全局唯一的 OneID (UUID) 锚定，确保了在人员变动、部门调整场景下，度量数据的历史回溯性与一致性。
 
 ### ✅ 主要完成的工作 (Highlights)
 
-* **数据模型全量标准化重构 (Data Model Standardization)**:
-  * **Google Style 对齐**: 对跨越 `core`、`plugins` (Jira, Sonar, Jenkins, ZenTao, JFrog, Nexus) 及 `test_management`, `service_desk` 等 11 个模块、60+ 个数据模型进行了全量重构。
-  * **双重增强**: 实现了所有模型的 `__repr__` 方法，解决了长期以来后端调试与日志排查的信息黑盒问题；补全了 Google 风格的高质量 Docstrings（包含中文业务描述与类型标注）。
+* **身份管理中心重构 (Identity Management Refactoring)**:
+  * **OneID 锚定机制**: 升级 `IdentityManager`，确立以 `global_user_id` (UUID) 作为跨系统人员关联的稳定唯一标识，彻底解耦 surrogate primary key (ID)。
+  * **SCD Type 2 自动适配**: 实现 `get_or_create_user` 逻辑的自动版本化，支持按 Email/工号精准识别当前有效记录 (`is_current=True`) 并自动建立多源映射。
 
-* **全栈文档工程同步 (Full-Stack Documentation Sync)**:
-  * **核心文档升级**: 发布了 **数据字典 v2.1 (DATA_DICTIONARY.md)**，详尽收录了重构后的所有表结构与 Pydantic 映射逻辑。
-  * **发布版本更新**: 同步将 `README`, `ARCHITECTURE`, `REQUIREMENTS`, `USER_GUIDE`, `DEPLOYMENT`, `PROJECT_SUMMARY_AND_MANUAL` 等 10+ 份核心文档升级至 **3.8.0** 版本。
-  * **工程质量对齐**: 确保所有技术选型描述（如 Pydantic V2 应用、Google Style 强制约定）在文档与代码间完美对齐。
+* **SCD Type 2 核心服务集 (Standardized Update Services)**:
+  * **通用更新逻辑**: 在 `core/services.py` 落地 `close_current_and_insert_new` 核心函数，实现了“关闭旧版、开启新版、自增版本号”的原子化操作。
+  * **关联关系透明过滤**: 对 `base_models` 及全部插件模型执行了“关系现代化”改造，为 60+ 个 `relationship` 注入了自动过滤 `is_current=True` 的 `primaryjoin` 片段，从 ORM 层杜绝了脏数据关联。
 
-* **工程规范与标准沉淀 (Standards Enforcement)**:
-  * **CONTRIBUTING 指南强化**: 在 `CONTRIBUTING.md` 中制度化了模型定义的“两件套”（Docstring + `__repr__`），确立了新加入开发者的强制性代码质量底线。
-  * **版本控制闭环**: 发布了涵盖全量变更的 `CHANGELOG.md [3.8.0]`。
+* **全量插件架构适配 (Full-Scale Plugin Adaptation)**:
+  * **六大插件同步刷新**: 完成了 Jira, ZenTao, Jenkins, SonarQube, JFrog, GitLab 全部 Worker/Transformer 的深度重构。
+  * **ZenTao 专项治理**: 特别针对禅道的复杂部门树进行了 SCD Type 2 改造，实现了部门名称/层级变更时的历史版本保留；重构了用例与发布的身份识别逻辑。
+  * **外键标准规范化**: 将所有插件模型中的用户引用的外键类型统一切换为 UUID，并映射至 `mdm_identities.global_user_id`。
+
+* **安全与权限中心对齐 (Security & Privacy Alignment)**:
+  * **数据隔离增强**: 更新 `core/security.py` 隐私过滤器，确保在行政级别/部门级别的权限校验环节，始终基于最新的组织架构定义。
+  * **OAuth 逻辑适配**: 适配了 `UserOAuthToken` 与新身份模型的关联逻辑。
 
 ### 🚧 遗留问题与障碍 (Blockers)
 
-* **Markdown 格式微调**: 发现 `DATA_DICTIONARY.md` 等个别 Markdown 文件在大规模表格编辑后存在 `MD060/table-column-style` 等轻微 Lint 警告，虽不影响阅读，但需在后续进行美观度修复。
+* **数据库迁移对齐**: 由于模型层移除了 `primary_email` 和 `employee_id` 的物理唯一约束，需手工核对并生成 Alembic 迁移脚本，以防止数据库层索引冲突及确保数据平滑迁移。
 
 ### 🚀 下一步计划 (Next Steps)
 
-1. **自动化模型校验**: 探索通过脚本自动验证 `__repr__` 和 Docstring 的覆盖率，防止后续开发带来的质量回退。
-2. **Lint 专项治理**: 执行一次全局 Markdown Lint 修复，消除所有文档中的格式警告。
+1. **迁移脚本固化**: 执行 `alembic revision --autogenerate` 并手工精修生成的迁移 SQL，完成所有环境的表结构升级。
+2. **集成回归测试**: 针对复杂的“人员调岗/跨源识别”场景执行 `test_identity_mapping.py` 的回归套件，验证历史版本记录不受干扰。
+3. **前端看板对齐**: 检查 Grafana 看板 SQL，确保所有的 User/Org 关联查询均已显式添加 `is_current = true` 过滤条件。
 
 ---
 

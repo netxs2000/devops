@@ -8,6 +8,7 @@ from devops_collector.models.base_models import Organization, User as GlobalUser
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.identity_manager import IdentityManager
+from devops_collector.core.services import close_current_and_insert_new
 from .client import ZenTaoClient
 from .models import (
     ZenTaoProduct, ZenTaoExecution, ZenTaoIssue, ZenTaoProductPlan,
@@ -171,7 +172,7 @@ class ZenTaoWorker(BaseWorker):
         plan.opened_by = data.get('openedBy')
         if plan.opened_by:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', plan.opened_by)
-            plan.opened_by_user_id = u.id
+            plan.opened_by_user_id = u.global_user_id
             
         if data.get('openedDate'):
             plan.opened_date = datetime.fromisoformat(data['openedDate'].replace(' ', 'T'))
@@ -208,13 +209,13 @@ class ZenTaoWorker(BaseWorker):
         issue.opened_by = data.get('openedBy')
         if issue.opened_by:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', issue.opened_by)
-            issue.opened_by_user_id = u.id
+            issue.opened_by_user_id = u.global_user_id
             
         issue.assigned_to = data.get('assignedTo')
         if issue.assigned_to:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', issue.assigned_to)
-            issue.assigned_to_user_id = u.id
-            issue.user_id = u.id # 向后兼容
+            issue.assigned_to_user_id = u.global_user_id
+            issue.user_id = u.global_user_id # 向后兼容
         
         if data.get('openedDate'):
             # 处理禅道日期格式可能不标准的情况
@@ -256,7 +257,7 @@ class ZenTaoWorker(BaseWorker):
         tc.opened_by = data.get('openedBy')
         if tc.opened_by:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', tc.opened_by)
-            tc.opened_by_user_id = u.id
+            tc.opened_by_user_id = u.global_user_id
             
         if data.get('openedDate'):
             tc.opened_date = datetime.fromisoformat(data['openedDate'].replace(' ', 'T'))
@@ -306,7 +307,7 @@ class ZenTaoWorker(BaseWorker):
         build.builder = data.get('builder')
         if build.builder:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', build.builder)
-            build.builder_user_id = u.id
+            build.builder_user_id = u.global_user_id
             
         if data.get('date'):
             build.date = datetime.fromisoformat(data['date'].replace(' ', 'T'))
@@ -346,7 +347,7 @@ class ZenTaoWorker(BaseWorker):
         rel.opened_by = data.get('openedBy')
         if rel.opened_by:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', rel.opened_by)
-            rel.opened_by_user_id = u.id
+            rel.opened_by_user_id = u.global_user_id
         rel.raw_data = data
         self.session.flush()
         return rel
@@ -362,7 +363,7 @@ class ZenTaoWorker(BaseWorker):
         action.actor = data.get('actor')
         if action.actor:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', action.actor)
-            action.actor_user_id = u.id
+            action.actor_user_id = u.global_user_id
             
         action.action = data.get('action')
         if data.get('date'):
@@ -380,12 +381,35 @@ class ZenTaoWorker(BaseWorker):
         # 禅道部门 ID -> 系统 Organization 对象
         dept_map = {}
         
-        # 第一遍：创建/更新所有部门
+        # 第一遍：创建/更新所有部门 (SCD Type 2 兼容)
         for d in depts:
-            org = self.session.query(Organization).filter_by(name=d['name']).first()
+            org_id = f"zentao_dept_{d['id']}"
+            org_name = d['name']
+            org = self.session.query(Organization).filter_by(
+                org_id=org_id, is_current=True
+            ).first()
+            
             if not org:
-                org = Organization(name=d['name'], level='Department')
+                org = Organization(
+                    org_id=org_id, 
+                    org_name=org_name, 
+                    org_level=3,
+                    is_current=True,
+                    sync_version=1
+                )
                 self.session.add(org)
+                logger.info(f"Created ZenTao Organization: {org_name}")
+            else:
+                # 检查属性变化
+                if org.org_name != org_name:
+                    org = close_current_and_insert_new(
+                        self.session,
+                        Organization,
+                        {"org_id": org_id},
+                        {"org_name": org_name, "sync_version": org.sync_version, "org_level": 3}
+                    )
+                    logger.info(f"Updated ZenTao Organization Name: {org_name}")
+            
             dept_map[d['id']] = org
         
         self.session.flush()
@@ -393,7 +417,7 @@ class ZenTaoWorker(BaseWorker):
         # 第二遍：建立父子关系
         for d in depts:
             if d.get('parent') and d['parent'] in dept_map:
-                dept_map[d['id']].parent_id = dept_map[d['parent']].id
+                dept_map[d['id']].parent_org_id = dept_map[d['parent']].org_id
         
         self.session.flush()
 
@@ -401,24 +425,22 @@ class ZenTaoWorker(BaseWorker):
         """同步禅道用户到公共 User 表，并绑定部门。"""
         zt_users = self.client.get_users()
         for u_data in zt_users:
-            IdentityManager.get_or_create_user(
+            user = IdentityManager.get_or_create_user(
                 self.session, 
                 source='zentao',
                 external_id=u_data['account'],
                 email=u_data.get('email'),
                 name=u_data.get('realname')
             )
-            # 更新部门属性 (对齐后的 User)
-            user = self.session.query(GlobalUser).join(IdentityMapping).filter(
-                IdentityMapping.source == 'zentao',
-                IdentityMapping.external_id == u_data['account']
-            ).first()
             
             if user:
                 if u_data.get('dept'):
-                    org = self.session.query(Organization).filter_by(name=u_data.get('dept_name')).first()
+                    org_id = f"zentao_dept_{u_data['dept']}"
+                    org = self.session.query(Organization).filter_by(
+                        org_id=org_id, is_current=True
+                    ).first()
                     if org:
-                        user.organization_id = org.id
+                        user.department_id = org.org_id
                 user.raw_data = u_data
                 
         self.session.flush()

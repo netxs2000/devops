@@ -38,16 +38,21 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.primary_email == email).first()
+    return db.query(User).filter(User.primary_email == email, User.is_current == True).first()
 
 def create_user(db: Session, user_data):
     hashed_password = get_password_hash(user_data.password)
     
     db_user = User(
+        global_user_id=uuid.uuid4(),
         primary_email=user_data.email,
         full_name=user_data.full_name,
         employee_id=user_data.employee_id,
-        is_active=True
+        is_active=True,
+        is_survivor=True,
+        sync_version=1,
+        is_current=True,
+        is_deleted=False
     )
     db.add(db_user)
     db.flush() # Generate ID
