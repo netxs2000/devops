@@ -94,3 +94,11 @@ url = https://jfrog.example.com/artifactory
 token = jfrog_identity_token
 # Comma-separated repo list to sync
 sync_repos = docker-local,maven-remote
+
+[sla]
+p0 = 8
+p1 = 24
+p2 = 73
+p3 = 120
+p4 = 240
+default = 48

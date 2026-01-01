@@ -14,10 +14,12 @@ from typing import List, Optional
 
 from sqlalchemy import (
     JSON, BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Index,
-    Integer, String, Text, UniqueConstraint
+    Integer, String, Text, UniqueConstraint, select
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import declarative_base, relationship, backref
+from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 
 # SQLAlchemy 声明式基类
@@ -135,6 +137,12 @@ class Organization(Base):
         back_populates="managed_organizations",
         post_update=True
     )
+    
+    # MDM 聚合关系 (补全双向)
+    users = relationship("User", foreign_keys="[User.department_id]", back_populates="department")
+    products = relationship("Product", back_populates="organization")
+    okr_objectives = relationship("OKRObjective", back_populates="organization")
+    revenue_contracts = relationship("RevenueContract", back_populates="organization")
     
     created_at = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
@@ -409,7 +417,7 @@ class User(Base):
     )
     
     # 关联关系
-    department = relationship("Organization", foreign_keys=[department_id])
+    department = relationship("Organization", foreign_keys=[department_id], back_populates="users")
     location = relationship("Location", foreign_keys=[location_id])
     
     # [RBAC] 管理的组织 (作为负责人)
@@ -424,6 +432,28 @@ class User(Base):
     identities = relationship(
         "IdentityMapping", back_populates="user", cascade="all, delete-orphan"
     )
+    
+    # Association Proxies (黑科技 1)
+    # 直接获取用户在所有三方系统中的用户名列表
+    external_usernames = association_proxy('identities', 'external_username')
+    # 直接获取用户在所有系统中绑定的外部ID列表
+    external_ids = association_proxy('identities', 'external_user_id')
+    
+    # 业务画像与目标补全 (双向)
+    activity_profiles = relationship("UserActivityProfile", back_populates="user", cascade="all, delete-orphan")
+    okr_objectives = relationship("OKRObjective", back_populates="owner")
+    test_cases = relationship("TestCase", back_populates="author")
+    requirements = relationship("Requirement", back_populates="author")
+    
+    # 多重角色产品管理关系
+    managed_products_as_pm = relationship("Product", foreign_keys="[Product.product_manager_id]", back_populates="product_manager")
+    managed_products_as_dm = relationship("Product", foreign_keys="[Product.dev_manager_id]", back_populates="dev_manager")
+    managed_products_as_tm = relationship("Product", foreign_keys="[Product.test_manager_id]", back_populates="test_manager")
+    managed_products_as_rm = relationship("Product", foreign_keys="[Product.release_manager_id]", back_populates="release_manager")
+    
+    # 插件数据直达 (Association Proxies)
+    project_memberships = relationship("ProjectMember", back_populates="user", cascade="all, delete-orphan")
+    projects = association_proxy('project_memberships', 'project')
     
     __table_args__ = (
         Index('idx_identity_map', identity_map, postgresql_using='gin'),
@@ -657,12 +687,15 @@ class Product(Base):
     
     # 关系
     children = relationship("Product", backref=backref('parent', remote_side=[id]))
-    organization = relationship("Organization")
+    organization = relationship("Organization", back_populates="products")
     
-    product_manager = relationship("User", foreign_keys=[product_manager_id])
-    dev_manager = relationship("User", foreign_keys=[dev_manager_id])
-    test_manager = relationship("User", foreign_keys=[test_manager_id])
-    release_manager = relationship("User", foreign_keys=[release_manager_id])
+    product_manager = relationship("User", foreign_keys=[product_manager_id], back_populates="managed_products_as_pm")
+    dev_manager = relationship("User", foreign_keys=[dev_manager_id], back_populates="managed_products_as_dm")
+    test_manager = relationship("User", foreign_keys=[test_manager_id], back_populates="managed_products_as_tm")
+    release_manager = relationship("User", foreign_keys=[release_manager_id], back_populates="managed_products_as_rm")
+    
+    # 财务与合同 (双向)
+    revenue_contracts = relationship("RevenueContract", back_populates="product")
     
     # 关联 OKR 目标
     objectives = relationship("OKRObjective", back_populates="product")
@@ -713,8 +746,8 @@ class OKRObjective(Base, TimestampMixin):
 
     # 关系映射
     product = relationship("Product", back_populates="objectives")
-    owner = relationship("User")
-    organization = relationship("Organization")
+    owner = relationship("User", back_populates="okr_objectives")
+    organization = relationship("Organization", back_populates="okr_objectives")
     children = relationship("OKRObjective", backref=backref('parent', remote_side=[id]))
     key_results = relationship("OKRKeyResult", back_populates="objective", cascade="all, delete-orphan")
 
@@ -787,6 +820,39 @@ class Service(Base, TimestampMixin):
     product = relationship("Product")
     slos = relationship("SLO", back_populates="service", cascade="all, delete-orphan")
     projects = relationship("ServiceProjectMapping", back_populates="service", cascade="all, delete-orphan")
+    resource_costs = relationship("ResourceCost", back_populates="service")
+
+    # ROI & 健康度评估 (黑科技 3 & 4)
+    @hybrid_property
+    def total_cost(self):
+        """服务的累计投入成本 (ROI 基准)。"""
+        return sum(c.amount for c in self.resource_costs)
+
+    @total_cost.expression
+    def total_cost(cls):
+        """服务的累计投入成本 SQL 聚合。"""
+        return select(func.sum(ResourceCost.amount)).\
+            where(ResourceCost.service_id == cls.id).\
+            label("total_cost")
+
+    @hybrid_property
+    def health_score(self):
+        """服务的综合健康度评分 (0-100)。
+        目前的逻辑是基于 SLO 达成率的简单模拟，生产中可与 Project 关联。
+        """
+        # 简单示例逻辑：基于关联项目的活跃度或质量 (此处由 SLO 数量模拟)
+        if not self.slos: return 80.0
+        return 100.0 - (len(self.slos) * 2)
+
+    @hybrid_property
+    def investment_roi(self):
+        """投入产出比 (ROI)。
+        公式：健康度分值 / (累计投入 / 10000)
+        用于衡量每万元投入带来的稳定性/质量收益。
+        """
+        cost = self.total_cost
+        if not cost or cost == 0: return 0.0
+        return round(self.health_score / (cost / 10000.0), 2)
 
 
 class ServiceProjectMapping(Base, TimestampMixin):
@@ -1043,6 +1109,7 @@ class CostCode(Base, TimestampMixin):
     is_active = Column(Boolean, default=True)
     
     costs = relationship("ResourceCost", back_populates="cost_code")
+    purchase_contracts = relationship("PurchaseContract", back_populates="cost_code")
 
     def __repr__(self) -> str:
         return f"<CostCode(code='{self.code}', name='{self.name}')>"
@@ -1101,6 +1168,10 @@ class ResourceCost(Base, TimestampMixin):
     
     cost_code = relationship("CostCode", back_populates="costs")
     purchase_contract = relationship("PurchaseContract", back_populates="costs")
+    
+    # 关联到逻辑服务
+    service_id = Column(Integer, ForeignKey('services.id'))
+    service = relationship("Service", back_populates="resource_costs")
 
     def __repr__(self) -> str:
         return f"<ResourceCost(id={self.id}, item='{self.cost_item}', amount={self.amount})>"
@@ -1146,7 +1217,7 @@ class UserActivityProfile(Base, TimestampMixin):
     avg_lint_errors_per_kloc = Column(Float)
     code_review_acceptance_rate = Column(Float)
     
-    user = relationship("User")
+    user = relationship("User", back_populates="activity_profiles")
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
@@ -1194,8 +1265,8 @@ class RevenueContract(Base, TimestampMixin):
     status = Column(String(50), default='Active')
     raw_data = Column(JSON)
     
-    product = relationship("Product")
-    organization = relationship("Organization")
+    product = relationship("Product", back_populates="revenue_contracts")
+    organization = relationship("Organization", back_populates="revenue_contracts")
     payment_nodes = relationship("ContractPaymentNode", back_populates="contract", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
@@ -1275,7 +1346,7 @@ class PurchaseContract(Base, TimestampMixin):
     raw_data = Column(JSON)
     
     # 关系
-    cost_code = relationship("CostCode")
+    cost_code = relationship("CostCode", back_populates="purchase_contracts")
     costs = relationship("ResourceCost", back_populates="purchase_contract")
 
     def __repr__(self) -> str:

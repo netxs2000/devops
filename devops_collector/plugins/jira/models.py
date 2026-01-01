@@ -34,6 +34,7 @@ class JiraProject(Base):
     lead_name = Column(String(255))
     
     gitlab_project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
+    gitlab_project = relationship("Project", back_populates="jira_projects")
     
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default='PENDING')

@@ -9,6 +9,8 @@ from sqlalchemy.orm import relationship
 
 # 从公共基础模型导入 Base
 from devops_collector.models.base_models import Base
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.sql import func, select
 
 
 
@@ -37,6 +39,7 @@ class SonarProject(Base):
     qualifier = Column(String(10))
     
     gitlab_project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
+    gitlab_project = relationship("Project", back_populates="sonar_projects")
     
     last_analysis_date = Column(DateTime(timezone=True))
     
@@ -56,6 +59,36 @@ class SonarProject(Base):
     issues = relationship(
         "SonarIssue", back_populates="project", cascade="all, delete-orphan"
     )
+    
+    # 获取最新的分析指标 (黑科技 2)
+    latest_measure = relationship(
+        "SonarMeasure",
+        primaryjoin="and_(SonarProject.id==SonarMeasure.project_id)",
+        order_by="desc(SonarMeasure.analysis_date)",
+        viewonly=True,
+        uselist=False
+    )
+
+    @hybrid_property
+    def bugs(self):
+        return self.latest_measure.bugs if self.latest_measure else 0
+
+    @hybrid_property
+    def vulnerabilities(self):
+        return self.latest_measure.vulnerabilities if self.latest_measure else 0
+
+    @hybrid_property
+    def coverage(self):
+        return self.latest_measure.coverage if self.latest_measure else 0.0
+
+    @hybrid_property
+    def quality_gate(self):
+        return self.latest_measure.quality_gate_status if self.latest_measure else 'UNKNOWN'
+
+    @hybrid_property
+    def is_clean(self):
+        """质量门禁是否通过。"""
+        return self.quality_gate == 'OK'
 
     def __repr__(self) -> str:
         return f"<SonarProject(key='{self.key}', name='{self.name}')>"

@@ -86,8 +86,10 @@ class AnalysisSettings(BaseSettings):
         '*.exe', '*.dll', '*.so', '*.dylib'
     ]
     production_env_mapping: List[str] = ["prod", "production", "prd", "main"]
+    incident_label_patterns: List[str] = ["incident", "production-error", "P0", "P1"]
+    change_failure_label_patterns: List[str] = ["change-failure", "rollback"]
 
-    @field_validator('ignored_file_patterns', 'production_env_mapping', mode='before')
+    @field_validator('ignored_file_patterns', 'production_env_mapping', 'incident_label_patterns', 'change_failure_label_patterns', mode='before')
     @classmethod
     def split_str(cls, v):
         """Splits comma-separated strings into lists.
@@ -180,6 +182,24 @@ class AISettings(BaseSettings):
     base_url: str = "https://api.openai.com/v1"
     model: str = "gpt-4o"
 
+class SLASettings(BaseSettings):
+    """SLA threshold settings (in hours).
+    
+    Attributes:
+        p0 (int): SLA response threshold for P0.
+        p1 (int): SLA response threshold for P1.
+        p2 (int): SLA response threshold for P2.
+        p3 (int): SLA response threshold for P3.
+        p4 (int): SLA response threshold for P4.
+        default (int): Default SLA response threshold.
+    """
+    p0: int = 8
+    p1: int = 24
+    p2: int = 73
+    p3: int = 120
+    p4: int = 240
+    default: int = 48
+
 class StorageSettings(BaseSettings):
     """Local storage configuration.
 
@@ -234,6 +254,7 @@ class Settings(BaseSettings):
     jenkins: JenkinsSettings = JenkinsSettings()
     ai: AISettings = AISettings()
     storage: StorageSettings = StorageSettings()
+    sla: SLASettings = SLASettings()
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -309,3 +330,9 @@ class Config:
     AI_BASE_URL = settings.ai.base_url
     AI_MODEL = settings.ai.model
     DATA_DIR = settings.storage.data_dir
+    SLA_P0 = settings.sla.p0
+    SLA_P1 = settings.sla.p1
+    SLA_P2 = settings.sla.p2
+    SLA_P3 = settings.sla.p3
+    SLA_P4 = settings.sla.p4
+    SLA_DEFAULT = settings.sla.default

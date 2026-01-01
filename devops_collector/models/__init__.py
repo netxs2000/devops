@@ -26,18 +26,30 @@ from .base_models import (
     Incident,
     ResourceCost,
     UserActivityProfile,
+    Service,
+    ServiceProjectMapping,
+    SLO,
     TimestampMixin,
     RawDataMixin
+)
+# 从依赖扫描模块导入
+from .dependency import (
+    DependencyScan,
+    LicenseRiskRule,
+    Dependency,
+    DependencyCVE
 )
 # 从测试管理模块导入
 from .test_management import (
     TestCase,
     TestCaseIssueLink,
+    Requirement,
     TestExecutionRecord
 )
 # 从 GitLab 插件导入特定模型
 from devops_collector.plugins.gitlab.models import (
     Project,
+    ProjectMember,
     Commit,
     CommitFileStats,
     Issue,
@@ -126,9 +138,10 @@ __all__ = [
     'OKRObjective', 'OKRKeyResult', 'TraceabilityLink',
     'TestExecutionSummary', 'PerformanceRecord', 'Incident', 'ResourceCost',
     'UserActivityProfile',
+    'Service', 'ServiceProjectMapping', 'SLO',
     'TimestampMixin', 'RawDataMixin',
     # GitLab 模型
-    'Project', 'Commit', 'CommitFileStats',
+    'Project', 'ProjectMember', 'Commit', 'CommitFileStats',
     'Issue', 'MergeRequest', 'Pipeline', 'Deployment',
     'Note', 'Tag', 'Branch', 'GitLabGroup', 'GitLabGroupMember', 'Milestone',
     'GitLabIssueEvent',
@@ -148,5 +161,9 @@ __all__ = [
     # ZenTao 模型
     'ZenTaoProduct', 'ZenTaoIssue', 'ZenTaoExecution',
     # 测试管理
-    'TestCase', 'TestCaseIssueLink'
+    'TestCase', 'TestCaseIssueLink', 'Requirement',
+    # 依赖扫描
+    'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE'
 ]
+# 注册全局事件监听器 (黑科技 3)
+from . import events

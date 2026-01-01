@@ -12,13 +12,15 @@
 """
 from datetime import datetime, timezone
 from typing import List, Optional
+from devops_collector.config import settings
 
 from sqlalchemy import (
     JSON, BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Integer,
-    String, Text
+    String, Text, select, cast
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import backref, relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 
 # 从公共基础模型导入 Base 和共享模型
@@ -184,6 +186,14 @@ class Project(Base):
 
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # 注入依赖扫描关系 (跨模块关联)
+    dependency_scans = relationship(
+        "DependencyScan", back_populates="project", cascade="all, delete-orphan"
+    )
+    dependencies = relationship(
+        "Dependency", back_populates="project", cascade="all, delete-orphan"
+    )
+
     # 关联关系
     milestones = relationship(
         "Milestone", back_populates="project", cascade="all, delete-orphan"
@@ -191,6 +201,103 @@ class Project(Base):
     members = relationship(
         "ProjectMember", back_populates="project", cascade="all, delete-orphan"
     )
+    commits = relationship(
+        "Commit", back_populates="project", cascade="all, delete-orphan"
+    )
+    merge_requests = relationship(
+        "MergeRequest", back_populates="project", cascade="all, delete-orphan"
+    )
+    issues = relationship(
+        "Issue", back_populates="project", cascade="all, delete-orphan"
+    )
+    pipelines = relationship(
+        "Pipeline", back_populates="project", cascade="all, delete-orphan"
+    )
+    deployments = relationship(
+        "Deployment", back_populates="project", cascade="all, delete-orphan"
+    )
+    
+    # 跨插件补全与测试管理 (双向)
+    test_cases = relationship("TestCase", back_populates="project", cascade="all, delete-orphan")
+    requirements = relationship("Requirement", back_populates="project", cascade="all, delete-orphan")
+    test_execution_records = relationship("TestExecutionRecord", back_populates="project", cascade="all, delete-orphan")
+    
+    sonar_projects = relationship("SonarProject", back_populates="gitlab_project")
+    jira_projects = relationship("JiraProject", back_populates="gitlab_project")
+
+    # Materialized Attributes (黑科技 5)
+    @hybrid_property
+    def visibility(self):
+        """项目可见性 (public, internal, private)。"""
+        return self.raw_data.get('visibility') if self.raw_data else None
+
+    @hybrid_property
+    def web_url(self):
+        """项目的 GitLab 网页地址。"""
+        return self.raw_data.get('web_url') if self.raw_data else None
+
+    @hybrid_property
+    def is_archived(self):
+        """项目是否已归档。"""
+        return self.raw_data.get('archived', False) if self.raw_data else False
+
+    @is_archived.expression
+    def is_archived(cls):
+        # 兼容性处理：尝试从 JSON 提取布尔值
+        return func.coalesce(func.json_extract(cls.raw_data, '$.archived'), False)
+
+    # DORA Metrics (黑科技 6)
+    @hybrid_property
+    def mttr(self):
+        """平均恢复时长 (MTTR) - 单位: 秒。"""
+        incidents = [i for i in self.issues if i.is_incident and i.state == 'closed']
+        if not incidents: return 0.0
+        r_times = [i.resolution_time for i in incidents if i.resolution_time is not None]
+        return sum(r_times) / len(r_times) if r_times else 0.0
+
+    @mttr.expression
+    def mttr(cls):
+        """MTTR 的 SQL 聚合。"""
+        # 动态获取关联类以避免 NameError
+        Issue_ = cls.issues.property.mapper.class_
+        # 使用子查询计算该项目下所有已关闭 Incident 的平均解决时间
+        return select(func.avg(Issue_.resolution_time)).\
+            where(Issue_.project_id == cls.id).\
+            where(Issue_.is_incident == True).\
+            where(Issue_.state == 'closed').\
+            scalar_subquery()
+
+    @hybrid_property
+    def change_failure_rate(self):
+        """变更失败率 (CFR) - 单位: 百分比。
+        计算公式：(变更失败 Issues 数 / 成功部署数) * 100
+        """
+        success_deploys = len([d for d in self.deployments if d.is_success])
+        if success_deploys == 0: return 0.0
+        failures = len([i for i in self.issues if i.is_change_failure])
+        return (failures / success_deploys) * 100
+
+    @change_failure_rate.expression
+    def change_failure_rate(cls):
+        """CFR 的 SQL 聚合。"""
+        from sqlalchemy import case, cast, Float
+        Issue_ = cls.issues.property.mapper.class_
+        Deployment_ = cls.deployments.property.mapper.class_
+        # 计算失败数
+        failures_count = select(func.count(Issue_.id)).\
+            where(Issue_.project_id == cls.id).\
+            where(Issue_.is_change_failure == True).\
+            scalar_subquery()
+        # 计算成功部署数
+        deploy_count = select(func.count(Deployment_.id)).\
+            where(Deployment_.project_id == cls.id).\
+            where(Deployment_.status == 'success').\
+            scalar_subquery()
+        
+        return case(
+            (deploy_count > 0, cast(failures_count, Float) / cast(deploy_count, Float) * 100),
+            else_=0.0
+        )
 
     def __repr__(self) -> str:
         return f"<Project(id={self.id}, path='{self.path_with_namespace}')>"
@@ -237,7 +344,7 @@ class ProjectMember(Base):
     expires_at = Column(DateTime(timezone=True))
     
     project = relationship("Project", back_populates="members")
-    user = relationship("User")
+    user = relationship("User", back_populates="project_memberships")
 
     def __repr__(self) -> str:
         return f"<ProjectMember(project_id={self.project_id}, user_id={self.user_id})>"
@@ -301,6 +408,52 @@ class MergeRequest(Base):
     merge_commit_sha = Column(String)
     raw_data = Column(JSON)
     
+    # 链路追溯 (黑科技 1+)
+    deployments = relationship(
+        "Deployment",
+        primaryjoin="and_(MergeRequest.merge_commit_sha==Deployment.sha, MergeRequest.project_id==Deployment.project_id)",
+        foreign_keys="[Deployment.sha, Deployment.project_id]",
+        viewonly=True
+    )
+
+    @hybrid_property
+    def latest_deployment(self):
+        """MR 关联的最新部署记录。"""
+        if not self.deployments: return None
+        return sorted(self.deployments, key=lambda d: d.created_at or d.updated_at, reverse=True)[0]
+
+    @hybrid_property
+    def risk_score(self):
+        """变更风险评分 (0-100)。(黑科技 2/4 - AI 降噪)
+        基于变更规模、评审轮次、质量门禁以及 AI 分类建议。
+        """
+        score = 0.0
+        # 1. 变更规模因子 (从 raw_data 提取)
+        if self.raw_data:
+            stats = self.raw_data.get('stats', {})
+            additions = stats.get('additions', 0)
+            deletions = stats.get('deletions', 0)
+            score += (additions + deletions) / 100.0  # 每 100 行增加 1 分
+        
+        # 2. 协作复杂性因子
+        score += (self.review_cycles or 1) * 5
+        
+        # 3. 质量门禁因子
+        if self.quality_gate_status == 'failed':
+            score += 40
+            
+        # 4. AI 增强降噪 (黑科技 4)
+        if self.ai_category:
+            cat = self.ai_category.lower()
+            if 'bugfix' in cat or 'security' in cat:
+                score *= 1.2  # 修复类变更风险通常更高
+            elif 'documentation' in cat or 'test' in cat:
+                score *= 0.2  # 纯文档或测试增量风险极低（降噪）
+            elif 'refactor' in cat:
+                score *= 0.8  # 重构通常经过更严谨考虑
+            
+        return min(round(score, 1), 100.0)
+
     # 链路追溯：关联外部业务需求 (Jira/ZenTao)
     external_issue_id = Column(String(100))
     issue_source = Column(String(50)) # jira, zentao
@@ -325,7 +478,43 @@ class MergeRequest(Base):
     )
     author = relationship("User")
     
-    project = relationship("Project")
+    project = relationship("Project", back_populates="merge_requests")
+
+    # Hybrid Attributes (黑科技 2)
+    @hybrid_property
+    def cycle_time(self):
+        """MR 周期时长 (秒)。
+        如果是已合并状态，计算从创建到合并的时间；否则返回 None。
+        """
+        if self.merged_at and self.created_at:
+            # 兼容性处理：确保都是 aware 的
+            start = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=timezone.utc)
+            end = self.merged_at if self.merged_at.tzinfo else self.merged_at.replace(tzinfo=timezone.utc)
+            return (end - start).total_seconds()
+        return None
+
+    @cycle_time.expression
+    def cycle_time(cls):
+        """支持 SQL 过滤的周期时长表达式。"""
+        # 注意: 这里使用 func.julianday 等 SQLite 语法或 PostgreSQL 的 epoch 
+        # 为了通用，可以使用基本的减法，具体取决于数据库方言
+        return func.coalesce(cls.merged_at - cls.created_at, None)
+
+    # Materialized Attributes (黑科技 5)
+    @hybrid_property
+    def is_draft(self):
+        """判断是否为草稿状态。"""
+        if not self.raw_data:
+            return False
+        return self.raw_data.get('draft', False) or self.raw_data.get('work_in_progress', False)
+
+    @hybrid_property
+    def source_branch(self):
+        return self.raw_data.get('source_branch') if self.raw_data else None
+
+    @hybrid_property
+    def target_branch(self):
+        return self.raw_data.get('target_branch') if self.raw_data else None
 
     def __repr__(self) -> str:
         return f"<MergeRequest(id={self.id}, iid={self.iid}, title='{self.title}')>"
@@ -398,7 +587,7 @@ class Commit(Base):
     )
     author_user = relationship("User")
     
-    project = relationship("Project")
+    project = relationship("Project", back_populates="commits")
 
     def __repr__(self) -> str:
         return f"<Commit(id='{self.short_id}', author='{self.author_name}')>"
@@ -500,6 +689,9 @@ class Issue(Base):
     ai_confidence = Column(Float)
     
     labels = Column(JSON) 
+    first_response_at = Column(DateTime(timezone=True))
+    
+    milestone_id = Column(Integer, ForeignKey('milestones.id'), nullable=True)
     
     raw_data = Column(JSON)
     
@@ -508,12 +700,39 @@ class Issue(Base):
     )
     author = relationship("User")
     
-    project = relationship("Project")
+    project = relationship("Project", back_populates="issues")
     events = relationship("GitLabIssueEvent", back_populates="issue", cascade="all, delete-orphan")
 
     # 敏捷效能分析关联
     transitions = relationship("IssueStateTransition", back_populates="issue", cascade="all, delete-orphan")
     blockages = relationship("Blockage", back_populates="issue", cascade="all, delete-orphan")
+    milestone = relationship("Milestone", back_populates="issues")
+
+    # 需求溯源关系 (黑科技 1+)
+    merge_requests = relationship(
+        "MergeRequest",
+        primaryjoin="and_(cast(Issue.iid, String)==MergeRequest.external_issue_id, Issue.project_id==MergeRequest.project_id)",
+        viewonly=True,
+        foreign_keys="[MergeRequest.external_issue_id, MergeRequest.project_id]"
+    )
+
+    @hybrid_property
+    def is_deployed(self):
+        """该需求是否已部署到生产环境。"""
+        for mr in self.merge_requests:
+            if any(d.is_success and d.is_production for d in mr.deployments):
+                return True
+        return False
+
+    @hybrid_property
+    def deploy_environments(self):
+        """该需求已部署到的所有环境列表。"""
+        envs = set()
+        for mr in self.merge_requests:
+            for d in mr.deployments:
+                if d.status == 'success':
+                    envs.add(d.environment)
+        return list(envs)
 
     # 测试管理关联
     associated_test_cases = relationship(
@@ -521,6 +740,116 @@ class Issue(Base):
         secondary="test_case_issue_links",
         back_populates="linked_issues"
     )
+
+    # Hybrid Attributes (黑科技 2)
+    @hybrid_property
+    def resolution_time(self):
+        """Issue 解决时长 (秒)。"""
+        if self.closed_at and self.created_at:
+            # 兼容性处理：确保都是 aware 的
+            start = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=timezone.utc)
+            end = self.closed_at if self.closed_at.tzinfo else self.closed_at.replace(tzinfo=timezone.utc)
+            return (end - start).total_seconds()
+        return None
+
+    @resolution_time.expression
+    def resolution_time(cls):
+        return func.coalesce(cls.closed_at - cls.created_at, None)
+
+    @hybrid_property
+    def age_in_current_state(self):
+        """在当前状态已停留时长 (秒)。
+        基于 updated_at 估算状态最后变更时间。
+        """
+        if self.updated_at:
+            updated_at = self.updated_at if self.updated_at.tzinfo else self.updated_at.replace(tzinfo=timezone.utc)
+            return (datetime.now(timezone.utc) - updated_at).total_seconds()
+        return 0
+
+    @hybrid_property
+    def is_bug(self):
+        """根据标签判定是否为 Bug。"""
+        if not self.labels:
+            return False
+        return any('bug' in str(label).lower() for label in self.labels)
+
+    @hybrid_property
+    def is_incident(self):
+        """根据标签判定是否为 DORA 事故 (Incident)。"""
+        if not self.labels: return False
+        labels_str = str(self.labels).lower()
+        return any(p.lower() in labels_str for p in settings.analysis.incident_label_patterns)
+
+    @is_incident.expression
+    def is_incident(cls):
+        """DORA 事故检测的 SQL 表达式。"""
+        # 兼容性方案：通过将 JSON 转换为文本并模糊匹配标签关键字
+        from sqlalchemy import or_, Text
+        conditions = [func.cast(cls.labels, Text).ilike(f"%{p}%") for p in settings.analysis.incident_label_patterns]
+        return or_(*conditions)
+
+    @hybrid_property
+    def is_change_failure(self):
+        """根据标签判定是否为变更失败 (Change Failure)。"""
+        if not self.labels: return False
+        labels_str = str(self.labels).lower()
+        return any(p.lower() in labels_str for p in settings.analysis.change_failure_label_patterns)
+
+    @is_change_failure.expression
+    def is_change_failure(cls):
+        """变更失败检测的 SQL 表达式。"""
+        from sqlalchemy import or_, Text
+        conditions = [func.cast(cls.labels, Text).ilike(f"%{p}%") for p in settings.analysis.change_failure_label_patterns]
+        return or_(*conditions)
+
+    # Service Desk / SLA Logic (黑科技 2)
+    @hybrid_property
+    def priority_level(self):
+        """从标签中解析优先级 (P0=0, P1=1, ...)。"""
+        if not self.labels: return 99
+        labels_str = str(self.labels).upper()
+        if 'P0' in labels_str: return 0
+        if 'P1' in labels_str: return 1
+        if 'P2' in labels_str: return 2
+        if 'P3' in labels_str: return 3
+        if 'P4' in labels_str: return 4
+        return 5
+
+    @hybrid_property
+    def sla_limit_seconds(self):
+        """根据优先级确定的 SLA 响应阈值。"""
+        # 从配置加载阈值 (单位: 小时 -> 秒)
+        thresholds = {
+            0: settings.sla.p0 * 3600,
+            1: settings.sla.p1 * 3600,
+            2: settings.sla.p2 * 3600,
+            3: settings.sla.p3 * 3600,
+            4: settings.sla.p4 * 3600
+        }
+        return thresholds.get(self.priority_level, settings.sla.default * 3600)
+
+    @hybrid_property
+    def is_sla_violated(self):
+        """是否违反了 SLA 响应承诺。"""
+        if not self.created_at: return False
+        
+        # 兼容性处理：确保都是 aware 的
+        start = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=timezone.utc)
+        
+        # 如果已经响应，计算实际响应时间；否则计算至今的时长
+        raw_end = self.first_response_at or datetime.now(timezone.utc)
+        end = raw_end if raw_end.tzinfo else raw_end.replace(tzinfo=timezone.utc)
+        
+        response_time = (end - start).total_seconds()
+        
+        return response_time > self.sla_limit_seconds
+
+    @hybrid_property
+    def sla_status(self):
+        """SLA 状态语义化输出。"""
+        if self.first_response_at:
+            return "SUCCESS" if not self.is_sla_violated else "VIOLATED"
+        return "WARNING" if self.is_sla_violated else "PENDING"
 
     def __repr__(self) -> str:
         return f"<Issue(id={self.id}, iid={self.iid}, title='{self.title}')>"
@@ -659,7 +988,24 @@ class Pipeline(Base):
     
     raw_data = Column(JSON)
     
-    project = relationship("Project")
+    project = relationship("Project", back_populates="pipelines")
+
+    # DORA Hybrid Attributes (黑科技 4)
+    @hybrid_property
+    def is_success(self):
+        return self.status == 'success'
+
+    @is_success.expression
+    def is_success(cls):
+        return cls.status == 'success'
+
+    @hybrid_property
+    def is_failed(self):
+        return self.status == 'failed'
+
+    @is_failed.expression
+    def is_failed(cls):
+        return cls.status == 'failed'
 
     def __repr__(self) -> str:
         return f"<Pipeline(id={self.id}, project_id={self.project_id}, status='{self.status}')>"
@@ -697,7 +1043,26 @@ class Deployment(Base):
     
     raw_data = Column(JSON)
     
-    project = relationship("Project")
+    project = relationship("Project", back_populates="deployments")
+
+    # DORA Hybrid Attributes (黑科技 4)
+    @hybrid_property
+    def is_success(self):
+        return self.status == 'success'
+
+    @is_success.expression
+    def is_success(cls):
+        return cls.status == 'success'
+
+    @hybrid_property
+    def is_production(self):
+        if not self.environment:
+            return False
+        return self.environment.lower() in ['production', 'prod']
+
+    @is_production.expression
+    def is_production(cls):
+        return func.lower(cls.environment).in_(['production', 'prod'])
 
     def __repr__(self) -> str:
         return f"<Deployment(id={self.id}, env='{self.environment}', status='{self.status}')>"
@@ -851,6 +1216,26 @@ class Milestone(Base):
         secondary="release_milestone_links",
         back_populates="milestones"
     )
+    issues = relationship("Issue", back_populates="milestone")
+    
+    # Iteration Management (黑科技 2)
+    @hybrid_property
+    def progress(self):
+        """里程碑完成进度 (百分比)。"""
+        total = len(self.issues)
+        if total == 0:
+            return 0.0
+        closed = len([i for i in self.issues if i.state == 'closed'])
+        return (closed / total) * 100
+
+    @hybrid_property
+    def is_overdue(self):
+        """是否已逾期。"""
+        if self.state == 'closed':
+            return False
+        if self.due_date:
+            return datetime.now(timezone.utc) > self.due_date
+        return False
 
     def __repr__(self) -> str:
         return f"<Milestone(id={self.id}, title='{self.title}')>"
@@ -1054,3 +1439,7 @@ class GitLabDependency(Base):
 
     def __repr__(self) -> str:
         return f"<GitLabDependency(id={self.id}, name='{self.name}', version='{self.version}')>"
+
+
+# 注册事件监听器 (黑科技 3)
+from . import events

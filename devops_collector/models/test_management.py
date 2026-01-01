@@ -12,6 +12,8 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table, JSON, D
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.ext.hybrid import hybrid_property
 from devops_collector.models.base_models import Base, TimestampMixin, User
 
 
@@ -57,8 +59,8 @@ class TestCase(Base, TimestampMixin):
     test_steps = Column(JSON, default=[])
 
     # 关系映射
-    author = relationship("User")
-    project = relationship("Project")
+    author = relationship("User", back_populates="test_cases")
+    project = relationship("Project", back_populates="test_cases")
     linked_issues = relationship(
         "Issue",
         secondary="test_case_issue_links",
@@ -68,6 +70,26 @@ class TestCase(Base, TimestampMixin):
         "Requirement",
         secondary="requirement_test_case_links",
         back_populates="test_cases"
+    )
+    
+    # 增加执行统计 (Hybrid Attribute)
+    @hybrid_property
+    def execution_count(self):
+        """用例被执行的总次数。"""
+        # 注意：这里需要通过 iid 关联
+        return len(self.execution_records)
+
+    @execution_count.expression
+    def execution_count(cls):
+        # 简化版实现，实际生产环境可使用 select 子查询
+        return func.count(TestExecutionRecord.id).label('execution_count')
+
+    # 建立与执行记录的直接联系
+    execution_records = relationship(
+        "TestExecutionRecord",
+        primaryjoin="foreign(TestExecutionRecord.test_case_iid) == TestCase.iid",
+        viewonly=True,
+        overlaps="project"
     )
 
     def __repr__(self) -> str:
@@ -132,13 +154,17 @@ class Requirement(Base, TimestampMixin):
     state = Column(String(20), default="opened")
 
     # 关系映射
-    author = relationship("User")
-    project = relationship("Project")
+    author = relationship("User", back_populates="requirements")
+    project = relationship("Project", back_populates="requirements")
     test_cases = relationship(
         "TestCase",
         secondary="requirement_test_case_links",
         back_populates="associated_requirements"
     )
+
+    # 跨层穿透 (Association Proxy)
+    # 业务价值：从需求直达关联的缺陷 (穿透测试用例层)
+    linked_bugs = association_proxy('test_cases', 'linked_issues')
 
     def __repr__(self) -> str:
         return f"<Requirement(iid={self.iid}, title='{self.title}', state='{self.state}')>"
@@ -202,6 +228,8 @@ class TestExecutionRecord(Base, TimestampMixin):
     environment = Column(String(50), default="Default")
     
     title = Column(String(255))
+    
+    project = relationship("Project", back_populates="test_execution_records")
 
     def __repr__(self) -> str:
         return f"<TestExecutionRecord(iid={self.test_case_iid}, result={self.result})>"
