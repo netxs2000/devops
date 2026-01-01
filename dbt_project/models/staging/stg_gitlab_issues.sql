@@ -1,0 +1,20 @@
+
+with source as (
+    select * from {{ source('raw', 'gitlab_issues') }}
+),
+
+renamed as (
+    select
+        id as issue_id,
+        project_id,
+        iid,
+        title,
+        state,
+        author_id as author_user_id,
+        created_at,
+        closed_at,
+        updated_at
+    from source
+)
+
+select * from renamed

@@ -10,13 +10,13 @@
 function switchView(view) {
     const navItems = [
         'nav-dashboard', 'nav-tests', 'nav-defects', 'nav-reqs',
-        'nav-matrix', 'nav-reports', 'nav-support', 'nav-sd-submit', 'nav-sd-my'
+        'nav-matrix', 'nav-reports', 'nav-support', 'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub'
     ];
 
     const viewItems = [
         'results', 'statsGrid', 'bugView', 'matrixView',
         'requirementsView', 'reportsView', 'view-servicedesk',
-        'sdSubmitView', 'sdMyView'
+        'sdSubmitView', 'sdMyView', 'decisionHubView'
     ];
 
     // Reset all nav and views
@@ -64,6 +64,10 @@ function switchView(view) {
     } else if (view === 'sd_my') {
         document.getElementById('sdMyView').style.display = 'block';
         document.getElementById('sdMyFrame').src = 'service_desk_my_tickets.html';
+    } else if (view === 'decision_hub') {
+        document.getElementById('decisionHubView').style.display = 'block';
+        // 生产环境建议通过反向代理，开发环境先直连 Streamlit 默认端口
+        document.getElementById('decisionHubFrame').src = 'http://localhost:8501/?embed=true';
     }
 }
 

@@ -43,6 +43,22 @@ sync-all: ## 手动触发全量数据同步
 	python -m devops_collector.scheduler --force-all
 	python -m devops_collector.worker --once
 
+dbt-build: ## 执行 dbt 建模转换
+	@echo "$(GREEN)🏗️ Running dbt transformations...$(RESET)"
+	cd dbt_project && dbt build
+
+dashboard: ## 启动 DevOps 智能决策仪表盘
+	@echo "$(GREEN)🖥️ Starting Streamlit Dashboard...$(RESET)"
+	streamlit run dashboard/Home.py
+
+validate: ## 执行数据质量校验 (Great Expectations)
+	@echo "$(GREEN)⚖️ Running Data Quality Validation...$(RESET)"
+	python scripts/validate_models.py
+
+orchestrate: ## 启动资产编排控制台 (Dagster)
+	@echo "$(GREEN)🏗️ Starting Dagster Orchestrator...$(RESET)"
+	dagster dev -f dagster_repo/__init__.py
+
 clean: ## 清理临时文件
 	@echo "$(GREEN)🧹 Cleaning temporary files...$(RESET)"
 	find . -type d -name "__pycache__" -exec rm -rf {} +
