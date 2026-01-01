@@ -14,6 +14,7 @@ from .base_models import (
     Organization,
     User,
     Location,  # MDM地理位置主数据表
+    Calendar,  # 日历与时间维度主数据
     SyncLog,
     RawDataStaging,
     IdentityMapping,
@@ -30,7 +31,18 @@ from .base_models import (
     ServiceProjectMapping,
     SLO,
     TimestampMixin,
-    RawDataMixin
+    RawDataMixin,
+    ProjectMaster,  # 项目全生命周期主数据
+    ContractPaymentNode,
+    RevenueContract,
+    PurchaseContract,
+    UserCredential,
+    MetricDefinition,
+    SystemRegistry,  # 系统与接口注册主数据
+    EntityTopology,  # 实体/资产拓扑主数据
+    Company,         # 客户公司主数据
+    Vendor,          # 供应商主数据
+    EpicMaster       # Epic主数据
 )
 # 从依赖扫描模块导入
 from .dependency import (
@@ -134,12 +146,14 @@ except ImportError:
 
 __all__ = [
     # 公共基础模型
-    'Base', 'Organization', 'User', 'Location', 'SyncLog', 'RawDataStaging', 'IdentityMapping', 'Product',
+    'Base', 'Organization', 'User', 'Location', 'Calendar', 'SyncLog', 'RawDataStaging', 'IdentityMapping', 'Product',
     'OKRObjective', 'OKRKeyResult', 'TraceabilityLink',
     'TestExecutionSummary', 'PerformanceRecord', 'Incident', 'ResourceCost',
     'UserActivityProfile',
     'Service', 'ServiceProjectMapping', 'SLO',
     'TimestampMixin', 'RawDataMixin',
+    'ProjectMaster', 'ContractPaymentNode', 'RevenueContract', 'PurchaseContract', 'UserCredential', 'MetricDefinition', 'SystemRegistry',
+    'EntityTopology', 'Company', 'Vendor', 'EpicMaster',
     # GitLab 模型
     'Project', 'ProjectMember', 'Commit', 'CommitFileStats',
     'Issue', 'MergeRequest', 'Pipeline', 'Deployment',

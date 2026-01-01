@@ -10,11 +10,12 @@ from sqlalchemy import pool
 from alembic import context
 
 # add project path to sys.path so we can import models
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 # this is the MetaData object for 'autogenerate' support
 # import your Base metadata here
 from devops_collector.models.base_models import Base
+from devops_collector.config import settings
 
 # this will set up loggers basically.
 config = context.config
@@ -31,7 +32,7 @@ def run_migrations_offline():
     Calls to context.execute() here emit the given string to the
     script output.
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = settings.database.uri
     context.configure(
         url=url,
         target_metadata=Base.metadata,
@@ -49,8 +50,10 @@ def run_migrations_online():
     In this scenario we need to create an Engine
     and associate a connection with the context.
     """
+    configuration = config.get_section(config.config_ini_section)
+    configuration["sqlalchemy.url"] = settings.database.uri
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
