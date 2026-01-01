@@ -11,6 +11,7 @@
 本数据字典基于系统最新的 SQLAlchemy ORM 模型自动生成，确保与实际数据库结构的一致性。
 
 ### 文档结构
+
 - **表名**: 数据库表的物理名称
 - **模型类**: 对应的 Python ORM 模型类名
 - **业务描述**: 从模型 Docstring 提取的业务用途说明
@@ -21,10 +22,10 @@
 
 ## 📋 数据表清单
 
-本系统共包含 **64 个数据表**，分为以下几个业务域：
-
+本系统共包含 **64 个基础表** 以及 **12 个高级智能分析模型**，分为以下几个业务域：
 
 ### 🏢 核心主数据域 (Core Master Data)
+
 - `mdm_identities` - User
 - `mdm_identity_mappings` - IdentityMapping
 - `mdm_location` - Location
@@ -33,6 +34,7 @@
 - `services` - Service
 
 ### 🧪 测试管理域 (Test Management)
+
 - `requirements` - Requirement
 - `test_case_issue_links` - TestCaseIssueLink
 - `test_cases` - TestCase
@@ -40,6 +42,7 @@
 - `test_execution_summaries` - TestExecutionSummary
 
 ### 🦊 GitLab 集成域 (GitLab Integration)
+
 - `gitlab_dependencies` - GitLabDependency
 - `gitlab_group_members` - GitLabGroupMember
 - `gitlab_groups` - GitLabGroup
@@ -51,10 +54,12 @@
 - `sync_logs` - SyncLog
 
 ### 📈 分析与洞察域 (Analytics & Insights)
+
 - `okr_key_results` - OKRKeyResult
 - `okr_objectives` - OKRObjective
 
 ### 🗂️ 其他辅助域 (Other Supporting Tables)
+
 - `branches` - Branch
 - `commit_file_stats` - CommitFileStats
 - `commits` - Commit
@@ -97,6 +102,22 @@
 - `zentao_executions` - ZenTaoExecution
 - `zentao_issues` - ZenTaoIssue
 - `zentao_products` - ZenTaoProduct
+
+### 🧠 高级智能分析域 (Advanced Intelligence Models - dbt)
+
+- `int_unified_activities` - 统一活动流引擎
+- `int_entity_alignment` - 模糊实体对齐与链接
+- `fct_developer_activity_profile` - 开发者 DNA 画像
+- `fct_capitalization_audit` - 研发投入资本化审计
+- `fct_delivery_costs` - 交付成本与 FinOps 桥接指标
+- `fct_metrics_audit_guard` - 指标一致性哨兵
+- `fct_shadow_it_discovery` - 影子系统发现 (Shadow IT)
+- `fct_dora_metrics` - DORA 核心度量
+- `fct_project_delivery_health` - 项目交付健康度 360
+- `fct_compliance_audit` - 合规与内控审计
+- `fct_architectural_brittleness` - 架构脆性指数 (ABI)
+- `fct_talent_radar` - 人才雷达识别
+- `int_unified_work_items` - 统一扁平化工作项引擎
 
 ---
 
@@ -1980,10 +2001,166 @@
 
 ---
 
+## 🧠 高级数据挖掘与智能分析模型 (Advanced Analytics & Intelligence Models)
+
+本章节描述了通过 dbt 实现的智能化分析模型，这些模型通过多维聚合和算法识别生成高价值洞察。
+
+### 1. 统一活动流引擎 (Unified Activity Stream Engine)
+
+- **核心逻辑**: 将 Commits, MRs, Issues, Comments 等原子操作打平为标准的、带权重的事件流。
+- **价值**: 实现跨工具的统一产出度量，是画像和效能分析的母表。
+- **维度**: 发生时间、操作者、操作类型、目标实体、来源系统。
+- **指标**: 基础影响分 (Base Impact Score)。
+- **说明**: 对不同类型的动作分配权重（如：提交=1，合并=2，评论=0.5）。
+- **意义**: 解决了工具孤岛导致的数据口径不一问题。
+- **实现方式**: dbt Intermediate Model (`int_unified_activities`)。
+- **SQL脚本**: `dbt_project/models/intermediate/int_unified_activities.sql` (聚合产出数据流)
+
+### 2. 模糊实体对齐与链接 (Fuzzy Entity Resolution & Linkage)
+
+- **核心逻辑**: 基于 Levenshtein 距离及 ID 前缀匹配，自动关联 GitLab 仓库与 MDM 资产。
+- **价值**: 实现技术资产与业务资产的自动化映射。
+- **维度**: 映射策略 (Strategy)、对齐置信度 (Confidence)。
+- **指标**: 文本相似度得分 (Similarity Score)。
+- **说明**: 处理项目名称不一致但路径相似的“幽灵关联”。
+- **意义**: 极大降低了人工维护资产映射表的成本。
+- **实现方式**: dbt Intermediate Model -> Reverse ETL to `mdm_entities_topology`。
+- **SQL脚本**: `dbt_project/models/intermediate/int_entity_alignment.sql` (实现跨系统实体自动关联)
+
+### 3. 开发者 DNA 画像 (Developer Activity DNA Profile)
+
+- **核心逻辑**: 基于活动流聚类算法，识别开发者的工作范式（代码机器、评审专家、需求终结者）。
+- **价值**: 识别团队中的技术领袖和“胶水人”。
+- **维度**: 用户、主要贡献技能、工作范式 (Archetype)。
+- **指标**: 活跃重心分、交付频率。
+- **说明**: 通过分析 MR 评论数 vs 代码提交数的比率来判定画像。
+- **意义**: 辅助 HR 进行人才盘点和技术骨干识别。
+- **实现方式**: dbt Mart Model (`fct_developer_activity_profile`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_developer_activity_profile.sql` (生成开发者技术基因画像)
+
+### 4. 研发投入资本化审计 (Capitalization Audit)
+
+- **核心逻辑**: 通过 Issue 标签 -> MR -> Commits 的穿透关联，核算归属于 CapEx 的实际工作量。
+- **价值**: 为财务资产化提供不可篡改的代码级审计依据。
+- **维度**: Epic, Portfolio Link, 审计状态 (Audit Status)。
+- **指标**: 审计工作量单位 (Audit Effort Units/Commits)。
+- **说明**: 关联 Epic 到具体的物理代码变更。
+- **意义**: 确保 R&D 资本化合规，满足外部审计要求。
+- **实现方式**: dbt Mart Model (`fct_capitalization_audit`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_capitalization_audit.sql` (提供研发成本资本化审计链路)
+
+### 5. 交付成本与 FinOps 桥接 (Delivery Costs / FinOps Bridge)
+
+- **核心逻辑**: 将开发者活动时长乘以 MDM 维护的标准费率 (Labor Rates)，生成项目/服务级成本。
+- **价值**: 实现研发投入的可视化，识别高成本低产出区域。
+- **维度**: 服务 ID、成本中心。
+- **指标**: 累计研发投入成本 (Total Labor Cost)。
+- **说明**: 结合 `mdm_resource_costs` 实现动态成本核算。
+- **意义**: 为项目投资回报率 (ROI) 提供实时反馈。
+- **实现方式**: dbt Mart Model (`fct_delivery_costs`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_delivery_costs.sql` (将工程动作转化为财务价值)
+
+### 6. 指标一致性哨兵 (Metrics Consistency Guard)
+
+- **核心逻辑**: 利用统计学指纹和 3-Sigma 离群值检测，识别异常波动或人为造假的指标。
+- **价值**: 确保 DORA 等关键指标的真实性，防止指标驱动开发导致的“刷分”。
+- **维度**: 检查时间项、异常类型。
+- **指标**: 离群值标志 (Is Outlier)。
+- **说明**: 监控超短 Lead Time 等不合逻辑的数据。
+- **意义**: 建立数据信用体系，防止管理误导。
+- **实现方式**: dbt Mart Model (`fct_metrics_audit_guard`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_metrics_audit_guard.sql` (指标异常自动检测)
+
+### 7. 影子系统发现 (Shadow IT Discovery)
+
+- **核心逻辑**: 通过活跃 Repo 与 MDM 注册资产的差集识别“黑产”或非合规项目。
+- **价值**: 消除治理盲区。
+- **维度**: 项目、活跃度状态 (Shadow IT Status)。
+- **指标**: 最近 30d 动作数。
+- **说明**: 自动识别活跃但未进入 MDM 纳管的项目。
+- **意义**: 降低安全和合规性风险。
+- **实现方式**: dbt Mart Model (`fct_shadow_it_discovery`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_shadow_it_discovery.sql` (发现未注册的影子资产)
+
+### 8. DORA 核心度量 (DORA Metrics)
+
+- **核心逻辑**: 依照 DevOps 标准度量模型，聚合产出发布频率、Lead Time、失败率等指标。
+- **价值**: 提供跨部门统一的效能对标基准。
+- **维度**: 项目、月份。
+- **指标**: Deployment Frequency, Lead Time, Change Failure Rate, MTTR。
+- **说明**: 全球通用的 DevOps 效能衡量金标准。
+- **意义**: 指导团队持续改进交付流程。
+- **实现方式**: dbt Mart Model (`fct_dora_metrics`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_dora_metrics.sql` (标准化 DORA 指标计算)
+
+### 9. 项目交付健康度 360 (Project Delivery Health 360)
+
+- **核心逻辑**: 结合代码分布、扫描风险、MR 积压及测试覆盖率生成的加权分。
+- **价值**: 实现项目健康度的“红绿灯”监控。
+- **维度**: 质量等级、构建状态。
+- **指标**: 综合健康分 (Health Score)。
+- **说明**: 多位一体的项目实时健康监视器。
+- **意义**: 帮助管理者快速定位高风险项目。
+- **实现方式**: dbt Mart Model (`fct_project_delivery_health`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_project_delivery_health.sql` (动态计算项目多维健康度)
+
+### 10. 合规与内控审计 (Governance & Compliance Audit)
+
+- **核心逻辑**: 识别“绕过评审合并”和“直连推送”等违规操作记录。
+- **价值**: 提供不可篡改的变更管理合规存证。
+- **维度**: 合规状态、分支保护项。
+- **指标**: Suspicious Bypass Rate.
+- **说明**: 针对 SOX 404 四眼原则进行自动化审计。
+- **意义**: 降低审计成本，确保流程合规执行。
+- **实现方式**: dbt Mart Model (`fct_compliance_audit`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_compliance_audit.sql` (自动化识别流程规避行为)
+
+### 11. 架构脆性指数 (Architectural Brittleness Index)
+
+- **核心逻辑**: 通过包引用的 In-Degree 高度关联技术债务与低覆盖率。
+- **价值**: 预测核心组件的崩溃风险。
+- **维度**: 架构状态 (Architectural Status)。
+- **指标**: ABI Score.
+- **说明**: 识别那“大影响面、高质量债”的核心黑盒模块。
+- **意义**: 指导架构重构的优先级建议。
+- **实现方式**: dbt Mart Model (`fct_architectural_brittleness`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_architectural_brittleness.sql` (量化核心模块的架构坍塌风险)
+
+### 12. 人才雷达识别 (Talent Radar)
+
+- **核心逻辑**: 综合多维贡献度（代码、评审、文档）进行技术影响力排名。
+- **价值**: 自动发现组织内的 Top 1% 金牌开发者。
+- **维度**: 用户、部门、技能标签。
+- **指标**: 影响力综合得分 (Influence Score)。
+- **说明**: 配合 `fct_developer_activity_profile` 提供更深入的人才洞察。
+- **意义**: 辅助组织绩效评价与继任者计划。
+- **实现方式**: dbt Mart Model (`fct_talent_radar`)。
+- **SQL脚本**: `dbt_project/models/marts/fct_talent_radar.sql` (构建组织内的高级技术人才塔)
+
+### 13. 统一扁平化工作项引擎 (Unified Flattened Work Items)
+
+- **核心逻辑**: 消除 Jira 与 GitLab 需求/任务的字段差异，映射到统一工作流。
+- **价值**: 跨工具流转透明化。
+- **维度**: 系统、优先级、到期日。
+- **指标**: 交付偏差率 (TV)。
+- **说明**: 业务视角的“大一统”任务池。
+- **意义**: 解决了跨部门协作中“不同工具不同语言”的沟通壁垒。
+- **实现方式**: dbt Intermediate Model (`int_unified_work_items`)。
+- **SQL脚本**: `dbt_project/models/intermediate/int_unified_work_items.sql` (实现全渠道工作项对齐)
+
+---
 
 ## 📝 变更日志
 
+### v2.1 (2026-01-01)
+
+- ✅ 新增 **dbt 智能分析模型** 章节，涵盖 DORA、ABI、DNA 画像等高级逻辑
+- ✅ 新增 **影子系统发现** 与 **指标审计哨兵** 模型描述
+- ✅ 完善了各个模型的核心逻辑、指标及价值说明
+- ✅ 统一了 dbt Marts 脚本的存放位置记录
+
 ### v2.0 (2025-12-28)
+
 - ✅ 基于最新 SQLAlchemy 模型自动生成
 - ✅ 新增企业级分域架构组织
 - ✅ 完善字段约束和关系映射说明

@@ -42,7 +42,8 @@ from .base_models import (
     EntityTopology,  # 实体/资产拓扑主数据
     Company,         # 客户公司主数据
     Vendor,          # 供应商主数据
-    EpicMaster       # Epic主数据
+    EpicMaster,      # Epic主数据
+    ComplianceIssue  # 合规性问题记录
 )
 # 从依赖扫描模块导入
 from .dependency import (
@@ -153,7 +154,7 @@ __all__ = [
     'Service', 'ServiceProjectMapping', 'SLO',
     'TimestampMixin', 'RawDataMixin',
     'ProjectMaster', 'ContractPaymentNode', 'RevenueContract', 'PurchaseContract', 'UserCredential', 'MetricDefinition', 'SystemRegistry',
-    'EntityTopology', 'Company', 'Vendor', 'EpicMaster',
+    'EntityTopology', 'Company', 'Vendor', 'EpicMaster', 'ComplianceIssue',
     # GitLab 模型
     'Project', 'ProjectMember', 'Commit', 'CommitFileStats',
     'Issue', 'MergeRequest', 'Pipeline', 'Deployment',

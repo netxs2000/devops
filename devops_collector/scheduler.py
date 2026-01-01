@@ -88,6 +88,34 @@ def main() -> None:
                     session.commit()
 
             
+            # === 3. dbt Transformation (Daily) ===
+            # TODO: Add logic to run only once a day
+            import subprocess
+            try:
+                # 简单粗暴的每天运行逻辑：可以优化为检查最后运行时间
+                # 在这里我们作为演示，假设需要每分钟尝试运行（实际生产应由 Airflow 调度）
+                logger.info("Triggering dbt run...")
+                result = subprocess.run(
+                    ["dbt", "run", "--project-dir", "dbt_project", "--profiles-dir", "dbt_project"], 
+                    capture_output=True, 
+                    text=True
+                )
+                if result.returncode == 0:
+                    logger.info("dbt run success")
+                    # === 4. Reverse ETL (Closing the loop) ===
+                    from .core.reverse_etl import (
+                        sync_talent_tags_to_mdm, 
+                        sync_aligned_entities_to_mdm,
+                        sync_shadow_it_findings
+                    )
+                    sync_talent_tags_to_mdm(session)
+                    sync_aligned_entities_to_mdm(session)
+                    sync_shadow_it_findings(session)
+                else:
+                    logger.error(f"dbt run failed: {result.stderr}")
+            except Exception as e:
+                logger.error(f"Failed to run dbt or reverse ETL: {e}")
+
         except Exception as e:
             logger.error(f"Scheduler loop error: {e}")
             session.rollback()

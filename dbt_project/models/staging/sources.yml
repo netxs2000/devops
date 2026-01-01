@@ -1,0 +1,51 @@
+
+version: 2
+
+sources:
+  - name: raw
+    description: "Raw data collected by Python workers"
+    database: devops_collector
+    schema: public
+    tables:
+      # MDM Core Tables
+      - name: mdm_identities
+        description: "User identities (Single Source of Truth for Users)"
+      - name: mdm_resource_costs
+        description: "Resource cost data (Hourly rates, etc.)"
+      - name: mdm_organizations
+        description: "Organizational structure"
+      - name: mdm_projects
+        description: "Project master data"
+      - name: mdm_systems_registry
+        description: "Registry of external systems (GitLab, Jira, etc.)"
+      - name: mdm_entities_topology
+        description: "Technical asset topology (Apps, Repos, Services)"
+      - name: mdm_metrics_definitions
+        description: "Standard metric definitions catalog"
+      - name: mdm_epic
+        description: "Epic and portfolio hierarchy"
+      
+      # GitLab Raw Tables
+      - name: gitlab_projects
+        description: "Projects synced from GitLab"
+      - name: gitlab_merge_requests
+        description: "MRs synced from GitLab"
+      - name: gitlab_commits
+        description: "Commits synced from GitLab"
+      - name: gitlab_issues
+        description: "Issues synced from GitLab"
+      - name: gitlab_notes
+      - name: gitlab_pipelines
+      - name: gitlab_deployments
+      - name: gitlab_packages
+      - name: gitlab_dependencies
+
+      # Jira Specific Tables
+      - name: jira_projects
+      - name: jira_issues
+      - name: jira_issue_histories
+
+      # SonarQube Specific Tables
+      - name: sonar_projects
+      - name: sonar_measures
+      - name: sonar_issues
