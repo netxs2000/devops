@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """GitLab 基础客户端封装模块。
 
 本模块提供统一的 GitLab API 交互入口，处理身份验证、异常重试以及通用的数据提取逻辑。
@@ -7,12 +6,10 @@ Typical Usage:
     client = GitLabClient()
     project = client.get_project(123)
 """
-
 import logging
 import gitlab
 from typing import Any, Optional, List
 from devops_collector.config import Config
-
 logger = logging.getLogger(__name__)
 
 class GitLabClient:
@@ -31,15 +28,11 @@ class GitLabClient:
             Exception: 当 GitLab API 认证失败或网络连接超时。
         """
         try:
-            self.gl = gitlab.Gitlab(
-                Config.GITLAB_URL, 
-                private_token=Config.GITLAB_PRIVATE_TOKEN,
-                timeout=30
-            )
+            self.gl = gitlab.Gitlab(Config.GITLAB_URL, private_token=Config.GITLAB_PRIVATE_TOKEN, timeout=30)
             self.gl.auth()
-            logger.info("Successfully authenticated with GitLab API.")
+            logger.info('Successfully authenticated with GitLab API.')
         except Exception as e:
-            logger.error(f"Failed to initialize GitLab client: {e}")
+            logger.error(f'Failed to initialize GitLab client: {e}')
             raise
 
     def get_project(self, project_id: int) -> Optional[Any]:
@@ -54,10 +47,10 @@ class GitLabClient:
         try:
             return self.gl.projects.get(project_id)
         except gitlab.exceptions.GitlabGetError:
-            logger.warning(f"Project {project_id} not found.")
+            logger.warning(f'Project {project_id} not found.')
             return None
         except Exception as e:
-            logger.error(f"Error fetching project {project_id}: {e}")
+            logger.error(f'Error fetching project {project_id}: {e}')
             return None
 
     def get_issue(self, project_id: int, issue_iid: int) -> Optional[Any]:
@@ -76,7 +69,7 @@ class GitLabClient:
         try:
             return project.issues.get(issue_iid)
         except Exception as e:
-            logger.error(f"Error fetching issue {issue_iid} in project {project_id}: {e}")
+            logger.error(f'Error fetching issue {issue_iid} in project {project_id}: {e}')
             return None
 
     def get_issue_author_id(self, db: Session, project_id: int, issue_iid: int) -> Optional[str]:
@@ -94,11 +87,9 @@ class GitLabClient:
         issue = self.get_issue(project_id, issue_iid)
         if not issue:
             return None
-        
         email = issue.attributes.get('author', {}).get('email')
         if not email:
             return None
-            
         user = auth_services.get_user_by_email(db, email=email)
         return str(user.global_user_id) if user else None
 
@@ -115,17 +106,12 @@ class GitLabClient:
         from devops_collector.models import Project, Product, Location
         stakeholders = []
         project = db.query(Project).filter(Project.id == project_id).first()
-        
-        # 1. 位置负责人
         if project and project.location_id:
             loc = db.query(Location).filter(Location.location_id == project.location_id).first()
             if loc and loc.manager_user_id:
                 stakeholders.append(str(loc.manager_user_id))
-        
-        # 2. 产品干系人
         product = db.query(Product).filter(Product.project_id == project_id).first()
         if product:
             uids = [product.product_manager_id, product.dev_manager_id, product.test_manager_id]
             stakeholders.extend([str(uid) for uid in uids if uid])
-            
         return list(set(stakeholders))

@@ -6,13 +6,9 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-
-# 从公共基础模型导入 Base
 from devops_collector.models.base_models import Base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func, select
-
-
 
 class SonarProject(Base):
     """SonarQube 项目模型 (sonar_projects)。
@@ -32,57 +28,79 @@ class SonarProject(Base):
         issues (List[SonarIssue]): 关联的问题详情列表。
     """
     __tablename__ = 'sonar_projects'
-    
     id = Column(Integer, primary_key=True, autoincrement=True)
     key = Column(String(500), unique=True, nullable=False)
     name = Column(String(255))
     qualifier = Column(String(10))
-    
     gitlab_project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
-    gitlab_project = relationship("Project", back_populates="sonar_projects")
-    
+    gitlab_project = relationship('Project', back_populates='sonar_projects')
     last_analysis_date = Column(DateTime(timezone=True))
-    
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default='PENDING')
-    
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at = Column(
-        DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc)
-    )
-    
-    measures = relationship(
-        "SonarMeasure", back_populates="project", cascade="all, delete-orphan"
-    )
-    issues = relationship(
-        "SonarIssue", back_populates="project", cascade="all, delete-orphan"
-    )
-    
-    # 获取最新的分析指标 (黑科技 2)
-    latest_measure = relationship(
-        "SonarMeasure",
-        primaryjoin="and_(SonarProject.id==SonarMeasure.project_id)",
-        order_by="desc(SonarMeasure.analysis_date)",
-        viewonly=True,
-        uselist=False
-    )
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+    measures = relationship('SonarMeasure', back_populates='project', cascade='all, delete-orphan')
+    issues = relationship('SonarIssue', back_populates='project', cascade='all, delete-orphan')
+    latest_measure = relationship('SonarMeasure', primaryjoin='and_(SonarProject.id==SonarMeasure.project_id)', order_by='desc(SonarMeasure.analysis_date)', viewonly=True, uselist=False)
 
     @hybrid_property
     def bugs(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         return self.latest_measure.bugs if self.latest_measure else 0
 
     @hybrid_property
     def vulnerabilities(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         return self.latest_measure.vulnerabilities if self.latest_measure else 0
 
     @hybrid_property
     def coverage(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         return self.latest_measure.coverage if self.latest_measure else 0.0
 
     @hybrid_property
     def quality_gate(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         return self.latest_measure.quality_gate_status if self.latest_measure else 'UNKNOWN'
 
     @hybrid_property
@@ -91,8 +109,18 @@ class SonarProject(Base):
         return self.quality_gate == 'OK'
 
     def __repr__(self) -> str:
-        return f"<SonarProject(key='{self.key}', name='{self.name}')>"
+        '''"""TODO: Add description.
 
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f"<SonarProject(key='{self.key}', name='{self.name}')>"
 
 class SonarMeasure(Base):
     """SonarQube 指标快照模型 (sonar_measures)。
@@ -120,18 +148,15 @@ class SonarMeasure(Base):
         project (SonarProject): 关联的项目对象。
     """
     __tablename__ = 'sonar_measures'
-    
     id = Column(Integer, primary_key=True, autoincrement=True)
     project_id = Column(Integer, ForeignKey('sonar_projects.id'), nullable=False)
     analysis_date = Column(DateTime(timezone=True), nullable=False)
-    
     files = Column(Integer)
     lines = Column(Integer)
     ncloc = Column(Integer)
     classes = Column(Integer)
     functions = Column(Integer)
     statements = Column(Integer)
-    
     coverage = Column(Float)
     bugs = Column(Integer)
     bugs_blocker = Column(Integer, default=0)
@@ -139,43 +164,43 @@ class SonarMeasure(Base):
     bugs_major = Column(Integer, default=0)
     bugs_minor = Column(Integer, default=0)
     bugs_info = Column(Integer, default=0)
-    
     vulnerabilities = Column(Integer)
     vulnerabilities_blocker = Column(Integer, default=0)
     vulnerabilities_critical = Column(Integer, default=0)
     vulnerabilities_major = Column(Integer, default=0)
     vulnerabilities_minor = Column(Integer, default=0)
     vulnerabilities_info = Column(Integer, default=0)
-    
     security_hotspots = Column(Integer)
     security_hotspots_high = Column(Integer, default=0)
     security_hotspots_medium = Column(Integer, default=0)
     security_hotspots_low = Column(Integer, default=0)
-    
     code_smells = Column(Integer)
     comment_lines_density = Column(Float)
     duplicated_lines_density = Column(Float)
     sqale_index = Column(Integer)
     sqale_debt_ratio = Column(Float)
-    
     complexity = Column(Integer)
     cognitive_complexity = Column(Integer)
-    
     reliability_rating = Column(String(1))
     security_rating = Column(String(1))
     sqale_rating = Column(String(1))
-    
     quality_gate_status = Column(String(10))
-    
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-    
-    project = relationship("SonarProject", back_populates="measures")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    project = relationship('SonarProject', back_populates='measures')
 
     def __repr__(self) -> str:
-        return f"<SonarMeasure(project_id={self.project_id}, date='{self.analysis_date}')>"
+        '''"""TODO: Add description.
 
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f"<SonarMeasure(project_id={self.project_id}, date='{self.analysis_date}')>"
 
 class SonarIssue(Base):
     """SonarQube 问题详情模型 (sonar_issues)。
@@ -195,39 +220,39 @@ class SonarIssue(Base):
         project (SonarProject): 关联的项目对象。
     """
     __tablename__ = 'sonar_issues'
-    
     id = Column(Integer, primary_key=True, autoincrement=True)
     issue_key = Column(String(50), unique=True, nullable=False)
     project_id = Column(Integer, ForeignKey('sonar_projects.id'), nullable=False)
-    
     type = Column(String(20))
     severity = Column(String(20))
     status = Column(String(20))
     resolution = Column(String(20))
-    
     rule = Column(String(200))
     message = Column(Text)
     component = Column(String(500))
     line = Column(Integer)
     effort = Column(String(20))
     debt = Column(String(20))
-    
     creation_date = Column(DateTime(timezone=True))
     update_date = Column(DateTime(timezone=True))
     close_date = Column(DateTime(timezone=True))
-    
     assignee = Column(String(100))
     author = Column(String(100))
-    assignee_user_id = Column(
-        UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True
-    )
-    author_user_id = Column(
-        UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True
-    )
-    
+    assignee_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
+    author_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
     raw_data = Column(JSON)
-    
-    project = relationship("SonarProject", back_populates="issues")
+    project = relationship('SonarProject', back_populates='issues')
 
     def __repr__(self) -> str:
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         return f"<SonarIssue(key='{self.issue_key}', severity='{self.severity}')>"
