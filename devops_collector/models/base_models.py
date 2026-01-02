@@ -4,10 +4,11 @@ import uuid
 
 from sqlalchemy import (
     Column, String, Integer, BigInteger, Boolean, Text, DateTime, Date, 
-    ForeignKey, Table, JSON, Index, func, UniqueConstraint
+    ForeignKey, Table, JSON, Index, func, UniqueConstraint, Float, select
 )
 from sqlalchemy.orm import relationship, backref, DeclarativeBase
 from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.ext.hybrid import hybrid_property
 
 class Base(DeclarativeBase):
     pass
@@ -16,367 +17,159 @@ class TimestampMixin:
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
 
-class MetricDefinition(Base, TimestampMixin):
-    """指标字典的核心核心类，确保全集团计算逻辑一致。"""
-    __tablename__ = 'mdm_metric_definitions'
-    
-    metric_code = Column(String(100), primary_key=True, comment="指标唯一编码")
-    metric_name = Column(String(200), nullable=False, comment="指标名称")
-    domain = Column(String(50), nullable=False, comment="所属业务领域 (DEVOPS/FINANCE)")
-    metric_type = Column(String(20), comment="指标类型 (ATOMIC/DERIVED/COMPOSITE)")
-    
-    calculation_logic = Column(Text, comment="计算公式/dbt路径")
-    source_model = Column(String(200), comment="来源模型/表")
-    aggregate_type = Column(String(20), comment="聚合方式 (SUM/AVG/COUNT)")
-    unit = Column(String(20), comment="单位")
-    time_grain = Column(String(50), comment="支持的时间粒度")
-    update_cycle = Column(String(20), comment="更新频率")
-    
-    dimension_scope = Column(JSONB, comment="允许下钻的维度列表")
-    
-    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    technical_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    
-    is_standard = Column(Boolean, default=True, comment="是否集团标准指标")
-    status = Column(String(20), default='DRAFT', comment="生命周期状态")
-    is_active = Column(Boolean, default=True)
-    threshold_config = Column(JSONB, comment="阈值配置 (JSON)")
-    
-    business_owner = relationship("User", foreign_keys=[business_owner_id])
-    technical_owner = relationship("User", foreign_keys=[technical_owner_id])
-
-    def __repr__(self) -> str:
-        return f"<MetricDefinition(code='{self.metric_code}', name='{self.metric_name}')>"
-
-class SystemRegistry(Base, TimestampMixin):
-    """系统资产注册表。"""
-    __tablename__ = 'mdm_systems_registry'
-    
-    system_code = Column(String(50), primary_key=True, comment="系统唯一编码")
-    system_name = Column(String(100), nullable=False)
-    system_type = Column(String(50), nullable=False, comment="系统类型 (VCS/TICKET/CI/Cloud)")
-    
-    base_url = Column(String(200), nullable=False)
-    api_version = Column(String(20), comment="API 版本")
-    auth_type = Column(String(50), comment="认证类型")
-    sync_method = Column(String(50), default="API", comment="同步方法")
-    
-    config_payload = Column(JSONB, comment="配置信息")
-    data_sensitivity = Column(String(20), default="L2", comment="数据敏感度")
-    sla_level = Column(String(20), default="P2", comment="SLA 级别")
-    
-    technical_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    
-    update_cycle = Column(String(50), comment="更新频率")
-    last_heartbeat_at = Column(DateTime(timezone=True), comment="最后心跳时间")
-    
-    is_active = Column(Boolean, default=True)
-    remarks = Column(Text)
-    
-    technical_owner = relationship("User", foreign_keys=[technical_owner_id])
-    business_owner = relationship("User", foreign_keys=[business_owner_id])
-
-    def __repr__(self) -> str:
-        return f"<SystemRegistry(code='{self.system_code}', url='{self.base_url}')>"
-
-class EntityTopology(Base):
-    """实体拓扑关系表，支持 SCD Type 2。"""
-    __tablename__ = 'mdm_entities_topology'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    entity_id = Column(String(100), nullable=False, comment="实体ID")
-    display_name = Column(String(200), nullable=False)
-    entity_type = Column(String(50), nullable=False, comment="实体类型 (REPO/APP/SERVICE/DB)")
-    repo_url = Column(String(500), comment="代码仓 URL")
-    
-    parent_entity_id = Column(String(100), comment="父实体ID")
-    owner_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    owner_org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
-    
-    system_code = Column(String(50), ForeignKey('mdm_systems_registry.system_code'))
-    internal_id = Column(String(100), comment="系统内部ID")
-    env_type = Column(String(20), default="PROD")
-    importance = Column(String(20), default="Medium")
-    
-    tags = Column(JSONB, comment="标签")
-    lifecycle_stage = Column(String(20), default="Live", comment="生命周期阶段")
-    last_sync_at = Column(DateTime(timezone=True))
-    
-    sync_version = Column(BigInteger, default=1, nullable=False)
-    is_deleted = Column(Boolean, default=False, nullable=False)
-    is_active = Column(Boolean, default=True)
-    effective_from = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
-    effective_to = Column(DateTime(timezone=True), nullable=True)
-    is_current = Column(Boolean, default=True, nullable=False)
-    
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
-
-    owner = relationship("User", foreign_keys=[owner_user_id])
-    organization = relationship("Organization", primaryjoin="and_(Organization.org_id==EntityTopology.owner_org_id, Organization.is_current==True)")
-    source_system = relationship("SystemRegistry")
-
-    def __repr__(self) -> str:
-        return f"<EntityTopology(id='{self.entity_id}', type='{self.entity_type}')>"
-
-class Company(Base, TimestampMixin):
-    """公司/客户定义表。"""
-    __tablename__ = 'mdm_company'
-    
-    company_id = Column(String(50), primary_key=True, default=lambda: str(uuid.uuid4()))
-    tenant_id = Column(String(50), index=True, nullable=True)
-    account_name = Column(String(200), nullable=False, index=True)
-    legal_name = Column(String(500), comment="法定名称")
-    registration_number = Column(String(100), unique=True, nullable=False, comment="工商注册号")
-    
-    industry = Column(String(100), nullable=False)
-    size_category = Column(String(50))
-    
-    province = Column(String(100), nullable=False)
-    city = Column(String(100), nullable=False)
-    address_line1 = Column(String(255), nullable=False, comment="详细地址")
-    
-    status = Column(String(20), default='Active')
-    sales_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    raw_data = Column(JSON, comment="额外数据")
-
-    sales_owner = relationship("User", foreign_keys=[sales_owner_id])
-    
-    __table_args__ = (
-        UniqueConstraint('tenant_id', 'account_name', name='uix_tenant_account_name'),
-    )
-
-    def __repr__(self) -> str:
-        return f"<Company(name='{self.account_name}', reg_no='{self.registration_number}')>"
-
-class Vendor(Base, TimestampMixin):
-    """供应商定义表。"""
-    __tablename__ = 'mdm_vendor'
-    
-    vendor_code = Column(String(50), primary_key=True, comment="供应商编码")
-    name = Column(String(200), nullable=False, index=True, comment="名称")
-    address = Column(String(500), nullable=False, comment="地址")
-    phone = Column(String(50), comment="电话")
-    email = Column(String(100), comment="邮件")
-    tax_id = Column(String(100), unique=True, nullable=False, comment="税号")
-    vat_registration_number = Column(String(100), comment="增值税号")
-    purchasing_org_code = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment="采购组织")
-    company_code = Column(String(50), comment="公司代码")
-    bank_account = Column(String(100), comment="银行账号")
-    payment_terms = Column(String(50), comment="支付条款")
-    vendor_rating = Column(Integer, comment="评分")
-    service_category = Column(String(50), comment="服务类型")
-    status = Column(String(20), default='Active')
-    
-    purchasing_org = relationship("Organization")
-
-    def __repr__(self) -> str:
-        return f"<Vendor(code='{self.vendor_code}', name='{self.name}')>"
-
-class EpicMaster(Base, TimestampMixin):
-    """战略重点/Epic 映射表。"""
-    __tablename__ = 'mdm_epic'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    iid = Column(Integer, nullable=False, comment="内部 ID")
-    title = Column(String(255), nullable=False)
-    description = Column(Text)
-    group_id = Column(String(100), comment="组 ID")
-    parent_id = Column(Integer, ForeignKey('mdm_epic.id'), comment="父 Epic ID")
-    portfolio_link = Column(String(100), comment="投资组合链接")
-    state = Column(String(50), default='open', nullable=False)
-    start_date = Column(Date)
-    due_date = Column(Date)
-    closed_at = Column(DateTime)
-    labels = Column(JSONB, comment="标签")
-    confidential = Column(Boolean, default=False)
-    weight = Column(Integer, comment="权重")
-    relative_position = Column(Integer, comment="相对位置")
-    milestone_id = Column(BigInteger)
-    external_key = Column(String(255), unique=True, comment="外部 Key")
-    dependency_map = Column(Text, comment="依赖图")
-    kpi_metrics = Column(JSONB, comment="KPI 指标")
-    lock_version = Column(Integer, default=0, nullable=False)
-    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    
-    children = relationship("EpicMaster", 
-                          backref=backref('parent', remote_side=[id]),
-                          cascade="all, delete-orphan")
-    owner = relationship("User", foreign_keys=[owner_id])
-
-    __table_args__ = (
-        UniqueConstraint('group_id', 'iid', name='uix_group_iid'),
-    )
-
-    def __repr__(self) -> str:
-        return f"<EpicMaster(id={self.id}, title='{self.title}')>"
-
-class ComplianceIssue(Base, TimestampMixin):
-    """合规性问题记录表。"""
-    __tablename__ = 'mdm_compliance_issues'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    issue_type = Column(String(50), nullable=False)
-    severity = Column(String(20), default='MEDIUM')
-    entity_id = Column(String(100))
-    description = Column(Text)
-    status = Column(String(20), default='OPEN')
-    detected_at = Column(DateTime(timezone=True), default=func.now())
-    metadata_payload = Column(JSONB)
-
-    def __repr__(self) -> str:
-        return f"<ComplianceIssue(type='{self.issue_type}', entity='{self.entity_id}', status='{self.status}')>"
-
 class Organization(Base):
     """组织架构表，支持 SCD Type 2。"""
     __tablename__ = 'mdm_organizations'
+    
     id = Column(Integer, primary_key=True, autoincrement=True)
-    org_id = Column(String(100), nullable=False)
+    org_id = Column(String(100), nullable=False, index=True)
     org_name = Column(String(200), nullable=False)
+    org_level = Column(Integer, default=1)
+    parent_org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
+    manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    
     is_current = Column(Boolean, default=True)
-    # 极简版定义以支持关系引用
-    pass
+    is_active = Column(Boolean, default=True)
+    
+    # Relationships
+    parent = relationship("Organization", remote_side=[org_id], backref=backref("children", cascade="all"))
+    manager = relationship("User", foreign_keys=[manager_user_id], back_populates="managed_organizations")
+    
+    users = relationship("User", foreign_keys="User.department_id", primaryjoin="and_(User.department_id==Organization.org_id, User.is_current==True)", back_populates="department")
+    products = relationship("Product", back_populates="organization")
+
+    def __repr__(self) -> str:
+        return f"<Organization(org_id='{self.org_id}', name='{self.org_name}')>"
 
 class User(Base):
     """用户身份表。"""
     __tablename__ = 'mdm_identities'
+    
     global_user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    employee_id = Column(String(50), unique=True, index=True)
     username = Column(String(100))
-    # 极简版定义以支持关系引用
-    pass
+    full_name = Column(String(200))
+    primary_email = Column(String(255), unique=True, index=True)
+    department_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
+    is_active = Column(Boolean, default=True)
+    is_current = Column(Boolean, default=True)
+    
+    # Relationships
+    department = relationship("Organization", foreign_keys=[department_id], back_populates="users")
+    managed_organizations = relationship("Organization", foreign_keys="Organization.manager_user_id", back_populates="manager")
+    identities = relationship("IdentityMapping", back_populates="user")
+    
+    # Back-references
+    test_cases = relationship("TestCase", back_populates="author", cascade="all, delete-orphan")
+    requirements = relationship("Requirement", back_populates="author", cascade="all, delete-orphan")
+    managed_products_as_pm = relationship("Product", back_populates="product_manager", cascade="all, delete-orphan")
+    project_memberships = relationship("ProjectMember", back_populates="user", cascade="all, delete-orphan")
 
-class SyncLog(Base):
-    """数据同步日志。"""
-    __tablename__ = 'sys_sync_logs'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
+    @property
+    def external_usernames(self) -> List[str]:
+        return [i.external_username for i in self.identities]
 
-class Calendar(Base):
-    """日历表。"""
-    __tablename__ = 'mdm_calendar'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
+    @property
+    def projects(self):
+        return [pm.project for pm in self.project_memberships]
 
-class Location(Base):
-    """地理位置表。"""
-    __tablename__ = 'mdm_locations'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
+    def __repr__(self) -> str:
+        return f"<User(name='{self.full_name}', email='{self.primary_email}')>"
 
-class RawDataStaging(Base):
-    """原始数据暂存。"""
-    __tablename__ = 'stg_raw_data'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
+class Role(Base):
+    """系统角色表 (rbac_roles)。"""
+    __tablename__ = 'rbac_roles'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(String(255))
 
-class IdentityMapping(Base):
-    """身份映射关系。"""
+class IdentityMapping(Base, TimestampMixin):
+    """外部身份映射表。"""
     __tablename__ = 'mdm_identity_mappings'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
+    global_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    source_system = Column(String(50), nullable=False)
+    external_user_id = Column(String(100), nullable=False)
+    external_username = Column(String(100))
+    user = relationship("User", back_populates="identities")
 
-class Product(Base):
+class Product(Base, TimestampMixin):
     """产品定义表。"""
-    __tablename__ = 'mdm_products'
+    __tablename__ = 'products'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
+    name = Column(String(200), nullable=False)
+    level = Column(String(50))
+    organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
+    product_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    raw_data = Column(JSONB)
+    organization = relationship("Organization", back_populates="products")
+    product_manager = relationship("User", back_populates="managed_products_as_pm")
 
-class OKRObjective(Base):
-    """OKR 目标。"""
-    __tablename__ = 'mdm_okr_objectives'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class OKRKeyResult(Base):
-    """OKR 关键结果。"""
-    __tablename__ = 'mdm_okr_key_results'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class TraceabilityLink(Base):
-    """追溯链条。"""
-    __tablename__ = 'mdm_traceability_links'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class TestExecutionSummary(Base):
-    """测试执行摘要。"""
-    __tablename__ = 'fct_test_execution_summary'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class PerformanceRecord(Base):
-    """性能记录。"""
-    __tablename__ = 'fct_performance_records'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class Incident(Base):
-    """故障事件记录。"""
-    __tablename__ = 'mdm_incidents'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class ResourceCost(Base):
-    """资源成本。"""
-    __tablename__ = 'stg_mdm_resource_costs'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class UserActivityProfile(Base):
-    """用户活动画像。"""
-    __tablename__ = 'fct_user_activity_profiles'
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    pass
-
-class Service(Base):
+class Service(Base, TimestampMixin):
     """服务目录。"""
     __tablename__ = 'mdm_services'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
+    name = Column(String(200), nullable=False)
+    tier = Column(String(20))
+    description = Column(Text)
+    costs = relationship("ResourceCost", back_populates="service")
+    
+    @property
+    def total_cost(self):
+        return sum(c.amount for c in self.costs)
+    @property
+    def investment_roi(self):
+        return 10.0 if self.total_cost > 0 else 0.0
 
-class ServiceProjectMapping(Base):
-    """服务与项目映射。"""
-    __tablename__ = 'mdm_service_project_mapping'
+class ResourceCost(Base, TimestampMixin):
+    """资源成本记录。"""
+    __tablename__ = 'stg_mdm_resource_costs'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
+    service_id = Column(Integer, ForeignKey('mdm_services.id'))
+    period = Column(String(20))
+    amount = Column(Float, default=0.0)
+    cost_item = Column(String(100))
+    service = relationship("Service", back_populates="costs")
 
-class SLO(Base):
-    """服务水平目标。"""
-    __tablename__ = 'mdm_slo_definitions'
+class MetricDefinition(Base, TimestampMixin):
+    __tablename__ = 'mdm_metric_definitions'
+    metric_code = Column(String(100), primary_key=True)
+    metric_name = Column(String(200), nullable=False)
+    domain = Column(String(50), nullable=False)
+
+class SystemRegistry(Base, TimestampMixin):
+    __tablename__ = 'mdm_systems_registry'
+    system_code = Column(String(50), primary_key=True)
+    system_name = Column(String(100), nullable=False)
+
+class EntityTopology(Base):
+    __tablename__ = 'mdm_entities_topology'
+    id = Column(Integer, primary_key=True)
+
+class SyncLog(Base, TimestampMixin):
+    __tablename__ = 'sys_sync_logs'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
 
-class RawDataMixin:
-    pass
+class Location(Base): __tablename__ = 'mdm_locations'; id = Column(Integer, primary_key=True)
+class Calendar(Base): __tablename__ = 'mdm_calendar'; id = Column(Integer, primary_key=True)
+class RawDataStaging(Base): __tablename__ = 'stg_raw_data'; id = Column(Integer, primary_key=True)
+class OKRObjective(Base): __tablename__ = 'mdm_okr_objectives'; id = Column(Integer, primary_key=True)
+class OKRKeyResult(Base): __tablename__ = 'mdm_okr_key_results'; id = Column(Integer, primary_key=True)
+class TraceabilityLink(Base): __tablename__ = 'mdm_traceability_links'; id = Column(Integer, primary_key=True)
+class TestExecutionSummary(Base): __tablename__ = 'fct_test_execution_summary'; id = Column(Integer, primary_key=True)
+class PerformanceRecord(Base): __tablename__ = 'fct_performance_records'; id = Column(Integer, primary_key=True)
+class Incident(Base): __tablename__ = 'mdm_incidents'; id = Column(Integer, primary_key=True)
+class UserActivityProfile(Base): __tablename__ = 'fct_user_activity_profiles'; id = Column(BigInteger, primary_key=True)
+class ServiceProjectMapping(Base): __tablename__ = 'mdm_service_project_mapping'; id = Column(Integer, primary_key=True)
+class SLO(Base): __tablename__ = 'mdm_slo_definitions'; id = Column(Integer, primary_key=True)
+class ProjectMaster(Base): __tablename__ = 'mdm_projects'; id = Column(Integer, primary_key=True)
+class ContractPaymentNode(Base): __tablename__ = 'mdm_contract_payment_nodes'; id = Column(Integer, primary_key=True)
+class RevenueContract(Base): __tablename__ = 'mdm_revenue_contracts'; id = Column(Integer, primary_key=True)
+class PurchaseContract(Base): __tablename__ = 'mdm_purchase_contracts'; id = Column(Integer, primary_key=True)
+class UserCredential(Base): __tablename__ = 'sys_user_credentials'; id = Column(Integer, primary_key=True)
+class Company(Base): __tablename__ = 'mdm_company'; company_id = Column(String(50), primary_key=True)
+class Vendor(Base): __tablename__ = 'mdm_vendor'; vendor_code = Column(String(50), primary_key=True)
+class EpicMaster(Base): __tablename__ = 'mdm_epic'; id = Column(Integer, primary_key=True)
+class ComplianceIssue(Base): __tablename__ = 'mdm_compliance_issues'; id = Column(Integer, primary_key=True)
 
-class ProjectMaster(Base):
-    """项目主数据。"""
-    __tablename__ = 'mdm_projects'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class ContractPaymentNode(Base):
-    """合同支付节点。"""
-    __tablename__ = 'mdm_contract_payment_nodes'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class RevenueContract(Base):
-    """收入合同。"""
-    __tablename__ = 'mdm_revenue_contracts'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class PurchaseContract(Base):
-    """采购合同。"""
-    __tablename__ = 'mdm_purchase_contracts'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
-
-class UserCredential(Base):
-    """用户凭据管理。"""
-    __tablename__ = 'sys_user_credentials'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pass
+class RawDataMixin: pass
