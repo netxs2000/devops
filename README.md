@@ -1,4 +1,4 @@
-# DevOps Data Collector (研发效能数据采集器)
+# DevOps Data Application Platform (研发效能数据应用平台)
 
 ![Version](https://img.shields.io/badge/version-3.8.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-green)
@@ -6,14 +6,14 @@
 
 ## 📖 项目简介 (Introduction)
 
-**DevOps Data Collector** 是一个企业级研发效能数据采集与分析平台。它旨在打破研发工具链（GitLab, SonarQube, Jenkins 等）之间的数据孤岛，将分散的研发数据聚合为有价值的资产。
+**DevOps Data Application Platform** 是一个企业级研发效能数据采集与分析平台。它旨在打破研发工具链（GitLab, SonarQube, Jenkins 等）之间的数据孤岛，将分散的研发数据聚合为有价值的资产。
 
 系统的核心目标是为企业提供：
 
 * **标准化数据模型**: 采用 Google Style 规范重构的高质量数据模型层，支持深度的 ODS/DW 转换与血缘追溯。
-* **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）、SPACE 框架指标及 **流动效能 (Flow Efficiency)**。
-* **GitLab 测试管理中台 (Test Management Hub)**: 专为 GitLab 社区版设计的轻量级测试管理工具，支持测试用例库、执行追踪、缺陷看板及质量报告。
-* **战略决策支持 (ROI)**: 提供波士顿矩阵（明星/现金牛项目识别）和 **ROI 投入产出比分析**，对接财务合同数据。
+* **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）、SPACE 框架指标及 流动效能 (Flow Efficiency)。
+* **测试管理中台 (Test Management Hub)**: 专为 GitLab 社区版设计的轻量级测试管理工具，支持测试用例库、执行追踪、缺陷看板及质量报告。
+* **战略决策支持 (ROI)**: 提供波士顿矩阵（明星/现金牛项目识别）和 ROI 投入产出比分析，对接财务合同数据。
 * **智能化生成的测试管理 (AI Generative QA)**: 利用 LLM 自动将需求 AC 转化为标准化测试步骤，提升 50%+ 的用例设计效率。
 * **Pydantic V2 零拷贝架构**: 全量采用 V2 特性，实现数据库到 DTO 的极速、优雅转换。
 * **人才洞察**: 识别高潜人才、技术专家和离职风险。
@@ -22,7 +22,7 @@
 ## ✨ 核心特性 (Key Features)
 
 * **统一身份认证 (Unified Identity)**: 自动关联 GitLab 账号与 SonarQube 账号，识别离职员工和外部贡献者。
-* **GitLab 测试管理 (Test Hub) 🌟 (New)**:
+* **测试管理 🌟**:
   * **结构化用例**: 支持预置条件、测试步骤、优先级等结构化数据存储。
   * **执行审计**: 每次执行自动在 GitLab Issue 记录评论，确保持续集成反馈环闭合。
   * **缺陷联动**: 支持从失败用例一键生成 Bug 链接，内置缺陷看板追踪修复进度。
@@ -35,9 +35,9 @@
 * **智能语义 (AI Insights)**: 基于 LLM 自动提取 Commit/MR/Issue 的业务贡献摘要。
 * **工程卓越度 (Developer Experience)**: 采集 MR 评审轮次、深度差异分析、加班分布，全方位量化协作质量。
 * **合规与风控 (Governance & Risk)**: 监控绕过流程的 Direct Push 和积压的安全漏洞。
-* **开源许可证合规 (OSS License Compliance) 🌟 (New)**: 集成 OWASP Dependency-Check，自动扫描项目依赖，识别高风险许可证（GPL/AGPL）和 CVE 安全漏洞，支持 SPDX 标准化和 CVSS 评分。
-* **模块化预警与通知 (Modular Alerting & Notification) 🌟 (New)**: 系统内置了高性能的“多渠道风险预警引擎”，实现从数据洞察到管理动作的闭环：
-  * **异常识别**: 定时扫描 `view_pmo_risk_anomalies` 视图。
+* **开源许可证合规 (OSS License Compliance) 🌟**: 集成 OWASP Dependency-Check，自动扫描项目依赖，识别高风险许可证（GPL/AGPL）和 CVE 安全漏洞，支持 SPDX 标准化和 CVSS 评分。
+* **模块化预警与通知 (Modular Alerting & Notification) 🌟**: 系统内置了高性能的“多渠道风险预警引擎”，实现从数据洞察到管理动作的闭环：
+  * **异常识别**: 定时扫描 `view_pmo_risk_anomalies` 视图，识别异常数据。
   * **多端推送**: 支持 **企业微信 (WeCom)**、**飞书 (Feishu)** 和 **钉钉 (DingTalk)** 的 Webhook 集成。
   * **结构化触达**: 自动生成富文本卡片，包含风险等级颜色标识与责任人 @ 提及功能。
 * **断点续传 (Resumable Sync)**: 针对海量数据同步设计，支持意外中断后自动恢复。

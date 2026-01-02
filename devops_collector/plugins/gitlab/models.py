@@ -145,6 +145,8 @@ class Project(Base):
         branches_count (int): 分支总数。
         organization_id (str): 关联的组织架构 ID (mdm_organizations.org_id)。
         organization (Organization): 关联的 Organization 对象。
+        mdm_project_id (int): 关联的主项目 ID (mdm_projects.id)。
+        mdm_project (ProjectMaster): 关联的主项目对象。
         updated_at (datetime): 数据库记录的最后更新时间。
         milestones (List[Milestone]): 项目关联的里程碑列表。
         members (List[ProjectMember]): 项目成员列表。
@@ -172,6 +174,9 @@ class Project(Base):
     branches_count = Column(Integer)
     organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     organization = relationship('Organization', primaryjoin='and_(Organization.org_id==Project.organization_id, Organization.is_current==True)', back_populates='projects')
+    mdm_project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True)
+    from devops_collector.models.base_models import ProjectMaster
+    mdm_project = relationship('ProjectMaster', back_populates='gitlab_repos')
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     dependency_scans = relationship('DependencyScan', back_populates='project', cascade='all, delete-orphan')
     dependencies = relationship('Dependency', back_populates='project', cascade='all, delete-orphan')

@@ -9,6 +9,7 @@ Typical Usage:
 import logging
 import gitlab
 from typing import Any, Optional, List
+from sqlalchemy.orm import Session
 from devops_collector.config import Config
 logger = logging.getLogger(__name__)
 

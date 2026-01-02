@@ -1,10 +1,11 @@
 """TODO: Add module description."""
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
-from devops_collector.auth.dependencies import get_current_user, get_db
+from devops_portal.dependencies import get_current_user
+from devops_collector.auth.router import get_db
 from devops_collector.models.base_models import User, UserOAuthToken
 from devops_collector.plugins.gitlab.client import GitLabClient
-from devops_collector.core.config import Config
+from devops_collector.config import Config
 
 def get_user_gitlab_client(current_user: User=Depends(get_current_user), db: Session=Depends(get_db)) -> GitLabClient:
     """依赖注入：获取基于当前登录用户 OAuth Token 的 GitLab 客户端。

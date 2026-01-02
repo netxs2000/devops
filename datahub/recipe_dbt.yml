@@ -1,0 +1,20 @@
+source:
+  type: "dbt"
+  config:
+    # dbt 项目元数据文件路径
+    manifest_path: "./dbt_project/target/manifest.json"
+    catalog_path: "./dbt_project/target/catalog.json"
+    sources_path: "./dbt_project/target/sources.json"
+    
+    # 建立 dbt 模型与数据库物理表的血缘关系
+    load_schemas: true
+    # 目标数据库平台
+    target_platform: "postgres"
+    
+    # 环境标记
+    env: "PROD"
+
+sink:
+  type: "datahub-rest"
+  config:
+    server: "http://localhost:8080"

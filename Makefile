@@ -59,6 +59,11 @@ orchestrate: ## 启动资产编排控制台 (Dagster)
 	@echo "$(GREEN)🏗️ Starting Dagster Orchestrator...$(RESET)"
 	dagster dev -f dagster_repo/__init__.py
 
+datahub-ingest: ## 同步元数据到 DataHub (PostgreSQL & dbt)
+	@echo "$(GREEN)🔭 Ingesting metadata to DataHub...$(RESET)"
+	datahub ingest -c datahub/recipe_postgres.yml
+	datahub ingest -c datahub/recipe_dbt.yml
+
 clean: ## 清理临时文件
 	@echo "$(GREEN)🧹 Cleaning temporary files...$(RESET)"
 	find . -type d -name "__pycache__" -exec rm -rf {} +

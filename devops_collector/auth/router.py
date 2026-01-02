@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from devops_collector.auth import services, schemas
 from devops_collector.models.base_models import User, UserOAuthToken
 from devops_collector.auth.database import SessionLocal
-from devops_collector.core.config import Config
+from devops_collector.config import Config
 router = APIRouter(prefix='/auth', tags=['Authentication'])
 
 def get_db():

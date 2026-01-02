@@ -4,10 +4,11 @@ import uuid
 
 from sqlalchemy import (
     Column, String, Integer, BigInteger, Boolean, Text, DateTime, Date, 
-    ForeignKey, Table, JSON, Index, func, UniqueConstraint, Float, select
+    ForeignKey, Table, JSON, Index, func, UniqueConstraint, Float, select,
+    UUID
 )
 from sqlalchemy.orm import relationship, backref, DeclarativeBase
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+JSONB = JSON
 from sqlalchemy.ext.hybrid import hybrid_property
 
 class Base(DeclarativeBase):
@@ -49,6 +50,14 @@ class Organization(Base, TimestampMixin, SCDMixin):
     def __repr__(self) -> str:
         return f"<Organization(org_id='{self.org_id}', name='{self.org_name}', version={self.sync_version})>"
 
+# 关联表：用户与角色
+user_roles = Table(
+    'sys_user_roles',
+    Base.metadata,
+    Column('user_id', UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), primary_key=True),
+    Column('role_id', Integer, ForeignKey('rbac_roles.id'), primary_key=True)
+)
+
 class User(Base, TimestampMixin, SCDMixin):
     """全局用户映射表。"""
     __tablename__ = 'mdm_identities'
@@ -65,6 +74,7 @@ class User(Base, TimestampMixin, SCDMixin):
     department = relationship("Organization", foreign_keys=[department_id], back_populates="users")
     managed_organizations = relationship("Organization", foreign_keys="Organization.manager_user_id", back_populates="manager")
     identities = relationship("IdentityMapping", back_populates="user")
+    roles = relationship("Role", secondary=user_roles, backref="users")
     
     # Back-references
     test_cases = relationship("TestCase", back_populates="author")
@@ -87,6 +97,7 @@ class Role(Base):
     """系统角色表 (rbac_roles)。"""
     __tablename__ = 'rbac_roles'
     id = Column(Integer, primary_key=True)
+    code = Column(String(50), unique=True, nullable=False) # SYSTEM_ADMIN, PROJECT_LEAD, etc.
     name = Column(String(100), unique=True, nullable=False)
     description = Column(String(255))
 
@@ -170,11 +181,71 @@ class Incident(Base): __tablename__ = 'mdm_incidents'; id = Column(Integer, prim
 class UserActivityProfile(Base): __tablename__ = 'fct_user_activity_profiles'; id = Column(BigInteger, primary_key=True)
 class ServiceProjectMapping(Base): __tablename__ = 'mdm_service_project_mapping'; id = Column(Integer, primary_key=True)
 class SLO(Base): __tablename__ = 'mdm_slo_definitions'; id = Column(Integer, primary_key=True)
-class ProjectMaster(Base): __tablename__ = 'mdm_projects'; id = Column(Integer, primary_key=True)
+class ProjectMaster(Base, TimestampMixin, SCDMixin):
+    """项目全生命周期主数据 (mdm_projects)。
+    
+    用于打通“需求 -> 开发 -> 测试 -> 发布”的交付链条。采用 SCD Type 2 保留历史版本。
+    """
+    __tablename__ = 'mdm_projects'
+    
+    # 1. 基础标识 (OneID 穿透)
+    project_id = Column(String(100), primary_key=True) # 全局唯一项目 ID (系统码+项目 Key)
+    project_name = Column(String(200), nullable=False) # 项目的正式名称
+    
+    # 2. 分类与状态
+    project_type = Column(String(50)) # SPRINT/WATERFALL/RESEARCH
+    status = Column(String(50), default='PLAN') # PLAN/DEV/TEST/RELEASED
+    is_active = Column(Boolean, default=True) # 是否处于活跃/进行中
+    
+    # 3. 组织与人员关联 (OneID 穿透)
+    pm_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True) # 项目经理
+    org_id = Column(String(100), ForeignKey('mdm_organizations.org_id')) # 归属业务线 / 部门
+    
+    # 4. 时间轴管理
+    plan_start_date = Column(Date) # 计划启动日期
+    plan_end_date = Column(Date) # 计划交付日期
+    actual_start_at = Column(DateTime(timezone=True)) # 实际开始时间
+    actual_end_at = Column(DateTime(timezone=True)) # 实际完成时间
+    
+    # 5. 外部系统与财务关联
+    external_id = Column(String(100), unique=True) # 外部系统原生 ID (如 Jira Key)
+    system_code = Column(String(50), ForeignKey('mdm_systems_registry.system_code')) # 来源系统编码
+    budget_code = Column(String(100)) # 预算关联编码 (用于 CAPEX/OPEX 审计)
+    budget_type = Column(String(50)) # 预算类型 (CAPEX 资本化/OPEX 费用化)
+    
+    lead_repo_id = Column(Integer, nullable=True) # 受理仓库 ID (GitLab Project ID)
+    description = Column(Text) # 项目简述 (保留字段)
+
+    # Relationships
+    organization = relationship("Organization", foreign_keys=[org_id])
+    project_manager = relationship("User", foreign_keys=[pm_user_id])
+    source_system = relationship("SystemRegistry")
+    gitlab_repos = relationship("Project", back_populates="mdm_project")
+
+    def __repr__(self) -> str:
+        return f"<ProjectMaster(project_id='{self.project_id}', name='{self.project_name}')>"
 class ContractPaymentNode(Base): __tablename__ = 'mdm_contract_payment_nodes'; id = Column(Integer, primary_key=True)
 class RevenueContract(Base): __tablename__ = 'mdm_revenue_contracts'; id = Column(Integer, primary_key=True)
 class PurchaseContract(Base): __tablename__ = 'mdm_purchase_contracts'; id = Column(Integer, primary_key=True)
-class UserCredential(Base): __tablename__ = 'sys_user_credentials'; id = Column(Integer, primary_key=True)
+class UserCredential(Base, TimestampMixin):
+    """用户凭证表。"""
+    __tablename__ = 'sys_user_credentials'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), unique=True)
+    password_hash = Column(String(255), nullable=False)
+    user = relationship("User", backref=backref("credential", uselist=False))
+
+class UserOAuthToken(Base, TimestampMixin):
+    """用户 OAuth 令牌存储表。"""
+    __tablename__ = 'sys_user_oauth_tokens'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(100), index=True)
+    provider = Column(String(50), index=True)
+    access_token = Column(String(1024), nullable=False)
+    refresh_token = Column(String(1024))
+    token_type = Column(String(50))
+    expires_at = Column(DateTime(timezone=True))
+
 class Company(Base): __tablename__ = 'mdm_company'; company_id = Column(String(50), primary_key=True)
 class Vendor(Base): __tablename__ = 'mdm_vendor'; vendor_code = Column(String(50), primary_key=True)
 class EpicMaster(Base): __tablename__ = 'mdm_epic'; id = Column(Integer, primary_key=True)

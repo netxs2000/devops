@@ -317,9 +317,11 @@
             </div>
             <form id="requirementForm">
                 <div class="form-group">
-                    <label>GitLab 项目 ID <span class="required">*</span></label>
-                    <input type="number" id="projectId" required placeholder="例如：123">
-                    <div class="help-text">请输入需求所属的 GitLab 项目 ID</div>
+                    <label>受影响的业务系统 <span class="required">*</span></label>
+                    <select id="mdmId" required onchange="handleProjectChange()">
+                        <option value="">正在加载项目列表...</option>
+                    </select>
+                    <div class="help-text">请选择您提出建议的业务系统名称</div>
                 </div>
 
                 <div class="form-group">
@@ -423,14 +425,40 @@
                 document.getElementById('reporterName').innerText = `${user.full_name || user.username} (${user.organization_name || 'Individual'})`;
                 document.getElementById('reporterAvatar').innerText = (user.full_name || user.username).charAt(0).toUpperCase();
             }
+
+            await loadBusinessProjects();
+        }
+
+        async function loadBusinessProjects() {
+            const select = document.getElementById('mdmId');
+            try {
+                const projects = await fetch('/service-desk/business-projects', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sd_token')}` }
+                }).then(res => res.json());
+
+                select.innerHTML = '<option value="">-- 请选择业务系统 --</option>';
+                projects.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                select.innerHTML = '<option value="">加载失败，请刷新</option>';
+            }
+        }
+
+        function handleProjectChange() {
+            uploadedAttachments = [];
+            document.getElementById('filePreview').innerHTML = '';
         }
 
         async function handleFileUpload(event) {
             const files = event.target.files;
-            const projectId = document.getElementById('projectId').value;
+            const mdmId = document.getElementById('mdmId').value;
 
-            if (!projectId) {
-                alert('请先输入项目 ID，以便我们将附件归档至正确的项目。');
+            if (!mdmId) {
+                alert('请先选择业务系统，以便我们将附件归档。');
                 return;
             }
 
@@ -444,7 +472,7 @@
                 formData.append('file', file);
 
                 try {
-                    const response = await fetch(`/service-desk/upload?project_id=${projectId}`, {
+                    const response = await fetch(`/service-desk/upload?mdm_id=${mdmId}`, {
                         method: 'POST',
                         body: formData
                     });
@@ -483,10 +511,10 @@
                 attachments: uploadedAttachments
             };
 
-            const projectId = document.getElementById('projectId').value;
+            const mdmId = document.getElementById('mdmId').value;
 
             try {
-                const url = `/service-desk/submit-requirement?project_id=${projectId}`;
+                const url = `/service-desk/submit-requirement?mdm_id=${mdmId}`;
                 const result = await Api.post(url, formData);
 
                 showAlert(`✅ ${result.message}`, 'success');
