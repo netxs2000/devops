@@ -14,11 +14,20 @@ class Base(DeclarativeBase):
     pass
 
 class TimestampMixin:
+    """时间戳混入类，提供自动创建和更新时间。"""
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
 
-class Organization(Base):
-    """组织架构表，支持 SCD Type 2。"""
+class SCDMixin:
+    """SCD Type 2 慢变维支持混入类。"""
+    sync_version = Column(Integer, default=1, nullable=False)
+    effective_from = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    effective_to = Column(DateTime(timezone=True), nullable=True)
+    is_current = Column(Boolean, default=True, index=True)
+    is_deleted = Column(Boolean, default=False)
+
+class Organization(Base, TimestampMixin, SCDMixin):
+    """组织架构表，支持 SCD Type 2 生命周期管理。"""
     __tablename__ = 'mdm_organizations'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -28,7 +37,6 @@ class Organization(Base):
     parent_org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     
-    is_current = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     
     # Relationships
@@ -39,10 +47,10 @@ class Organization(Base):
     products = relationship("Product", back_populates="organization")
 
     def __repr__(self) -> str:
-        return f"<Organization(org_id='{self.org_id}', name='{self.org_name}')>"
+        return f"<Organization(org_id='{self.org_id}', name='{self.org_name}', version={self.sync_version})>"
 
-class User(Base):
-    """用户身份表。"""
+class User(Base, TimestampMixin, SCDMixin):
+    """全局用户映射表。"""
     __tablename__ = 'mdm_identities'
     
     global_user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -52,7 +60,6 @@ class User(Base):
     primary_email = Column(String(255), unique=True, index=True)
     department_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     is_active = Column(Boolean, default=True)
-    is_current = Column(Boolean, default=True)
     
     # Relationships
     department = relationship("Organization", foreign_keys=[department_id], back_populates="users")
@@ -60,10 +67,10 @@ class User(Base):
     identities = relationship("IdentityMapping", back_populates="user")
     
     # Back-references
-    test_cases = relationship("TestCase", back_populates="author", cascade="all, delete-orphan")
-    requirements = relationship("Requirement", back_populates="author", cascade="all, delete-orphan")
-    managed_products_as_pm = relationship("Product", back_populates="product_manager", cascade="all, delete-orphan")
-    project_memberships = relationship("ProjectMember", back_populates="user", cascade="all, delete-orphan")
+    test_cases = relationship("TestCase", back_populates="author")
+    requirements = relationship("Requirement", back_populates="author")
+    managed_products_as_pm = relationship("Product", back_populates="product_manager")
+    project_memberships = relationship("ProjectMember", back_populates="user")
 
     @property
     def external_usernames(self) -> List[str]:
@@ -74,7 +81,7 @@ class User(Base):
         return [pm.project for pm in self.project_memberships]
 
     def __repr__(self) -> str:
-        return f"<User(name='{self.full_name}', email='{self.primary_email}')>"
+        return f"<User(name='{self.full_name}', email='{self.primary_email}', version={self.sync_version})>"
 
 class Role(Base):
     """系统角色表 (rbac_roles)。"""
@@ -91,6 +98,7 @@ class IdentityMapping(Base, TimestampMixin):
     source_system = Column(String(50), nullable=False)
     external_user_id = Column(String(100), nullable=False)
     external_username = Column(String(100))
+    external_email = Column(String(100))
     user = relationship("User", back_populates="identities")
 
 class Product(Base, TimestampMixin):
@@ -152,7 +160,7 @@ class SyncLog(Base, TimestampMixin):
 
 class Location(Base): __tablename__ = 'mdm_locations'; id = Column(Integer, primary_key=True)
 class Calendar(Base): __tablename__ = 'mdm_calendar'; id = Column(Integer, primary_key=True)
-class RawDataStaging(Base): __tablename__ = 'stg_raw_data'; id = Column(Integer, primary_key=True)
+class RawDataStaging(Base): __tablename__ = 'stg_raw_data'; id = Column(Integer, primary_key=True); source = Column(String(50)); entity_type = Column(String(50)); external_id = Column(String(100)); payload = Column(JSON); schema_version = Column(String(20)); collected_at = Column(DateTime(timezone=True))
 class OKRObjective(Base): __tablename__ = 'mdm_okr_objectives'; id = Column(Integer, primary_key=True)
 class OKRKeyResult(Base): __tablename__ = 'mdm_okr_key_results'; id = Column(Integer, primary_key=True)
 class TraceabilityLink(Base): __tablename__ = 'mdm_traceability_links'; id = Column(Integer, primary_key=True)
