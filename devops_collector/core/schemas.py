@@ -22,8 +22,8 @@ class GitLabUserSchema(BaseModel):
     username: str
     name: str
     email: Optional[str] = None
-    state: str = "active"
-    skype: Optional[str] = Field(None, alias="skypeid")
+    state: str = 'active'
+    skype: Optional[str] = Field(None, alias='skypeid')
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 class GitLabMRSchema(BaseModel):
@@ -44,7 +44,7 @@ class GitLabMRSchema(BaseModel):
     iid: int
     project_id: int
     title: str
-    description: Optional[str] = ""
+    description: Optional[str] = ''
     state: str
     author: GitLabUserSchema
     created_at: datetime
@@ -54,9 +54,21 @@ class GitLabMRSchema(BaseModel):
     @field_validator('state')
     @classmethod
     def validate_state(cls, v):
+        '''"""TODO: Add description.
+
+Args:
+    cls: TODO
+    v: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         allowed = {'opened', 'closed', 'merged', 'locked'}
         if v not in allowed:
-            raise ValueError(f"Invalid MR state: {v}")
+            raise ValueError(f'Invalid MR state: {v}')
         return v
 
 class StagingDataBundle(BaseModel):

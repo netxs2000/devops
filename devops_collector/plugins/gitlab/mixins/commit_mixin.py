@@ -5,13 +5,10 @@
 import logging
 from datetime import datetime
 from typing import List, Optional
-
 from devops_collector.core.utils import parse_iso8601
 from devops_collector.plugins.gitlab.models import Project, Commit, CommitFileStats
 from devops_collector.plugins.gitlab.analyzer import DiffAnalyzer
-
 logger = logging.getLogger(__name__)
-
 
 class CommitMixin:
     """提供 Commit 相关的同步逻辑。
@@ -31,10 +28,7 @@ class CommitMixin:
         Returns:
             int: 本次成功处理的提交总数。
         """
-        return self._process_generator(
-            self.client.get_project_commits(project.id, since=since),
-            lambda batch: self._save_commits_batch(project, batch)
-        )
+        return self._process_generator(self.client.get_project_commits(project.id, since=since), lambda batch: self._save_commits_batch(project, batch))
 
     def _save_commits_batch(self, project: Project, batch: List[dict]) -> None:
         """批量保存提交记录，并触发追溯与行为分析。
@@ -50,44 +44,22 @@ class CommitMixin:
             project (Project): 关联的项目实体。
             batch (List[dict]): 从 API 获取的原始提交数据列表。
         """
-        existing = self.session.query(Commit.id).filter(
-            Commit.project_id == project.id,
-            Commit.id.in_([c['id'] for c in batch])
-        ).all()
+        existing = self.session.query(Commit.id).filter(Commit.project_id == project.id, Commit.id.in_([c['id'] for c in batch])).all()
         existing_ids = {c.id for c in existing}
-        
         new_commits = []
         for data in batch:
             if data['id'] in existing_ids:
                 continue
-            
-            commit = Commit(
-                id=data['id'],
-                project_id=project.id,
-                short_id=data['short_id'],
-                title=data['title'],
-                author_name=data['author_name'],
-                author_email=data['author_email'],
-                message=data['message'],
-                authored_date=parse_iso8601(data['authored_date']),
-                committed_date=parse_iso8601(data['committed_date'])
-            )
-            
+            commit = Commit(id=data['id'], project_id=project.id, short_id=data['short_id'], title=data['title'], author_name=data['author_name'], author_email=data['author_email'], message=data['message'], authored_date=parse_iso8601(data['authored_date']), committed_date=parse_iso8601(data['committed_date']))
             stats = data.get('stats', {})
             commit.additions = stats.get('additions', 0)
             commit.deletions = stats.get('deletions', 0)
             commit.total = stats.get('total', 0)
-            
             self.session.add(commit)
             new_commits.append(commit)
-            
-            # 自动化链路追踪提取 (provided by TraceabilityMixin)
             if hasattr(self, '_apply_traceability_extraction'):
                 self._apply_traceability_extraction(commit)
-            
-            # 行为特征：加班识别与行为特征
             self._apply_commit_behavior_analysis(commit)
-        
         if self.enable_deep_analysis and new_commits:
             for commit in new_commits:
                 self._process_commit_diffs(project, commit)
@@ -108,24 +80,13 @@ class CommitMixin:
                 file_path = diff.get('new_path') or diff.get('old_path')
                 if not file_path or DiffAnalyzer.is_ignored(file_path):
                     continue
-                
-                # 分析差异统计
                 diff_text = diff.get('diff', '')
                 stats = DiffAnalyzer.analyze_diff(diff_text, file_path)
-                
-                # 识别文件分类
                 category = DiffAnalyzer.get_file_category(file_path)
-                
-                # 保存统计
-                file_stats = CommitFileStats(
-                    commit_id=commit.id,
-                    file_path=file_path,
-                    file_type_category=category,
-                    **stats
-                )
+                file_stats = CommitFileStats(commit_id=commit.id, file_path=file_path, file_type_category=category, **stats)
                 self.session.add(file_stats)
         except Exception as e:
-            logger.warning(f"Failed to analyze diff for commit {commit.id}: {e}")
+            logger.warning(f'Failed to analyze diff for commit {commit.id}: {e}')
 
     def _apply_commit_behavior_analysis(self, commit: Commit) -> None:
         """分析 Commit 的行为特征（主要检测是否为非工作时间提交）。
@@ -135,10 +96,7 @@ class CommitMixin:
         """
         if not commit.committed_date:
             return
-            
         dt = commit.committed_date
-        # 加班定义：周末，或常规工作时间 (09:00 - 19:00) 之外 (取 20:00 - 08:00)
         is_weekend = dt.weekday() >= 5
         is_night = dt.hour >= 20 or dt.hour < 8
-        
         commit.is_off_hours = is_weekend or is_night

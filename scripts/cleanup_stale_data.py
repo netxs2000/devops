@@ -4,27 +4,30 @@
 import sys
 import os
 import logging
-
-# 将项目根目录添加到 pythonpath
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from devops_collector.core.retention_manager import RetentionManager
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger("CleanupScript")
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('CleanupScript')
 
 def main():
-    logger.info("Starting stale data cleanup...")
+    '''"""TODO: Add description.
+
+Args:
+    TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+    logger.info('Starting stale data cleanup...')
     try:
         manager = RetentionManager()
         deleted_count = manager.cleanup_raw_data()
-        logger.info(f"Cleanup finished. Total records removed: {deleted_count}")
+        logger.info(f'Cleanup finished. Total records removed: {deleted_count}')
     except Exception as e:
-        logger.error(f"Cleanup failed: {e}")
+        logger.error(f'Cleanup failed: {e}')
         sys.exit(1)
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

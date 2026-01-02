@@ -5,12 +5,9 @@
 import logging
 from datetime import datetime
 from typing import List
-
 from devops_collector.core.utils import parse_iso8601
 from devops_collector.plugins.gitlab.models import Project, Pipeline, Deployment
-
 logger = logging.getLogger(__name__)
-
 
 class PipelineMixin:
     """提供流水线与部署相关的同步逻辑。
@@ -27,10 +24,7 @@ class PipelineMixin:
         Returns:
             int: 处理的流水线总数。
         """
-        return self._process_generator(
-            self.client.get_project_pipelines(project.id),
-            lambda batch: self._save_pipelines_batch(project, batch)
-        )
+        return self._process_generator(self.client.get_project_pipelines(project.id), lambda batch: self._save_pipelines_batch(project, batch))
 
     def _save_pipelines_batch(self, project: Project, batch: List[dict]) -> None:
         """批量保存流水线及其基本指标。
@@ -43,17 +37,8 @@ class PipelineMixin:
             project (Project): 关联的项目实体。
             batch (List[dict]): 流水线原始数据列表。
         """
-        # 1. Staging
         for data in batch:
-            self.save_to_staging(
-                source='gitlab',
-                entity_type='pipeline',
-                external_id=data['id'],
-                payload=data,
-                schema_version=self.SCHEMA_VERSION
-            )
-        
-        # 2. Transform
+            self.save_to_staging(source='gitlab', entity_type='pipeline', external_id=data['id'], payload=data, schema_version=self.SCHEMA_VERSION)
         self._transform_pipelines_batch(project, batch)
 
     def _transform_pipelines_batch(self, project: Project, batch: List[dict]) -> None:
@@ -66,13 +51,11 @@ class PipelineMixin:
         ids = [item['id'] for item in batch]
         existing = self.session.query(Pipeline).filter(Pipeline.id.in_(ids)).all()
         existing_map = {p.id: p for p in existing}
-        
         for data in batch:
             p = existing_map.get(data['id'])
             if not p:
                 p = Pipeline(id=data['id'])
                 self.session.add(p)
-            
             p.project_id = project.id
             p.status = data['status']
             p.ref = data.get('ref')
@@ -91,11 +74,8 @@ class PipelineMixin:
         Returns:
             int: 处理的部署记录总数。
         """
-        return self._process_generator(
-            self.client.get_project_deployments(project.id),
-            lambda batch: self._save_deployments_batch(project, batch)
-        )
-    
+        return self._process_generator(self.client.get_project_deployments(project.id), lambda batch: self._save_deployments_batch(project, batch))
+
     def _save_deployments_batch(self, project: Project, batch: List[dict]) -> None:
         """批量保存部署信息。
         
@@ -105,17 +85,8 @@ class PipelineMixin:
             project (Project): 关联的项目实体。
             batch (List[dict]): 部署记录原始数据列表。
         """
-        # 1. Staging
         for data in batch:
-            self.save_to_staging(
-                source='gitlab',
-                entity_type='deployment',
-                external_id=data['id'],
-                payload=data,
-                schema_version=self.SCHEMA_VERSION
-            )
-            
-        # 2. Transform
+            self.save_to_staging(source='gitlab', entity_type='deployment', external_id=data['id'], payload=data, schema_version=self.SCHEMA_VERSION)
         self._transform_deployments_batch(project, batch)
 
     def _transform_deployments_batch(self, project: Project, batch: List[dict]) -> None:
@@ -128,13 +99,11 @@ class PipelineMixin:
         ids = [item['id'] for item in batch]
         existing = self.session.query(Deployment).filter(Deployment.id.in_(ids)).all()
         existing_map = {d.id: d for d in existing}
-        
         for data in batch:
             d = existing_map.get(data['id'])
             if not d:
                 d = Deployment(id=data['id'])
                 self.session.add(d)
-                
             d.project_id = project.id
             d.iid = data['iid']
             d.status = data['status']

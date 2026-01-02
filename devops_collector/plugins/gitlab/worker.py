@@ -22,7 +22,6 @@ import logging
 from datetime import datetime
 from typing import Optional, Any
 from sqlalchemy.orm import Session
-
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.utils import parse_iso8601
@@ -30,8 +29,6 @@ from devops_collector.plugins.gitlab.client import GitLabClient
 from devops_collector.plugins.gitlab.models import Project, GitLabGroup, SyncLog
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.plugins.gitlab.identity import IdentityMatcher
-
-# Mixins
 from devops_collector.plugins.gitlab.mixins.base_mixin import BaseMixin
 from devops_collector.plugins.gitlab.mixins.traceability_mixin import TraceabilityMixin
 from devops_collector.plugins.gitlab.mixins.commit_mixin import CommitMixin
@@ -39,12 +36,9 @@ from devops_collector.plugins.gitlab.mixins.issue_mixin import IssueMixin
 from devops_collector.plugins.gitlab.mixins.mr_mixin import MergeRequestMixin
 from devops_collector.plugins.gitlab.mixins.pipeline_mixin import PipelineMixin
 from devops_collector.plugins.gitlab.mixins.asset_mixin import AssetMixin
-
 logger = logging.getLogger(__name__)
 
-
-class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, 
-                   IssueMixin, MergeRequestMixin, PipelineMixin, AssetMixin):
+class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueMixin, MergeRequestMixin, PipelineMixin, AssetMixin):
     """GitLab 数据采集 Worker。
     
     负责具体项目的全生命周期数据同步，包括基础信息、研发活动、协作行为以及效能指标。
@@ -55,9 +49,9 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin,
         enable_deep_analysis (bool): 是否启用深度分析（如代码 Diff 分析，计算量较大）。
         identity_manager (IdentityManager): 身份映射管理器。
     """
-    SCHEMA_VERSION = "1.1" # GitLab API 结构版本
+    SCHEMA_VERSION = '1.1'
 
-    def __init__(self, session: Session, client: GitLabClient, enable_deep_analysis: bool = False):
+    def __init__(self, session: Session, client: GitLabClient, enable_deep_analysis: bool=False):
         """初始化 GitLab Worker。
         
         Args:
@@ -69,7 +63,7 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin,
         self.enable_deep_analysis = enable_deep_analysis
         self.identity_matcher = IdentityMatcher(session)
         self.user_resolver = UserResolver(session, client)
-    
+
     def process_task(self, task: dict):
         """处理 GitLab 同步任务。
         
@@ -87,54 +81,36 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin,
         """
         project_id = task.get('project_id')
         if not project_id:
-            logger.error("No project_id provided in task")
+            logger.error('No project_id provided in task')
             return
-
         try:
-            # 1. 同步项目基础信息
             project = self._sync_project(project_id)
             if not project:
                 return
-
             since = project.last_synced_at.isoformat() if project.last_synced_at else None
-            
-            # 2. 同步各类资源 (顺序敏感，部分资源依赖 Project 存在)
-            # 统计计数用于日志
             commits_count = self._sync_commits(project, since)
             issues_count = self._sync_issues(project, since)
             mrs_count = self._sync_merge_requests(project, since)
-            self._sync_pipelines(project) # 流水线暂不支持简单 since 过滤，通常依赖 IID 增量
+            self._sync_pipelines(project)
             self._sync_deployments(project)
             self._sync_tags(project)
             self._sync_branches(project)
             self._sync_milestones(project)
             self._sync_packages(project)
-            
-            # 3. 深度分析 (CALMS Sharing & Automation)
             if self.enable_deep_analysis:
                 try:
                     self._sync_wiki_logs(project)
                     self._sync_dependencies(project)
                 except Exception as e:
-                    logger.warning(f"Deep analysis failed for project {project_id}: {e}")
-            
-            # 3. 身份匹配与后处理
+                    logger.warning(f'Deep analysis failed for project {project_id}: {e}')
             self._match_identities(project)
-            
             project.last_synced_at = datetime.now()
             project.sync_status = 'SUCCESS'
             self.session.commit()
-            
-            log = SyncLog(
-                project_id=project_id,
-                status='SUCCESS',
-                message=f"Synced: {commits_count} commits, {issues_count} issues, {mrs_count} MRs"
-            )
+            log = SyncLog(project_id=project_id, status='SUCCESS', message=f'Synced: {commits_count} commits, {issues_count} issues, {mrs_count} MRs')
             self.session.add(log)
             self.session.commit()
-            
-            self.log_success(f"GitLab project {project.name} synced successfully")
-            
+            self.log_success(f'GitLab project {project.name} synced successfully')
         except Exception as e:
             self.session.rollback()
             try:
@@ -142,16 +118,14 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin,
                 if project:
                     project.sync_status = 'FAILED'
                     self.session.commit()
-                    
                 log = SyncLog(project_id=project_id, status='FAILED', message=str(e))
                 self.session.add(log)
                 self.session.commit()
             except:
                 pass
-            
-            self.log_failure(f"Failed to sync GitLab project {project_id}", e)
+            self.log_failure(f'Failed to sync GitLab project {project_id}', e)
             raise
-    
+
     def _sync_project(self, project_id: int) -> Optional[Project]:
         """同步项目元数据。
         
@@ -165,48 +139,27 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin,
         """
         try:
             p_data = self.client.get_project(project_id)
-            # 演示：将原始项目数据落盘到 Staging 层
-            self.save_to_staging(
-                source='gitlab',
-                entity_type='project',
-                external_id=project_id,
-                payload=p_data,
-                schema_version=self.SCHEMA_VERSION
-            )
+            self.save_to_staging(source='gitlab', entity_type='project', external_id=project_id, payload=p_data, schema_version=self.SCHEMA_VERSION)
         except Exception as e:
-            logger.error(f"Failed to get project {project_id}: {e}")
+            logger.error(f'Failed to get project {project_id}: {e}')
             return None
-            
         project = self.session.query(Project).filter_by(id=project_id).first()
         if not project:
             if not p_data.get('namespace', {}).get('id'):
-                logger.error(f"Project {project_id} has no namespace info")
+                logger.error(f'Project {project_id} has no namespace info')
                 return None
-            
-            # 确保 Group 存在 (简单处理，只建一级)
             group_id = p_data['namespace']['id']
             group = self.session.query(GitLabGroup).filter_by(id=group_id).first()
             if not group:
                 try:
                     g_data = self.client.get_group(group_id)
-                    group = GitLabGroup(
-                        id=g_data['id'],
-                        name=g_data['name'],
-                        path=g_data['path'],
-                        full_path=g_data['full_path'],
-                        description=g_data.get('description'),
-                        visibility=g_data.get('visibility'),
-                        web_url=g_data.get('web_url'),
-                        created_at=parse_iso8601(g_data.get('created_at'))
-                    )
+                    group = GitLabGroup(id=g_data['id'], name=g_data['name'], path=g_data['path'], full_path=g_data['full_path'], description=g_data.get('description'), visibility=g_data.get('visibility'), web_url=g_data.get('web_url'), created_at=parse_iso8601(g_data.get('created_at')))
                     self.session.add(group)
                     self.session.flush()
                 except Exception as e:
-                    logger.warning(f"Failed to sync group {group_id}: {e}")
-            
+                    logger.warning(f'Failed to sync group {group_id}: {e}')
             project = Project(id=project_id)
             self.session.add(project)
-        
         project.name = p_data.get('name')
         project.path_with_namespace = p_data.get('path_with_namespace')
         project.description = p_data.get('description')
@@ -217,36 +170,19 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin,
         project.forks_count = p_data.get('forks_count', 0)
         project.visibility = p_data.get('visibility')
         project.archived = p_data.get('archived')
-        
         stats = p_data.get('statistics', {})
         project.storage_size = stats.get('storage_size')
         project.commit_count = stats.get('commit_count')
-        
         project.created_at = parse_iso8601(p_data.get('created_at'))
-            
         return project
-
 
     def _match_identities(self, project: Project) -> None:
         """匹配项目内未关联用户的提交记录。"""
-        
-        # 此处简单实现，实际可优化为批量处理
-        # 为避免循环依赖问题，Commit 已在 CommitMixin 中处理了同步
-        # 这里主要处理那些 gitlab_user_id 为空的 Commit
-        # 需引入 Commit 模型，但为了解耦，我们尽量减少此处对 具体 Mixin 内部细节的依赖
-        # 但 Commit 是共享模型，所以 query 是安全的
         from devops_collector.plugins.gitlab.models import Commit as CommitModel
-        
-        unlinked = self.session.query(CommitModel).filter_by(
-            project_id=project.id, 
-            gitlab_user_id=None
-        ).all()
-        
+        unlinked = self.session.query(CommitModel).filter_by(project_id=project.id, gitlab_user_id=None).all()
         for commit in unlinked:
             user_id = self.identity_matcher.match(commit)
             if user_id:
                 commit.gitlab_user_id = user_id
-        
         self.session.commit()
-
 PluginRegistry.register_worker('gitlab', GitLabWorker)

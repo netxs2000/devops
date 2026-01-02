@@ -7,178 +7,72 @@
     - 第2层: 各插件定义特定模型 (GitLab, SonarQube)
     - 第3层: 本文件统一导出所有模型
 """
+from .base_models import Base, Organization, User, Location, Calendar, SyncLog, RawDataStaging, IdentityMapping, Product, OKRObjective, OKRKeyResult, TraceabilityLink, TestExecutionSummary, PerformanceRecord, Incident, ResourceCost, UserActivityProfile, Service, ServiceProjectMapping, SLO, TimestampMixin, RawDataMixin, ProjectMaster, ContractPaymentNode, RevenueContract, PurchaseContract, UserCredential, MetricDefinition, SystemRegistry, EntityTopology, Company, Vendor, EpicMaster, ComplianceIssue
+from .dependency import DependencyScan, LicenseRiskRule, Dependency, DependencyCVE
+from .test_management import TestCase, TestCaseIssueLink, Requirement, TestExecutionRecord
 
-# 从公共基础模型导入
-from .base_models import (
-    Base,
-    Organization,
-    User,
-    Location,  # MDM地理位置主数据表
-    Calendar,  # 日历与时间维度主数据
-    SyncLog,
-    RawDataStaging,
-    IdentityMapping,
-    Product,
-    OKRObjective,
-    OKRKeyResult,
-    TraceabilityLink,
-    TestExecutionSummary,
-    PerformanceRecord,
-    Incident,
-    ResourceCost,
-    UserActivityProfile,
-    Service,
-    ServiceProjectMapping,
-    SLO,
-    TimestampMixin,
-    RawDataMixin,
-    ProjectMaster,  # 项目全生命周期主数据
-    ContractPaymentNode,
-    RevenueContract,
-    PurchaseContract,
-    UserCredential,
-    MetricDefinition,
-    SystemRegistry,  # 系统与接口注册主数据
-    EntityTopology,  # 实体/资产拓扑主数据
-    Company,         # 客户公司主数据
-    Vendor,          # 供应商主数据
-    EpicMaster,      # Epic主数据
-    ComplianceIssue  # 合规性问题记录
-)
-# 从依赖扫描模块导入
-from .dependency import (
-    DependencyScan,
-    LicenseRiskRule,
-    Dependency,
-    DependencyCVE
-)
-# 从测试管理模块导入
-from .test_management import (
-    TestCase,
-    TestCaseIssueLink,
-    Requirement,
-    TestExecutionRecord
-)
-# 从 GitLab 插件导入特定模型
-from devops_collector.plugins.gitlab.models import (
-    Project,
-    ProjectMember,
-    Commit,
-    CommitFileStats,
-    Issue,
-    MergeRequest,
-    Pipeline,
-    Deployment,
-    Note,
-    Tag,
-    Branch,
-    GitLabGroup,
-    GitLabGroupMember,
-    Milestone,
-    GitLabIssueEvent,
-    GitLabWikiLog,
-    GitLabDependency,
-    GitLabPackage,
-    GitLabPackageFile
-)
+# 延迟导入插件模型以避免循环依赖
+def _import_plugin_models():
+    global Project, ProjectMember, Commit, CommitFileStats, Issue, MergeRequest, Pipeline, Deployment, Note, Tag, Branch, GitLabGroup, GitLabGroupMember, Milestone, GitLabIssueEvent, GitLabWikiLog, GitLabDependency, GitLabPackage, GitLabPackageFile
+    global SonarProject, SonarMeasure, SonarIssue, JenkinsJob, JenkinsBuild, JiraProject, JiraBoard, JiraSprint, JiraIssue, JiraIssueHistory, NexusComponent, NexusAsset, JFrogArtifact, JFrogScan, JFrogVulnerabilityDetail, JFrogDependency, ZenTaoProduct, ZenTaoIssue, ZenTaoExecution
 
-# 从 SonarQube 插件导入模型
-from devops_collector.plugins.sonarqube.models import (
-    SonarProject,
-    SonarMeasure,
-    SonarIssue
-)
+    from devops_collector.plugins.gitlab.models import Project, ProjectMember, Commit, CommitFileStats, Issue, MergeRequest, Pipeline, Deployment, Note, Tag, Branch, GitLabGroup, GitLabGroupMember, Milestone, GitLabIssueEvent, GitLabWikiLog, GitLabDependency, GitLabPackage, GitLabPackageFile
+    from devops_collector.plugins.sonarqube.models import SonarProject, SonarMeasure, SonarIssue
+    
+    try:
+        from devops_collector.plugins.jenkins.models import JenkinsJob, JenkinsBuild
+    except ImportError:
+        JenkinsJob = JenkinsBuild = None
+        
+    try:
+        from devops_collector.plugins.jira.models import JiraProject, JiraBoard, JiraSprint, JiraIssue, JiraIssueHistory
+    except ImportError:
+        JiraProject = JiraBoard = JiraSprint = JiraIssue = JiraIssueHistory = None
+        
+    try:
+        from devops_collector.plugins.nexus.models import NexusComponent, NexusAsset
+    except ImportError:
+        NexusComponent = NexusAsset = None
+        
+    try:
+        from devops_collector.plugins.jfrog.models import JFrogArtifact, JFrogScan, JFrogVulnerabilityDetail, JFrogDependency
+    except ImportError:
+        JFrogArtifact = JFrogScan = JFrogVulnerabilityDetail = JFrogDependency = None
+        
+    try:
+        from devops_collector.plugins.zentao.models import ZenTaoProduct, ZenTaoIssue, ZenTaoExecution
+    except ImportError:
+        ZenTaoProduct = ZenTaoIssue = ZenTaoExecution = None
 
-# 从 Jenkins 插件导入模型
-try:
-    from devops_collector.plugins.jenkins.models import (
-        JenkinsJob,
-        JenkinsBuild
-    )
-except ImportError:
-    # 允许插件暂不存在
-    JenkinsJob = None
-    JenkinsBuild = None
-try:
-    from devops_collector.plugins.jira.models import (
-        JiraProject,
-        JiraBoard,
-        JiraSprint,
-        JiraIssue,
-        JiraIssueHistory
-    )
-except ImportError:
-    JiraProject = None
-    JiraBoard = None
-    JiraSprint = None
-    JiraIssue = None
-    JiraIssueHistory = None
-    ZenTaoExecution = None
-try:
-    from devops_collector.plugins.nexus.models import (
-        NexusComponent,
-        NexusAsset
-    )
-except ImportError:
-    NexusComponent = None
-    NexusAsset = None
-try:
-    from devops_collector.plugins.jfrog.models import (
-        JFrogArtifact,
-        JFrogScan,
-        JFrogVulnerabilityDetail,
-        JFrogDependency
-    )
-except ImportError:
-    JFrogArtifact = None
-    JFrogScan = None
-    JFrogVulnerabilityDetail = None
-    JFrogDependency = None
-try:
-    from devops_collector.plugins.zentao.models import (
-        ZenTaoProduct,
-        ZenTaoIssue,
-        ZenTaoExecution
-    )
-except ImportError:
-    ZenTaoProduct = None
-    ZenTaoIssue = None
-    ZenTaoExecution = None
+# 为了保持兼容性，我们仍然在这里导出，但移动到最后
+from devops_collector.plugins.gitlab.models import Project, ProjectMember, Commit, CommitFileStats, Issue, MergeRequest, Pipeline, Deployment, Note, Tag, Branch, GitLabGroup, GitLabGroupMember, Milestone, GitLabIssueEvent, GitLabWikiLog, GitLabDependency, GitLabPackage, GitLabPackageFile
+from devops_collector.plugins.sonarqube.models import SonarProject, SonarMeasure, SonarIssue
 
-__all__ = [
-    # 公共基础模型
-    'Base', 'Organization', 'User', 'Location', 'Calendar', 'SyncLog', 'RawDataStaging', 'IdentityMapping', 'Product',
-    'OKRObjective', 'OKRKeyResult', 'TraceabilityLink',
-    'TestExecutionSummary', 'PerformanceRecord', 'Incident', 'ResourceCost',
-    'UserActivityProfile',
-    'Service', 'ServiceProjectMapping', 'SLO',
-    'TimestampMixin', 'RawDataMixin',
-    'ProjectMaster', 'ContractPaymentNode', 'RevenueContract', 'PurchaseContract', 'UserCredential', 'MetricDefinition', 'SystemRegistry',
-    'EntityTopology', 'Company', 'Vendor', 'EpicMaster', 'ComplianceIssue',
-    # GitLab 模型
-    'Project', 'ProjectMember', 'Commit', 'CommitFileStats',
-    'Issue', 'MergeRequest', 'Pipeline', 'Deployment',
-    'Note', 'Tag', 'Branch', 'GitLabGroup', 'GitLabGroupMember', 'Milestone',
-    'GitLabIssueEvent',
-    'GitLabWikiLog',
-    'GitLabDependency',
-    'GitLabPackage', 'GitLabPackageFile',
-    # SonarQube 模型
-    'SonarProject', 'SonarMeasure', 'SonarIssue',
-    # Jira 模型
-    'JiraProject', 'JiraBoard', 'JiraSprint', 'JiraIssue', 'JiraIssueHistory',
-    # Jenkins 模型
-    'JenkinsJob', 'JenkinsBuild',
-    # JFrog 模型
-    'JFrogArtifact', 'JFrogScan', 'JFrogVulnerabilityDetail', 'JFrogDependency',
-    # Nexus 模型
-    'NexusComponent', 'NexusAsset',
-    # ZenTao 模型
-    'ZenTaoProduct', 'ZenTaoIssue', 'ZenTaoExecution',
-    # 测试管理
-    'TestCase', 'TestCaseIssueLink', 'Requirement',
-    # 依赖扫描
-    'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE'
-]
-# 注册全局事件监听器 (黑科技 3)
+try:
+    from devops_collector.plugins.jenkins.models import JenkinsJob, JenkinsBuild
+except ImportError:
+    JenkinsJob = JenkinsBuild = None
+
+try:
+    from devops_collector.plugins.jira.models import JiraProject, JiraBoard, JiraSprint, JiraIssue, JiraIssueHistory
+except ImportError:
+    JiraProject = JiraBoard = JiraSprint = JiraIssue = JiraIssueHistory = None
+
+try:
+    from devops_collector.plugins.nexus.models import NexusComponent, NexusAsset
+except ImportError:
+    NexusComponent = NexusAsset = None
+
+try:
+    from devops_collector.plugins.jfrog.models import JFrogArtifact, JFrogScan, JFrogVulnerabilityDetail, JFrogDependency
+except ImportError:
+    JFrogArtifact = JFrogScan = JFrogVulnerabilityDetail = JFrogDependency = None
+
+try:
+    from devops_collector.plugins.zentao.models import ZenTaoProduct, ZenTaoIssue, ZenTaoExecution
+except ImportError:
+    ZenTaoProduct = ZenTaoIssue = ZenTaoExecution = None
+
+__all__ = ['Base', 'Organization', 'User', 'Location', 'Calendar', 'SyncLog', 'RawDataStaging', 'IdentityMapping', 'Product', 'OKRObjective', 'OKRKeyResult', 'TraceabilityLink', 'TestExecutionSummary', 'PerformanceRecord', 'Incident', 'ResourceCost', 'UserActivityProfile', 'Service', 'ServiceProjectMapping', 'SLO', 'TimestampMixin', 'RawDataMixin', 'ProjectMaster', 'ContractPaymentNode', 'RevenueContract', 'PurchaseContract', 'UserCredential', 'MetricDefinition', 'SystemRegistry', 'EntityTopology', 'Company', 'Vendor', 'EpicMaster', 'ComplianceIssue', 'Project', 'ProjectMember', 'Commit', 'CommitFileStats', 'Issue', 'MergeRequest', 'Pipeline', 'Deployment', 'Note', 'Tag', 'Branch', 'GitLabGroup', 'GitLabGroupMember', 'Milestone', 'GitLabIssueEvent', 'GitLabWikiLog', 'GitLabDependency', 'GitLabPackage', 'GitLabPackageFile', 'SonarProject', 'SonarMeasure', 'SonarIssue', 'JiraProject', 'JiraBoard', 'JiraSprint', 'JiraIssue', 'JiraIssueHistory', 'JenkinsJob', 'JenkinsBuild', 'JFrogArtifact', 'JFrogScan', 'JFrogVulnerabilityDetail', 'JFrogDependency', 'NexusComponent', 'NexusAsset', 'ZenTaoProduct', 'ZenTaoIssue', 'ZenTaoExecution', 'TestCase', 'TestCaseIssueLink', 'Requirement', 'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE']
+
 from . import events

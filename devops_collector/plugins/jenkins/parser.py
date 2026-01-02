@@ -5,19 +5,13 @@
 import logging
 from typing import Dict, Any, Optional
 from devops_collector.models.base_models import TestExecutionSummary
-
 logger = logging.getLogger(__name__)
 
 class ReportParser:
     """Jenkins 测试报告解析器。"""
 
     @staticmethod
-    def parse_jenkins_test_report(
-        project_id: Optional[int], 
-        build_id: str, 
-        report_data: Dict[str, Any],
-        job_name: str = ""
-    ) -> Optional[TestExecutionSummary]:
+    def parse_jenkins_test_report(project_id: Optional[int], build_id: str, report_data: Dict[str, Any], job_name: str='') -> Optional[TestExecutionSummary]:
         """将 Jenkins testReport 转换为 TestExecutionSummary。
         
         Args:
@@ -31,53 +25,28 @@ class ReportParser:
         """
         if not report_data:
             return None
-
         try:
-            # 基础数据提取
             total = report_data.get('totalCount', 0)
             failed = report_data.get('failCount', 0)
             skipped = report_data.get('skipCount', 0)
-            passed = total - failed - skipped # Jenkins JSON 并不总是直接提供 passedCount
-            
-            # 持续时间 (Jenkins 返回的是秒，我们转为毫秒存储)
+            passed = total - failed - skipped
             duration_s = report_data.get('duration', 0)
             duration_ms = int(duration_s * 1000)
-
-            # 自动推断测试层级 (Test Level)
-            # 策略：根据 Job 名称关键字识别
-            test_level = "Automation" # 默认值
+            test_level = 'Automation'
             job_name_lower = job_name.lower()
-            
-            if "unit" in job_name_lower or "ut" in job_name_lower:
-                test_level = "Unit"
-            elif "api" in job_name_lower or "interface" in job_name_lower:
-                test_level = "API"
-            elif "ui" in job_name_lower or "web" in job_name_lower or "e2e" in job_name_lower:
-                test_level = "UI"
-            elif "perf" in job_name_lower or "stress" in job_name_lower:
-                test_level = "Performance"
-
-            # 计算通过率
+            if 'unit' in job_name_lower or 'ut' in job_name_lower:
+                test_level = 'Unit'
+            elif 'api' in job_name_lower or 'interface' in job_name_lower:
+                test_level = 'API'
+            elif 'ui' in job_name_lower or 'web' in job_name_lower or 'e2e' in job_name_lower:
+                test_level = 'UI'
+            elif 'perf' in job_name_lower or 'stress' in job_name_lower:
+                test_level = 'Performance'
             pass_rate = 0.0
             if total > 0:
-                pass_rate = (passed / total) * 100
-
-            summary = TestExecutionSummary(
-                project_id=project_id,
-                build_id=build_id,
-                test_level=test_level,
-                test_tool="Jenkins/JUnit", # 默认为 Jenkins 适配的 JUnit 格式
-                total_cases=total,
-                passed_count=passed,
-                failed_count=failed,
-                skipped_count=skipped,
-                pass_rate=pass_rate,
-                duration_ms=duration_ms,
-                raw_data=report_data
-            )
-            
+                pass_rate = passed / total * 100
+            summary = TestExecutionSummary(project_id=project_id, build_id=build_id, test_level=test_level, test_tool='Jenkins/JUnit', total_cases=total, passed_count=passed, failed_count=failed, skipped_count=skipped, pass_rate=pass_rate, duration_ms=duration_ms, raw_data=report_data)
             return summary
-            
         except Exception as e:
-            logger.error(f"Failed to parse Jenkins test report: {e}")
+            logger.error(f'Failed to parse Jenkins test report: {e}')
             return None

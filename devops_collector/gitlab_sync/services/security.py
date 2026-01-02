@@ -1,7 +1,7 @@
+"""TODO: Add module description."""
 from sqlalchemy.orm import Query, Session
 from sqlalchemy import or_
 from typing import Any
-
 from devops_collector.models.base_models import User
 from devops_collector.gitlab_sync.models.issue_metadata import IssueMetadata
 
@@ -25,29 +25,19 @@ class IssueSecurityProvider:
         Returns:
             Query: 过滤后的查询对象
         """
-        # 1. 获取用户部门中文名 (来自 mdm_organizations)
-        user_dept_name = "UNKNOWN"
+        user_dept_name = 'UNKNOWN'
         if current_user.department:
             user_dept_name = current_user.department.org_name
-            
-        # 2. 获取用户 GitLab 账号名 (来自 identity_map)
-        # 假设存储格式为 {"gitlab": {"username": "zhangsan"}}
         gitlab_username = None
         if current_user.identity_map and 'gitlab' in current_user.identity_map:
             gitlab_info = current_user.identity_map['gitlab']
             if isinstance(gitlab_info, dict):
                 gitlab_username = gitlab_info.get('username')
             else:
-                # 兼容旧格式或是直接存储的数字 ID，这里尝试匹配 username
-                pass 
-
-        # 3. 构造并集过滤条件
+                pass
         conditions = [IssueMetadata.dept_name == user_dept_name]
-        
         if gitlab_username:
             conditions.append(IssueMetadata.author_username == gitlab_username)
-            
-        # 4. 应用 OR 逻辑
         return query.filter(or_(*conditions)).filter(IssueMetadata.sync_status == 1)
 
     @staticmethod

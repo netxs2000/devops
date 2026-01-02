@@ -7,11 +7,9 @@ import logging
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-
 from devops_collector.models.base_models import OKRKeyResult, OKRObjective
 from devops_collector.plugins.sonarqube.models import SonarMeasure, SonarProject
 from devops_collector.models import Commit, Project, Issue
-
 logger = logging.getLogger(__name__)
 
 class OKRService:
@@ -45,18 +43,13 @@ class OKRService:
         Returns:
             None
         """
-        active_krs = self.session.query(OKRKeyResult).join(OKRObjective).filter(
-            OKRObjective.status == 'active'
-        ).all()
-        
-        logger.info(f"Starting automatic OKR update for {len(active_krs)} Key Results")
-        
+        active_krs = self.session.query(OKRKeyResult).join(OKRObjective).filter(OKRObjective.status == 'active').all()
+        logger.info(f'Starting automatic OKR update for {len(active_krs)} Key Results')
         for kr in active_krs:
             try:
                 self.update_key_result(kr)
             except Exception as e:
-                logger.error(f"Failed to update KR {kr.id} ({kr.title}): {e}")
-        
+                logger.error(f'Failed to update KR {kr.id} ({kr.title}): {e}')
         self.session.commit()
 
     def update_key_result(self, kr: OKRKeyResult):
@@ -73,21 +66,18 @@ class OKRService:
         config = kr.linked_metrics_config
         if not config or not isinstance(config, dict):
             return
-
         metric_type = config.get('type')
         new_value = None
-
         if metric_type == 'sonar':
             new_value = self._get_sonar_metric(config)
         elif metric_type == 'git_commit_count':
             new_value = self._get_git_commit_count(config)
         elif metric_type == 'issue_resolved_count':
             new_value = self._get_issue_resolved_count(config)
-
         if new_value is not None:
             kr.current_value = str(new_value)
             kr.progress = self._calculate_progress(kr)
-            logger.debug(f"Updated KR {kr.id}: new_value={new_value}, progress={kr.progress}%")
+            logger.debug(f'Updated KR {kr.id}: new_value={new_value}, progress={kr.progress}%')
 
     def _calculate_progress(self, kr: OKRKeyResult) -> int:
         """计算进度百分比 (0-100)。
@@ -104,12 +94,10 @@ class OKRService:
             curr = float(kr.current_value or 0)
             target = float(kr.target_value or 0)
             initial = float(kr.initial_value or 0)
-
             if target == initial:
                 return 100 if curr >= target else 0
-            
-            progress = int(((curr - initial) / (target - initial)) * 100)
-            return max(0, min(100, progress)) # 限制在 0-100 之间
+            progress = int((curr - initial) / (target - initial) * 100)
+            return max(0, min(100, progress))
         except (ValueError, TypeError, ZeroDivisionError):
             return 0
 
@@ -125,17 +113,10 @@ class OKRService:
         """
         project_key = config.get('project_key')
         metric_name = config.get('metric_name')
-        
         if not project_key or not metric_name:
             return None
-
-        # 先找到项目，再按时间倒序拿最新的度量记录
-        latest_measure = self.session.query(SonarMeasure).join(SonarProject).filter(
-            SonarProject.key == project_key
-        ).order_by(SonarMeasure.analysis_date.desc()).first()
-
+        latest_measure = self.session.query(SonarMeasure).join(SonarProject).filter(SonarProject.key == project_key).order_by(SonarMeasure.analysis_date.desc()).first()
         if latest_measure:
-            # 动态获取字段值，如 latest_measure.coverage
             value = getattr(latest_measure, metric_name, None)
             if value is not None:
                 return float(value)
@@ -154,10 +135,7 @@ class OKRService:
         project_id = config.get('project_id')
         if not project_id:
             return 0
-            
-        count = self.session.query(func.count(Commit.id)).filter_by(
-            project_id=project_id
-        ).scalar()
+        count = self.session.query(func.count(Commit.id)).filter_by(project_id=project_id).scalar()
         return count or 0
 
     def _get_issue_resolved_count(self, config: dict) -> int:
@@ -172,12 +150,7 @@ class OKRService:
         """
         project_id = config.get('project_id')
         state = config.get('state', 'closed')
-        
         if not project_id:
             return 0
-            
-        count = self.session.query(func.count(Issue.id)).filter_by(
-            project_id=project_id,
-            state=state
-        ).scalar()
+        count = self.session.query(func.count(Issue.id)).filter_by(project_id=project_id, state=state).scalar()
         return count or 0

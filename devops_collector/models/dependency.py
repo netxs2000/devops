@@ -6,9 +6,7 @@ from sqlalchemy import Column, Integer, String, Boolean, Float, Text, DateTime, 
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-
 from devops_collector.models import Base
-
 
 class DependencyScan(Base):
     """依赖扫描记录表 (dependency_scans)。
@@ -31,17 +29,10 @@ class DependencyScan(Base):
         dependencies (List[Dependency]): 关联的依赖明细。
     """
     __tablename__ = 'dependency_scans'
-    
     id = Column(Integer, primary_key=True)
-    project_id = Column(
-        Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False
-    )
-    scan_date = Column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-    scanner_name = Column(
-        String(50), nullable=False, default='OWASP Dependency-Check'
-    )
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    scan_date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    scanner_name = Column(String(50), nullable=False, default='OWASP Dependency-Check')
     scanner_version = Column(String(20))
     total_dependencies = Column(Integer, default=0)
     vulnerable_dependencies = Column(Integer, default=0)
@@ -50,19 +41,23 @@ class DependencyScan(Base):
     report_path = Column(Text)
     raw_json = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-    
-    # 关系
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     project = relationship('Project', back_populates='dependency_scans')
-    dependencies = relationship(
-        'Dependency', back_populates='scan', cascade='all, delete-orphan'
-    )
-    
-    def __repr__(self):
-        return f"<DependencyScan(id={self.id}, project_id={self.project_id}, status='{self.scan_status}')>"
+    dependencies = relationship('Dependency', back_populates='scan', cascade='all, delete-orphan')
 
+    def __repr__(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f"<DependencyScan(id={self.id}, project_id={self.project_id}, status='{self.scan_status}')>"
 
 class LicenseRiskRule(Base):
     """许可证风险规则配置表 (license_risk_rules)。
@@ -82,7 +77,6 @@ class LicenseRiskRule(Base):
         is_active (bool): 规则是否处于启用状态。
     """
     __tablename__ = 'license_risk_rules'
-    
     id = Column(Integer, primary_key=True)
     license_name = Column(String(200), nullable=False, unique=True)
     license_spdx_id = Column(String(100))
@@ -96,13 +90,21 @@ class LicenseRiskRule(Base):
     policy_notes = Column(Text)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-    
-    def __repr__(self):
-        return f"<LicenseRiskRule(name='{self.license_name}', risk='{self.risk_level}')>"
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+    def __repr__(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f"<LicenseRiskRule(name='{self.license_name}', risk='{self.risk_level}')>"
 
 class Dependency(Base):
     """项目依赖清单表 (dependencies)。
@@ -127,60 +129,47 @@ class Dependency(Base):
         cves (List[DependencyCVE]): 关联的漏洞列表。
     """
     __tablename__ = 'dependencies'
-    __table_args__ = (
-        UniqueConstraint(
-            'scan_id', 'package_name', 'package_version', 
-            name='uq_dependency_scan_package'
-        ),
-    )
-    
+    __table_args__ = (UniqueConstraint('scan_id', 'package_name', 'package_version', name='uq_dependency_scan_package'),)
     id = Column(Integer, primary_key=True)
-    scan_id = Column(
-        Integer, ForeignKey('dependency_scans.id', ondelete='CASCADE'), 
-        nullable=False
-    )
-    project_id = Column(
-        Integer, ForeignKey('projects.id', ondelete='CASCADE'), 
-        nullable=False
-    )
-    
+    scan_id = Column(Integer, ForeignKey('dependency_scans.id', ondelete='CASCADE'), nullable=False)
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
     package_name = Column(String(500), nullable=False)
     package_version = Column(String(100))
     package_manager = Column(String(50))
     dependency_type = Column(String(20), default='direct')
-    
     license_name = Column(String(200))
     license_spdx_id = Column(String(100))
     license_url = Column(Text)
     license_risk_level = Column(String(20))
-    
     has_vulnerabilities = Column(Boolean, default=False)
     highest_cvss_score = Column(Float)
     critical_cve_count = Column(Integer, default=0)
     high_cve_count = Column(Integer, default=0)
     medium_cve_count = Column(Integer, default=0)
     low_cve_count = Column(Integer, default=0)
-    
     file_path = Column(Text)
     description = Column(Text)
     homepage_url = Column(Text)
     raw_data = Column(JSONB)
-    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
-    
-    # 关系
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     scan = relationship('DependencyScan', back_populates='dependencies')
     project = relationship('Project', back_populates='dependencies')
-    cves = relationship(
-        'DependencyCVE', back_populates='dependency', cascade='all, delete-orphan'
-    )
-    
-    def __repr__(self):
-        return f"<Dependency(name='{self.package_name}', version='{self.package_version}')>"
+    cves = relationship('DependencyCVE', back_populates='dependency', cascade='all, delete-orphan')
 
+    def __repr__(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f"<Dependency(name='{self.package_name}', version='{self.package_version}')>"
 
 class DependencyCVE(Base):
     """CVE 漏洞详情表 (dependency_cves)。
@@ -196,34 +185,32 @@ class DependencyCVE(Base):
         dependency (Dependency): 关联的依赖对象。
     """
     __tablename__ = 'dependency_cves'
-    __table_args__ = (
-        UniqueConstraint('dependency_id', 'cve_id', name='uq_dependency_cve'),
-    )
-    
+    __table_args__ = (UniqueConstraint('dependency_id', 'cve_id', name='uq_dependency_cve'),)
     id = Column(Integer, primary_key=True)
-    dependency_id = Column(
-        Integer, ForeignKey('dependencies.id', ondelete='CASCADE'), 
-        nullable=False
-    )
-    
+    dependency_id = Column(Integer, ForeignKey('dependencies.id', ondelete='CASCADE'), nullable=False)
     cve_id = Column(String(50), nullable=False)
     cvss_score = Column(Float)
     cvss_vector = Column(String(200))
     severity = Column(String(20))
-    
     description = Column(Text)
     published_date = Column(DateTime(timezone=True))
     last_modified_date = Column(DateTime(timezone=True))
-    
     fixed_version = Column(String(100))
     remediation = Column(Text)
-    
     references = Column(JSONB)
-    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
-    # 关系
     dependency = relationship('Dependency', back_populates='cves')
-    
+
     def __repr__(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         return f"<DependencyCVE(cve_id='{self.cve_id}', severity='{self.severity}')>"

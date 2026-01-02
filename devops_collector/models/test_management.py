@@ -7,7 +7,6 @@ Typical Usage:
     test_case = TestCase(title="验证登录", test_steps=[{"step": "输入密码", "expected": "显示星号"}])
     session.add(test_case)
 """
-
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table, JSON, DateTime, and_
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -15,7 +14,6 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
 from devops_collector.models.base_models import Base, TimestampMixin, User
-
 
 class TestCase(Base, TimestampMixin):
     """测试用例模型。
@@ -40,16 +38,9 @@ class TestCase(Base, TimestampMixin):
         associated_requirements (List[Requirement]): 该用例关联的需求列表。
     """
     __tablename__ = 'test_cases'
-
     id = Column(Integer, primary_key=True)
-    project_id = Column(
-        Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False
-    )
-    author_id = Column(
-        UUID(as_uuid=True), 
-        ForeignKey('mdm_identities.global_user_id'), 
-        nullable=False
-    )
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    author_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=False)
     iid = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
     priority = Column(String(20))
@@ -57,44 +48,45 @@ class TestCase(Base, TimestampMixin):
     pre_conditions = Column(Text)
     description = Column(Text)
     test_steps = Column(JSON, default=[])
+    author = relationship('User', primaryjoin='and_(User.global_user_id==TestCase.author_id, User.is_current==True)', back_populates='test_cases')
+    project = relationship('Project', back_populates='test_cases')
+    linked_issues = relationship('Issue', secondary='test_case_issue_links', back_populates='associated_test_cases')
+    associated_requirements = relationship('Requirement', secondary='requirement_test_case_links', back_populates='test_cases')
 
-    # 关系映射
-    author = relationship("User", primaryjoin="and_(User.global_user_id==TestCase.author_id, User.is_current==True)", back_populates="test_cases")
-    project = relationship("Project", back_populates="test_cases")
-    linked_issues = relationship(
-        "Issue",
-        secondary="test_case_issue_links",
-        back_populates="associated_test_cases"
-    )
-    associated_requirements = relationship(
-        "Requirement",
-        secondary="requirement_test_case_links",
-        back_populates="test_cases"
-    )
-    
-    # 增加执行统计 (Hybrid Attribute)
     @hybrid_property
     def execution_count(self):
         """用例被执行的总次数。"""
-        # 注意：这里需要通过 iid 关联
         return len(self.execution_records)
 
     @execution_count.expression
     def execution_count(cls):
-        # 简化版实现，实际生产环境可使用 select 子查询
-        return func.count(TestExecutionRecord.id).label('execution_count')
+        '''"""TODO: Add description.
 
-    # 建立与执行记录的直接联系
-    execution_records = relationship(
-        "TestExecutionRecord",
-        primaryjoin="foreign(TestExecutionRecord.test_case_iid) == TestCase.iid",
-        viewonly=True,
-        overlaps="project"
-    )
+Args:
+    cls: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return func.count(TestExecutionRecord.id).label('execution_count')
+    execution_records = relationship('TestExecutionRecord', primaryjoin='foreign(TestExecutionRecord.test_case_iid) == TestCase.iid', viewonly=True, overlaps='project')
 
     def __repr__(self) -> str:
-        return f"<TestCase(iid={self.iid}, title='{self.title}')>"
+        '''"""TODO: Add description.
 
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f"<TestCase(iid={self.iid}, title='{self.title}')>"
 
 class TestCaseIssueLink(Base, TimestampMixin):
     """测试用例与 Issue 的关联表。
@@ -107,18 +99,23 @@ class TestCaseIssueLink(Base, TimestampMixin):
         issue_id (int): 关联的 Issue ID。
     """
     __tablename__ = 'test_case_issue_links'
-
     id = Column(Integer, primary_key=True)
-    test_case_id = Column(
-        Integer, ForeignKey('test_cases.id', ondelete='CASCADE'), nullable=False
-    )
-    issue_id = Column(
-        Integer, ForeignKey('issues.id', ondelete='CASCADE'), nullable=False
-    )
+    test_case_id = Column(Integer, ForeignKey('test_cases.id', ondelete='CASCADE'), nullable=False)
+    issue_id = Column(Integer, ForeignKey('issues.id', ondelete='CASCADE'), nullable=False)
 
     def __repr__(self) -> str:
-        return f"<TestCaseIssueLink(tc={self.test_case_id}, issue={self.issue_id})>"
+        '''"""TODO: Add description.
 
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f'<TestCaseIssueLink(tc={self.test_case_id}, issue={self.issue_id})>'
 
 class Requirement(Base, TimestampMixin):
     """需求模型。
@@ -138,37 +135,31 @@ class Requirement(Base, TimestampMixin):
         project (Project): 关联的项目。
     """
     __tablename__ = 'requirements'
-
     id = Column(Integer, primary_key=True)
-    project_id = Column(
-        Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False
-    )
-    author_id = Column(
-        UUID(as_uuid=True), 
-        ForeignKey('mdm_identities.global_user_id'), 
-        nullable=False
-    )
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    author_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=False)
     iid = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
     description = Column(Text)
-    state = Column(String(20), default="opened")
-
-    # 关系映射
-    author = relationship("User", primaryjoin="and_(User.global_user_id==Requirement.author_id, User.is_current==True)", back_populates="requirements")
-    project = relationship("Project", back_populates="requirements")
-    test_cases = relationship(
-        "TestCase",
-        secondary="requirement_test_case_links",
-        back_populates="associated_requirements"
-    )
-
-    # 跨层穿透 (Association Proxy)
-    # 业务价值：从需求直达关联的缺陷 (穿透测试用例层)
+    state = Column(String(20), default='opened')
+    author = relationship('User', primaryjoin='and_(User.global_user_id==Requirement.author_id, User.is_current==True)', back_populates='requirements')
+    project = relationship('Project', back_populates='requirements')
+    test_cases = relationship('TestCase', secondary='requirement_test_case_links', back_populates='associated_requirements')
     linked_bugs = association_proxy('test_cases', 'linked_issues')
 
     def __repr__(self) -> str:
-        return f"<Requirement(iid={self.iid}, title='{self.title}', state='{self.state}')>"
+        '''"""TODO: Add description.
 
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f"<Requirement(iid={self.iid}, title='{self.title}', state='{self.state}')>"
 
 class RequirementTestCaseLink(Base, TimestampMixin):
     """需求与测试用例的关联表。
@@ -179,18 +170,23 @@ class RequirementTestCaseLink(Base, TimestampMixin):
         test_case_id (int): 关联的测试用例 ID。
     """
     __tablename__ = 'requirement_test_case_links'
-
     id = Column(Integer, primary_key=True)
-    requirement_id = Column(
-        Integer, ForeignKey('requirements.id', ondelete='CASCADE'), nullable=False
-    )
-    test_case_id = Column(
-        Integer, ForeignKey('test_cases.id', ondelete='CASCADE'), nullable=False
-    )
+    requirement_id = Column(Integer, ForeignKey('requirements.id', ondelete='CASCADE'), nullable=False)
+    test_case_id = Column(Integer, ForeignKey('test_cases.id', ondelete='CASCADE'), nullable=False)
 
     def __repr__(self) -> str:
-        return f"<RequirementTestCaseLink(req={self.requirement_id}, tc={self.test_case_id})>"
+        '''"""TODO: Add description.
 
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f'<RequirementTestCaseLink(req={self.requirement_id}, tc={self.test_case_id})>'
 
 class TestExecutionRecord(Base, TimestampMixin):
     """测试执行完整审计记录模型。
@@ -211,25 +207,29 @@ class TestExecutionRecord(Base, TimestampMixin):
         title (str): 冗余存放的用例标题。
     """
     __tablename__ = 'test_execution_records'
-
     id = Column(Integer, primary_key=True)
-    project_id = Column(
-        Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False
-    )
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
     test_case_iid = Column(Integer, nullable=False, index=True)
-    
     result = Column(String(20), nullable=False)
     executed_at = Column(DateTime(timezone=True), default=func.now())
     executor_name = Column(String(100))
     executor_uid = Column(UUID(as_uuid=True))
-    
     comment = Column(Text)
     pipeline_id = Column(Integer)
-    environment = Column(String(50), default="Default")
-    
+    environment = Column(String(50), default='Default')
     title = Column(String(255))
-    
-    project = relationship("Project", back_populates="test_execution_records")
+    project = relationship('Project', back_populates='test_execution_records')
 
     def __repr__(self) -> str:
-        return f"<TestExecutionRecord(iid={self.test_case_iid}, result={self.result})>"
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f'<TestExecutionRecord(iid={self.test_case_iid}, result={self.result})>'

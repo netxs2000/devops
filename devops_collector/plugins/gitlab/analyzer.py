@@ -1,3 +1,4 @@
+"""TODO: Add module description."""
 from devops_collector.core.algorithms import CodeMetrics
 
 class DiffAnalyzer(CodeMetrics):

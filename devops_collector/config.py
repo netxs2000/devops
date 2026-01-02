@@ -14,8 +14,6 @@ from typing import List, Optional
 from pydantic import Field, HttpUrl, RedisDsn, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import configparser
-
-# 传统的 config.ini 路径
 CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), 'config.ini')
 
 class GitLabSettings(BaseSettings):
@@ -28,11 +26,11 @@ class GitLabSettings(BaseSettings):
         client_secret (str): OAuth2 Application Secret.
         redirect_uri (str): OAuth2 Callback URL (e.g., http://portal/auth/callback).
     """
-    url: str = "https://gitlab.com"
-    private_token: str = ""
-    client_id: str = ""
-    client_secret: str = ""
-    redirect_uri: str = ""
+    url: str = 'https://gitlab.com'
+    private_token: str = ''
+    client_id: str = ''
+    client_secret: str = ''
+    redirect_uri: str = ''
 
 class DatabaseSettings(BaseSettings):
     """Database connection and retention settings.
@@ -41,7 +39,7 @@ class DatabaseSettings(BaseSettings):
         uri (str): The database connection URI (e.g., postgresql://user:pass@host/db).
         raw_data_retention_days (int): The number of days to retain raw data.
     """
-    uri: str = "postgresql://gitlab_collector:password@localhost/gitlab_data"
+    uri: str = 'postgresql://gitlab_collector:password@localhost/gitlab_data'
     raw_data_retention_days: int = 30
 
 class RabbitMQSettings(BaseSettings):
@@ -53,11 +51,11 @@ class RabbitMQSettings(BaseSettings):
         user (str): The username for authentication.
         password (str): The password for authentication.
     """
-    host: str = "rabbitmq"
-    queue: str = "gitlab_tasks"
-    user: str = "user"
-    password: str = "password"
-    
+    host: str = 'rabbitmq'
+    queue: str = 'gitlab_tasks'
+    user: str = 'user'
+    password: str = 'password'
+
     @property
     def url(self) -> str:
         """Constructs the AMQP URL from settings.
@@ -65,7 +63,7 @@ class RabbitMQSettings(BaseSettings):
         Returns:
             str: The full AMQP connection string.
         """
-        return f"amqp://{self.user}:{self.password}@{self.host}:5672/"
+        return f'amqp://{self.user}:{self.password}@{self.host}:5672/'
 
 class AnalysisSettings(BaseSettings):
     """Code analysis configuration.
@@ -76,18 +74,10 @@ class AnalysisSettings(BaseSettings):
         production_env_mapping (List[str]): Environment names considered as production.
     """
     enable_deep_analysis: bool = False
-    ignored_file_patterns: List[str] = [
-        '*.lock', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
-        '*.min.js', '*.min.css', '*.map',
-        'node_modules/*', 'dist/*', 'build/*', 'vendor/*',
-        '*.svg', '*.png', '*.jpg', '*.jpeg', '*.gif', '*.ico',
-        '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx',
-        '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',
-        '*.exe', '*.dll', '*.so', '*.dylib'
-    ]
-    production_env_mapping: List[str] = ["prod", "production", "prd", "main"]
-    incident_label_patterns: List[str] = ["incident", "production-error", "P0", "P1"]
-    change_failure_label_patterns: List[str] = ["change-failure", "rollback"]
+    ignored_file_patterns: List[str] = ['*.lock', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', '*.min.js', '*.min.css', '*.map', 'node_modules/*', 'dist/*', 'build/*', 'vendor/*', '*.svg', '*.png', '*.jpg', '*.jpeg', '*.gif', '*.ico', '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx', '*.zip', '*.tar', '*.gz', '*.rar', '*.7z', '*.exe', '*.dll', '*.so', '*.dylib']
+    production_env_mapping: List[str] = ['prod', 'production', 'prd', 'main']
+    incident_label_patterns: List[str] = ['incident', 'production-error', 'P0', 'P1']
+    change_failure_label_patterns: List[str] = ['change-failure', 'rollback']
 
     @field_validator('ignored_file_patterns', 'production_env_mapping', 'incident_label_patterns', 'change_failure_label_patterns', mode='before')
     @classmethod
@@ -138,7 +128,7 @@ class LoggingSettings(BaseSettings):
     Attributes:
         level (str): The logging level (e.g., INFO, DEBUG).
     """
-    level: str = "INFO"
+    level: str = 'INFO'
 
 class SonarQubeSettings(BaseSettings):
     """SonarQube integration settings.
@@ -149,8 +139,8 @@ class SonarQubeSettings(BaseSettings):
         sync_interval_hours (int): Interval in hours between synchronization tasks.
         sync_issues (bool): Whether to synchronize issues.
     """
-    url: str = ""
-    token: str = ""
+    url: str = ''
+    token: str = ''
     sync_interval_hours: int = 24
     sync_issues: bool = False
 
@@ -164,9 +154,9 @@ class JenkinsSettings(BaseSettings):
         sync_interval_hours (int): Interval in hours between synchronization tasks.
         build_sync_limit (int): Maximum number of builds to sync per job.
     """
-    url: str = ""
-    user: str = ""
-    token: str = ""
+    url: str = ''
+    user: str = ''
+    token: str = ''
     sync_interval_hours: int = 12
     build_sync_limit: int = 100
 
@@ -178,9 +168,9 @@ class AISettings(BaseSettings):
         base_url (str): The base URL of the LLM API.
         model (str): The name of the model to use.
     """
-    api_key: str = ""
-    base_url: str = "https://api.openai.com/v1"
-    model: str = "gpt-4o"
+    api_key: str = ''
+    base_url: str = 'https://api.openai.com/v1'
+    model: str = 'gpt-4o'
 
 class SLASettings(BaseSettings):
     """SLA threshold settings (in hours).
@@ -206,8 +196,8 @@ class StorageSettings(BaseSettings):
     Attributes:
         data_dir (str): The directory path for persistent data storage.
     """
-    data_dir: str = "./data"
-    
+    data_dir: str = './data'
+
     @field_validator('data_dir')
     @classmethod
     def make_absolute(cls, v):
@@ -255,12 +245,7 @@ class Settings(BaseSettings):
     ai: AISettings = AISettings()
     storage: StorageSettings = StorageSettings()
     sla: SLASettings = SLASettings()
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_nested_delimiter="__",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file='.env', env_nested_delimiter='__', extra='ignore')
 
     @classmethod
     def load_from_ini(cls, path: str):
@@ -276,21 +261,17 @@ class Settings(BaseSettings):
         """
         cp = configparser.ConfigParser()
         cp.read(path, encoding='utf-8')
-        
         data = {}
         for section in cp.sections():
             data[section] = dict(cp.items(section))
-            
         return cls.model_validate(data)
-
-# 实例化全局配置
 try:
     if os.path.exists(CONFIG_FILE_PATH):
         settings = Settings.load_from_ini(CONFIG_FILE_PATH)
     else:
         settings = Settings()
 except Exception as e:
-    print(f"⚠️ Warning: Failed to load config.ini, using defaults. Error: {e}")
+    print(f'⚠️ Warning: Failed to load config.ini, using defaults. Error: {e}')
     settings = Settings()
 
 class Config:
@@ -299,7 +280,7 @@ class Config:
     建议新代码直接使用：from devops_collector.config import settings
     """
     GITLAB_URL = settings.gitlab.url
-    GITLAB_TOKEN = settings.gitlab.private_token # Alias for backward compatibility
+    GITLAB_TOKEN = settings.gitlab.private_token
     GITLAB_CLIENT_ID = settings.gitlab.client_id
     GITLAB_CLIENT_SECRET = settings.gitlab.client_secret
     GITLAB_REDIRECT_URI = settings.gitlab.redirect_uri

@@ -2,15 +2,35 @@
 
 所有对 DevOps Data Collector 的重要更改都将记录在此文件中。
 
+## [3.9.0] - 2026-01-02
+
+### 新增 (Added) - v3.9.0
+
+* **Dagster 资产编排 (Asset Orchestration)**: 引入 Dagster 作为核心调度引擎，实现了软件定义资产 (SDA)、全链路血缘追踪与精细化资源管理。
+* **dbt 高阶分析模型**: 集成 dbt 实现复杂业务逻辑转化，新增研发 ROI 核算、资本化审计跟踪、开发者行为画像等 10+ 核心分析模型。
+* **DataHub 数据治理**: 启动 DataHub 集成，实现元数据自动摄取 (PostgreSQL/dbt) 与标准化数据目录管理。
+* **SCD Type 2 统一服务**: 实现通用的 `close_current_and_insert_new` 服务函数，支持主数据 (MDM) 的历史版本留存、有效性字段标记与乐观锁机制。
+* **MDM 日历主数据**: 新增 `mdm_calendar` 表及自动化初始化脚本，支持跨地域法定节假日与工作日的精准效能核算。
+* **AI 增强风险评估**: 集成 AI 分类模型，实现对 Merge Request 的智能风险分级与异常降噪。
+* **Great Expectations 质检**: 在 Dagster 流水中嵌入数据质量检查点，确保从存储层到展现层的数据准确性。
+
+### 优化 (Improved) - v3.9.0
+
+* **迭代管理可视化**: 增强 `devops_portal` 迭代看板，支持根据 GitLab 里程碑实时计算任务进度、自动展示进度条与未完成任务结转。
+* **API 契约标准化**: 全面完成基于 Pydantic V2 的输入输出 Schema 定义，显著提升了接口调试与前端交互的稳定性。
+* **部署架构升级**: 优化 `docker-compose.yml`，集成 Dagster Daemon、Dagit 与 DataHub 相关容器服务。
+
+---
+
 ## [3.8.0] - 2026-01-01
 
-### 新增 (Added)
+### 新增 (Added) - v3.8.0
 
 * **全量数据模型标准化**: 按照 Google Python Style Guide 完成了 11 个核心及插件模型模块的统一重构。
 * **调试增强**: 为所有数据模型添加了结构化的 `__repr__` 方法，极大提升了日志审计与开发调试效率。
 * **详细业务标注**: 通过 Google Style Docstrings 为 60+ 数据表字段添加了精确的中文业务描述与类型标注。
 
-### 优化 (Improved)
+### 优化 (Improved) - v3.8.0
 
 * **核心主数据解耦**: 合并并重构了 `test_management.py` 与 `dependency.py` 中的重复模型定义。
 * **文档同步自动化**: 同步更新了 `DATA_DICTIONARY.md`、`ARCHITECTURE.md` 等全套 13 份核心技术文档。
@@ -18,12 +38,12 @@
 
 ## [3.7.0] - 2025-12-30
 
-### 新增 (Added)
+### 新增 (Added) - v3.7.0
 
 * **AI 赋能测试生成 (AC-to-Steps)**: 核心服务 `TestingService` 接入 LLM，支持从需求验收标准 (Acceptance Criteria) 自动生成结构化测试步骤。
 * **AIClient 依赖注入**: 为 `TestingService` 等核心服务引入依赖注入模式，提升了系统的可测试性和灵活性。
 
-### 优化 (Improved)
+### 优化 (Improved) - v3.7.0
 
 * **Pydantic V2 全面重构**: 将全量 Schema（Auth, Core, TestHub）升级至 Pydantic V2 标准。
   * 使用 `model_config` 和 `ConfigDict(from_attributes=True)` 替换旧版 ORM 模式。
@@ -35,7 +55,7 @@
 
 ## [3.6.0] - 2025-12-29
 
-### 新增 (Added)
+### 新增 (Added) - v3.6.0
 
 * **MDM_LOCATION地理位置主数据表**: 创建符合GB/T 2260国家标准的地理位置主数据表，支持省/市/区县三级层级结构，初始化34个省级行政区划数据。
 * **P2实时通知定向推送**: 完善SSE实时通知系统，实现基于业务场景的精准定向推送功能：
@@ -45,7 +65,7 @@
 * **干系人查询辅助函数**: 新增 `get_project_stakeholders()`、`get_requirement_author()`、`get_testcase_author()` 三个辅助函数，支持定向通知。
 * **地理位置数据初始化脚本**: 提供 `init_mdm_location.py` 脚本，自动创建表结构、初始化省份数据、迁移历史province字段。
 
-### 优化 (Improved)
+### 优化 (Improved) - v3.6.0
 
 * **User模型升级**: 将 `province` 字符串字段升级为 `location_id` 外键，关联mdm_location表，实现规范化地理位置管理。
 * **数据过滤逻辑优化**: 调整 `get_province_quality` 和 `get_province_benchmarking` API，使用location对象获取省份信息，兼容location为空的情况。
@@ -53,7 +73,7 @@
 
 ## [3.5.0] - 2025-12-20
 
-### 新增 (Added)
+### 新增 (Added) - v3.5.0
 
 * **内源共创指数 (InnerSource Impact)**: 实现了跨部门技术流动性的量化体系，建立 `view_pmo_innersource_reuse_heatmap` 视图。
 * **隐性满意度 (Shadow Satisfaction Index)**: 发布了基于行为指纹的项目交付体验算法，量化 SLA、争议度与返工率。
@@ -68,13 +88,13 @@
 * **OWASP Dependency-Check 集成**: 实现完整的开源依赖扫描与许可证合规性管理，包括依赖清单、CVE 漏洞检测、许可证风险评估、SPDX 标准化支持。
 * **指标预警阈值配置白皮书 (`METRIC_THRESHOLDS_GUIDE.md`)**: 定义了分阶段（规范、提效、共创）的效能治理红线及其触发行动。
 
-### 优化 (Improved)
+### 优化 (Improved) - v3.5.0
 
 * **PMO 战略方案升级**: 完善了 `PMO_ANALYTICS_PLAN.md` 中关于数据宽表设计与管理意义的详细逻辑说明。
 
 ## [3.4.0] - 2025-12-20
 
-### 新增 (Added)
+### 新增 (Added) - v3.4.0
 
 * **Jira 360° 采集**: 深度集成 Jira API。新增对 `labels`, `fix_versions`, `time_spent`, `original_estimate` 的采集与持久化。
 * **依赖追溯 (Dependency Tracking)**: 提取 Jira Issue Links，并在 `traceability_links` 表中建立跨项目阻塞关系。
@@ -83,7 +103,7 @@
 * **人员效能画像**: 新增 `view_user_ability_hexagon` 视图，基于产出、质量、协作、响应、广度和持续性六大指标生成“能力六边形”。
 * **Schema 版本管理**: 为 `RawDataStaging` 引入 `schema_version` 字段，支持不同 API 版本的共存与平滑采样。
 
-### 优化 (Improved)
+### 优化 (Improved) - v3.4.0
 
 * **GitLab Worker 重构**: 采用 Mixin 模式拆解大型项目逻辑（Commits/MRs/Issues/Pipelines），引入 `Common Utilities` 模块，大幅降低代码冗余。
 * **通知架构重构**: 引入 `BaseBot` 抽象基类，提升了告警渠道的可扩展性。
@@ -93,12 +113,12 @@
 
 ## [3.3.5] - 2025-12-19
 
-### 新增 (Added)
+### 新增 (Added) - v3.3.5
 
 * **制品库插件 (Artifactory & Nexus)**: 接入 JFrog 与 Nexus API。支持通过 SHA 校验和追踪制品流转。
 * **血缘建立**: 支持从二进制制品回溯至 source 项目及 CI 构建任务的完整链路。
 
-### 优化 (Improved)
+### 优化 (Improved) - v3.3.5
 
 * **DORA 指标增强**: 引入交付前置时间 (Lead Time) 的精细化拆解（Coding/Review/Deploy）。
 * **生产环境映射**: 支持在 `config.ini` 中自定义生产环境关键词。
@@ -107,7 +127,7 @@
 
 ## [3.3.0] - 2025-12-18
 
-### 新增 (Added)
+### 新增 (Added) - v3.3.0
 
 * **禅道 (ZenTao) 插件**: 完整支持需求、任务、缺陷及组织的双向同步。
 * **身份管理中心 (`IdentityManager`)**: 正式上线跨工具身份自动对齐逻辑。
@@ -117,7 +137,7 @@
 
 ## [3.2.0] - 2025-12-16
 
-### 新增 (Added)
+### 新增 (Added) - v3.2.0
 
 * **Jenkins 深度采集**: 支持 Job/Build 及触发源（Manual/WebHook）识别。
 * **波士顿矩阵分析**: 自动划分明星/瘦狗项目。
@@ -126,7 +146,7 @@
 
 ## [3.1.0] - 2025-12-14
 
-### 新增 (Added)
+### 新增 (Added) - v3.1.0
 
-* **架构重构 (v3.1)**: 正式引入 **Raw Data Staging (ODS)** 层，确保数据原始性与可重放性。
+* **架构重构 (v3.1)**: 正式引入 **Raw Data Staging (ODS)** 层，确保数据原始性与可重放性.
 * **SonarQube 2.0**: 增加了对代码异味详情的采集。

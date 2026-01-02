@@ -16,9 +16,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any
 import requests
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
-
 logger = logging.getLogger(__name__)
-
 
 class RateLimiter:
     """令牌桶算法实现的速率限制器。
@@ -32,8 +30,20 @@ class RateLimiter:
         limiter = RateLimiter(10)  # 10 次/秒
         limiter.wait_for_token()   # 阻塞直到可以发送请求
     """
-    
-    def __init__(self, rate_limit: int = 10):
+
+    def __init__(self, rate_limit: int=10):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+    rate_limit: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         self.rate_limit = rate_limit
         self.tokens = float(rate_limit)
         self.last_update = time.time()
@@ -50,7 +60,6 @@ class RateLimiter:
         if self.tokens > self.rate_limit:
             self.tokens = float(self.rate_limit)
         self.last_update = current
-
         if self.tokens >= 1:
             self.tokens -= 1
             return True
@@ -62,7 +71,6 @@ class RateLimiter:
         while not self.get_token():
             time.sleep(0.1)
 
-
 def is_retryable_exception(exception: Exception) -> bool:
     """判断异常是否值得重试。
     
@@ -72,7 +80,6 @@ def is_retryable_exception(exception: Exception) -> bool:
         if exception.response.status_code in [401, 403]:
             return False
     return isinstance(exception, requests.exceptions.RequestException)
-
 
 class BaseClient(ABC):
     """所有数据源客户端的抽象基类。
@@ -100,15 +107,8 @@ class BaseClient(ABC):
             def test_connection(self) -> bool:
                 return self._get("version").ok
     """
-    
-    def __init__(
-        self, 
-        base_url: str, 
-        auth_headers: Dict[str, str],
-        rate_limit: int = 10,
-        timeout: int = 30,
-        max_retries: int = 5
-    ):
+
+    def __init__(self, base_url: str, auth_headers: Dict[str, str], rate_limit: int=10, timeout: int=30, max_retries: int=5):
         """初始化客户端。
         
         Args:
@@ -123,13 +123,9 @@ class BaseClient(ABC):
         self.limiter = RateLimiter(rate_limit)
         self.timeout = timeout
         self.max_retries = max_retries
-    
-    @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(multiplier=1, min=4, max=60),
-        retry=retry_if_exception(is_retryable_exception)
-    )
-    def _get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> requests.Response:
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60), retry=retry_if_exception(is_retryable_exception))
+    def _get(self, endpoint: str, params: Optional[Dict[str, Any]]=None) -> requests.Response:
         """发送 GET 请求。
         
         Args:
@@ -144,38 +140,24 @@ class BaseClient(ABC):
             requests.exceptions.RequestException: 网络错误
         """
         self.limiter.wait_for_token()
-        url = f"{self.base_url}/{endpoint}"
-        
+        url = f'{self.base_url}/{endpoint}'
         try:
-            response = requests.get(
-                url, 
-                headers=self.headers, 
-                params=params, 
-                timeout=self.timeout
-            )
-            
-            # 处理速率限制
+            response = requests.get(url, headers=self.headers, params=params, timeout=self.timeout)
             if response.status_code == 429:
                 retry_after = int(response.headers.get('Retry-After', 60))
-                logger.warning(f"Rate limited. Sleeping for {retry_after}s")
+                logger.warning(f'Rate limited. Sleeping for {retry_after}s')
                 time.sleep(retry_after)
-                raise requests.exceptions.RequestException("Rate Limited")
-            
+                raise requests.exceptions.RequestException('Rate Limited')
             response.raise_for_status()
             return response
-            
         except requests.exceptions.HTTPError as e:
             if e.response.status_code in [401, 403]:
-                logger.error(f"Auth error: {e}")
-                raise  # 不重试认证错误
+                logger.error(f'Auth error: {e}')
+                raise
             raise
-    
-    @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(multiplier=1, min=4, max=60),
-        retry=retry_if_exception(is_retryable_exception)
-    )
-    def _post(self, endpoint: str, data: Optional[Any] = None, json: Optional[Dict[str, Any]] = None, headers: Optional[Dict[str, str]] = None) -> requests.Response:
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60), retry=retry_if_exception(is_retryable_exception))
+    def _post(self, endpoint: str, data: Optional[Any]=None, json: Optional[Dict[str, Any]]=None, headers: Optional[Dict[str, str]]=None) -> requests.Response:
         """发送 POST 请求。
         
         Args:
@@ -188,53 +170,35 @@ class BaseClient(ABC):
             Response 对象
         """
         self.limiter.wait_for_token()
-        url = f"{self.base_url}/{endpoint}"
-        
+        url = f'{self.base_url}/{endpoint}'
         req_headers = self.headers.copy() if self.headers else {}
         if headers:
             req_headers.update(headers)
-            
         try:
-            response = requests.post(
-                url, 
-                headers=req_headers, 
-                data=data,
-                json=json, 
-                timeout=self.timeout
-            )
+            response = requests.post(url, headers=req_headers, data=data, json=json, timeout=self.timeout)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as e:
             if e.response.status_code in [401, 403]:
-                logger.error(f"Auth error: {e}")
+                logger.error(f'Auth error: {e}')
                 raise
             raise
 
-    @retry(
-        stop=stop_after_attempt(5),
-        wait=wait_exponential(multiplier=1, min=4, max=60),
-        retry=retry_if_exception(is_retryable_exception)
-    )
-    def _put(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> requests.Response:
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60), retry=retry_if_exception(is_retryable_exception))
+    def _put(self, endpoint: str, data: Optional[Dict[str, Any]]=None) -> requests.Response:
         """发送 PUT 请求。"""
         self.limiter.wait_for_token()
-        url = f"{self.base_url}/{endpoint}"
-        
+        url = f'{self.base_url}/{endpoint}'
         try:
-            response = requests.put(
-                url, 
-                headers=self.headers, 
-                json=data, 
-                timeout=self.timeout
-            )
+            response = requests.put(url, headers=self.headers, json=data, timeout=self.timeout)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as e:
             if e.response.status_code in [401, 403]:
-                logger.error(f"Auth error: {e}")
+                logger.error(f'Auth error: {e}')
                 raise
             raise
-    
+
     @abstractmethod
     def test_connection(self) -> bool:
         """测试与目标系统的连接是否正常。

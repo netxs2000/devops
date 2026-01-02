@@ -6,10 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, Boolean, BigInteger
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-
-# 从公共基础模型导入 Base
 from devops_collector.models.base_models import Base
-
 
 class JenkinsJob(Base):
     """Jenkins 任务(Job)模型 (jenkins_jobs)。
@@ -28,35 +25,33 @@ class JenkinsJob(Base):
         builds (List[JenkinsBuild]): 关联的构建列表。
     """
     __tablename__ = 'jenkins_jobs'
-    
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
     full_name = Column(String(500), unique=True, nullable=False)
     url = Column(String(500))
     description = Column(Text)
     color = Column(String(50))
-    
     gitlab_project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
-    
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default='PENDING')
-    
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at = Column(
-        DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc)
-    )
-    
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     raw_data = Column(JSON)
-    
-    builds = relationship(
-        "JenkinsBuild", back_populates="job", cascade="all, delete-orphan"
-    )
+    builds = relationship('JenkinsBuild', back_populates='job', cascade='all, delete-orphan')
 
     def __repr__(self) -> str:
-        return f"<JenkinsJob(full_name='{self.full_name}')>"
+        '''"""TODO: Add description.
 
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
+        return f"<JenkinsJob(full_name='{self.full_name}')>"
 
 class JenkinsBuild(Base):
     """Jenkins 构建(Build)详情模型 (jenkins_builds)。
@@ -82,40 +77,37 @@ class JenkinsBuild(Base):
         job (JenkinsJob): 关联的 Job 对象。
     """
     __tablename__ = 'jenkins_builds'
-    
     id = Column(Integer, primary_key=True, autoincrement=True)
     job_id = Column(Integer, ForeignKey('jenkins_jobs.id'), nullable=False)
     number = Column(Integer, nullable=False)
-    
     queue_id = Column(BigInteger)
     url = Column(String(500))
-    
     result = Column(String(20))
     duration = Column(BigInteger)
     timestamp = Column(DateTime(timezone=True))
-    
     building = Column(Boolean, default=False)
     executor = Column(String(255))
-    
     trigger_type = Column(String(50))
     trigger_user = Column(String(100))
-    trigger_user_id = Column(
-        UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True
-    )
-    
+    trigger_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
     commit_sha = Column(String(100))
-    
     raw_data = Column(JSON)
-    
     gitlab_mr_iid = Column(Integer)
     artifact_id = Column(String(200))
     artifact_type = Column(String(50))
-    
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-    
-    job = relationship("JenkinsJob", back_populates="builds")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    job = relationship('JenkinsJob', back_populates='builds')
 
     def __repr__(self) -> str:
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         return f"<JenkinsBuild(job_id={self.job_id}, number={self.number}, result='{self.result}')>"

@@ -4,17 +4,15 @@
 """
 import logging
 from typing import List, Callable, Any
-
 logger = logging.getLogger(__name__)
-
 
 class BaseMixin:
     """提供通用的生成器处理逻辑。
     
     必须混入到拥有 session 属性的类中使用。
     """
-    
-    def _process_generator(self, generator, processor_func: Callable[[List[Any]], None], batch_size: int = 500) -> int:
+
+    def _process_generator(self, generator, processor_func: Callable[[List[Any]], None], batch_size: int=500) -> int:
         """通用的生成器批处理助手。
         
         将 API 返回的生成器流数据按批次收集，并调用处理函数进行存储，
@@ -42,11 +40,10 @@ class BaseMixin:
                     count += len(batch)
                 except Exception as e:
                     self.session.rollback()
-                    logger.error(f"Batch processing failed: {e}")
+                    logger.error(f'Batch processing failed: {e}')
                     raise
                 finally:
                     batch = []
-        
         if batch:
             try:
                 processor_func(batch)
@@ -54,7 +51,6 @@ class BaseMixin:
                 count += len(batch)
             except Exception as e:
                 self.session.rollback()
-                logger.error(f"Final batch processing failed: {e}")
+                logger.error(f'Final batch processing failed: {e}')
                 raise
-                
         return count

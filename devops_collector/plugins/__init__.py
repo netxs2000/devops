@@ -6,5 +6,3 @@
     from devops_collector.plugins import gitlab
     from devops_collector.plugins import sonarqube
 """
-# 不在包级别自动导入，避免循环依赖
-# 用户可以按需导入: from devops_collector.plugins import gitlab

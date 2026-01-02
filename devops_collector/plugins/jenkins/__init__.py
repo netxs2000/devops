@@ -5,5 +5,4 @@
 from .client import JenkinsClient
 from .worker import JenkinsWorker
 from .models import JenkinsJob, JenkinsBuild
-
 __all__ = ['JenkinsClient', 'JenkinsWorker', 'JenkinsJob', 'JenkinsBuild']

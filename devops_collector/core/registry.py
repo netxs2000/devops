@@ -16,9 +16,7 @@ Typical usage:
 """
 import logging
 from typing import Dict, Type, Optional, List
-
 logger = logging.getLogger(__name__)
-
 
 class PluginRegistry:
     """插件注册表，管理所有数据源插件。
@@ -38,10 +36,9 @@ class PluginRegistry:
         GitLabClient = PluginRegistry.get_client('gitlab')
         client = GitLabClient(url, token)
     """
-    
     _clients: Dict[str, Type] = {}
     _workers: Dict[str, Type] = {}
-    
+
     @classmethod
     def register_client(cls, name: str, client_class: Type) -> None:
         """注册 API 客户端类。
@@ -51,8 +48,8 @@ class PluginRegistry:
             client_class: 客户端类 (继承自 BaseClient)
         """
         cls._clients[name] = client_class
-        logger.debug(f"Registered client: {name} -> {client_class.__name__}")
-    
+        logger.debug(f'Registered client: {name} -> {client_class.__name__}')
+
     @classmethod
     def register_worker(cls, name: str, worker_class: Type) -> None:
         """注册 Worker 类。
@@ -62,8 +59,8 @@ class PluginRegistry:
             worker_class: Worker 类 (继承自 BaseWorker)
         """
         cls._workers[name] = worker_class
-        logger.debug(f"Registered worker: {name} -> {worker_class.__name__}")
-    
+        logger.debug(f'Registered worker: {name} -> {worker_class.__name__}')
+
     @classmethod
     def get_client(cls, name: str) -> Optional[Type]:
         """获取已注册的客户端类。
@@ -75,10 +72,10 @@ class PluginRegistry:
             客户端类，如果未找到则返回 None
         """
         if name not in cls._clients:
-            logger.warning(f"Client not found: {name}")
+            logger.warning(f'Client not found: {name}')
             return None
         return cls._clients[name]
-    
+
     @classmethod
     def get_worker(cls, name: str) -> Optional[Type]:
         """获取已注册的 Worker 类。
@@ -90,10 +87,10 @@ class PluginRegistry:
             Worker 类，如果未找到则返回 None
         """
         if name not in cls._workers:
-            logger.warning(f"Worker not found: {name}")
+            logger.warning(f'Worker not found: {name}')
             return None
         return cls._workers[name]
-    
+
     @classmethod
     def list_plugins(cls) -> Dict[str, Dict[str, str]]:
         """列出所有已注册的插件。
@@ -107,12 +104,9 @@ class PluginRegistry:
         all_names = set(cls._clients.keys()) | set(cls._workers.keys())
         result = {}
         for name in all_names:
-            result[name] = {
-                'client': cls._clients.get(name, type(None)).__name__,
-                'worker': cls._workers.get(name, type(None)).__name__
-            }
+            result[name] = {'client': cls._clients.get(name, type(None)).__name__, 'worker': cls._workers.get(name, type(None)).__name__}
         return result
-    
+
     @classmethod
     def list_sources(cls) -> List[str]:
         """列出所有已注册的数据源名称。
@@ -121,7 +115,7 @@ class PluginRegistry:
             数据源名称列表
         """
         return list(set(cls._clients.keys()) | set(cls._workers.keys()))
-    
+
     @classmethod
     def get_client_instance(cls, name: str, **kwargs) -> Optional[object]:
         """获取并实例化客户端。
