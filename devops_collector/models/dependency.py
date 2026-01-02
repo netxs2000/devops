@@ -2,8 +2,8 @@
 OWASP Dependency-Check 数据模型
 存储依赖扫描、许可证信息和 CVE 漏洞数据
 """
-from sqlalchemy import Column, Integer, String, Boolean, Float, Text, DateTime, ForeignKey, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String, Boolean, Float, Text, DateTime, ForeignKey, UniqueConstraint, JSON
+JSONB = JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from devops_collector.models import Base

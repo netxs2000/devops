@@ -7,7 +7,7 @@ from devops_collector.auth.router import get_db
 from devops_collector.plugins.gitlab.client import GitLabClient
 from devops_collector.plugins.gitlab.agile_service import GitLabAgileService
 from devops_collector.models import User
-from devops_collector.core.config import Config
+from devops_collector.config import Config
 from devops_collector.core import security
 from devops_collector.plugins.gitlab.models import Project, Milestone
 from devops_portal.dependencies import get_current_user

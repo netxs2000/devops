@@ -1,6 +1,6 @@
 # 修订记录 (Changelog)
 
-所有对 DevOps Data Collector 的重要更改都将记录在此文件中。
+所有对 DevOps Data Application Platform 的重要更改都将记录在此文件中。
 
 ## [3.9.0] - 2026-01-02
 

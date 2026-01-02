@@ -1,0 +1,19 @@
+source:
+  type: "postgres"
+  config:
+    # 数据库连接信息
+    host_port: "localhost:5432"
+    database: "devops_db"
+    username: "postgres"
+    password: "devops123"
+    # 扫描特定的 schema
+    schema_patterns:
+      allow:
+        - "public"
+    # 包含表和视图
+    include_views: true
+
+sink:
+  type: "datahub-rest"
+  config:
+    server: "http://localhost:8080"

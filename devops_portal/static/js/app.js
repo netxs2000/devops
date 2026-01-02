@@ -10,13 +10,13 @@
 function switchView(view) {
     const navItems = [
         'nav-dashboard', 'nav-tests', 'nav-defects', 'nav-reqs',
-        'nav-matrix', 'nav-reports', 'nav-support', 'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub'
+        'nav-matrix', 'nav-reports', 'nav-governance', 'nav-support', 'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-projects'
     ];
 
     const viewItems = [
         'results', 'statsGrid', 'bugView', 'matrixView',
         'requirementsView', 'reportsView', 'view-servicedesk',
-        'sdSubmitView', 'sdMyView', 'decisionHubView'
+        'sdSubmitView', 'sdMyView', 'decisionHubView', 'governanceView', 'adminProjectsView'
     ];
 
     // Reset all nav and views
@@ -68,6 +68,13 @@ function switchView(view) {
         document.getElementById('decisionHubView').style.display = 'block';
         // 生产环境建议通过反向代理，开发环境先直连 Streamlit 默认端口
         document.getElementById('decisionHubFrame').src = 'http://localhost:8501/?embed=true';
+    } else if (view === 'governance') {
+        document.getElementById('governanceView').style.display = 'block';
+        // DataHub 默认运行在 9002 端口
+        document.getElementById('governanceFrame').src = 'http://localhost:9002/';
+    } else if (view === 'admin_projects') {
+        document.getElementById('adminProjectsView').style.display = 'block';
+        loadAdminProjects();
     }
 }
 
@@ -171,4 +178,171 @@ function initUserProfile(user) {
     }
 
     window.currentUser = user;
+}
+
+// --- Admin: Two-Layer Project Assignment ---
+
+async function loadAdminProjects() {
+    try {
+        const mdmTbody = document.getElementById('mdmProjectsTableBody');
+        const unlinkedTbody = document.getElementById('unlinkedReposTableBody');
+        mdmTbody.innerHTML = '<tr><td colspan="5">加载中...</td></tr>';
+        unlinkedTbody.innerHTML = '<tr><td colspan="2">加载中...</td></tr>';
+
+        // 1. 获取主项目、未关联仓库、组织列表
+        const mdmProjects = await Api.request('/admin/mdm-projects');
+        const unlinkedRepos = await Api.request('/admin/unlinked-repos');
+        const orgs = await Api.request('/admin/organizations');
+
+        // 2. 渲染主项目表格
+        mdmTbody.innerHTML = '';
+        mdmProjects.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <div style="font-weight:bold;">${p.project_name}</div>
+                    <code style="font-size:10px; opacity:0.7;">${p.project_id}</code>
+                </td>
+                <td><span style="font-size:11px;">${p.project_type}</span></td>
+                <td><span class="badge ${p.status === 'RELEASED' ? 'badge-active' : ''}">${p.status}</span></td>
+                <td>
+                    <span class="badge ${p.lead_repo_id ? 'badge-passed' : 'badge-warning'}">
+                        ${p.lead_repo_id ? '✅ 已配置 (ID:' + p.lead_repo_id + ')' : '⚠️ 需配置'}
+                    </span>
+                    <div style="font-size:10px; color:var(--text-dim); margin-top:4px;">部门: ${p.org_name}</div>
+                </td>
+                <td style="text-align:center;">${p.repo_count}</td>
+            `;
+            mdmTbody.appendChild(tr);
+        });
+
+        // 3. 渲染待关联仓库
+        unlinkedTbody.innerHTML = '';
+        if (unlinkedRepos.length === 0) {
+            unlinkedTbody.innerHTML = '<tr><td colspan="2" style="color:var(--text-dim); text-align:center;">暂无待关联仓库</td></tr>';
+        }
+        unlinkedRepos.forEach(r => {
+            const tr = document.createElement('tr');
+
+            // 构建主项目下拉选择框 + 是否作为受理中心的勾选
+            let selectHtml = `<div style="display:flex; align-items:center; gap:8px;">
+                <select id="link-select-${r.id}" style="width:100px;">
+                    <option value="">-- 选择 --</option>`;
+            mdmProjects.forEach(p => {
+                selectHtml += `<option value="${p.project_id}">${p.project_name}</option>`;
+            });
+            selectHtml += `</select>
+                <label style="font-size:10px; display:flex; align-items:center; cursor:pointer;">
+                    <input type="checkbox" id="is-lead-${r.id}"> 主
+                </label>
+                <button class="btn btn-sm" onclick="doLink(${r.id})">OK</button>
+            </div>`;
+
+            tr.innerHTML = `
+                <td><div style="font-size:11px; font-weight:bold;">${r.name}</div><code style="font-size:9px; opacity:0.6;">${r.path}</code></td>
+                <td>${selectHtml}</td>
+            `;
+            unlinkedTbody.appendChild(tr);
+        });
+
+        // 4. 填充 Modal 下拉框
+        const orgSelect = document.getElementById('newProjOrg');
+        orgSelect.innerHTML = '<option value="">-- 选择归属部门 --</option>';
+        orgs.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.org_id;
+            opt.textContent = o.org_name;
+            orgSelect.appendChild(opt);
+        });
+
+    } catch (e) {
+        UI.showToast('加载失败: ' + e.message, 'error');
+    }
+}
+
+function openCreateProjectModal() {
+    document.getElementById('createProjectModal').style.display = 'flex';
+}
+
+function closeCreateProjectModal() {
+    document.getElementById('createProjectModal').style.display = 'none';
+}
+
+async function submitCreateProject() {
+    const payload = {
+        project_id: document.getElementById('newProjId').value,
+        project_name: document.getElementById('newProjName').value,
+        org_id: document.getElementById('newProjOrg').value,
+        project_type: document.getElementById('newProjType').value,
+        plan_start_date: document.getElementById('newProjPlanStart').value || null,
+        plan_end_date: document.getElementById('newProjPlanEnd').value || null,
+        budget_code: document.getElementById('newProjBudgetCode').value,
+        budget_type: document.getElementById('newProjBudgetType').value,
+        description: document.getElementById('newProjDesc').value
+    };
+
+    if (!payload.project_id || !payload.project_name || !payload.org_id) {
+        UI.showToast('请完整填写项目 ID、名称及部门', 'warning');
+        return;
+    }
+
+    try {
+        await Api.request('/admin/mdm-projects', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        UI.showToast('主项目创建成功', 'success');
+        closeCreateProjectModal();
+        loadAdminProjects();
+    } catch (e) {
+        UI.showToast('创建失败: ' + e.message, 'error');
+    }
+}
+
+async function doLink(repoId) {
+    const mdmId = document.getElementById(`link-select-${repoId}`).value;
+    const isLead = document.getElementById(`is-lead-${repoId}`).checked;
+    if (!mdmId) {
+        UI.showToast('请选择业务项目', 'warning');
+        return;
+    }
+    await linkRepo(repoId, mdmId, isLead);
+}
+
+async function linkRepo(repoId, mdmId, isLead = false) {
+    try {
+        await Api.request('/admin/link-repo', {
+            method: 'POST',
+            body: JSON.stringify({
+                gitlab_project_id: repoId,
+                mdm_project_id: mdmId,
+                is_lead: isLead
+            })
+        });
+        UI.showToast('关联成功', 'success');
+        loadAdminProjects();
+    } catch (e) {
+        UI.showToast('关联失败: ' + e.message, 'error');
+    }
+}
+
+// --- Service Desk: Department Logic ---
+
+async function loadServiceDeskProjects() {
+    try {
+        const select = document.getElementById('sd-project-select');
+        if (!select) return;
+
+        // 修改为拉取业务主项目列表
+        const projects = await Api.request('/service-desk/business-projects');
+        select.innerHTML = '<option value="">-- 请选择受影响的业务系统 --</option>';
+        projects.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id; // MDM Project ID
+            opt.textContent = p.name;
+            select.appendChild(opt);
+        });
+    } catch (e) {
+        console.error('Failed to load business projects:', e);
+    }
 }

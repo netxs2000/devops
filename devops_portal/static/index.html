@@ -48,6 +48,14 @@
                     </svg>
                     Dashboard
                 </a>
+                <a href="iteration.html" class="nav-link" id="nav-iterations">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z">
+                        </path>
+                    </svg>
+                    Iteration Plan
+                </a>
                 <a href="#" class="nav-link" id="nav-tests" onclick="switchView('test-cases')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -95,12 +103,26 @@
                     </svg>
                     Insights
                 </a>
-                <a href="#" class="nav-link" id="nav-decision-hub" onclick="switchView('decision_hub')" style="color: var(--passed);">
+                <a href="#" class="nav-link" id="nav-governance" onclick="switchView('governance')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    Governance
+                </a>
+                <a href="#" class="nav-link" id="nav-decision-hub" onclick="switchView('decision_hub')"
+                    style="color: var(--passed);">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
                     Decision Hub
+                </a>
+                <a href="#" class="nav-link admin-only" id="nav-admin-projects" onclick="switchView('admin_projects')"
+                    style="display:none; border-top: 1px solid var(--border-color); margin-top: 10px; padding-top: 15px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                    </svg>
+                    Project Admin
                 </a>
                 <div
                     style="margin: 20px 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); opacity: 0.6;">
@@ -416,6 +438,120 @@
                         style="width:100%; height:100%; border:none; border-radius: 12px;"></iframe>
                 </div>
             </div>
+
+            <div id="governanceView" style="display:none; height: calc(100vh - 120px); margin-top: -20px;">
+                <div class="glass-panel" style="height: 100%; padding: 0; overflow: hidden; background: #f3f4f7;">
+                    <iframe id="governanceFrame" src=""
+                        style="width:100%; height:100%; border:none; border-radius: 12px;"></iframe>
+                </div>
+            </div>
+
+            <div id="adminProjectsView" style="display:none;">
+                <div class="glass-panel" style="padding: 2rem;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <div>
+                            <h2 style="margin: 0;">🏛️ 业务项目管理 (Two-Layer)</h2>
+                            <p style="color: var(--text-dim); margin: 5px 0 0;">管理业务主项目 (MDM) 及其关联的 GitLab 技术仓库。</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openCreateProjectModal()">➕ 新建主项目</button>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 2rem;">
+                        <!-- 左侧：主项目列表 -->
+                        <div class="table-container">
+                            <h4 style="margin-bottom: 1rem;">1. 业务主项目清单</h4>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>项目ID/名称</th>
+                                        <th>类型</th>
+                                        <th>状态</th>
+                                        <th>受理中心 (Lead Repo)</th>
+                                        <th>仓库数</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mdmProjectsTableBody">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 右侧：待关联仓库 -->
+                        <div class="table-container">
+                            <h4 style="margin-bottom: 1rem;">2. 待指派仓库 (Technical Repos)</h4>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>仓库名称</th>
+                                        <th>关联到业务项目...</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="unlinkedReposTableBody">
+                                    <!-- Dynamic -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create MDM Project Modal -->
+            <div id="createProjectModal" class="modal-overlay">
+                <div class="modal" style="width: 600px; max-height: 90vh; overflow-y: auto;">
+                    <h3>➕ 新建业务主项目</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                        <div class="form-group">
+                            <label>项目唯一ID (ID)</label>
+                            <input type="text" id="newProjId" placeholder="PRJ_JIRA_PAY_101" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>项目名称 (Name)</label>
+                            <input type="text" id="newProjName" placeholder="2025Q4 支付链路优化" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>项目类型 (Type)</label>
+                            <select id="newProjType" class="form-control">
+                                <option value="SPRINT">敏捷迭代 (SPRINT)</option>
+                                <option value="WATERFALL">瀑布项目 (WATERFALL)</option>
+                                <option value="RESEARCH">研发研究 (RESEARCH)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>归属部门 (Org)</label>
+                            <select id="newProjOrg" class="form-control"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>计划开始 (Start)</label>
+                            <input type="date" id="newProjPlanStart" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>计划交付 (End)</label>
+                            <input type="date" id="newProjPlanEnd" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>预算编码 (Budget)</label>
+                            <input type="text" id="newProjBudgetCode" placeholder="BC_2025_TECH_01"
+                                class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>预算类型</label>
+                            <select id="newProjBudgetType" class="form-control">
+                                <option value="CAPEX">资本化 (CAPEX)</option>
+                                <option value="OPEX">费用化 (OPEX)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>项目简述</label>
+                        <textarea id="newProjDesc" placeholder="项目详细背景说明..." class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 20px;">
+                        <button class="btn" onclick="closeCreateProjectModal()">取消</button>
+                        <button class="btn btn-primary" onclick="submitCreateProject()">立即创建</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -678,35 +814,14 @@
                             document.getElementById('user-display-dept').innerText = user.department.org_name;
                         }
 
-                        // Menu Logic: Show "Iteration Management" if connected
-                        // This logic can be expanded. For now we just update the Binding UI.
-                        // Ideally we should inject a new Menu Item here.
                         if (user.gitlab_connected) {
-                            injectIterationMenu();
+                            updateGitLabUI(true);
                         }
                     }
                 }
             } catch (e) { console.error('Failed to sync auth status:', e); }
         }
 
-        function injectIterationMenu() {
-            const nav = document.querySelector('nav.controls');
-            // Check if already exists
-            if (document.getElementById('nav-iterations')) return;
-
-            const link = document.createElement('a');
-            link.href = 'iteration.html';
-            link.className = 'nav-link';
-            link.id = 'nav-iterations';
-            link.innerHTML = `
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-                </svg>
-                Iteration Plan
-            `;
-            // Insert after Dashboard
-            nav.insertBefore(link, nav.children[1]);
-        }
 
         function openGitLabBindModal() {
             document.getElementById('bindGitLabModal').style.display = 'flex';

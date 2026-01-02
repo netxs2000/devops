@@ -13,10 +13,11 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import asyncio
+from sqlalchemy.orm import Session
 
 from devops_collector.gitlab_sync.services.gitlab_client import GitLabClient
-from devops_collector.models import schemas as internal_schemas # Keep existing if used
-from devops_portal import schemas # Use portal schemas for API response compatibility
+from devops_portal import schemas as portal_schemas # Use portal schemas for API response compatibility
+schemas = portal_schemas
 from devops_collector.gitlab_sync.services.security import IssueSecurityProvider
 from devops_collector.gitlab_sync.services.ai_client import AIClient
 
@@ -254,6 +255,9 @@ class TestingService(GitLabClient):
             else:
                 failed_items.append({
                     "index": i,
+                    "error": str(result)
+                })
+        
         return {
             "total": len(items),
             "success": success_count,
@@ -261,6 +265,16 @@ class TestingService(GitLabClient):
             "details": failed_items
         }
 
+    async def create_defect(self, 
+                            project_id: int, 
+                            title: str, 
+                            severity: str, 
+                            priority: str, 
+                            category: str, 
+                            env: str, 
+                            steps: str, 
+                            expected: str, 
+                            actual: str, 
                             reporter_name: str,
                             related_test_case_iid: Optional[int] = None,
                             attachments: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -327,6 +341,12 @@ class TestingService(GitLabClient):
             "message": "Defect reported successfully"
         }
 
+    async def create_requirement(self, 
+                                 project_id: int, 
+                                 title: str, 
+                                 priority: str, 
+                                 category: str, 
+                                 business_value: str, 
                                  acceptance_criteria: List[str], 
                                  creator_name: str,
                                  attachments: Optional[List[str]] = None) -> Dict[str, Any]:
@@ -390,6 +410,20 @@ class TestingService(GitLabClient):
             "web_url": issue.web_url,
             "message": "Requirement created successfully"
         }
+
+        return clusters
+
+    async def get_test_case_detail(self, project_id: int, iid: int) -> Optional[schemas.TestCase]:
+        """获取并解析单个测试用例详情。"""
+        project = self.get_project(project_id)
+        if not project:
+            return None
+        try:
+            issue = project.issues.get(iid)
+            return self.parse_markdown_to_test_case(issue.attributes)
+        except Exception as e:
+            logger.error(f"Error fetching test case {iid}: {e}")
+            return None
 
     async def run_semantic_deduplication(self, project_id: int, issue_type: str = 'requirement') -> List[Dict[str, Any]]:
         """[AI 核心] 语义级查重算法。
@@ -490,6 +524,8 @@ class TestingService(GitLabClient):
         )
         
         return True
+
+    async def clone_test_cases_from_project(self, source_project_id: int, target_project_id: int) -> Dict[str, Any]:
         """从源项目克隆所有测试用例到目标项目。
 
         Args:
@@ -579,11 +615,15 @@ class TestingService(GitLabClient):
                                test_type: str, 
                                requirement_id: Optional[str],
                                pre_conditions: List[str],
-                               steps: List[Dict[str, str]]) -> Optional[Any]:
+                               steps: List[Dict[str, str]],
+                               creator: Optional[str] = None) -> Optional[Any]:
+        """在线录入并创建测试用例。
 
-            requirement_id (Optional[str]): 关联的需求 Issue IID。
-            pre_conditions (List[str]): 前置条件列表。
-            steps (List[Dict[str, str]]): 包含 'action' 和 'expected' 的步骤列表。
+        Args:
+            project_id (int): GitLab 项目 ID。
+            title (str): 用例标题。
+            priority (str): 优先级 (P0-P4)。
+            test_type (str): 测试类型。
 
         Returns:
             Optional[Any]: 成功则返回新创建的 Issue 实例，否则返回 None。
