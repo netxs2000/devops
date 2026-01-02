@@ -6,11 +6,9 @@
 import logging
 from datetime import datetime, timezone
 from typing import Optional, Union, Any
-
 logger = logging.getLogger(__name__)
 
-
-def safe_int(value: Any, default: int = 0) -> int:
+def safe_int(value: Any, default: int=0) -> int:
     """安全地将值转换为整数。
     
     Args:
@@ -25,8 +23,7 @@ def safe_int(value: Any, default: int = 0) -> int:
     except (ValueError, TypeError):
         return default
 
-
-def safe_float(value: Any, default: float = 0.0) -> float:
+def safe_float(value: Any, default: float=0.0) -> float:
     """安全地将值转换为浮点数。
     
     Args:
@@ -41,7 +38,6 @@ def safe_float(value: Any, default: float = 0.0) -> float:
     except (ValueError, TypeError):
         return default
 
-
 def parse_iso8601(date_str: Optional[str]) -> Optional[datetime]:
     """解析 ISO 8601 格式的时间字符串。
     
@@ -55,15 +51,12 @@ def parse_iso8601(date_str: Optional[str]) -> Optional[datetime]:
     """
     if not date_str:
         return None
-        
     try:
-        # 常见修复：GitLab/SonarQube 返回的 Z 代表 UTC
         cleaned_str = date_str.replace('Z', '+00:00')
         return datetime.fromisoformat(cleaned_str)
     except ValueError as e:
         logger.warning(f"Failed to parse date string '{date_str}': {e}")
         return None
-
 from pathlib import Path
 from devops_collector.config import settings
 
@@ -82,6 +75,5 @@ def resolve_data_path(filename: str) -> Path:
     try:
         data_dir.mkdir(parents=True, exist_ok=True)
     except Exception as e:
-        logger.error(f"Failed to create data directory {data_dir}: {e}")
-        
+        logger.error(f'Failed to create data directory {data_dir}: {e}')
     return data_dir / filename

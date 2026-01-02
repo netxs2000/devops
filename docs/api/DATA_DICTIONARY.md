@@ -1,7 +1,7 @@
 # 📊 DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-01-01 19:01:50  
-> **版本**: v2.0 (企业级标准版)  
+> **生成时间**: 2026-01-02 02:45:10  
+> **版本**: v3.0 (现代数据仓库版)  
 > **状态**: ✅ 有效 (Active)
 
 ---
@@ -22,16 +22,17 @@
 
 ## 📋 数据表清单
 
-本系统共包含 **64 个基础表** 以及 **12 个高级智能分析模型**，分为以下几个业务域：
+本系统共包含 **65 个基础表** 以及 **15 个高级智能分析模型**，分为以下几个业务域：
 
 ### 🏢 核心主数据域 (Core Master Data)
 
-- `mdm_identities` - User
-- `mdm_identity_mappings` - IdentityMapping
-- `mdm_location` - Location
-- `mdm_organizations` - Organization
-- `products` - Product
-- `services` - Service
+- `mdm_calendar` - Calendar
+- mdm_identities - User
+- mdm_identity_mappings - IdentityMapping
+- mdm_location - Location
+- mdm_organizations - Organization
+- products - Product
+- services - Service
 
 ### 🧪 测试管理域 (Test Management)
 
@@ -123,6 +124,31 @@
 
 ## 📦 核心主数据域
 
+### Calendar (`mdm_calendar`)
+
+**业务描述**: 万年历主数据 (mdm_calendar)。 提供日期维度的全量属性，支持跨地域法定节假日、工作日判定，是 DORA 流动效能、人力成本核算及研发 ROI 计算的时间基准。
+
+#### 字段定义 - Calendar
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `date_id` | Integer | PK | 否 | - | 日期主键 (YYYYMMDD) |
+| `full_date` | Date | - | 否 | - | 完整日期 |
+| `year` | Integer | - | 否 | - | 年份 |
+| `month` | Integer | - | 否 | - | 月份 (1-12) |
+| `day` | Integer | - | 否 | - | 日 (1-31) |
+| `quarter` | Integer | - | 否 | - | 季度 (1-4) |
+| `week_of_year` | Integer | - | 否 | - | 一年中的第几周 |
+| `day_of_week` | Integer | - | 否 | - | 星期几 (0-6, 0=Sunday) |
+| `is_workday` | Boolean | - | 否 | True | 是否为工作日 (考虑调休) |
+| `is_holiday` | Boolean | - | 否 | False | 是否为法定节假日 |
+| `holiday_name` | String(100) | - | 是 | - | 节假日名称 (如：春节) |
+| `region` | String(20) | - | 否 | CN | 区域 (默认 CN) |
+| `fiscal_year` | Integer | - | 是 | - | 财年 |
+| `created_at` | DateTime | - | 是 | now() | 创建时间 |
+
+---
+
 ### User (`mdm_identities`)
 
 **业务描述**: 人员主数据 (mdm_identities)。 全局唯一标识，集团级唯一身份 ID (OneID)。
@@ -130,7 +156,7 @@
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | `id` | Integer | PK | 否 | - | - |
 | `global_user_id` | UUID | - | 否 | - | - |
 | `employee_id` | String(50) | - | 是 | - | - |
@@ -142,10 +168,10 @@
 | `is_active` | Boolean | - | 是 | True | - |
 | `sync_version` | BigInteger | - | 否 | 1 | - |
 | `is_deleted` | Boolean | - | 否 | False | - |
-| `effective_from` | DateTime | - | 否 | <function User.<lambda> at 0x0000022FBD229220> | - |
+| `effective_from` | DateTime | - | 否 | 系统默认 | - |
 | `effective_to` | DateTime | - | 是 | - | - |
 | `is_current` | Boolean | - | 否 | True | - |
-| `created_at` | DateTime | - | 是 | <function User.<lambda> at 0x0000022FBD229590> | - |
+| `created_at` | DateTime | - | 是 | 系统默认 | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `source_system` | String(50) | - | 是 | - | - |
 | `department_id` | String(100) | FK | 是 | - | - |
@@ -175,10 +201,10 @@
 
 **业务描述**: 身份映射关系表 (mdm_identity_mappings)。 存储 OneID 到各子系统的具体账号 ID。
 
-#### 字段定义
+#### 字段定义 - IdentityMapping
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | `id` | Integer | PK | 否 | - | - |
 | `global_user_id` | UUID | FK | 是 | - | - |
 | `source_system` | String(50) | - | 否 | - | - |
@@ -198,10 +224,10 @@
 
 **业务描述**: 地理位置主数据 (mdm_location)。 为支持省、市、区县三级层级结构，采用统一地址代码表结构（适配 GB/T 2260 国标）。
 
-#### 字段定义
+#### 字段定义 - Location
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | `location_id` | String(6) | PK | 否 | - | - |
 | `location_name` | String(50) | - | 否 | - | - |
 | `location_type` | String(20) | - | 否 | - | - |
@@ -213,7 +239,7 @@
 | `created_at` | DateTime | - | 是 | <function Location.<lambda> at 0x0000022FBD1CA400> | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
-#### 关系映射
+#### 关系映射 - Location
 
 - **children**: one-to-many → `Location`
 - **manager**: many-to-one → `User`
@@ -225,10 +251,10 @@
 
 **业务描述**: 组织架构主数据 (mdm_organizations)。 建立全集团的汇报线与成本中心映射，支持指标按部门层级汇总。
 
-#### 字段定义
+#### 字段定义 - Organization
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | `id` | Integer | PK | 否 | - | - |
 | `org_id` | String(100) | - | 否 | - | - |
 | `org_name` | String(200) | - | 否 | - | - |
@@ -244,7 +270,7 @@
 | `created_at` | DateTime | - | 是 | <function Organization.<lambda> at 0x0000022FBD1C9900> | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
-#### 关系映射
+#### 关系映射 - Organization
 
 - **children**: one-to-many → `Organization`
 - **services**: one-to-many → `Service`
@@ -262,10 +288,10 @@
 
 **业务描述**: 全局产品模型，支持“产品线 -> 产品”的层级结构。 用于在业务层面聚合技术项目和负责人，是多项目协作和成本分析的基础。
 
-#### 字段定义
+#### 字段定义 - Product
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | `id` | Integer | PK | 否 | - | - |
 | `name` | String(200) | - | 否 | - | - |
 | `description` | Text | - | 是 | - | - |
@@ -288,7 +314,7 @@
 | `created_at` | DateTime | - | 是 | <function Product.<lambda> at 0x0000022FBD22B950> | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
-#### 关系映射
+#### 关系映射 - Product
 
 - **children**: one-to-many → `Product`
 - **organization**: many-to-one → `Organization`
