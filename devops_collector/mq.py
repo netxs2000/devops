@@ -8,7 +8,6 @@ import pika
 import json
 import logging
 from .config import Config
-
 logger = logging.getLogger(__name__)
 
 class MessageQueue:
@@ -24,7 +23,19 @@ class MessageQueue:
         mq = MessageQueue()
         mq.publish_task({'project_id': 123, 'job_type': 'full'})
     """
+
     def __init__(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         self.url = Config.RABBITMQ_URL
         self.params = pika.URLParameters(self.url)
         self.connection = None
@@ -32,13 +43,24 @@ class MessageQueue:
         self.connect()
 
     def connect(self):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         try:
             self.connection = pika.BlockingConnection(self.params)
             self.channel = self.connection.channel()
             self.channel.queue_declare(queue='gitlab_tasks', durable=True)
-            logger.info("Connected to RabbitMQ")
+            logger.info('Connected to RabbitMQ')
         except Exception as e:
-            logger.error(f"Failed to connect to RabbitMQ: {e}")
+            logger.error(f'Failed to connect to RabbitMQ: {e}')
             raise e
 
     def publish_task(self, task: dict) -> None:
@@ -49,15 +71,8 @@ class MessageQueue:
         """
         if not self.channel or self.connection.is_closed:
             self.connect()
-        
-        self.channel.basic_publish(
-            exchange='',
-            routing_key='gitlab_tasks',
-            body=json.dumps(task),
-            properties=pika.BasicProperties(
-                delivery_mode=2,  # make message persistent
-            ))
-        logger.info(f"Published task: {task}")
+        self.channel.basic_publish(exchange='', routing_key='gitlab_tasks', body=json.dumps(task), properties=pika.BasicProperties(delivery_mode=2))
+        logger.info(f'Published task: {task}')
 
     def consume_tasks(self, callback) -> None:
         """开始消费任务队列 (阻塞式)。
@@ -67,15 +82,13 @@ class MessageQueue:
         """
         if not self.channel or self.connection.is_closed:
             self.connect()
-            
         self.channel.basic_qos(prefetch_count=1)
         self.channel.basic_consume(queue='gitlab_tasks', on_message_callback=callback)
-        
-        logger.info("Waiting for tasks...")
+        logger.info('Waiting for tasks...')
         try:
             self.channel.start_consuming()
         except KeyboardInterrupt:
             self.channel.stop_consuming()
         except Exception as e:
-            logger.error(f"Consumer error: {e}")
+            logger.error(f'Consumer error: {e}')
             raise e

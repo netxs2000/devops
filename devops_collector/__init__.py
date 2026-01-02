@@ -14,8 +14,4 @@
 """
 __version__ = '2.0.0'
 __author__ = 'DevOps Team'
-
-# 导入核心模块
 from . import core
-# plugins 按需导入，避免循环依赖
-# from . import plugins

@@ -1,4 +1,4 @@
-
+"""TODO: Add module description."""
 import unittest
 from devops_collector.plugins.gitlab.analyzer import DiffAnalyzer
 
@@ -34,12 +34,7 @@ class TestDiffAnalyzer(unittest.TestCase):
 
     def test_analyze_diff_basic(self):
         """测试基础的代码行统计。"""
-        diff_text = """@@ -1,3 +1,4 @@
--old code
-+new code
-+# comment line
-+
-+"""
+        diff_text = '@@ -1,3 +1,4 @@\n-old code\n+new code\n+# comment line\n+\n+'
         stats = DiffAnalyzer.analyze_diff(diff_text, 'test.py')
         self.assertEqual(stats['code_deleted'], 1)
         self.assertEqual(stats['code_added'], 1)
@@ -51,6 +46,5 @@ class TestDiffAnalyzer(unittest.TestCase):
         self.assertTrue(DiffAnalyzer.is_ignored('package-lock.json'))
         self.assertTrue(DiffAnalyzer.is_ignored('node_modules/vue/index.js'))
         self.assertFalse(DiffAnalyzer.is_ignored('src/index.js'))
-
 if __name__ == '__main__':
     unittest.main()
