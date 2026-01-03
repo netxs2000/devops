@@ -58,74 +58,36 @@ python scripts/init_revenue_contracts.py
 
 ### 2.5 服务台门户部署 (Service Desk Web Portal)
 *   **资源部署**: 将 `devops_portal/static/` 目录下的所有 HTML/CSS/JS 文件部署至 Nginx 静态服务目录，或确保 FastAPI 应用已挂载静态目录。
-*   **认证配置**: 确保 `config.ini` 中 `[security]` 章节已配置 `secret_key` (用于 JWT 签名) 和 `token_expire_minutes`。
+*   **认证配置**: 确保环境变量中已配置 `SECURITY__SECRET_KEY` (用于 JWT 签名) 和有效期。
 *   **通知服务**: 确保 RabbitMQ 服务运行正常，该组件负责支撑 SSE 实时推送功能。
 ```
 
 ## 3. 配置详解 (Configuration)
 
-配置文件路径: `config.ini`
+本项目采用 Pydantic Settings 管理配置，**所有配置均通过环境变量注入**。在 `.env` 文件中，嵌套配置使用 **双下划线 (`__`)** 作为分隔符。
 
-### [database]
+### 核心配置清单
 
-| 参数 | 说明 | 示例 |
-|:---|:---|:---|
-| `url` | SQLAlchemy 数据库连接串 | `postgresql://user:pass@host:5432/dbname` |
+| 类别 | 环境变量 Key | 说明 | 示例 |
+|:---|:---|:---|:---|
+| **数据库** | `DATABASE__URI` | 数据库连接串 | `postgresql://user:pass@host:5432/db` |
+| | `STORAGE__DATA_DIR` | 持久化数据目录 | `/app/data` |
+| **GitLab** | `GITLAB__URL` | GitLab 实例地址 | `https://gitlab.company.com` |
+| | `GITLAB__PRIVATE_TOKEN` | 具有 API 权限的 Token | `glpat-xxxxxxxx` |
+| | `GITLAB__CLIENT_ID` | OAuth2 Client ID | - |
+| | `GITLAB__CLIENT_SECRET` | OAuth2 Client Secret | - |
+| **SonarQube** | `SONARQUBE__URL` | SonarQube 地址 | `https://sonar.company.com` |
+| | `SONARQUBE__TOKEN` | 用户 Token | `squ_xxxxxxxx` |
+| **Jenkins** | `JENKINS__URL` | Jenkins 地址 | `http://jenkins.company.com` |
+| | `JENKINS__USER` | 用户名 | `admin` |
+| | `JENKINS__TOKEN` | API Token | `11ea...` |
+| **消息队列** | `RABBITMQ__HOST` | RabbitMQ 地址 | `rabbitmq` |
+| | `RABBITMQ__QUEUE` | 队列名称 | `gitlab_tasks` |
+| **AI 服务** | `AI__API_KEY` | LLM API Key | `sk-xxxx` |
+| | `AI__BASE_URL` | LLM Base URL | `https://api.openai.com/v1` |
+| **通知** | `NOTIFIERS__WECOM_WEBHOOK` | 企业微信 Webhook | `https://qyapi...` |
 
-### [gitlab]
-
-| 参数 | 说明 | 示例 |
-|:---|:---|:---|
-| `url` | GitLab 实例地址 | `https://gitlab.company.com` |
-| `token` | 具有 `api` 权限的 Personal Access Token | `glpat-xxxxxxxx` |
-| `nop_token` | (可选) 备用 Token，主 Token 限流时切换 | `glpat-yyyyyyyy` |
-| `enable_deep_analysis`| 是否开启深度分析模式 (Events, Diff, Wiki) | `true` |
-
-### [sonarqube]
-
-| 参数 | 说明 | 示例 |
-|:---|:---|:---|
-| `url` | SonarQube 实例地址 | `https://sonar.company.com` |
-| `token` | 用户 Token | `squ_xxxxxxxx` |
-
-### [jenkins]
-
-| 参数 | 说明 | 示例 |
-|:---|:---|:---|
-| `url` | Jenkins 实例地址 | `http://jenkins.company.com` |
-| `user` | Jenkins 用户名 | `admin` |
-| `token` | API Token (用户设置 -> Configure 生成) | `11ea...` |
-
-### [rabbitmq]
-
-| 参数 | 说明 | 示例 |
-|:---|:---|:---|
-| `host` | RabbitMQ 服务地址 | `localhost` 或 `rabbitmq` |
-| `queue` | 任务队列名称 | `devops_tasks` |
-
-### [common]
-
-| 参数 | 说明 | 示例 |
-|:---|:---|:---|
-| `org_name` | 顶层组织名称，用于报表标题 | `MyTechCorp` |
-| `raw_data_retention_days` | 原始数据保留天数 (默认 30) | `30` |
-
-### [enrichment] (New)
-
-| 参数 | 说明 | 示例 |
-|:---|:---|:---|
-| `ai_provider` | AI 服务商 (openai/azure/local) | `openai` |
-| `api_key` | API Key | `sk-xxxx` |
-| `model_name` | 使用的模型名称 | `gpt-4o-mini` |
-| `enable_ai_qa` | 是否开启 AI 自动化测试生成 | `true` |
-
-### [notifiers] (New)
-
-| 参数 | 说明 | 示例 |
-|:---|:---|:---|
-| `wecom_webhook` | 企业微信 Webhook | `https://qyapi.weixin.qq.com/...` |
-| `feishu_webhook` | 飞书 Webhook | `https://open.feishu.cn/...` |
-| `dingtalk_webhook`| 钉钉 Webhook | `https://oapi.dingtalk.com/...` |
+> **注意**: 如果使用 Docker Compose，请直接修改 `.env` 文件。如果使用 K8s，请创建 ConfigMap/Secret 并映射为环境变量。
 
 ## 4. 定时任务配置 (Scheduling)
 
@@ -147,7 +109,7 @@ crontab -e
 ### Q: 初始化时报错 "FATAL: password authentication failed"
 
 * **原因**: 数据库密码错误或 pg_hba.conf 未允许连接。
-* **解决**: 检查 `config.ini` 中的数据库 URL，确保用户名密码正确且有建表权限。
+* **解决**: 检查 `.env` 中的 `DATABASE__URI` 或 `POSTGRES_PASSWORD` 配置，确保用户名密码正确且有建表权限。
 
 ### Q: GitLab 同步极慢或卡住
 

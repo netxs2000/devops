@@ -59,19 +59,15 @@
 
 ### 2. 配置说明
 
-本项目包含两类配置文件：
-
-1. **基础设施配置 (`.env`)**: 用于 Docker 编排，配置数据库密码、端口等。
-2. **应用业务配置 (`config.ini`)**: 用于配置 GitLab/SonarQube/Jenkins 的连接凭证。
+本项目采用 **环境驱动配置 (Environment-Based Configuration)**，完全遵循 12-Factor App 原则。所有配置（基础设施 + 业务逻辑）均通过环境变量管理。
 
 ```bash
-# 复制示例配置
+# 1. 复制示例配置
 cp .env.example .env
-cp config.ini.example config.ini
 
-# 编辑配置文件 (必填)
-# 1. 修改 .env 中的 POSTGRES_PASSWORD (选填)
-# 2. 修改 config.ini 填入 GitLab/SonarQube/Jenkins 的 URL 和 Token
+# 2. 编辑 .env 文件
+#    - 基础设施: 设置 DB_PASSWORD, RABBITMQ_USER 等
+#    - 业务集成: 设置 GITLAB__URL, SONARQUBE__TOKEN 等 (注意使用双下划线 __ 处理层级)
 ```
 
 ### 3. 一键部署 (Make Deploy)
