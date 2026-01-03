@@ -114,7 +114,7 @@ docker-compose exec -T db psql -U postgres -d devops_db -f /app/devops_collector
 
 ## 📂 项目结构 (Project Structure)
 
-```
+```text
 devops_collector/
 ├── models/                # 基础物理表定义 (Tables)
 ├── sql/                   # 分析视图定义 (Views / Data Mart)
@@ -125,21 +125,31 @@ devops_collector/
 └── scripts/               # 工具脚本
 ```
 
+## 🌟 最新特性 (New Features v4.0.0)
+
+本版本引入了基于 **GitPrime**, **DORA**, **SPACE**, **Flow Framework** 四大理论的下一代效能度量体系。
+
+* **ELOC 2.0 (Equivalent Lines of Code)**: 告别单纯的“代码行数”。引入 **Impact Score** (对老代码修改加权) 和 **Churn Rate** (对近期重写代码降权)，还原代码真实价值。
+* **Flow Framework (价值流管理)**: 自动将工作项分类为 **Feature**, **Defect**, **Debt**, **Risk**，可视化展示研发资源的配比与价值流动速率。
+* **SPACE 框架 (多维平衡)**: 从 **S**atisfaction (心情打卡), **P**erformance (DORA), **A**ctivity, **C**ommunication, **E**fficiency 五个维度构建平衡记分卡。
+* **研发体验脉搏 (DevEx Pulse)**: 内置心情打卡挂件，实时捕捉团队士气波动。
+* **代码热点雷达 (Code Hotspots)**: 基于 **Michael Feathers** 理论的 F-C 象限分析，通过“复杂度 vs 变更频率”自动识别高危技术债务。
+* **DORA 金标准看板**: 引入行业对标评级 (High/Elite/Low)，让效能改进有据可依。
+
 ## 📚 文档 (Documentation)
 
-* [**用户手册 (PROJECT_SUMMARY_AND_MANUAL.md)**](./PROJECT_SUMMARY_AND_MANUAL.md): 详细的功能说明与操作指南。
-* [**PMO 分析方案 (PMO_ANALYTICS_PLAN.md)**](./PMO_ANALYTICS_PLAN.md): 战略分析指标的设计思路。
-* [**数据字典 (DATA_DICTIONARY.md)**](./DATA_DICTIONARY.md): 数据库表结构与字段说明。
-* [**需求规格 (REQUIREMENTS_SPECIFICATION.md)**](./REQUIREMENTS_SPECIFICATION.md): 详细的功能需求列表。
-* [**架构设计 (ARCHITECTURE.md)**](./ARCHITECTURE.md): 系统架构说明。
+* **[度量体系白皮书 (METRICS_ARCHITECTURE.md)](./docs/design/METRICS_ARCHITECTURE.md)**: 🔥 **NEW** 详解 ELOC 2.0、DORA、SPACE、Flow 等核心算法与实现逻辑。
+* [用户手册 (PROJECT_SUMMARY_AND_MANUAL.md)](./PROJECT_SUMMARY_AND_MANUAL.md): 功能说明与操作指南。
+* [数据字典 (DATA_DICTIONARY.md)](./DATA_DICTIONARY.md): 表结构定义。
 
-## 📄 许可证 (License)
+## 📂 看板与视图 (Analytics Mapping)
 
-[MIT](LICENSE)
+系统通过 Streamlit 看板与底层 SQL 视图的严格映射，实现了可维护的分析层架构。
 
-## 🌟 最新特性 (New Features v3.4.0)
-
-* **Jira 360° 采集**: 深度解析标签、修复版本、工时预估与实际值、以及 Issue Links 依赖。
-* **多渠道风险预警**: 异常指标自动推送至**企业微信、飞书、钉钉**，风险无处遁形。
-* **财务透明化**: 基于职级费率自动核算研发人工成本，支持项目 ROI 分析。
-* **人才能力六边形**: 自动化生成基于产出、质量、协作等维度的开发者画像。
+| Dashboard Page | SQL Definition (`devops_collector/sql/`) |
+| :--- | :--- |
+| `0_Value_Leaderboard.py` | `Value_Leaderboard.sql` |
+| `1_DORA_Metrics.py` | *N/A (dbt)* |
+| `15_Michael_Feathers_Code_Hotspots.py` | `Michael_Feathers_Code_Hotspots.sql` |
+| `16_SPACE_Framework.py` | `SPACE_Framework.sql` |
+| `17_Value_Stream.py` | `Value_Stream.sql` |

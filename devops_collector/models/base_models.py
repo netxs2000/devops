@@ -122,8 +122,21 @@ class DailyDevStats(Base, TimestampMixin):
     total_churn = Column(Integer, default=0)
     
     # Sherpa Metrics (Review)
-    review_count = Column(Integer, default=0)
-    review_comments = Column(Integer, default=0)
+
+class SatisfactionRecord(Base, TimestampMixin):
+    """Developer Experience Pulse / Satisfaction survey record.
+    
+    Implementation of SPACE Framework's 'S' (Satisfaction) dimension.
+    Typically collected via 'Niko-Niko' calendar or weekly pulse checks.
+    """
+    __tablename__ = 'satisfaction_records'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_email = Column(String(255), index=True) # Linked via email to Identity
+    score = Column(Integer) # 1-5 Scale (1=Very Sad, 5=Very Happy)
+    date = Column(Date, index=True) # One record per user per day/week
+    tags = Column(String(255), nullable=True) # Optional context: "Tools, Process, Meeting"
+    comment = Column(String(500), nullable=True)
 
     @property
     def external_usernames(self) -> List[str]:
