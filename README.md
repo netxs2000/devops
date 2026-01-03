@@ -148,7 +148,7 @@ devops_collector/
 
 | Dashboard Page | SQL Definition (`devops_collector/sql/`) |
 | :--- | :--- |
-| `0_Value_Leaderboard.py` | `Value_Leaderboard.sql` |
+| `0_Gitprime.py` | `Gitprime.sql` |
 | `1_DORA_Metrics.py` | *N/A (dbt)* |
 | `15_Michael_Feathers_Code_Hotspots.py` | `Michael_Feathers_Code_Hotspots.sql` |
 | `16_SPACE_Framework.py` | `SPACE_Framework.sql` |

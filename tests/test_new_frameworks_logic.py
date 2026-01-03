@@ -41,6 +41,33 @@ class TestNewFrameworksLogic(unittest.TestCase):
             );
         """)
         
+        # --- GitPrime / Leaderboard Tables ---
+        self.cursor.execute("""
+            CREATE TABLE mdm_identities (
+                id INTEGER PRIMARY KEY,
+                global_user_id TEXT,
+                full_name TEXT,
+                primary_email TEXT,
+                department_id TEXT
+            );
+        """)
+        self.cursor.execute("""
+            CREATE TABLE commit_metrics (
+                id INTEGER PRIMARY KEY,
+                commit_id TEXT,
+                author_email TEXT,
+                committed_at DATETIME,
+                eloc_score REAL,
+                impact_score REAL,
+                churn_lines INTEGER,
+                raw_additions INTEGER,
+                raw_deletions INTEGER,
+                comment_lines INTEGER,
+                test_lines INTEGER,
+                refactor_ratio REAL
+            );
+        """)
+
         # --- Hotspot Analysis Tables ---
         self.cursor.execute("CREATE TABLE commits (id TEXT PRIMARY KEY, project_id INTEGER, committed_date DATETIME);")
         self.cursor.execute("CREATE TABLE commit_file_stats (id INTEGER PRIMARY KEY, commit_id TEXT, file_path TEXT, code_added INTEGER, code_deleted INTEGER);")
@@ -102,6 +129,35 @@ class TestNewFrameworksLogic(unittest.TestCase):
             AVG(flow_time_days) as avg_flow_time_days
         FROM view_flow_items i
         GROUP BY 1;
+        """)
+
+        # View 3: GitPrime Metrics
+        self.cursor.execute("""
+        CREATE VIEW view_gitprime_metrics AS
+        WITH user_metrics AS (
+            SELECT 
+                u.global_user_id,
+                u.full_name,
+                u.primary_email,
+                u.department_id,
+                COUNT(DISTINCT cm.commit_id) as total_commits,
+                COUNT(DISTINCT DATE(cm.committed_at)) as active_days,
+                SUM(cm.eloc_score) as total_eloc,
+                SUM(cm.impact_score) as total_impact,
+                SUM(cm.churn_lines) as total_churn,
+                SUM(cm.raw_additions) as raw_additions
+            FROM mdm_identities u
+            JOIN commit_metrics cm ON u.primary_email = cm.author_email
+            WHERE cm.committed_at >= DATE('now', '-90 days')
+            GROUP BY u.global_user_id, u.full_name, u.primary_email, u.department_id
+        )
+        SELECT 
+            *,
+            CASE 
+                WHEN raw_additions > 0 THEN ROUND((total_churn * 100.0 / raw_additions), 1)
+                ELSE 0 
+            END as churn_rate_percent
+        FROM user_metrics;
         """)
 
     def tearDown(self):
@@ -219,6 +275,52 @@ class TestNewFrameworksLogic(unittest.TestCase):
         
         # LOC should be Net Sum: 100 (A) + 50 (B) - 20 (C) = 130
         self.assertEqual(res[2], 130, "Estimated Complexity (LOC) calculation failed")
+
+    def test_gitprime_logic(self):
+        """Test GitPrime metrics: Active Days, Impact, Churn."""
+        print("\n--- Testing GitPrime Framework: Active Days & Value ---")
+        
+        email = "dev@example.com"
+        today = datetime.now()
+        yesterday = today - timedelta(days=1)
+        
+        # 1. Setup User
+        self.cursor.execute("INSERT INTO mdm_identities (global_user_id, full_name, primary_email) VALUES ('u1', 'Test Dev', ?)", (email,))
+        
+        # 2. Setup Commits
+        # Today: 2 commits (should be 1 active day)
+        self.cursor.execute("""
+            INSERT INTO commit_metrics (commit_id, author_email, committed_at, eloc_score, impact_score, churn_lines, raw_additions)
+            VALUES ('c1', ?, ?, 10.0, 15.0, 0, 100)
+        """, (email, today.strftime("%Y-%m-%d %H:%M:%S")))
+        self.cursor.execute("""
+            INSERT INTO commit_metrics (commit_id, author_email, committed_at, eloc_score, impact_score, churn_lines, raw_additions)
+            VALUES ('c2', ?, ?, 5.0, 5.0, 2, 50)
+        """, (email, today.strftime("%Y-%m-%d %H:%M:%S")))
+        
+        # Yesterday: 1 commit (should be another active day)
+        self.cursor.execute("""
+            INSERT INTO commit_metrics (commit_id, author_email, committed_at, eloc_score, impact_score, churn_lines, raw_additions)
+            VALUES ('c3', ?, ?, 20.0, 30.0, 0, 200)
+        """, (email, yesterday.strftime("%Y-%m-%d %H:%M:%S")))
+        
+        self.conn.commit()
+        
+        # Verify View
+        self.cursor.execute("SELECT active_days, total_impact, total_eloc, churn_rate_percent FROM view_gitprime_metrics WHERE primary_email = ?", (email,))
+        res = self.cursor.fetchone()
+        
+        print(f"GitPrime Result: {res}")
+        # res layout: (active_days, total_impact, total_eloc, churn_rate_percent)
+        
+        # Active Days should be 2 (Today and Yesterday)
+        self.assertEqual(res[0], 2, "Active Days calculation failed (should be unique days)")
+        
+        # Total Impact: 15 + 5 + 30 = 50
+        self.assertEqual(res[1], 50.0, "Total Impact calculation failed")
+        
+        # Churn Rate: (2 / (100+50+200)) * 100 = 2/350 * 100 = 0.57... -> 0.6
+        self.assertAlmostEqual(res[3], 0.6, delta=0.1, msg="Churn Rate calculation failed")
 
 if __name__ == '__main__':
     unittest.main()

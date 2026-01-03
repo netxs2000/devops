@@ -24,11 +24,10 @@ The system is built on four theoretical pillars:
 
 Standardizes "effort" by weighting code changes based on context, reducing the bias of raw LOC.
 
-| Metric | Definition | Logic / Formula |
-| :--- | :--- | :--- |
 | **ELOC Score** | The weighted coding volume. | `(Additions + Deletions) * FileWeight * ContextWeight` |
 | **Impact Score** | Measures value of work, rewarding work on legacy code. | `ELOC Score * LegacyFactor` (LegacyFactor = 1.5 if file age > 180 days) |
 | **Churn Lines** | Code rewritten shortly after being merged (Waste). | Lines modified within **21 days** of previous commit. |
+| **Active Days** | Coding focus and consistency. | Count of distinct days with at least one commit. |
 | **Sherpa Score** | Collaboration impact (Reviewer capability). | `ReviewCount * 5` points. |
 
 ### 2.2 Flow Framework (Value Stream)
@@ -85,7 +84,7 @@ graph LR
     end
     
     subgraph "Presentation Layer (Streamlit)"
-        V1 --> P0[0_Value_Leaderboard.py]
+        V1 --> P0[0_Gitprime.py]
         V2 --> P17[17_Value_Stream.py]
         V3 --> P2[2_Project_Health.py]
         V4 --> P15[15_Michael_Feathers_Code_Hotspots.py]
@@ -98,7 +97,7 @@ To ensure maintainability, Dashboard Pages are strictly mapped to underlying SQL
 
 | Python Dashboard Page | SQL Definition File (`devops_collector/sql/`) |
 | :--- | :--- |
-| `0_Value_Leaderboard.py` | `Value_Leaderboard.sql` |
+| `0_Gitprime.py` | `Gitprime.sql` |
 | `2_Project_Health.py` | `Project_Health.sql` |
 | `3_Compliance_Audit.py` | `Compliance_Audit.sql` |
 | `4_ABI_Analysis.py` | `ABI_Analysis.sql` |
