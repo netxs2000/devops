@@ -72,6 +72,32 @@ class User(Base, TimestampMixin, SCDMixin):
     requirements = relationship('Requirement', back_populates='author')
     managed_products_as_pm = relationship('Product', back_populates='product_manager')
     project_memberships = relationship('ProjectMember', back_populates='user')
+    
+    # ELOC Stats (Cached for leaderboard)
+    total_eloc = Column(Float, default=0.0)
+    eloc_rank = Column(Integer, default=0)
+
+class CommitMetrics(Base, TimestampMixin):
+    """Detailed metrics for a single commit (ELOC)."""
+    __tablename__ = 'commit_metrics'
+    
+    commit_id = Column(String(100), primary_key=True)
+    project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True) # Updated to string
+    author_email = Column(String(255), index=True)
+    committed_at = Column(DateTime(timezone=True))
+    
+    # Raw stats
+    raw_additions = Column(Integer, default=0)
+    raw_deletions = Column(Integer, default=0)
+    
+    # Advanced stats
+    eloc_score = Column(Float, default=0.0)
+    comment_lines = Column(Integer, default=0)
+    test_lines = Column(Integer, default=0)
+    
+    # Analysis metadata
+    is_merge = Column(Boolean, default=False)
+    refactor_ratio = Column(Float, default=0.0)
 
     @property
     def external_usernames(self) -> List[str]:

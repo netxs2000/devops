@@ -88,3 +88,6 @@ raw_data_staging/
 
 # Alembic
 alembic/versions/*.pyc
+
+# Coverage reports
+htmlcov/
