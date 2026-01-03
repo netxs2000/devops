@@ -9,17 +9,13 @@ services:
     volumes:
       - .:/app
       - ./persistence_data:/app/data
-    environment:
-      - STORAGE__DATA_DIR=/app/data
-      - DB_HOST=db
-      - RABBIT_HOST=mq
-      - DATABASE__URI=postgresql://postgres:devops123@db:5432/devops_db
-      - RABBITMQ__HOST=mq
-      - RABBITMQ__USER=guest
-      - RABBITMQ__PASSWORD=guest
+    env_file:
+      - .env
     depends_on:
-      - db
-      - mq
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
     command: uvicorn devops_portal.main:app --host 0.0.0.0 --port 8000
 
   # 2. 数据异步采集 Worker
@@ -30,14 +26,13 @@ services:
     volumes:
       - .:/app
       - ./persistence_data:/app/data
-    environment:
-      - STORAGE__DATA_DIR=/app/data
-      - DB_HOST=db
-      - RABBIT_HOST=mq
-      - DATABASE__URI=postgresql://postgres:devops123@db:5432/devops_db
+    env_file:
+      - .env
     depends_on:
-      - db
-      - mq
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
     command: python -m devops_collector.worker
 
   # 3. 任务调度器
@@ -45,26 +40,30 @@ services:
     build: .
     image: devops-platform:latest
     container_name: devops-scheduler
-    environment:
-      - DB_HOST=db
-      - RABBIT_HOST=mq
+    env_file:
+      - .env
     depends_on:
-      - db
-      - mq
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
     command: python -m devops_collector.scheduler
 
   # 4. PostgreSQL 数据库
   db:
     image: postgres:15-alpine
     container_name: devops-db
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=devops123
-      - POSTGRES_DB=devops_db
+    env_file:
+      - .env
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # 5. RabbitMQ 消息队列
   mq:
@@ -75,6 +74,11 @@ services:
       - "15672:15672" # 管理后台
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:

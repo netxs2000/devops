@@ -577,60 +577,73 @@
 2. **调度层**: `scheduler.py`，基于时间策略生成同步任务。
 3. **Worker 层**: `worker.py`，消费 MQ 消息，执行具体插件逻辑。
 4. **模型层**: `models/` 目录，定义星型数据库模式，确保数据一致性。
-5. **数据层**: SQL Views (位于 `sql/` 目录)，提供分析就绪的数据宽表与集市。
+5. **模型层**: `models/` 目录，定义星型数据库模式，确保数据一致性。
+6. **数据层**: SQL Views (位于 `sql/` 目录)，提供分析就绪的数据宽表与集市。
+7. **基础设施**: **Docker & Make**，实现了“代码即基础设施 (IaC)”的标准化交付，屏蔽环境差异。
 
 ---
 
 ## 📘 5. 操作手册 (Operational Manual)
 
-### 5.1 环境部署
+### 5.1 环境部署 (Deployment)
+
+本项目推荐使用 **Docker + Make** 进行标准化部署，无需手动安装 Python 环境。
+
+1. **准备配置文件**:
+
+    ```bash
+    cp .env.example .env
+    cp config.ini.example config.ini
+    # 编辑 .env 修改数据库密码 (可选)
+    # 编辑 config.ini 填入 GitLab/SonarQube/Jenkins 凭证 (必填)
+    ```
+
+2. **一键部署**:
+
+    ```bash
+    make deploy
+    ```
+
+    此命令将自动执行：
+    * 构建 Docker 镜像 (`docker-compose build`)
+    * 启动所有容器 (`docker-compose up -d`)
+    * 等待数据库健康检查通过
+    * 执行初始化脚本 (`scripts/init_*.py`)
+
+### 5.2 常用运维命令
+
+所有操作建议通过 `make` 命令在容器内执行，以确保环境一致性。
+
+* **查看日志**: `make logs`
+* **停止服务**: `make down`
+* **手动全量同步**: `make sync-all`
+* **进入容器 Shell**: `make shell` (用于调试)
+
+### 5.3 数据视图更新
+
+默认 `make deploy` 已包含初始数据加载。如果需要手动重新加载 SQL 视图：
 
 ```bash
-# 1. 安装依赖
-pip install -r requirements.txt
-
-# 2. 配置文件
-cp devops_collector/config.ini.example devops_collector/config.ini
-# 编辑 config.ini 填入 GitLab/SonarQube 的 URL 和 Token
+docker-compose exec -T db psql -U postgres -d devops_db -f /app/devops_collector/sql/PROJECT_OVERVIEW.sql
+# ...
 ```
 
-### 5.2 初始化系统与数据视图
+### 5.4 执行数据采集
 
-首次运行前，必须执行初始化脚本以建立表结构，并**部署分析视图**：
+系统分为 Scheduler (调度) 和 Worker (执行) 两部分，均已容器化运行。
+
+**手动触发一次全量同步**:
 
 ```bash
-# 1. 初始化数据库与组织架构
-python scripts/init_discovery.py
-
-# 2. 初始化财务科目、费率与合同示例 (New)
-python scripts/init_cost_codes.py
-python scripts/init_labor_rates.py
-python scripts/init_purchase_contracts.py
-python scripts/init_revenue_contracts.py
-
-# 2. 部署 SQL 分析视图 (需安装 psql 客户端)
-psql -d devops_db -f devops_collector/sql/PROJECT_OVERVIEW.sql
-psql -d devops_db -f devops_collector/sql/PMO_ANALYTICS.sql
-psql -d devops_db -f devops_collector/sql/HR_ANALYTICS.sql
-psql -d devops_db -f devops_collector/sql/TEAM_ANALYTICS.sql
+make sync-all
 ```
 
-### 5.3 执行数据采集
+此命令会在容器内依次运行调度器生成任务，并在 Worker 中处理这些任务。
 
-系统分为 Scheduler (调度) 和 Worker (执行) 两部分。
-
-**启动调度器 (Scheduler)**:
-定时扫描数据库，生成任务投递到 MQ。
+**查看后台服务状态**:
 
 ```bash
-python -m devops_collector.scheduler
-```
-
-**启动工作进程 (Worker)**:
-消费 MQ 任务执行实际采集。可启动多个 Worker 进程以并发处理。
-
-```bash
-python -m devops_collector.worker
+docker-compose ps
 ```
 
 ### 5.4 独立脚本工具

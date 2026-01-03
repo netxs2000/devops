@@ -55,79 +55,65 @@
 
 ### 1. 环境准备
 
-确保已安装 Python 3.9+ 和 PostgreSQL 数据库。
+确保已安装 **Docker** 和 **Docker Compose**。本项目实现了完全容器化部署，无需本地配置 Python 环境。
+
+### 2. 配置说明
+
+本项目包含两类配置文件：
+
+1. **基础设施配置 (`.env`)**: 用于 Docker 编排，配置数据库密码、端口等。
+2. **应用业务配置 (`config.ini`)**: 用于配置 GitLab/SonarQube/Jenkins 的连接凭证。
 
 ```bash
-# Clone 项目
-git clone <repository_url>
-cd devops_collector
+# 复制示例配置
+cp .env.example .env
+cp config.ini.example config.ini
 
-# 安装依赖
-pip install -r requirements.txt
+# 编辑配置文件 (必填)
+# 1. 修改 .env 中的 POSTGRES_PASSWORD (选填)
+# 2. 修改 config.ini 填入 GitLab/SonarQube/Jenkins 的 URL 和 Token
 ```
 
-### 2. 配置文件
+### 3. 一键部署 (Make Deploy)
 
-复制 `config.ini.example` 为 `config.ini` 并填写配置：
-
-```ini
-[database]
-url = postgresql://user:password@localhost:5432/devops_db
-
-[gitlab]
-url = https://gitlab.example.com
-token = glpat-xxxxxxxxxxxx
-
-[sonarqube]
-url = https://sonar.example.com
-token = squ_xxxxxxxxxxxx
-
-[jenkins]
-url = http://jenkins.example.com
-user = admin
-token = j_xxxxxxxxxxxx
-
-[common]
-org_name = MyCompany
-```
-
-### 3. 初始化系统
-
-运行初始化脚本，自动创建表结构并发现组织架构：
+使用 `make` 命令即可完成从构建、启动到初始化的全流程：
 
 ```bash
-# 1. 基础数据库与组织架构
-python scripts/init_discovery.py
-
-# 2. 财务科目与合同数据 (New)
-python scripts/init_cost_codes.py
-python scripts/init_labor_rates.py
-python scripts/init_purchase_contracts.py
-python scripts/init_revenue_contracts.py
+# 🚀 一键部署：构建镜像 -> 启动容器 -> 等待DB就绪 -> 初始化数据
+make deploy
 ```
 
-### 4. 部署分析视图 (关键步骤)
+部署完成后，服务将运行在后台：
 
-将内置的分析模型 (SQL Views) 部署到数据库：
+* **API 服务**: <http://localhost:8000>
+* **RabbitMQ 管理后台**: <http://localhost:15672> (用户/密码: guest/guest)
+
+### 4. 常用运维命令
+
+所有操作均封装在 `Makefile` 中，自动在容器内执行，确保环境一致性。
 
 ```bash
-# 需确保已安装 psql 或通过数据库客户端执行
-psql -d devops_db -f devops_collector/sql/PROJECT_OVERVIEW.sql
-psql -d devops_db -f devops_collector/sql/PMO_ANALYTICS.sql
-psql -d devops_db -f devops_collector/sql/HR_ANALYTICS.sql
-psql -d devops_db -f devops_collector/sql/TEAM_ANALYTICS.sql
+# 查看实时日志
+make logs
+
+# 运行测试用例
+make test
+
+# 手动触发全量同步
+make sync-all
+
+# 停止服务
+make down
 ```
 
-### 5. 数据采集
+### 5. 部署分析视图
 
-建议配置 Crontab 定时运行：
+初始化过程 (`make deploy`) 已自动包含基础数据初始化。如需更新 SQL 分析视图：
 
 ```bash
-# 启动调度器 (生成同步任务到 MQ)
-python -m devops_collector.scheduler
-
-# 启动 Worker 执行采集 (从 MQ 消费任务)
-python -m devops_collector.worker
+# (高级) 手动进入数据库容器执行 SQL
+docker-compose exec -T db psql -U postgres -d devops_db -f /app/devops_collector/sql/PROJECT_OVERVIEW.sql
+# ... 其他视图同理
 ```
 
 ## 📂 项目结构 (Project Structure)
