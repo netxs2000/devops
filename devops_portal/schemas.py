@@ -1,3 +1,4 @@
+"""TODO: Add module description."""
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -11,16 +12,15 @@ class TestStep(BaseModel):
 class TestCase(BaseModel):
     """测试用例核心模型"""
     model_config = ConfigDict(from_attributes=True)
-
-    id: int = Field(validation_alias="global_issue_id")
-    iid: int = Field(validation_alias="gitlab_issue_iid")
+    id: int = Field(validation_alias='global_issue_id')
+    iid: int = Field(validation_alias='gitlab_issue_iid')
     title: str
-    priority: Optional[str] = "P2"
-    test_type: Optional[str] = Field(default="Functional", validation_alias="issue_type")
+    priority: Optional[str] = 'P2'
+    test_type: Optional[str] = Field(default='Functional', validation_alias='issue_type')
     requirement_id: Optional[str] = None
     pre_conditions: List[str] = []
     steps: List[TestStep] = []
-    result: str = "pending"
+    result: str = 'pending'
     web_url: Optional[str] = None
     linked_bugs: List[Dict[str, str]] = []
 
@@ -30,7 +30,7 @@ class ExecutionRecord(BaseModel):
     result: str
     executed_at: datetime
     executor: str
-    executor_uid: Optional[str] = None # MDM global_user_id
+    executor_uid: Optional[str] = None
     comment: Optional[str] = None
     pipeline_id: Optional[int] = None
     environment: Optional[str] = None
@@ -49,7 +49,7 @@ class RequirementSummary(BaseModel):
     iid: int
     title: str
     state: str
-    review_state: str = "draft"
+    review_state: str = 'draft'
 
 class RequirementDetail(BaseModel):
     """需求详细信息"""
@@ -58,7 +58,7 @@ class RequirementDetail(BaseModel):
     title: str
     description: Optional[str]
     state: str
-    review_state: str = "draft"
+    review_state: str = 'draft'
     test_cases: List[TestCase] = []
 
 class RequirementCoverage(BaseModel):
@@ -111,9 +111,9 @@ class ProvinceBenchmarking(BaseModel):
 class ExecutionReport(BaseModel):
     """执行结果上报模型"""
     result: Optional[str] = None
-    executor: str = "TestHub System"
+    executor: str = 'TestHub System'
     comment: Optional[str] = None
-    environment: Optional[str] = "Default"
+    environment: Optional[str] = 'Default'
 
 class ServiceDeskBugSubmit(BaseModel):
     """Service Desk 缺陷提交模型"""
@@ -121,8 +121,8 @@ class ServiceDeskBugSubmit(BaseModel):
     requester_email: Optional[str] = None
     title: str
     severity: str
-    priority: str = "P2"
-    province: str = "nationwide"
+    priority: str = 'P2'
+    province: str = 'nationwide'
     environment: str
     steps_to_repro: str
     actual_result: str
@@ -135,9 +135,9 @@ class ServiceDeskRequirementSubmit(BaseModel):
     requester_email: Optional[str] = None
     title: str
     description: str
-    priority: str = "P2"
-    req_type: str = "feature"
-    province: str = "nationwide"
+    priority: str = 'P2'
+    req_type: str = 'feature'
+    province: str = 'nationwide'
     expected_delivery: Optional[str] = None
     attachments: Optional[List[str]] = []
 
@@ -155,7 +155,7 @@ class BugCreate(BaseModel):
     """缺陷创建模型"""
     title: str
     severity: str
-    priority: str = "P2"
+    priority: str = 'P2'
     category: str
     source: str
     province: str
@@ -169,10 +169,10 @@ class BugCreate(BaseModel):
 class RequirementCreate(BaseModel):
     """需求创建模型"""
     title: str
-    description: str = ""
-    priority: str = "P2"
-    req_type: str = "feature"
-    province: str = "nationwide"
+    description: str = ''
+    priority: str = 'P2'
+    req_type: str = 'feature'
+    province: str = 'nationwide'
 
 class BugDetail(BaseModel):
     """缺陷详情模型"""
@@ -219,7 +219,6 @@ class JenkinsBuildSummary(BaseModel):
 
 class AIResponse(BaseModel):
     """统一的 AI 接口返回模型"""
-    status: str = "success"
+    status: str = 'success'
     data: Optional[Dict[str, Any]] = None
     message: Optional[str] = None
-

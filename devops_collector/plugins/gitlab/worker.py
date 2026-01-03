@@ -15,7 +15,6 @@ from devops_collector.plugins.gitlab.mixins.issue_mixin import IssueMixin
 from devops_collector.plugins.gitlab.mixins.mr_mixin import MergeRequestMixin
 from devops_collector.plugins.gitlab.mixins.pipeline_mixin import PipelineMixin
 from devops_collector.plugins.gitlab.mixins.asset_mixin import AssetMixin
-
 logger = logging.getLogger(__name__)
 
 class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueMixin, MergeRequestMixin, PipelineMixin, AssetMixin):
@@ -23,6 +22,20 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
     SCHEMA_VERSION = '1.1'
 
     def __init__(self, session: Session, client: GitLabClient, enable_deep_analysis: bool=False):
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+    session: TODO
+    client: TODO
+    enable_deep_analysis: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         super().__init__(session, client)
         self.enable_deep_analysis = enable_deep_analysis
         self.identity_matcher = IdentityMatcher(session)
@@ -33,41 +46,27 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
         project_id = task.get('project_id')
         if not project_id:
             raise ValueError('No project_id provided in task')
-
         project = self._sync_project(project_id)
         if not project:
-            return {"status": "skipped", "reason": "project_not_found"}
-
+            return {'status': 'skipped', 'reason': 'project_not_found'}
         since = project.last_synced_at.isoformat() if project.last_synced_at else None
-        
-        # 批量同步各维度数据
-        stats = {
-            "commits": self._sync_commits(project, since),
-            "issues": self._sync_issues(project, since),
-            "mrs": self._sync_merge_requests(project, since)
-        }
-        
+        stats = {'commits': self._sync_commits(project, since), 'issues': self._sync_issues(project, since), 'mrs': self._sync_merge_requests(project, since)}
         self._sync_pipelines(project)
         self._sync_deployments(project)
         self._sync_tags(project)
         self._sync_branches(project)
         self._sync_milestones(project)
         self._sync_packages(project)
-        
         if self.enable_deep_analysis:
             try:
                 self._sync_wiki_logs(project)
                 self._sync_dependencies(project)
             except Exception as e:
                 logger.warning(f'Deep analysis failed for project {project_id}: {e}')
-        
         self._match_identities(project)
-        
-        # 记录同步日志 (由 run_sync 统一 commit 状态)
         log_msg = f"Synced: {stats['commits']} commits, {stats['issues']} issues, {stats['mrs']} MRs"
         sync_log = SyncLog(project_id=project_id, status='SUCCESS', message=log_msg)
         self.session.add(sync_log)
-        
         return stats
 
     def _sync_project(self, project_id: int) -> Optional[Project]:
@@ -75,9 +74,7 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
         p_data = self.client.get_project(project_id)
         if not p_data:
             return None
-            
         self.save_to_staging(source='gitlab', entity_type='project', external_id=project_id, payload=p_data)
-        
         project = self.session.query(Project).filter_by(id=project_id).first()
         if not project:
             namespace_id = p_data.get('namespace', {}).get('id')
@@ -85,8 +82,6 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
                 self._ensure_group(namespace_id)
             project = Project(id=project_id)
             self.session.add(project)
-
-        # 映射字段 (简化版)
         project.name = p_data.get('name')
         project.path_with_namespace = p_data.get('path_with_namespace')
         project.web_url = p_data.get('web_url')
@@ -101,10 +96,7 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
         if not group:
             try:
                 g_data = self.client.get_group(group_id)
-                group = GitLabGroup(
-                    id=g_data['id'], name=g_data['name'], 
-                    path=g_data['path'], full_path=g_data['full_path']
-                )
+                group = GitLabGroup(id=g_data['id'], name=g_data['name'], path=g_data['path'], full_path=g_data['full_path'])
                 self.session.add(group)
             except Exception as e:
                 logger.warning(f'Failed to sync group {group_id}: {e}')
@@ -117,5 +109,4 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
             user_id = self.identity_matcher.match(commit)
             if user_id:
                 commit.gitlab_user_id = user_id
-
 PluginRegistry.register_worker('gitlab', GitLabWorker)

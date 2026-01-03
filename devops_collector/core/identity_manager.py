@@ -8,16 +8,13 @@ import uuid
 from typing import Optional
 from sqlalchemy.orm import Session
 from devops_collector.models.base_models import User, IdentityMapping
-
 logger = logging.getLogger(__name__)
 
 class IdentityManager:
     """身份管理中心，提供跨系统的用户识别与映射能力。"""
 
     @staticmethod
-    def get_or_create_user(session: Session, source: str, external_id: str, 
-                         email: Optional[str]=None, name: Optional[str]=None, 
-                         employee_id: Optional[str]=None) -> User:
+    def get_or_create_user(session: Session, source: str, external_id: str, email: Optional[str]=None, name: Optional[str]=None, employee_id: Optional[str]=None) -> User:
         """根据外部账号解析并获取全局用户实体。
         
         策略:
@@ -39,61 +36,24 @@ class IdentityManager:
             User: 关联后的当前有效用户对象。
         """
         email_lower = email.lower() if email else None
-        
-        # 1. 检查映射是否存在
-        mapping = session.query(IdentityMapping).filter_by(
-            source_system=source, 
-            external_user_id=str(external_id)
-        ).first()
-        
+        mapping = session.query(IdentityMapping).filter_by(source_system=source, external_user_id=str(external_id)).first()
         if mapping:
-            current_user = session.query(User).filter_by(
-                global_user_id=mapping.global_user_id, 
-                is_current=True
-            ).first()
+            current_user = session.query(User).filter_by(global_user_id=mapping.global_user_id, is_current=True).first()
             if current_user:
                 return current_user
-
-        # 2. 尝试基于 Email 匹配
         user = None
         if email_lower:
-            user = session.query(User).filter_by(
-                primary_email=email_lower, 
-                is_current=True
-            ).first()
-        
-        # 3. 尝试基于工号匹配
+            user = session.query(User).filter_by(primary_email=email_lower, is_current=True).first()
         if not user and employee_id:
-            user = session.query(User).filter_by(
-                employee_id=employee_id, 
-                is_current=True
-            ).first()
-
-        # 4. 创建新用户
+            user = session.query(User).filter_by(employee_id=employee_id, is_current=True).first()
         if not user:
             new_uid = uuid.uuid4()
-            user = User(
-                global_user_id=new_uid,
-                full_name=name or (email_lower.split('@')[0] if email_lower else f"{source}_{external_id}"),
-                primary_email=email_lower,
-                employee_id=employee_id,
-                sync_version=1,
-                is_current=True
-            )
+            user = User(global_user_id=new_uid, full_name=name or (email_lower.split('@')[0] if email_lower else f'{source}_{external_id}'), primary_email=email_lower, employee_id=employee_id, sync_version=1, is_current=True)
             session.add(user)
             session.flush()
             logger.info(f'Created new user: {user.full_name} via {source}')
-
-        # 5. 补全映射关系
         if not mapping:
-            mapping = IdentityMapping(
-                global_user_id=user.global_user_id,
-                source_system=source,
-                external_user_id=str(external_id),
-                external_username=name,
-                external_email=email_lower
-            )
+            mapping = IdentityMapping(global_user_id=user.global_user_id, source_system=source, external_user_id=str(external_id), external_username=name, external_email=email_lower)
             session.add(mapping)
             session.flush()
-
         return user
