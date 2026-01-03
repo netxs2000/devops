@@ -45,7 +45,7 @@ class Organization(Base, TimestampMixin, SCDMixin):
     manager = relationship("User", foreign_keys=[manager_user_id], back_populates="managed_organizations")
     
     users = relationship("User", foreign_keys="User.department_id", primaryjoin="and_(User.department_id==Organization.org_id, User.is_current==True)", back_populates="department")
-    products = relationship("Product", back_populates="organization")
+    products = relationship("Product", back_populates="owner_team")
 
     def __repr__(self) -> str:
         return f"<Organization(org_id='{self.org_id}', name='{self.org_name}', version={self.sync_version})>"
@@ -113,16 +113,69 @@ class IdentityMapping(Base, TimestampMixin):
     user = relationship("User", back_populates="identities")
 
 class Product(Base, TimestampMixin):
-    """产品定义表。"""
-    __tablename__ = 'products'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(200), nullable=False)
-    level = Column(String(50))
-    organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
+    """产品主数据表 (mdm_product)。
+    
+    在主数据管理 (MDM) 中，产品表字段是标准化产品数据的核心组成部分。
+    旨在确保跨系统 (如电商平台、库存管理、营销系统) 的一致性。
+    """
+    __tablename__ = 'mdm_product'
+
+    # 1. 核心标识
+    product_id = Column(String(100), primary_key=True, comment="主键, 唯一, 唯一标识 (如 SOFT-DATAHUB-001)")
+    product_code = Column(String(25), nullable=False, index=True, comment="软件代码")
+    product_name = Column(String(255), nullable=False, comment="软件标准名称")
+    
+    # 2. 描述与分类
+    product_description = Column(Text, nullable=False, comment="产品特性用途")
+    category = Column(String(100), comment="引用分类表，关联产品分类")
+    
+    # 3. 技术属性
+    version_schema = Column(String(50), nullable=False, comment="允许部署的版本范围或版本号")
+    specification = Column(JSON, comment="键值对形式存储 {软件名称, 版本, 最小内存}")
+    runtime_env = Column(JSON, comment="允许运行的目标环境 (Array)")
+    checksum = Column(String(255), comment="发布包的哈希值")
+    
+    # 4. 生命周期与运维
+    lifecycle_status = Column(String(50), default='Active', comment="生命周期状态: Active, End-of-Life")
+    repo_url = Column(String(255), comment="源代码仓库地址")
+    artifact_path = Column(String(255), comment="产物库路径")
+    
+    # 5. 归属与人员 (保留 product_manager_id)
+    owner_team_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment="负责该产品部门的组织ID")
     product_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    raw_data = Column(JSONB)
-    organization = relationship("Organization", back_populates="products")
+    
+    # Relationships
+    owner_team = relationship("Organization", back_populates="products")
     product_manager = relationship("User", back_populates="managed_products_as_pm")
+    project_relations = relationship("ProjectProductRelation", back_populates="product")
+
+    def __repr__(self) -> str:
+        return f"<Product(code='{self.product_code}', name='{self.product_name}')>"
+
+class ProjectProductRelation(Base, TimestampMixin):
+    """项目与产品的多对多关联关系表。
+    
+    用于支持从产品维度统计项目的投入产出（ROI）。
+    支持一个项目服务于多个产品（如中台项目），并配置分摊权重。
+    """
+    __tablename__ = 'mdm_rel_project_product'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=False, index=True)
+    product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=False, index=True)
+    
+    # 业务属性
+    relation_type = Column(String(50), default='PRIMARY', comment="关系类型: PRIMARY(主产品)/SHARED(共享)/DEPENDENCY(依赖)")
+    allocation_ratio = Column(Float, default=1.0, comment="成本/统计分摊权重 (0.0-1.0)")
+    
+    # 联合唯一约束，防止重复绑定
+    __table_args__ = (
+        UniqueConstraint('project_id', 'product_id', name='uq_project_product'),
+    )
+
+    # Relationships
+    project = relationship("ProjectMaster", back_populates="product_relations")
+    product = relationship("Product", back_populates="project_relations")
 
 class Service(Base, TimestampMixin):
     """服务目录。"""
@@ -221,6 +274,7 @@ class ProjectMaster(Base, TimestampMixin, SCDMixin):
     project_manager = relationship("User", foreign_keys=[pm_user_id])
     source_system = relationship("SystemRegistry")
     gitlab_repos = relationship("Project", back_populates="mdm_project")
+    product_relations = relationship("ProjectProductRelation", back_populates="project")
 
     def __repr__(self) -> str:
         return f"<ProjectMaster(project_id='{self.project_id}', name='{self.project_name}')>"
