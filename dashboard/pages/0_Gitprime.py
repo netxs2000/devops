@@ -12,8 +12,8 @@ from devops_collector.config import settings
 
 # Page Configuration
 st.set_page_config(
-    page_title="Developer Value Leaderboard",
-    page_icon="CODE",
+    page_title="GitPrime Engineering Insights",
+    page_icon="🌊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -62,7 +62,6 @@ def load_data():
     engine = get_db_engine()
     
     # Query trying to join all metrics including Collaboration (Reviews)
-    # Note: Requires DailyDevStats to be populated and linked via ID or compatible join
     query_full = """
     SELECT 
         u.full_name,
@@ -75,7 +74,8 @@ def load_data():
         COALESCE(SUM(cm.test_lines), 0) as test_lines,
         COALESCE(AVG(cm.refactor_ratio), 0) as refactor_ratio,
         COALESCE(SUM(dds.review_count), 0) as review_count,
-        count(distinct cm.commit_id) as commits_90d
+        count(distinct cm.commit_id) as commits_90d,
+        count(distinct date(cm.committed_at)) as active_days
     FROM mdm_identities u
     LEFT JOIN commit_metrics cm ON u.primary_email = cm.author_email 
         AND cm.committed_at >= NOW() - INTERVAL '90 days'
@@ -83,10 +83,10 @@ def load_data():
         AND dds.date >= CURRENT_DATE - INTERVAL '90 days'
     GROUP BY u.full_name, u.department_id, u.primary_email, u.id
     HAVING SUM(cm.eloc_score) > 0 OR SUM(dds.review_count) > 0
-    ORDER BY eloc_score DESC;
+    ORDER BY impact_score DESC;
     """
     
-    # Fallback query if DailyDevStats join fails (e.g. schema mismatch)
+    # Fallback query
     query_basic = """
     SELECT 
         u.full_name,
@@ -99,20 +99,20 @@ def load_data():
         COALESCE(SUM(cm.test_lines), 0) as test_lines,
         COALESCE(AVG(cm.refactor_ratio), 0) as refactor_ratio,
         0 as review_count,
-        count(distinct cm.commit_id) as commits_90d
+        count(distinct cm.commit_id) as commits_90d,
+        count(distinct date(cm.committed_at)) as active_days
     FROM mdm_identities u
     LEFT JOIN commit_metrics cm ON u.primary_email = cm.author_email 
         AND cm.committed_at >= NOW() - INTERVAL '90 days'
     GROUP BY u.full_name, u.department_id, u.primary_email
     HAVING SUM(cm.eloc_score) > 0
-    ORDER BY eloc_score DESC;
+    ORDER BY impact_score DESC;
     """
 
     try:
         with engine.connect() as conn:
              df = pd.read_sql(text(query_full), conn)
     except Exception as e:
-        # Fallback if daily_dev_stats join fails
         with engine.connect() as conn:
             df = pd.read_sql(text(query_basic), conn)
             
@@ -158,11 +158,11 @@ def process_metrics(df):
     return df
 
 # Main UI
-st.title("Developer Value Contribution Leaderboard")
+st.title("🌊 GitPrime Engineering Insights")
 st.markdown("""
 <div style='background-color:rgba(255, 215, 0, 0.1); padding: 15px; border-radius: 10px; border-left: 5px solid #FFD700;'>
-    <b>Code Equivalent (ELOC) 2.0</b><br>
-    Now featuring <b>Impact Analysis</b> (Legacy Factor) and <b>Quality Metrics</b> (Churn Rate).
+    <b>GitPrime Core Metrics</b><br>
+    Focusing on <b>Impact</b> (Legacy Value), <b>Active Days</b> (Coding Focus), and <b>Efficiency</b> (Churn Analysis).
 </div>
 """, unsafe_allow_html=True)
 st.button("Refresh Data", on_click=st.cache_resource.clear)
@@ -184,7 +184,7 @@ else:
     with top_row[1]:
         st.metric("Avg Churn Rate", f"{avg_churn:.1f}%", help="Percentage of code rewritten shortly after merge")
     with top_row[2]:
-        st.metric("Active Contributors", len(df))
+        st.metric("Avg Active Days", f"{df['active_days'].mean():.1f}", help="Average number of coding days per engineer (90d)")
     with top_row[3]:
         st.metric("Top Sheriff", df.sort_values('sherpa_score', ascending=False).iloc[0]['full_name'] if not df.empty else "N/A")
 
@@ -215,12 +215,13 @@ else:
             st.plotly_chart(fig_val, use_container_width=True)
             
         with c2:
-            st.subheader("High Impact Players")
+            st.subheader("Leaderboard (by Impact)")
             st.dataframe(
-                df[['full_name', 'eloc_score', 'impact_score', 'level']].sort_values('impact_score', ascending=False),
+                df[['rank', 'full_name', 'impact_score', 'active_days', 'level']].sort_values('impact_score', ascending=False),
                 column_config={
-                    "eloc_score": st.column_config.ProgressColumn("ELOC", format="%d", max_value=df['eloc_score'].max()),
-                    "impact_score": st.column_config.NumberColumn("Impact", format="%d")
+                    "rank": "Rank",
+                    "impact_score": st.column_config.NumberColumn("Impact", format="%d"),
+                    "active_days": st.column_config.NumberColumn("📅 Active Days", format="%d")
                 },
                 hide_index=True,
                 use_container_width=True
