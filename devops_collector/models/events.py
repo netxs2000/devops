@@ -5,10 +5,12 @@
 """
 from sqlalchemy import event, or_, func, Integer
 from devops_collector.models.base_models import IdentityMapping, User
-from devops_collector.plugins.gitlab.models import Commit, Issue
 
 def auto_link_user_activities(mapper, connection, target):
     """当新增身份映射时，自动关联该用户在各插件中的历史活动记录。"""
+    # Local import to avoid circular dependency
+    from devops_collector.plugins.gitlab.models import Commit, Issue
+    
     if target.source_system == 'gitlab':
         user = connection.execute(User.__table__.select().where(User.__table__.c.global_user_id == target.global_user_id)).first()
         if not user:
