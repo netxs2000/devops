@@ -129,7 +129,7 @@
 #### 2.2.2 插件工厂与实例化 (Plugin Factory) (New)
 
 * **零耦合分发**: 主 Worker 进程通过 `PluginRegistry` 动态创建 Client 和 Worker 实例，彻底消除 `if-elif` 硬编码。
-* **统一配置路由**: 任务根据 `source` 类型自动关联 `config.ini` 中的对应配置项。
+* **统一配置路由**: 任务根据 `source` 类型自动关联 `Settings` 对象中的对应配置项。
 
 #### 2.2.3 断点续传与增量同步 (Resumable Sync)
 
@@ -593,9 +593,9 @@
 
     ```bash
     cp .env.example .env
-    cp config.ini.example config.ini
-    # 编辑 .env 修改数据库密码 (可选)
-    # 编辑 config.ini 填入 GitLab/SonarQube/Jenkins 凭证 (必填)
+    # 编辑 .env 文件，填入：
+    # - 数据库密码 (POSTGRES_PASSWORD)
+    # - GitLab/SonarQube/Jenkins 凭证 (如 GITLAB__TOKEN)
     ```
 
 2. **一键部署**:
