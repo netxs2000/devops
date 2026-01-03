@@ -23,24 +23,13 @@ def gitlab_assets(context: AssetExecutionContext, db: DatabaseResource, config: 
     engine = db.get_engine()
     from sqlalchemy.orm import sessionmaker
     Session = sessionmaker(bind=engine)
-    
-    # 实例化客户端 (从配置获取)
-    client = GitLabClient(
-        url=settings.gitlab.url, 
-        token=settings.gitlab.token
-    )
-    
+    client = GitLabClient(url=settings.gitlab.url, token=settings.gitlab.token)
     with Session() as session:
         worker = GitLabWorker(session, client)
-        
-        # 如果未指定 ID，则同步所有已知项目
         ids = config.project_ids or [p.id for p in session.query(GitLabProject).all()]
-        
         for pid in ids:
-            context.log.info(f"Syncing GitLab project: {pid}")
-            worker.run_sync({"source": "gitlab", "project_id": pid}, 
-                           model_cls=GitLabProject, pk_value=pid)
-            
+            context.log.info(f'Syncing GitLab project: {pid}')
+            worker.run_sync({'source': 'gitlab', 'project_id': pid}, model_cls=GitLabProject, pk_value=pid)
     return 'completed'
 
 @asset(group_name='raw_data', compute_kind='python')
@@ -49,20 +38,11 @@ def sonarqube_assets(context: AssetExecutionContext, db: DatabaseResource, confi
     engine = db.get_engine()
     from sqlalchemy.orm import sessionmaker
     Session = sessionmaker(bind=engine)
-    
-    client = SonarQubeClient(
-        url=settings.sonarqube.url, 
-        token=settings.sonarqube.token
-    )
-    
+    client = SonarQubeClient(url=settings.sonarqube.url, token=settings.sonarqube.token)
     with Session() as session:
         worker = SonarQubeWorker(session, client)
-        
         keys = config.project_keys or [p.key for p in session.query(SonarProject).all()]
-        
         for key in keys:
-            context.log.info(f"Syncing SonarQube project: {key}")
-            worker.run_sync({"source": "sonarqube", "project_key": key}, 
-                           model_cls=SonarProject, pk_field='key', pk_value=key)
-            
+            context.log.info(f'Syncing SonarQube project: {key}')
+            worker.run_sync({'source': 'sonarqube', 'project_key': key}, model_cls=SonarProject, pk_field='key', pk_value=key)
     return 'completed'

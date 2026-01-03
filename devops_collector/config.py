@@ -13,8 +13,6 @@ import os
 from typing import List, Optional
 from pydantic import Field, HttpUrl, RedisDsn, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-import configparser
-CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), 'config.ini')
 
 class GitLabSettings(BaseSettings):
     """GitLab connection settings.
@@ -246,33 +244,7 @@ class Settings(BaseSettings):
     storage: StorageSettings = StorageSettings()
     sla: SLASettings = SLASettings()
     model_config = SettingsConfigDict(env_file='.env', env_nested_delimiter='__', extra='ignore')
-
-    @classmethod
-    def load_from_ini(cls, path: str):
-        """Loads configuration from a legacy config.ini file.
-
-        Compatible with the `configparser` format.
-
-        Args:
-            path (str): The absolute path to the config.ini file.
-
-        Returns:
-            Settings: A populated Settings instance.
-        """
-        cp = configparser.ConfigParser()
-        cp.read(path, encoding='utf-8')
-        data = {}
-        for section in cp.sections():
-            data[section] = dict(cp.items(section))
-        return cls.model_validate(data)
-try:
-    if os.path.exists(CONFIG_FILE_PATH):
-        settings = Settings.load_from_ini(CONFIG_FILE_PATH)
-    else:
-        settings = Settings()
-except Exception as e:
-    print(f'⚠️ Warning: Failed to load config.ini, using defaults. Error: {e}')
-    settings = Settings()
+settings = Settings()
 
 class Config:
     """向下兼容层，映射旧的全局变量名。

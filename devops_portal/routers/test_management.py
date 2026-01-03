@@ -260,8 +260,7 @@ async def update_requirement_review_state(project_id: int, iid: int, review_stat
         raise HTTPException(status_code=400, detail='Invalid review state')
     if review_state in ['approved', 'rejected']:
         user_role_codes = [r.code for r in current_user.roles]
-        # 假设拥有 SYSTEM_ADMIN 或 PROJECT_MAINTAINER 角色可以审批
-        if not any(role in user_role_codes for role in ['SYSTEM_ADMIN', 'PROJECT_MAINTAINER']):
+        if not any((role in user_role_codes for role in ['SYSTEM_ADMIN', 'PROJECT_MAINTAINER'])):
             raise HTTPException(status_code=403, detail='Need Maintainer role')
     try:
         client = GitLabClient()

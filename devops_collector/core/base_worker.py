@@ -31,8 +31,7 @@ class BaseWorker(ABC):
         """子类需实现此核心同步逻辑。"""
         pass
 
-    def run_sync(self, task: dict, model_cls: Optional[Any] = None, 
-                 pk_field: str = 'id', pk_value: Optional[Any] = None) -> Any:
+    def run_sync(self, task: dict, model_cls: Optional[Any]=None, pk_field: str='id', pk_value: Optional[Any]=None) -> Any:
         """通用同步包装器，处理事务、日志和异常。
         
         该方法封装了标准的“开始-处理-成功提交-失败回退”流程。
@@ -47,20 +46,14 @@ class BaseWorker(ABC):
             process_task 的返回值
         """
         source = task.get('source', 'unknown')
-        self.log_progress(f"Starting {source} sync task", 0, 1)
-        
+        self.log_progress(f'Starting {source} sync task', 0, 1)
         try:
-            # 尝试更新状态为同步中
             if model_cls and pk_value:
                 instance = self.session.query(model_cls).filter_by(**{pk_field: pk_value}).first()
                 if instance and hasattr(instance, 'sync_status'):
                     instance.sync_status = 'SYNCING'
                     self.session.commit()
-
-            # 执行核心逻辑
             result = self.process_task(task)
-            
-            # 更新状态为成功
             if model_cls and pk_value:
                 instance = self.session.query(model_cls).filter_by(**{pk_field: pk_value}).first()
                 if instance:
@@ -68,16 +61,12 @@ class BaseWorker(ABC):
                         instance.sync_status = 'SUCCESS'
                     if hasattr(instance, 'last_synced_at'):
                         instance.last_synced_at = datetime.now(timezone.utc)
-            
             self.session.commit()
-            self.log_success(f"{source} sync completed")
+            self.log_success(f'{source} sync completed')
             return result
-            
         except Exception as e:
             self.session.rollback()
-            self.log_failure(f"{source} sync failed", e)
-            
-            # 记录失败状态
+            self.log_failure(f'{source} sync failed', e)
             if model_cls and pk_value:
                 try:
                     instance = self.session.query(model_cls).filter_by(**{pk_field: pk_value}).first()
@@ -89,15 +78,54 @@ class BaseWorker(ABC):
             raise e
 
     def log_success(self, message: str) -> None:
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+    message: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         logger.info(f'[SUCCESS] {message}')
 
     def log_failure(self, message: str, error: Optional[Exception]=None) -> None:
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+    message: TODO
+    error: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         if error:
             logger.error(f'[FAILURE] {message}: {error}')
         else:
             logger.error(f'[FAILURE] {message}')
 
     def log_progress(self, message: str, current: int, total: int) -> None:
+        '''"""TODO: Add description.
+
+Args:
+    self: TODO
+    message: TODO
+    current: TODO
+    total: TODO
+
+Returns:
+    TODO
+
+Raises:
+    TODO
+"""'''
         percent = current / total * 100 if total > 0 else 0
         logger.info(f'[PROGRESS] {message}: {current}/{total} ({percent:.1f}%)')
 
@@ -105,33 +133,13 @@ class BaseWorker(ABC):
         """将原始数据保存到 Staging 层，消除重复的 Upsert 逻辑。"""
         from devops_collector.models.base_models import RawDataStaging
         from sqlalchemy.dialects.postgresql import insert
-        
-        data = {
-            'source': source,
-            'entity_type': entity_type,
-            'external_id': str(external_id),
-            'payload': payload,
-            'schema_version': schema_version,
-            'collected_at': datetime.now(timezone.utc)
-        }
-        
+        data = {'source': source, 'entity_type': entity_type, 'external_id': str(external_id), 'payload': payload, 'schema_version': schema_version, 'collected_at': datetime.now(timezone.utc)}
         try:
-            # 尝试使用高效的 PG ON CONFLICT
             stmt = insert(RawDataStaging).values(**data)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=['source', 'entity_type', 'external_id'],
-                set_={
-                    'payload': data['payload'],
-                    'schema_version': data['schema_version'],
-                    'collected_at': data['collected_at']
-                }
-            )
+            stmt = stmt.on_conflict_do_update(index_elements=['source', 'entity_type', 'external_id'], set_={'payload': data['payload'], 'schema_version': data['schema_version'], 'collected_at': data['collected_at']})
             self.session.execute(stmt)
         except Exception:
-            # 备选方案: 标准 SQLAlchemy 查询更新
-            existing = self.session.query(RawDataStaging).filter_by(
-                source=source, entity_type=entity_type, external_id=str(external_id)
-            ).first()
+            existing = self.session.query(RawDataStaging).filter_by(source=source, entity_type=entity_type, external_id=str(external_id)).first()
             if existing:
                 for k, v in data.items():
                     setattr(existing, k, v)
