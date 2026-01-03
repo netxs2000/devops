@@ -11,7 +11,6 @@ import os
 import sys
 import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from devops_collector.config import get_config
 from devops_collector.models.base_models import Base, CostCode
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -51,8 +50,8 @@ def init_cost_codes():
 
     负责读取配置、创建表结构并执行递归导入。
     """
-    config = get_config()
-    db_uri = config.get('database', 'uri')
+    from devops_collector.config import settings
+    db_uri = settings.database.uri
     engine = create_engine(db_uri)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)

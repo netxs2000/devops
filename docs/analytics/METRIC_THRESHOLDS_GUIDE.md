@@ -122,16 +122,15 @@
 
 ## 3. 指标预警自动修正机制
 
-系统支持在 `config.ini` 中通过 `[metric_thresholds]` 动态覆盖上述默认值，实现分部门、分阶段的个性化管理。
+系统支持在 `.env` 中通过环境变量动态覆盖上述默认值，实现分部门、分阶段的个性化管理。
 
-```ini
-[metric_thresholds]
-; 默认处于阶段 II (提效加速期)
-current_stage = 2
+```env
+# 默认处于阶段 II (提效加速期)
+METRICS__CURRENT_STAGE=2
 
-; 允许覆盖特定部门的阈值
-dept_ai_ssi_red_line = 70
-dept_infra_isi_green_line = 40
+# 允许覆盖特定部门的阈值
+METRICS__THRESHOLDS__DEPT_AI_SSI_RED_LINE=70
+METRICS__THRESHOLDS__DEPT_INFRA_ISI_GREEN_LINE=40
 ```
 
 ---

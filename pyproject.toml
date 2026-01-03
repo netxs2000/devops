@@ -61,7 +61,7 @@ devops-collector = "devops_collector.cli:main"
 packages = ["devops_collector"]
 
 [tool.setuptools.package-data]
-devops_collector = ["sql/*.sql", "config.ini.example"]
+devops_collector = ["sql/*.sql"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

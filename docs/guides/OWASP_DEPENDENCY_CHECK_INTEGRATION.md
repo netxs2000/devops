@@ -441,22 +441,21 @@ class DependencyCheckWorker(BaseWorker):
 
 ## 3. 配置文件 (`config.ini`)
 
-```ini
-[dependency_check]
+```env
 # OWASP Dependency-Check CLI 路径
-cli_path = /usr/local/bin/dependency-check.sh
+DEPENDENCY__CLI_PATH=/usr/local/bin/dependency-check.sh
 
 # 扫描超时时间（秒）
-timeout = 600
+DEPENDENCY__TIMEOUT=600
 
 # 是否启用自动扫描
-auto_scan_enabled = true
+DEPENDENCY__AUTO_SCAN_ENABLED=true
 
 # 扫描频率（天）
-scan_frequency_days = 7
+DEPENDENCY__SCAN_FREQUENCY_DAYS=7
 
 # 是否扫描传递依赖
-scan_transitive = true
+DEPENDENCY__SCAN_TRANSITIVE=true
 ```
 
 ---
@@ -556,7 +555,7 @@ export PATH=$PATH:/path/to/dependency-check/bin
 from devops_collector.plugins.dependency_check import DependencyCheckWorker
 
 # 初始化 Worker
-worker = DependencyCheckWorker(config)
+worker = DependencyCheckWorker()
 
 # 扫描项目
 scan_id = worker.run_scan(
