@@ -92,12 +92,38 @@ class CommitMetrics(Base, TimestampMixin):
     
     # Advanced stats
     eloc_score = Column(Float, default=0.0)
+    impact_score = Column(Float, default=0.0)  # GitPrime Style: Impact
+    churn_lines = Column(Integer, default=0)   # GitPrime Style: Churn
+    
     comment_lines = Column(Integer, default=0)
     test_lines = Column(Integer, default=0)
+    file_count = Column(Integer, default=0)    # Impact factor
     
     # Analysis metadata
     is_merge = Column(Boolean, default=False)
+    is_legacy_refactor = Column(Boolean, default=False) # Impact factor
     refactor_ratio = Column(Float, default=0.0)
+
+class DailyDevStats(Base, TimestampMixin):
+    """Daily snapshot of developer behavior (Flow & Check-in)."""
+    __tablename__ = 'daily_dev_stats'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('mdm_identities.id'), index=True)
+    date = Column(Date, index=True)
+    
+    # Flow Metrics
+    first_commit_time = Column(DateTime)
+    last_commit_time = Column(DateTime)
+    commit_count = Column(Integer, default=0)
+    
+    # Value Metrics
+    total_impact = Column(Float, default=0.0)
+    total_churn = Column(Integer, default=0)
+    
+    # Sherpa Metrics (Review)
+    review_count = Column(Integer, default=0)
+    review_comments = Column(Integer, default=0)
 
     @property
     def external_usernames(self) -> List[str]:

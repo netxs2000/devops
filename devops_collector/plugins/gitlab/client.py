@@ -625,4 +625,32 @@ class GitLabClient(BaseClient):
             data['due_date'] = due_date
         if description:
             data['description'] = description
-        return self._post(f'projects/{project_id}/milestones', data=data).json()
+    def get_file_last_commit(self, project_id: int, file_path: str, ref: str) -> Optional[dict]:
+        """获取指定文件在特定 ref 之前的最后一次提交信息。
+
+        用于判断文件变更时间间隔，支持 Churn (短期重写) 和 Legacy (老代码) 判定。
+
+        Args:
+            project_id (int): GitLab 项目 ID。
+            file_path (str): 文件路径。
+            ref (str): 当前提交的 SHA 或分支名 (将作为 until 参数或排除当前提交)。
+
+        Returns:
+            Optional[dict]: 最后一次提交的详情 (包含 committed_date)，若无历史则返回 None。
+        """
+        # 获取该文件的提交历史，取第2条 (跳过当前 ref 本身，或者基于业务逻辑调整)
+        # 注意: GitLab API 并没有直接的 "last modified before SHA" 参数
+        # 这里的策略是获取 ref 所在的历史列表，然后看该文件最近的变更
+        params = {
+            'path': file_path,
+            'ref_name': ref, # 使用 ref_name 限定分支/提交点
+            'per_page': 2    # 取最近两条: 第1条通常是当前提交(如果是基于HEAD)，第2条是上次
+        }
+        try:
+            commits = self._get(f'projects/{project_id}/repository/commits', params=params).json()
+            if len(commits) >= 2:
+                return commits[1] # 返回上一次提交
+            # 如果只有1条记录，说明是该文件首次创建，没有"上一次"
+            return None
+        except Exception:
+            return None

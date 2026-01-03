@@ -23,12 +23,18 @@ class ELOCResult(BaseModel):
     raw_additions: int = 0
     raw_deletions: int = 0
     eloc_score: float = 0.0
+    impact_score: float = 0.0 # New: GitPrime Impact
+    churn_lines: int = 0      # New: GitPrime Churn
+    
     comment_lines: int = 0
     test_lines: int = 0
     complexity_score: float = 0.0
+    
+    file_count: int = 1
+    is_legacy_refactor: bool = False
 
 class ELOCAnalyzer:
-    """Core analyzer for calculating Code Equivalent scores."""
+    """Core analyzer for calculating Code Equivalent & GitPrime-Style scores."""
     
     def __init__(self, options: ELOCOptions = ELOCOptions()):
         self.options = options
@@ -56,12 +62,20 @@ class ELOCAnalyzer:
             re.IGNORECASE
         )
 
-    def analyze_commit_diff(self, file_path: str, diff_lines: List[str]) -> ELOCResult:
+    def analyze_commit_diff(
+        self, 
+        file_path: str, 
+        diff_lines: List[str], 
+        file_last_modified_date: Optional[str] = None, # New: For Legacy detection
+        is_churn_commit: bool = False # New: Passed from upstream logic
+    ) -> ELOCResult:
         """Analyzes a list of diff lines for a specific file.
         
         Args:
             file_path: Relative path of the file.
             diff_lines: List of changes lines (starting with + or -).
+            file_last_modified_date: Timestamp of previous modification (for Legacy Impact).
+            is_churn_commit: External flag if this commit modifies very recent code (for Churn).
             
         Returns:
             ELOCResult: Calculated scores.
@@ -74,6 +88,27 @@ class ELOCAnalyzer:
             
         file_weight = self._get_file_weight(file_path)
         is_test_file = self._is_test_file(file_path)
+        
+        # New: Legacy Detection (> 6 months / 180 days approx)
+        # New: Legacy Detection (> 6 months / 180 days approx)
+        if file_last_modified_date:
+            try:
+                from dateutil import parser
+                from datetime import datetime
+                import pytz
+
+                # Parse and ensure UTC
+                last_mod = parser.isoparse(str(file_last_modified_date))
+                if not last_mod.tzinfo:
+                   last_mod = last_mod.replace(tzinfo=pytz.UTC)
+                
+                now = datetime.now(pytz.UTC)
+                days_diff = (now - last_mod).days
+                
+                if days_diff > 180:
+                    result.is_legacy_refactor = True
+            except Exception:
+                pass # Fail safe if date format is weird 
         
         # Test code bonus
         if is_test_file:
@@ -93,6 +128,8 @@ class ELOCAnalyzer:
             if line.startswith('+'):
                 result.raw_additions += 1
                 behavior_weight = 1.0
+                if is_churn_commit:
+                    result.churn_lines += 1
             elif line.startswith('-'):
                 result.raw_deletions += 1
                 behavior_weight = 0.8 # Standard deletion
@@ -117,6 +154,12 @@ class ELOCAnalyzer:
             # ELOC = Line * FileWeight * LineWeight * BehaviorWeight * TestBonus
             score = 1.0 * file_weight * line_weight * behavior_weight * test_multiplier
             result.eloc_score += score
+            
+        # 4. Calculate Impact Score (GitPrime Style)
+        # Impact = ELOC * LegacyFactor (1.5 if is_legacy)
+        legacy_factor = 1.5 if result.is_legacy_refactor else 1.0
+        # Note: Breadth factor (file_count) is applied at the commit aggregation level, not file level
+        result.impact_score = result.eloc_score * legacy_factor
             
         return result
 
