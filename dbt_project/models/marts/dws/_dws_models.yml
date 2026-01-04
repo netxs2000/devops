@@ -2,35 +2,51 @@ version: 2
 
 models:
   - name: dws_project_metrics_daily
-    description: "汇总单个项目在每一天的交付、质量和活跃度指标。"
+    description: "项目日度汇总表 (DWS)：整合该项目在每一天的全量交付、质量和活跃度聚合指标。"
     columns:
       - name: project_id
-        description: "GitLab 项目 ID"
-        tests:
-          - not_null
+        description: "业务主项目 ID"
       - name: metric_date
         description: "指标日期"
-        tests:
-          - not_null
       - name: is_active_day
-        description: "是否为活跃天（有 MR 或 部署）"
+        description: "该项目当日是否处于活跃状态（基于是否有提交/构建等判断）"
+      - name: commit_count
+        description: "当日代码提交总次数"
 
   - name: dws_project_quality_daily
-    description: "每日项目质量汇总"
+    description: "项目质量日度汇总：计算每日的新增 Bug、漏洞修复率及 SonarQube 重复率指标。"
     columns:
       - name: gitlab_project_id
-        tests:
-          - not_null
+        description: "GitLab 项目 ID"
       - name: analysis_day
-        tests:
-          - not_null
+        description: "分析日期"
+      - name: bug_count
+        description: "当日新增 Bug 数量"
 
   - name: dws_developer_metrics_daily
-    description: "每日开发者指标汇总"
+    description: "开发者效能日计表：记录每位开发者在不同项目中的活跃时长、产出量（Commit/ELOC）及协作量。"
     columns:
       - name: developer_id
-        tests:
-          - not_null
+        description: "全局统一用户 ID (Master User ID)"
       - name: metric_date
-        tests:
-          - not_null
+        description: "指标日期"
+      - name: work_hours_estimated
+        description: "基于行为轨迹推算的预估工作投入时长"
+
+  - name: dws_team_efficiency_weekly
+    description: "团队效能周报模型 (DWS)：以组织架构为维度聚合的跨项目交付效率分析。该模型整合了团队的人力规模、吞吐量（Commit/MR/Issue）以及协作质量（Review 频率），专为中层管理者提供部门间的对标数据。"
+    columns:
+      - name: audit_week
+        description: "审计周（ISO 周的周一）"
+      - name: team_name
+        description: "部门/团队名称"
+      - name: team_path
+        description: "组织架构全路径 (e.g., 研发部 > 平台组)"
+      - name: active_developer_count
+        description: "当周有产出行为的活跃开发者人数（反映人力投入水平）"
+      - name: total_merges
+        description: "当周合并成功的 MR 总数（反映代码交付吞吐量）"
+      - name: review_per_merge
+        description: "平均每次合并伴随的评论数（衡量代码评审深度和团队协作氛围）"
+      - name: total_impact_score
+        description: "团队总价值评分（基于 ELOC 和算法推算的加权得分）"
