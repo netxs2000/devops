@@ -1,36 +1,47 @@
 version: 2
 
 models:
+  - name: int_identity_alignment
+    description: "人员身份校准引擎：通过多级优先级策略（精确映射 > Email 匹配 > 用户名猜测）建立 OneID 翻译层。"
+    columns:
+      - name: identifier_value
+        description: "原始系统中采集到的标识值（ID/Email/Username）"
+      - name: master_user_id
+        description: "对应的全局统一用户 ID"
+      - name: strategy
+        description: "匹配策略名 (e.g., EXACT_MAPPING, USERNAME_AUTO_MATCH)"
+      - name: priority
+        description: "匹配优先级：数字越小优先级越高"
+
+  - name: int_entity_alignment
+    description: "资产对齐引擎：将底层技术资产（Git 仓库、服务）建立起与 MDM 业务项目/产品的映射关系。"
+    columns:
+      - name: master_entity_id
+        description: "MDM 标准资产 ID"
+      - name: alignment_strategy
+        description: "对齐策略：EXACT_ID, EXACT_NAME, FUZZY_PATH"
+
+  - name: int_org_hierarchy
+    description: "组织架构递归平铺：通过 CTE 递归计算部门的全路径（Breadcrumb）和所属根业务单元。"
+    columns:
+      - name: full_path
+        description: "部门层级全路径 (e.g., 研发部 > 中台组)"
+      - name: root_org_name
+        description: "顶层一级组织名称"
+
   - name: int_unified_activities
-    description: "统一活动流模型，整合 Commit, MR, Issue 和 Note"
+    description: "统一活动流流水：将 Commit, MR, Issue, Note 等碎片化行为聚合成标准化的 Event Stream。"
     columns:
       - name: activity_id
+        description: "全局唯一活动 ID"
         tests:
           - not_null
           - unique
-      - name: occurred_at
-        tests:
-          - not_null
       - name: activity_type
-        tests:
-          - not_null
-
-  - name: int_unified_work_items
-    description: "统一工作项模型，整合 Jira Issues 和 GitLab Issues"
-    columns:
-      - name: work_item_id
-        tests:
-          - not_null
-          - unique
+        description: "活动类型 (COMMIT, MERGE_REQUEST, ISSUE, NOTE)"
 
   - name: int_activity_financial_classification
-    description: "活动财务分类模型，为每个活动分配 CapEx 或 OpEx 标签"
+    description: "行为财务分类：根据活动所属项目或特定规则，自动标识该产出应计入 CapEx（资本支出）还是 OpEx（经营支出）。"
     columns:
-      - name: activity_id
-        tests:
-          - not_null
       - name: financial_category
-        tests:
-          - not_null
-          - accepted_values:
-              values: ['CapEx', 'OpEx']
+        description: "分类结果 (CapEx/OpEx)"

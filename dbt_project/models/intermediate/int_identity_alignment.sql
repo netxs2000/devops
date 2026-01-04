@@ -14,7 +14,7 @@
 with 
 
 identities as (
-    select * from {{ ref('stg_mdm_identities') }}
+    select * from {{ ref('int_golden_identity') }}
 ),
 
 mappings as (
@@ -66,12 +66,12 @@ fragment_pool as (
     select 
         'ANY' as source_system,
         'EMAIL' as identifier_type,
-        email as identifier_value,
-        user_id as master_user_id,
+        primary_email as identifier_value,
+        global_user_id as master_user_id,
         'EMAIL_FALLBACK' as strategy,
         20 as priority
     from identities
-    where email is not null
+    where primary_email is not null
 
     union all
 
@@ -80,12 +80,12 @@ fragment_pool as (
     select 
         'ANY' as source_system,
         'USERNAME' as identifier_type,
-        split_part(email, '@', 1) as identifier_value,
-        user_id as master_user_id,
+        split_part(primary_email, '@', 1) as identifier_value,
+        global_user_id as master_user_id,
         'USERNAME_AUTO_MATCH' as strategy,
         30 as priority -- 优先级低于精确映射和直接 Email 匹配
     from identities
-    where email like '%@%'
+    where primary_email like '%@%'
 )
 
 select * from fragment_pool
