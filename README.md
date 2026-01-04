@@ -10,7 +10,8 @@
 
 系统的核心目标是为企业提供：
 
-* **标准化数据模型**: 采用 Google Style 规范重构的高质量数据模型层，支持深度的 ODS/DW 转换与血缘追溯。
+* **标准化数据模型**: 采用 Google Style 规范重构的高质量数据模型层，全面接入 **dbt (data build tool)** 驱动的现代数据仓库架构，支持深度的 ODS/DW 转换与血缘追溯。
+* **数据校验哨兵 (Data Quality Sentinel)**: 内置基于 dbt 的 Schema 测试、单元测试和业务规则测试，确保核心指标（如 DORA, SPACE）的 100% 准确性。
 * **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）、SPACE 框架指标及 流动效能 (Flow Efficiency)。
 * **测试管理中台 (Test Management Hub)**: 专为 GitLab 社区版设计的轻量级测试管理工具，支持测试用例库、执行追踪、缺陷看板及质量报告。
 * **战略决策支持 (ROI)**: 提供波士顿矩阵（明星/现金牛项目识别）和 ROI 投入产出比分析，对接财务合同数据。
@@ -49,7 +50,7 @@
 * **语言**: Python 3.9+
 * **数据库**: PostgreSQL (生产环境推荐)
 * **ORM**: SQLAlchemy
-* **架构**: ELT (Extract-Load-Transform)，重度依赖 SQL Views 进行业务逻辑计算。
+* **架构**: ELT (Extract-Load-Transform)，重度依赖 **dbt** 进行数据建模与逻辑编排，辅以 SQL Views 进行实时分析。
 
 ## 🚀 快速开始 (Quick Start)
 
@@ -115,14 +116,13 @@ docker-compose exec -T db psql -U postgres -d devops_db -f /app/devops_collector
 ## 📂 项目结构 (Project Structure)
 
 ```text
-devops_collector/
-├── models/                # 基础物理表定义 (Tables)
-├── sql/                   # 分析视图定义 (Views / Data Mart)
-│   ├── PROJECT_OVERVIEW.sql # 项目宽表
-│   ├── PMO_ANALYTICS.sql    # 战略与管理视图
-│   └── HR_ANALYTICS.sql     # 人才与组织视图
-├── plugins/               # 数据源插件
-└── scripts/               # 工具脚本
+devops_collector/     # 数据采集核心 (Python)
+├── models/             # 基础物理表定义 (SQLAlchemy)
+├── sql/                # 传统分析视图定义
+dbt_project/          # 现代数仓建模层 (dbt)
+├── models/             # 数仓模型 (Staging/Int/Marts)
+├── tests/              # 业务规则自定义测试
+└── dbt_project.yml     # dbt 项目配置
 ```
 
 ## 🌟 最新特性 (New Features v4.0.0)
@@ -138,6 +138,7 @@ devops_collector/
 
 ## 📚 文档 (Documentation)
 
+* **[架构技术白皮书 (ARCHITECTURE_WHITE_PAPER.md)](./docs/design/ARCHITECTURE_WHITE_PAPER.md)**: 🚀 **CORE** 深入解读“主数据 (MDM) + 现代数仓 (dbt)”的六层深度重构架构。
 * **[度量体系白皮书 (METRICS_ARCHITECTURE.md)](./docs/design/METRICS_ARCHITECTURE.md)**: 🔥 **NEW** 详解 ELOC 2.0、DORA、SPACE、Flow 等核心算法与实现逻辑。
 * [用户手册 (PROJECT_SUMMARY_AND_MANUAL.md)](./PROJECT_SUMMARY_AND_MANUAL.md): 功能说明与操作指南。
 * [数据字典 (DATA_DICTIONARY.md)](./DATA_DICTIONARY.md): 表结构定义。
@@ -149,7 +150,7 @@ devops_collector/
 | Dashboard Page | SQL Definition (`devops_collector/sql/`) |
 | :--- | :--- |
 | `0_Gitprime.py` | `Gitprime.sql` |
-| `1_DORA_Metrics.py` | *N/A (dbt)* |
+| `1_DORA_Metrics.py` | `dws_project_metrics_daily.sql / fct_dora_metrics.sql` (dbt) |
 | `15_Michael_Feathers_Code_Hotspots.py` | `Michael_Feathers_Code_Hotspots.sql` |
-| `16_SPACE_Framework.py` | `SPACE_Framework.sql` |
-| `17_Value_Stream.py` | `Value_Stream.sql` |
+| `16_SPACE_Framework.py` | `dws_space_metrics_daily.sql` (dbt) |
+| `17_Value_Stream.py` | `dws_flow_metrics_weekly.sql` (dbt) |

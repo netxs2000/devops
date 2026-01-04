@@ -4,11 +4,62 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from devops_collector.auth.router import get_db
-from devops_collector.models.base_models import Organization, User, ProjectMaster
+from devops_collector.models.base_models import Organization, User, ProjectMaster, IdentityMapping
 from devops_collector.plugins.gitlab.models import Project
 from devops_portal.dependencies import get_current_user
+from devops_portal.schemas import IdentityMappingCreate, IdentityMappingView
 from pydantic import BaseModel
 router = APIRouter(prefix='/admin', tags=['administration'])
+
+@router.get('/users', response_model=List[dict])
+async def list_users(db: Session=Depends(get_db)):
+    """获取所有全局用户列表。"""
+    users = db.query(User).filter(User.is_current == True).all()
+    return [{'user_id': str(u.global_user_id), 'full_name': u.full_name, 'email': u.primary_email} for u in users]
+
+@router.get('/identity-mappings', response_model=List[IdentityMappingView])
+async def list_identity_mappings(db: Session=Depends(get_db)):
+    """获取所有外部身份映射。"""
+    mappings = db.query(IdentityMapping).all()
+    results = []
+    for m in mappings:
+        view = IdentityMappingView.from_orm(m)
+        view.user_name = m.user.full_name if m.user else "Unknown"
+        results.append(view)
+    return results
+
+@router.post('/identity-mappings')
+async def create_identity_mapping(payload: IdentityMappingCreate, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
+    """创建新的外部身份映射。"""
+    user_role_codes = [r.code for r in current_user.roles]
+    if 'SYSTEM_ADMIN' not in user_role_codes:
+        raise HTTPException(status_code=403, detail='Admin only')
+    
+    new_mapping = IdentityMapping(
+        global_user_id=payload.global_user_id,
+        source_system=payload.source_system,
+        external_user_id=payload.external_user_id,
+        external_username=payload.external_username,
+        external_email=payload.external_email
+    )
+    db.add(new_mapping)
+    db.commit()
+    return {'status': 'success', 'id': new_mapping.id}
+
+@router.delete('/identity-mappings/{mapping_id}')
+async def delete_identity_mapping(mapping_id: int, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
+    """删除指定的身份映射。"""
+    user_role_codes = [r.code for r in current_user.roles]
+    if 'SYSTEM_ADMIN' not in user_role_codes:
+        raise HTTPException(status_code=403, detail='Admin only')
+    
+    mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
+    if not mapping:
+        raise HTTPException(status_code=404, detail='Mapping not found')
+    
+    db.delete(mapping)
+    db.commit()
+    return {'status': 'success'}
 
 class MDMProjectCreate(BaseModel):
     '''"""TODO: Add class description."""'''

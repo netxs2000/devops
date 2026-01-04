@@ -3,7 +3,22 @@ import streamlit as st
 from utils import set_page_config, run_query
 set_page_config()
 st.title('🚀 DevOps 智能决策指挥中心')
-st.markdown('\n<div style="background-color: #1e2130; padding: 20px; border-radius: 10px; border-left: 5px solid #00d4ff; margin-bottom: 25px;">\n    <strong>欢迎使用 DevOps Intelligence Dashboard。</strong><br>\n    本系统整合了 GitLab, Jira, SonarQube 的研发现据，通过 dbt 深度挖掘处理，为您提供实时的效能看板、健康评估与风险预警。\n</div>\n', unsafe_allow_html=True)
+st.markdown("""
+<div style="background-color: #1e2130; padding: 25px; border-radius: 15px; border-left: 8px solid #00d4ff; margin-bottom: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">
+    <h3 style="margin-top:0; color:#00d4ff;">研发效能指挥舰桥 (Management Bridge)</h3>
+    <p style="color:#eee; font-size:1.1rem;">
+        基于 <strong>dbt v3.0</strong> 架构重构，全站数据已实现 MDM OneID 对齐。
+    </p>
+    <div style="margin-top:15px;">
+        <p style="font-size:0.9rem; color:#aaa;">旗舰视图已就绪：深度融合 DORA, SPACE 与 财务投入产出比。</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+if st.button('🔥 进入战略指挥中心 (Executive Cockpit)', use_container_width=True, type="primary"):
+    st.switch_page('pages/19_Strategic_Executive_Cockpit.py')
+
+st.divider()
 col1, col2, col3, col4 = st.columns(4)
 try:
     project_stats = run_query('SELECT count(*) as total FROM mdm_projects')
@@ -32,42 +47,55 @@ try:
 except Exception as e:
     st.error(f'数据加载失败，请检查数据库连接或 dbt 模型是否已生成。错误: {e}')
 st.divider()
-st.subheader('🎯 核心能力矩阵')
-m1, m2, m3, m4 = st.columns(4)
-with m1:
-    st.info('📊 **DORA 看板**')
-    if st.button('查看 DORA', key='dora'):
-        st.switch_page('pages/1_DORA_Metrics.py')
-with m2:
-    st.success('🏥 **项目健康度**')
-    if st.button('查看健康度', key='health'):
-        st.switch_page('pages/2_Project_Health.py')
-with m3:
-    st.warning('⚠️ **合规审计**')
-    if st.button('查看合规报告', key='compliance'):
-        st.switch_page('pages/3_Compliance_Audit.py')
-with m4:
-    st.error('📉 **架构脆性(ABI)**')
-    if st.button('查看架构分析', key='abi'):
-        st.switch_page('pages/4_ABI_Analysis.py')
-st.markdown('<br>', unsafe_allow_html=True)
-m5, m6, m7, m8 = st.columns(4)
-with m5:
-    st.markdown('👤 **开发者画像**')
-    if st.button('查看人才 DNA', key='profile'):
-        st.switch_page('pages/5_User_Profile.py')
-with m6:
-    st.markdown('💰 **研发资本化**')
-    if st.button('审计审计核算', key='capex'):
-        st.switch_page('pages/6_Capitalization_Audit.py')
-with m7:
-    st.markdown('🕵️ **影子 IT 发现**')
-    if st.button('查看资产风险', key='shadow'):
-        st.switch_page('pages/7_Shadow_IT.py')
-with m8:
-    st.markdown('🎯 **人才雷达**')
-    if st.button('识别明日之星', key='talent'):
-        st.switch_page('pages/8_Talent_Radar.py')
+st.subheader('🎯 核心能力矩阵 (Capability Matrix)')
+
+# Category: Strategic & Executive
+st.markdown("##### 🏛️ 战略与治理 (Strategy & Governance)")
+g1, g2, g3, g4 = st.columns(4)
+with g1:
+    if st.button('🏁 战略指挥中心', key='btn_cockpit', use_container_width=True): st.switch_page('pages/19_Strategic_Executive_Cockpit.py')
+with g2:
+    if st.button('💰 研发资本化', key='btn_capex', use_container_width=True): st.switch_page('pages/6_Capitalization_Audit.py')
+with g3:
+    if st.button('⚠️ 合规审计', key='btn_compliance', use_container_width=True): st.switch_page('pages/3_Compliance_Audit.py')
+with g4:
+    if st.button('📋 元数据治理', key='btn_meta', use_container_width=True): st.switch_page('pages/14_Metadata_Governance.py')
+
+# Category: Delivery & Productivity
+st.markdown("##### 🚀 交付与活力 (Delivery & Productivity)")
+p1, p2, p3, p4 = st.columns(4)
+with p1:
+    if st.button('📊 DORA 看板', key='btn_dora', use_container_width=True): st.switch_page('pages/1_DORA_Metrics.py')
+with p2:
+    if st.button('🌌 SPACE 框架', key='btn_space', use_container_width=True): st.switch_page('pages/16_SPACE_Framework.py')
+with p3:
+    if st.button('🌊 价值流分析', key='btn_vsm', use_container_width=True): st.switch_page('pages/17_Value_Stream.py')
+with p4:
+    if st.button('💎 GitPrime 指导', key='btn_gitprime', use_container_width=True): st.switch_page('pages/0_Gitprime.py')
+
+# Category: Quality & Engineering
+st.markdown("##### 🛡️ 质量与工程 (Quality & Engineering)")
+q1, q2, q3, q4 = st.columns(4)
+with q1:
+    if st.button('🏥 项目健康度', key='btn_health', use_container_width=True): st.switch_page('pages/2_Project_Health.py')
+with q2:
+    if st.button('📉 架构脆性', key='btn_abi', use_container_width=True): st.switch_page('pages/4_ABI_Analysis.py')
+with q3:
+    if st.button('🔥 代码热点图', key='btn_hotspots', use_container_width=True): st.switch_page('pages/15_Michael_Feathers_Code_Hotspots.py')
+with q4:
+    if st.button('🛡️ 指标护卫队', key='btn_guard', use_container_width=True): st.switch_page('pages/9_Metrics_Guard.py')
+
+# Category: People & Talent
+st.markdown("##### 👤 人才与组织 (People & Talent)")
+t1, t2, t3, t4 = st.columns(4)
+with t1:
+    if st.button('👤 开发者 DNA', key='btn_profile', use_container_width=True): st.switch_page('pages/5_User_Profile.py')
+with t2:
+    if st.button('🎯 人才雷达', key='btn_talent', use_container_width=True): st.switch_page('pages/8_Talent_Radar.py')
+with t3:
+    if st.button('🕵️ 影子 IT', key='btn_shadow', use_container_width=True): st.switch_page('pages/7_Shadow_IT.py')
+with t4:
+    if st.button('🧵 活动流追踪', key='btn_activity', use_container_width=True): st.switch_page('pages/10_Unified_Activities.py')
 st.divider()
 st.markdown('🔗 [跳转至 Dagster 控制台](http://localhost:3000)')
 st.sidebar.markdown('---')

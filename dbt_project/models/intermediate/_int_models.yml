@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: int_unified_activities
+    description: "统一活动流模型，整合 Commit, MR, Issue 和 Note"
+    columns:
+      - name: activity_id
+        tests:
+          - not_null
+          - unique
+      - name: occurred_at
+        tests:
+          - not_null
+      - name: activity_type
+        tests:
+          - not_null
+
+  - name: int_unified_work_items
+    description: "统一工作项模型，整合 Jira Issues 和 GitLab Issues"
+    columns:
+      - name: work_item_id
+        tests:
+          - not_null
+          - unique
+
+  - name: int_activity_financial_classification
+    description: "活动财务分类模型，为每个活动分配 CapEx 或 OpEx 标签"
+    columns:
+      - name: activity_id
+        tests:
+          - not_null
+      - name: financial_category
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['CapEx', 'OpEx']

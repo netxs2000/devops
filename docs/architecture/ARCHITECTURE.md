@@ -1,7 +1,7 @@
 # 系统架构设计文档 (System Architecture Design)
 
-**版本**: 3.9.0
-**日期**: 2026-01-02
+**版本**: 4.0.0 (Refactored)
+**日期**: 2026-01-04
 
 ## 1. 架构概览 (Architecture Overview)
 
@@ -9,14 +9,13 @@ DevOps Data Collector 已由传统的 ETL 演进为基于 **Modern Data Stack (M
 
 系统的核心流转逻辑：
 
-1. **编排层 (Orchestration Layer) 🌟**: 由 **Dagster** 统一管理任务调度。通过软件定义资产 (SDA) 替代传统的脚本调度，实现任务间的血缘依赖隔离。
-2. **采集层 (Collection Layer)**: 插件化适配器 (`BaseWorker`)。在 Dagster 资产节点的驱动下，对接外部 API 执行 **Extract** 动作。
-3. **暂存层 (Staging Layer)**: 原始数据近实时落盘至 `raw_data_staging` (ODS 层)，确保原始响应的可追溯性与可重放性。
-4. **存储层 (Storage Layer)**: 构建于 PostgreSQL 之上的事实表 (Fact Tables)，存放经过清洗的结构化数据。
-5. **转换层 (Transformation Layer) 🌟**: 利用 **dbt (data build tool)**。将复杂的业务逻辑（如 DORA、ROI、资本化审计）从 Python 代码下沉至 SQL 层，实现模型化版本控制。
-6. **治理层 (Governance & Metadata) 🌟**: 集成 **DataHub** 和 **Great Expectations**。提供自动化全链路血缘视图与数据质量实时监控。
-7. **服务层 (Service Layer)**: 数据集市 (Data Mart)，通过 dbt 生成的物化视图 (Materialized Views) 提供高性能 API 和 BI 接入点。
-8. **交互层 (Interaction Layer)**:
+1. **编排层 (Orchestration Layer)**: 由 **Dagster** 统一管理任务调度，通过 SDA (Software Defined Assets) 实现数据血缘驱动的自动化更新。
+2. **采集层 (Collection Layer)**: 插件化适配器 (`BaseWorker`)，执行外部 API 数据抽取。
+3. **主数据层 (MDM Layer) 🌟**: **架构核心**。管理身份 (Identity Resolution)、组织、项目拓扑等核心元数据，作为全系统的单一事实源 (SSOT)。
+4. **转换层 (Transformation Layer) 🌟**: 利用 **dbt** 构建五层数仓模型 (ODS -> MDM -> INT -> DWS -> MART)，实现逻辑封装。
+5. **治理层 (Governance & Metadata) 🌟**: 集成 **DataHub** 和 **Great Expectations**。提供自动化全链路血缘视图与数据质量实时监控。
+6. **服务层 (Service Layer)**: 数据集市 (Data Mart)，通过 dbt 生成的五层物化模型提供高性能 API 和 BI 接入点。
+7. **交互层 (Interaction Layer)**:
     * **Interactive Portal**: FastAPI + Vanilla JS 高性能管理门户。
     * **Advanced Analytics**: Streamlit 驱动的深度业务透视看板。
 
@@ -24,38 +23,38 @@ DevOps Data Collector 已由传统的 ETL 演进为基于 **Modern Data Stack (M
 graph TD
     subgraph Orchestration [编排与管控]
         DS[Dagster SDA]
-        GE[Great Expectations<br>Data Quality]
+        GE[Great Expectations]
     end
 
     subgraph Data Sources
-        API[GitLab/Jira/Jenkins/Sonar/ZenTao API]
+        API[GitLab/Jira/Sonar/Jenkins]
     end
 
-    subgraph Collection & Storage [采集与事实存储]
-        PW[Plugin Worker]
-        STG[(Raw Data ODS)]
-        DB[(PostgreSQL Fact Tables)]
+    subgraph Processing [存储与建模]
+        ODS[(ODS - Raw Staging)]
+        MDM[(MDM - Master Data Center)]
+        DBT[[dbt Transformation Engine]]
+        DWH[(DWH - Layered Tables)]
     end
 
-    subgraph Transformation & Governance [转换与治理]
-        DBT[dbt Models]
+    subgraph Governance [元数据与治理]
         DH[DataHub Catalog]
     end
 
     subgraph Presentation [应用与展示]
-        PORTAL[FastAPI Dashboard]
+        PORTAL[Fastapi Portal]
         BI[Streamlit Analytics]
     end
 
-    DS -->|Schedules| PW
-    API -->|Extract| PW
-    PW -->|JSON| STG
-    STG -->|Validation| DB
-    DB -->|Lineage| DBT
-    DBT -->|Materialized| DH
-    GE -.->|Audit| DB
-    DBT -->|Analytics| PORTAL
-    DBT -->|Metrics| BI
+    API -->|Extract| ODS
+    ODS -->|Refine| DBT
+    MDM -->|SSOT Support| DBT
+    DS -->|Schedules| DBT
+    DBT -->|Materialize| DWH
+    DWH -->|Lineage| DH
+    GE -.->|Data Quality| DWH
+    DWH -->|Serve| PORTAL
+    DWH -->|Serve| BI
 ```
 
 ## 2. 核心设计理念 (Core Concepts)
@@ -78,8 +77,8 @@ graph TD
 
 采用 "ELT" 思维，将所有的指标计算逻辑（Metrics Definitions）从应用层移至 **dbt**。
 
-* **模型层次化**: 分为 `stg` (清理), `int` (关联), `marts` (业务聚合) 三层，确保逻辑复用。
-* **文档化与测试**: 每个 dbt 模型都自带 Schema 校验与业务描述，自动同步至 DataHub。
+* **模型层次化**: 严格遵循 `stg` (清理), `mdm` (对齐), `int` (引擎化), `dws` (汇总), `marts` (事实) 五层架构。
+* **文档化与测试**: 引入 dbt Unit Tests 验证业务逻辑，dbt Schema Tests 验证主键与关系完整性。
 
 ### 2.4 数据质量守卫 (Data Quality Guard)
 

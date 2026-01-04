@@ -222,3 +222,17 @@ class AIResponse(BaseModel):
     status: str = 'success'
     data: Optional[Dict[str, Any]] = None
     message: Optional[str] = None
+
+class IdentityMappingCreate(BaseModel):
+    """创建外部身份映射的请求模型"""
+    global_user_id: str
+    source_system: str
+    external_user_id: str
+    external_username: Optional[str] = None
+    external_email: Optional[str] = None
+
+class IdentityMappingView(IdentityMappingCreate):
+    """外部身份映射视图模型"""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    user_name: Optional[str] = None

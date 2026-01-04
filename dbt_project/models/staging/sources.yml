@@ -10,6 +10,13 @@ sources:
       # MDM Core Tables
       - name: mdm_identities
         description: "User identities (Single Source of Truth for Users)"
+        columns:
+          - name: master_user_id
+            tests:
+              - not_null
+              - unique
+      - name: mdm_identity_mappings
+        description: "Mapping between global identities and external system accounts"
       - name: mdm_resource_costs
         description: "Resource cost data (Hourly rates, etc.)"
       - name: mdm_organizations
@@ -28,17 +35,39 @@ sources:
       # GitLab Raw Tables
       - name: gitlab_projects
         description: "Projects synced from GitLab"
+        columns:
+          - name: id
+            tests:
+              - not_null
+              - unique
       - name: gitlab_merge_requests
         description: "MRs synced from GitLab"
+        columns:
+          - name: id
+            tests:
+              - not_null
+              - unique
       - name: gitlab_commits
         description: "Commits synced from GitLab"
+        columns:
+          - name: id
+            tests:
+              - not_null
+              - unique
       - name: gitlab_issues
         description: "Issues synced from GitLab"
+        columns:
+          - name: id
+            tests:
+              - not_null
+              - unique
       - name: gitlab_notes
       - name: gitlab_pipelines
       - name: gitlab_deployments
       - name: gitlab_packages
       - name: gitlab_dependencies
+      - name: commit_file_stats
+        description: "File-level stats for each commit"
 
       # Jira Specific Tables
       - name: jira_projects

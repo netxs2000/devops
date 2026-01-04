@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: dws_project_metrics_daily
+    description: "汇总单个项目在每一天的交付、质量和活跃度指标。"
+    columns:
+      - name: project_id
+        description: "GitLab 项目 ID"
+        tests:
+          - not_null
+      - name: metric_date
+        description: "指标日期"
+        tests:
+          - not_null
+      - name: is_active_day
+        description: "是否为活跃天（有 MR 或 部署）"
+
+  - name: dws_project_quality_daily
+    description: "每日项目质量汇总"
+    columns:
+      - name: gitlab_project_id
+        tests:
+          - not_null
+      - name: analysis_day
+        tests:
+          - not_null
+
+  - name: dws_developer_metrics_daily
+    description: "每日开发者指标汇总"
+    columns:
+      - name: developer_id
+        tests:
+          - not_null
+      - name: metric_date
+        tests:
+          - not_null

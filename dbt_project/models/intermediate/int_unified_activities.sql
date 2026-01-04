@@ -8,9 +8,16 @@
     它是计算“开发者画像”、 “团队负荷”和“交付前导时间”的基础。
 */
 
+
 with 
 
+-- 辅助映射模型
+gitlab_users as (
+    select * from {{ ref('int_gitlab_user_mapping') }}
+),
+
 -- 1. 开发活动 (Commits)
+-- 注意：int_commits_with_authors 内部已经完成了校准，直接使用
 commit_activities as (
     select
         commit_sha as activity_id,
@@ -28,79 +35,85 @@ commit_activities as (
 -- 2. 协作活动 (Merge Requests)
 mr_activities as (
     select
-        merge_request_id::text as activity_id,
-        created_at as occurred_at,
-        author_user_id,
+        m.merge_request_id::text as activity_id,
+        m.created_at as occurred_at,
+        coalesce(u.master_user_id, '00000000-0000-0000-0000-000000000000'::uuid) as author_user_id,
         'MR_OPEN' as activity_type,
-        merge_request_id::text as target_entity_id,
+        m.merge_request_id::text as target_entity_id,
         'MR' as target_entity_type,
         2.0 as base_impact_score,
         'GITLAB' as source_system,
-        json_build_object('iid', iid, 'title', title) as metadata
-    from {{ ref('stg_gitlab_merge_requests') }}
+        json_build_object('iid', m.iid, 'title', m.title) as metadata
+    from {{ ref('stg_gitlab_merge_requests') }} m
+    left join gitlab_users u on m.author_user_id::text = u.gitlab_user_id
     
     union all
     
     select
-        merge_request_id::text || '_merged' as activity_id,
-        merged_at as occurred_at,
-        merged_by_user_id as author_user_id,
+        m.merge_request_id::text || '_merged' as activity_id,
+        m.merged_at as occurred_at,
+        coalesce(u.master_user_id, '00000000-0000-0000-0000-000000000000'::uuid) as author_user_id,
         'MR_MERGE' as activity_type,
-        merge_request_id::text as target_entity_id,
+        m.merge_request_id::text as target_entity_id,
         'MR' as target_entity_type,
         3.0 as base_impact_score,
         'GITLAB' as source_system,
-        json_build_object('iid', iid, 'title', title) as metadata
-    from {{ ref('stg_gitlab_merge_requests') }}
-    where state = 'merged'
+        json_build_object('iid', m.iid, 'title', m.title) as metadata
+    from {{ ref('stg_gitlab_merge_requests') }} m
+    left join gitlab_users u on m.merged_by_user_id::text = u.gitlab_user_id
+    where m.state = 'merged'
 ),
 
 -- 3. 需求/任务活动 (Issues)
 issue_activities as (
     select
-        issue_id::text as activity_id,
-        created_at as occurred_at,
-        author_user_id,
+        i.issue_id::text as activity_id,
+        i.created_at as occurred_at,
+        coalesce(u.master_user_id, '00000000-0000-0000-0000-000000000000'::uuid) as author_user_id,
         'ISSUE_OPEN' as activity_type,
-        issue_id::text as target_entity_id,
+        i.issue_id::text as target_entity_id,
         'ISSUE' as target_entity_type,
         1.0 as base_impact_score,
         'GITLAB' as source_system,
-        json_build_object('iid', iid, 'title', title) as metadata
-    from {{ ref('stg_gitlab_issues') }}
+        json_build_object('iid', i.iid, 'title', i.title) as metadata
+    from {{ ref('stg_gitlab_issues') }} i
+    left join gitlab_users u on i.author_user_id::text = u.gitlab_user_id
     
     union all
     
     select
-        issue_id::text || '_closed' as activity_id,
-        closed_at as occurred_at,
-        author_user_id, -- 这里假设关闭者是原作者，实际应使用 closed_by 字段
+        i.issue_id::text || '_closed' as activity_id,
+        i.closed_at as occurred_at,
+        coalesce(u.master_user_id, '00000000-0000-0000-0000-000000000000'::uuid) as author_user_id,
         'ISSUE_CLOSE' as activity_type,
-        issue_id::text as target_entity_id,
+        i.issue_id::text as target_entity_id,
         'ISSUE' as target_entity_type,
         1.5 as base_impact_score,
         'GITLAB' as source_system,
-        json_build_object('iid', iid, 'title', title) as metadata
-    from {{ ref('stg_gitlab_issues') }}
-    where state = 'closed'
+        json_build_object('iid', i.iid, 'title', i.title) as metadata
+    from {{ ref('stg_gitlab_issues') }} i
+    -- 这里我们假设关闭者映射到原作者，或者可以通过 staging 扩展 closed_by_user_id
+    left join gitlab_users u on i.author_user_id::text = u.gitlab_user_id
+    where i.state = 'closed'
 ),
 
 -- 4. 评审/讨论活动 (Notes/Comments)
 note_activities as (
     select
-        note_id::text as activity_id,
-        created_at as occurred_at,
-        author_user_id,
+        n.note_id::text as activity_id,
+        n.created_at as occurred_at,
+        coalesce(u.master_user_id, '00000000-0000-0000-0000-000000000000'::uuid) as author_user_id,
         case 
-            when noteable_type = 'MergeRequest' then 'REVIEW_COMMENT'
+            when n.noteable_type = 'MergeRequest' then 'REVIEW_COMMENT'
             else 'ISSUE_DISCUSSION'
         end as activity_type,
-        noteable_id::text as target_entity_id,
-        noteable_type as target_entity_type,
+        n.noteable_id::text as target_entity_id,
+        n.noteable_type as target_entity_type,
         2.0 as base_impact_score,
         'GITLAB' as source_system,
-        json_build_object('body_snippet', left(body, 50)) as metadata
-    from {{ ref('stg_gitlab_notes') }}
+        json_build_object('body_snippet', left(n.body, 50)) as metadata
+    from {{ ref('stg_gitlab_notes') }} n
+    left join gitlab_users u on n.author_user_id::text = u.gitlab_user_id
 )
 
 -- 5. 最终汇聚 (The Stream)
