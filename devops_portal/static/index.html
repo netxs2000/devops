@@ -124,6 +124,16 @@
                     </svg>
                     Project Admin
                 </a>
+                <a href="#" class="nav-link admin-only" id="nav-admin-users" onclick="switchView('admin_users')"
+                    style="display:none;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    User Mapping
+                </a>
                 <div
                     style="margin: 20px 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); opacity: 0.6;">
                     Business Service Desk</div>
@@ -493,65 +503,140 @@
                             </table>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Create MDM Project Modal -->
-            <div id="createProjectModal" class="modal-overlay">
-                <div class="modal" style="width: 600px; max-height: 90vh; overflow-y: auto;">
-                    <h3>➕ 新建业务主项目</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-                        <div class="form-group">
-                            <label>项目唯一ID (ID)</label>
-                            <input type="text" id="newProjId" placeholder="PRJ_JIRA_PAY_101" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>项目名称 (Name)</label>
-                            <input type="text" id="newProjName" placeholder="2025Q4 支付链路优化" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>项目类型 (Type)</label>
-                            <select id="newProjType" class="form-control">
-                                <option value="SPRINT">敏捷迭代 (SPRINT)</option>
-                                <option value="WATERFALL">瀑布项目 (WATERFALL)</option>
-                                <option value="RESEARCH">研发研究 (RESEARCH)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>归属部门 (Org)</label>
-                            <select id="newProjOrg" class="form-control"></select>
-                        </div>
-                        <div class="form-group">
-                            <label>计划开始 (Start)</label>
-                            <input type="date" id="newProjPlanStart" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>计划交付 (End)</label>
-                            <input type="date" id="newProjPlanEnd" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>预算编码 (Budget)</label>
-                            <input type="text" id="newProjBudgetCode" placeholder="BC_2025_TECH_01"
-                                class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>预算类型</label>
-                            <select id="newProjBudgetType" class="form-control">
-                                <option value="CAPEX">资本化 (CAPEX)</option>
-                                <option value="OPEX">费用化 (OPEX)</option>
-                            </select>
+                    <div id="adminUsersView" style="display:none;">
+                        <div class="glass-panel" style="padding: 2rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                                <div>
+                                    <h2 style="margin: 0;">🧬 人员身份校准中心 (User Mapping)</h2>
+                                    <p style="color: var(--text-dim); margin: 5px 0 0;">建立员工全局 ID 与外部系统 (GitLab/Jira)
+                                        账号的强关联。</p>
+                                </div>
+                                <button class="btn btn-primary" onclick="openCreateMappingModal()">➕ 添加身份绑定</button>
+                            </div>
+
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>员工姓名</th>
+                                            <th>系统来源</th>
+                                            <th>外部 UID</th>
+                                            <th>外部用户名</th>
+                                            <th>外部邮箱</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="userMappingsTableBody">
+                                        <!-- Dynamic -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label>项目简述</label>
-                        <textarea id="newProjDesc" placeholder="项目详细背景说明..." class="form-control" rows="3"></textarea>
+
+                    <!-- Create Identity Mapping Modal -->
+                    <div id="createMappingModal" class="modal-overlay">
+                        <div class="modal" style="width: 500px;">
+                            <h3>➕ 添加身份绑定</h3>
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label>选择员工</label>
+                                <select id="mapGlobalUser" class="form-control"></select>
+                            </div>
+                            <div class="form-group">
+                                <label>系统来源</label>
+                                <select id="mapSourceSystem" class="form-control">
+                                    <option value="GITLAB">GitLab</option>
+                                    <option value="JIRA">Jira</option>
+                                    <option value="SONAR">SonarQube</option>
+                                    <option value="JENKINS">Jenkins</option>
+                                    <option value="ZENTAO">ZenTao</option>
+                                    <option value="JFROG">JFrog</option>
+                                    <option value="NEXUS">Nexus</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>外部系统 UID (必填)</label>
+                                <input type="text" id="mapExternalId" placeholder="例如 GitLab ID: 556"
+                                    class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label>外部系统用户名</label>
+                                <input type="text" id="mapExternalUsername" placeholder="e.g. zhangsan_dev"
+                                    class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label>外部系统邮箱</label>
+                                <input type="text" id="mapExternalEmail" placeholder="e.g. zs@gmail.com"
+                                    class="form-control">
+                            </div>
+                            <div class="modal-actions" style="margin-top: 20px;">
+                                <button class="btn" onclick="closeCreateMappingModal()">取消</button>
+                                <button class="btn btn-primary" onclick="submitCreateMapping()">保存绑定</button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="modal-actions" style="margin-top: 20px;">
-                        <button class="btn" onclick="closeCreateProjectModal()">取消</button>
-                        <button class="btn btn-primary" onclick="submitCreateProject()">立即创建</button>
+
+                    <!-- Create MDM Project Modal -->
+                    <div id="createProjectModal" class="modal-overlay">
+                        <div class="modal" style="width: 600px; max-height: 90vh; overflow-y: auto;">
+                            <h3>➕ 新建业务主项目</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                                <div class="form-group">
+                                    <label>项目唯一ID (ID)</label>
+                                    <input type="text" id="newProjId" placeholder="PRJ_JIRA_PAY_101"
+                                        class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>项目名称 (Name)</label>
+                                    <input type="text" id="newProjName" placeholder="2025Q4 支付链路优化"
+                                        class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>项目类型 (Type)</label>
+                                    <select id="newProjType" class="form-control">
+                                        <option value="SPRINT">敏捷迭代 (SPRINT)</option>
+                                        <option value="WATERFALL">瀑布项目 (WATERFALL)</option>
+                                        <option value="RESEARCH">研发研究 (RESEARCH)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>归属部门 (Org)</label>
+                                    <select id="newProjOrg" class="form-control"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>计划开始 (Start)</label>
+                                    <input type="date" id="newProjPlanStart" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>计划交付 (End)</label>
+                                    <input type="date" id="newProjPlanEnd" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>预算编码 (Budget)</label>
+                                    <input type="text" id="newProjBudgetCode" placeholder="BC_2025_TECH_01"
+                                        class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>预算类型</label>
+                                    <select id="newProjBudgetType" class="form-control">
+                                        <option value="CAPEX">资本化 (CAPEX)</option>
+                                        <option value="OPEX">费用化 (OPEX)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 15px;">
+                                <label>项目简述</label>
+                                <textarea id="newProjDesc" placeholder="项目详细背景说明..." class="form-control"
+                                    rows="3"></textarea>
+                            </div>
+                            <div class="modal-actions" style="margin-top: 20px;">
+                                <button class="btn" onclick="closeCreateProjectModal()">取消</button>
+                                <button class="btn btn-primary" onclick="submitCreateProject()">立即创建</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
         </main>
     </div>
 

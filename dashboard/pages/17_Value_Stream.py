@@ -19,14 +19,20 @@ st.set_page_config(page_title="Value Stream Management", page_icon="🌊", layou
 st.title("🌊 Value Stream Management (Flow Framework)")
 st.caption("Visualizing the flow of business value through the software delivery lifecycle.")
 
-# --- CSS for Flow Types ---
 st.markdown("""
 <style>
-    /* Tasktop Standard Colors */
-    .flow-feature { color: #5B9BD5; font-weight: bold; } /* Blue */
-    .flow-defect { color: #C00000; font-weight: bold; }  /* Red */
-    .flow-debt { color: #FFC000; font-weight: bold; }    /* Orange */
-    .flow-risk { color: #ED7D31; font-weight: bold; }    /* Pink/Salmon */
+    .glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 15px;
+    }
+    .flow-feature { color: #5B9BD5; font-weight: bold; }
+    .flow-defect { color: #C00000; font-weight: bold; }
+    .flow-debt { color: #FFC000; font-weight: bold; }
+    .flow-risk { color: #ED7D31; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -35,21 +41,21 @@ st.markdown("""
 def load_flow_data():
     engine = get_db_engine()
     
-    # Check if view exists fallback
     try:
-        query = "SELECT * FROM view_flow_metrics_weekly"
+        # v3.0 Update: Use dws layer
+        query = "SELECT * FROM dws_flow_metrics_weekly"
         with engine.connect() as conn:
             df_weekly = pd.read_sql(text(query), conn)
             
-        # Also load raw items for Scatter plot
-        query_items = "SELECT * FROM view_flow_items WHERE state='closed' AND closed_at >= DATE('now', '-90 days')"
+        # Raw items for scatter
+        query_items = "SELECT * FROM int_unified_activities WHERE activity_type IN ('issue', 'mr') AND created_at >= CURRENT_DATE - INTERVAL '90 days'"
         with engine.connect() as conn:
             df_items = pd.read_sql(text(query_items), conn)
             
         return df_weekly, df_items
         
     except Exception as e:
-        st.warning(f"Could not load Flow views. Please ensure the SQL migration `FLOW_FRAMEWORK.sql` is run. Error: {e}")
+        st.warning(f"无法加载价值流数据 (dws_flow_metrics_weekly)。请运行 dbt 模型。错误: {e}")
         return pd.DataFrame(), pd.DataFrame()
 
 df_weekly, df_items = load_flow_data()
@@ -60,7 +66,7 @@ if df_weekly.empty:
 
 # --- Sidebar Filters ---
 projects = df_weekly['project_id'].unique() # Note: View returns ID, usually join name in View or here
-if 'project_id' indf_weekly.columns:
+if 'project_id' in df_weekly.columns:
      # Simple filter if logic complex
      pass
 

@@ -1,0 +1,55 @@
+version: 2
+
+models:
+  - name: fct_dora_metrics
+    description: "DORA 核心指标事实表"
+    columns:
+      - name: project_id
+        tests:
+          - not_null
+      - name: deployment_frequency
+        description: "部署频率"
+      - name: mtr_hours
+        description: "平均恢复时间"
+
+  - name: fct_project_delivery_health
+    description: "项目交付健康度审计"
+    columns:
+      - name: project_id
+        tests:
+          - not_null
+          - unique
+      - name: health_score
+        tests:
+          - accepted_values:
+              values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+              quote: false
+            severity: warn
+
+  - name: fct_capitalization_audit
+    description: "研发资本化审计事实表"
+    columns:
+      - name: project_id
+        tests:
+          - not_null
+      - name: audit_week
+        tests:
+          - not_null
+      - name: capitalization_rate
+        tests:
+          - not_null
+      - name: audit_status
+        tests:
+          - accepted_values:
+              values: ['HIGH_CAPEX_INSPECTION_REQUIRED', 'AUDIT_READY', 'INSUFFICIENT_DATA']
+
+  - name: fct_delivery_costs
+    description: "交付成本核算事实表"
+    columns:
+      - name: project_id
+        tests:
+          - not_null
+      - name: total_cost
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"

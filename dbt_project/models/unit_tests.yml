@@ -1,0 +1,41 @@
+version: 2
+
+unit_tests:
+  - name: test_int_activity_financial_classification
+    description: "验证研发活动财务分类逻辑：基于工作项类型和元数据关键字"
+    model: int_activity_financial_classification
+    given:
+      - input: ref('int_unified_activities')
+        rows:
+          - {activity_id: 'act_1', target_entity_id: 'issue_101', target_entity_type: 'ISSUE', metadata: '{"title": "Implement new auth flow"}'}
+          - {activity_id: 'act_2', target_entity_id: 'issue_102', target_entity_type: 'ISSUE', metadata: '{"title": "Fix login bug"}'}
+          - {activity_id: 'act_3', target_entity_id: 'repo_1', target_entity_type: 'REPO', metadata: '{"title": "feat: add user profile"}'}
+          - {activity_id: 'act_4', target_entity_id: 'repo_1', target_entity_type: 'REPO', metadata: '{"title": "fix: resolve memory leak"}'}
+          - {activity_id: 'act_5', target_entity_id: 'issue_103', target_entity_type: 'ISSUE', metadata: '{"title": "Unknown task"}'}
+      - input: ref('int_unified_work_items')
+        rows:
+          - {work_item_id: 'issue_101', work_item_type: 'Feature'}
+          - {work_item_id: 'issue_102', work_item_type: 'Bug'}
+          - {work_item_id: 'issue_103', work_item_type: 'Others'}
+    expect:
+      rows:
+        - {activity_id: 'act_1', financial_category: 'CapEx'} # 基于 Feature 工作项
+        - {activity_id: 'act_2', financial_category: 'OpEx'}  # 基于 Bug 工作项
+        - {activity_id: 'act_3', financial_category: 'CapEx'} # 基于 metadata 'feat' 关键字
+        - {activity_id: 'act_4', financial_category: 'OpEx'}  # 基于 metadata 'fix' 关键字
+        - {activity_id: 'act_5', financial_category: 'OpEx'}  # 默认降级为 OpEx
+
+  - name: test_fct_capitalization_audit_calculation
+    description: "验证资本化率计算及审计状态转换逻辑"
+    model: fct_capitalization_audit
+    given:
+      - input: ref('int_activity_financial_classification')
+        rows:
+          - {target_entity_id: 'p1', target_entity_type: 'REPO', financial_category: 'CapEx', base_impact_score: 80, occurred_at: '2024-01-01 10:00:00'}
+          - {target_entity_id: 'p1', target_entity_type: 'REPO', financial_category: 'OpEx', base_impact_score: 20, occurred_at: '2024-01-01 11:00:00'}
+          - {target_entity_id: 'p2', target_entity_type: 'REPO', financial_category: 'CapEx', base_impact_score: 90, occurred_at: '2024-01-01 10:00:00'}
+          - {target_entity_id: 'p2', target_entity_type: 'REPO', financial_category: 'OpEx', base_impact_score: 5, occurred_at: '2024-01-01 11:00:00'}
+    expect:
+      rows:
+        - {project_id: 'p1', capitalization_rate: 80.0, audit_status: 'AUDIT_READY'}
+        - {project_id: 'p2', capitalization_rate: 94.74, audit_status: 'HIGH_CAPEX_INSPECTION_REQUIRED'}

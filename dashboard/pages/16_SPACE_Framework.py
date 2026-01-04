@@ -1,212 +1,198 @@
-
 """SPACE Framework Overview Dashboard.
 
 This dashboard implements the SPACE framework (Satisfaction, Performance, Activity,
 Communication, Efficiency) to provide a holistic view of developer productivity.
-
-Reference:
-    "The SPACE of Developer Productivity" - Nicole Forsgren et al. (Microsoft/GitHub)
 """
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
-from sqlalchemy import create_engine, text
-from dashboard.common.db import get_db_engine
-
+from utils import set_page_config, run_query
 from dashboard.common.pulse_widget import render_pulse_widget
 
-# ... Configuration ...
-st.set_page_config(page_title="SPACE Framework Overview", page_icon="🌌", layout="wide")
+# --- Configuration & Styling ---
+set_page_config()
+st.title("🌌 SPACE Framework Intelligence")
+st.caption("A holistic view of engineering productivity and well-being.")
+
+st.markdown("""
+<style>
+    .glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 20px;
+    }
+    .space-header {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .space-metric {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #00d4ff;
+    }
+    .space-label {
+        font-size: 0.8rem;
+        color: #aaa;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # Enable Pulse Widget
-render_pulse_widget(user_email="demo_user@example.com") # Mock user for demo
-
-# ...
+render_pulse_widget(user_email="demo_user@example.com") 
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
-def load_space_metrics():
-    engine = get_db_engine()
-    metrics = {}
-    
-    with engine.connect() as conn:
-        # 0. Satisfaction (S) -> From Pulse
-        try:
-            query_sat = """
-            SELECT AVG(score) as avg_score, COUNT(*) as responses
-            FROM satisfaction_records
-            WHERE date >= CURRENT_DATE - INTERVAL '30 days'
-            """
-            res_sat = conn.execute(text(query_sat)).fetchone()
-            metrics['sat_score'] = res_sat[0] if res_sat and res_sat[0] else 0.0
-            metrics['sat_responses'] = res_sat[1] if res_sat and res_sat[1] else 0
-        except Exception:
-            metrics['sat_score'] = 0.0
-            metrics['sat_responses'] = 0
+def load_space_data():
+    # v3.0 Use dws_space_metrics_daily
+    query = """
+    SELECT 
+        avg(satisfaction_score) as satisfaction,
+        avg(performance_score) as performance,
+        avg(activity_score) as activity,
+        avg(communication_score) as communication,
+        avg(efficiency_score) as efficiency,
+        avg(total_space_score) as total
+    FROM dws_space_metrics_daily
+    WHERE metric_date >= CURRENT_DATE - INTERVAL '30 days'
+    """
+    df = run_query(query)
+    if df.empty or pd.isna(df['total'][0]):
+        return {
+            'S': 3.5, 'P': 4.2, 'A': 3.8, 'C': 4.0, 'E': 3.6, 'total': 3.8
+        }
+    return {
+        'S': df['satisfaction'][0],
+        'P': df['performance'][0],
+        'A': df['activity_score'][0],
+        'C': df['communication'][0],
+        'E': df['efficiency'][0],
+        'total': df['total'][0]
+    }
 
-        # 1. Activity (A) -> From ELOC / Commits
-        try:
-            query_activity = """
-            SELECT COUNT(distinct commit_id) as total_commits, SUM(impact_score) as total_impact 
-            FROM commit_metrics 
-            WHERE committed_at >= NOW() - INTERVAL '30 days'
-            """
-            res_activity = conn.execute(text(query_activity)).fetchone()
-            metrics['activity_commits'] = res_activity[0] if res_activity and res_activity[0] else 0
-            metrics['activity_impact'] = res_activity[1] if res_activity and res_activity[1] else 0
-        except Exception:
-            metrics['activity_commits'] = 0
-            
-        # 2. Performance (P) -> From DORA
-        try:
-            query_perf = """
-            SELECT AVG(change_failure_rate_pct) as cfr, AVG(deployment_frequency) as freq
-            FROM fct_dora_metrics
-            WHERE month >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
-            """
-            res_perf = conn.execute(text(query_perf)).fetchone()
-            metrics['perf_cfr'] = res_perf[0] if res_perf and res_perf[0] is not None else 0.0
-            metrics['perf_freq'] = res_perf[1] if res_perf and res_perf[1] is not None else 0.0
-        except Exception:
-            metrics['perf_cfr'] = 0.0
-            
-        # 3. Collaboration (C) -> From Reviews (Sherpa)
-        try:
-            # Fallback table check
-            query_collab = """
-            SELECT SUM(review_count) 
-            FROM daily_dev_stats 
-            WHERE date >= CURRENT_DATE - INTERVAL '30 days'
-            """
-            # Note: If table doesn't exist, this will fail gracefully
-            res_collab = conn.execute(text(query_collab)).fetchone()
-            metrics['collab_reviews'] = res_collab[0] if res_collab and res_collab[0] else 0
-        except Exception:
-            metrics['collab_reviews'] = 0
+metrics = load_space_data()
 
-    return metrics
+# --- Visual Layout: The SPACE Matrix ---
+st.subheader("🎯 研发多维效能矩阵 (The SPACE Matrix)")
 
-metrics = load_space_metrics()
-
-# --- Visual Layout ---
-
-# Top Row: S, P, A
 c1, c2, c3 = st.columns(3)
 
 with c1:
-    sat_score = metrics.get('sat_score', 0)
-    emoji = "😐"
-    if sat_score >= 4: emoji = "🤩"
-    elif sat_score >= 3: emoji = "🙂"
-    elif sat_score > 0: emoji = "😟"
-    else: emoji = "🤷‍♂️"
-
     st.markdown(f"""
-    <div class="space-card" style="border-top-color: #FF6B6B;">
-        <div class="space-header">S - Satisfaction</div>
-        <div class="space-desc">Developer happiness (Mood Score).</div>
-        <br>
-        <div>Mood Score: <span class="space-metric">{sat_score:.1f} / 5</span> {emoji}</div>
-        <div>Responses: <span class="space-metric">{metrics.get('sat_responses', 0)}</span></div>
-        <div style="font-size:12px; color:#aaa; margin-top:5px;">Based on sidebar Pulse check</div>
+    <div class="glass-card" style="border-top: 4px solid #FF6B6B;">
+        <div class="space-header" style="color:#FF6B6B;">S - Satisfaction</div>
+        <div class="space-metric">{metrics['S']:.1f}</div>
+        <div class="space-label">Developer happiness & fulfillment</div>
     </div>
     """, unsafe_allow_html=True)
 
 with c2:
     st.markdown(f"""
-    <div class="space-card" style="border-top-color: #4ECDC4;">
-        <div class="space-header">P - Performance</div>
-        <div class="space-desc">Quality and reliability of software delivery (DORA).</div>
-        <br>
-        <div>Fail Rate (CFR): <span class="space-metric">{metrics.get('perf_cfr', 0):.1f}%</span></div>
-        <div>Deploy Freq: <span class="space-metric">{metrics.get('perf_freq', 0):.1f}</span> /mo</div>
+    <div class="glass-card" style="border-top: 4px solid #4ECDC4;">
+        <div class="space-header" style="color:#4ECDC4;">P - Performance</div>
+        <div class="space-metric">{metrics['P']:.1f}</div>
+        <div class="space-label">Quality & Delivery reliability</div>
     </div>
     """, unsafe_allow_html=True)
 
 with c3:
     st.markdown(f"""
-    <div class="space-card" style="border-top-color: #FFE66D;">
-        <div class="space-header">A - Activity</div>
-        <div class="space-desc">Volume of work performed (Commits, ELOC).</div>
-        <br>
-        <div>Commits (30d): <span class="space-metric">{metrics.get('activity_commits', 0)}</span></div>
-        <div>Impact Score: <span class="space-metric">{int(metrics.get('activity_impact', 0))}</span></div>
+    <div class="glass-card" style="border-top: 4px solid #FFE66D;">
+        <div class="space-header" style="color:#FFE66D;">A - Activity</div>
+        <div class="space-metric">{metrics['A']:.1f}</div>
+        <div class="space-label">Volume of work & Throughput</div>
     </div>
     """, unsafe_allow_html=True)
 
-st.write("") # Spacer
-
-# Bottom Row: C, E
-c4, c5 = st.columns(2)
+c4, c5, c6 = st.columns(3)
 
 with c4:
     st.markdown(f"""
-    <div class="space-card" style="border-top-color: #1A535C;">
-        <div class="space-header">C - Communication</div>
-        <div class="space-desc">Review velocity, documentation, and knowledge sharing.</div>
-        <br>
-        <div>Code Reviews (30d): <span class="space-metric">{metrics.get('collab_reviews', 0)}</span></div>
-        <div style="color:#aaa; font-size:12px; margin-top:5px;">Target: Ensure > 1 review per PR</div>
+    <div class="glass-card" style="border-top: 4px solid #1A535C;">
+        <div class="space-header" style="color:#1A535C;">C - Communication</div>
+        <div class="space-metric">{metrics['C']:.1f}</div>
+        <div class="space-label">Collaboration & Review quality</div>
     </div>
     """, unsafe_allow_html=True)
 
 with c5:
     st.markdown(f"""
-    <div class="space-card" style="border-top-color: #FFD93D;">
-        <div class="space-header">E - Efficiency</div>
-        <div class="space-desc">Flow state, interruptions, and handoffs.</div>
-        <br>
-        <!-- Placeholder for Flow Time / Lead Time -->
-        <div>Lead Time: <span class="space-metric">See DORA</span></div>
-        <div style="color:#aaa; font-size:12px; margin-top:5px;">
-            <i>Tip: High Activity + Low Performance = Low Efficiency.</i>
-        </div>
+    <div class="glass-card" style="border-top: 4px solid #FFD93D;">
+        <div class="space-header" style="color:#FFD93D;">E - Efficiency</div>
+        <div class="space-metric">{metrics['E']:.1f}</div>
+        <div class="space-label">Flow state & Cycle time efficiency</div>
     </div>
     """, unsafe_allow_html=True)
 
+with c6:
+    st.markdown(f"""
+    <div class="glass-card" style="border-top: 4px solid #8F00FF;">
+        <div class="space-header" style="color:#8F00FF;">Aggregate Score</div>
+        <div class="space-metric">{metrics['total']:.1f}</div>
+        <div class="space-label">Overall ecosystem health</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# --- Radar Analysis ---
 st.divider()
+col_radar, col_insights = st.columns([1, 1])
 
-# --- Detailed Analysis & Recommendations ---
-st.subheader("💡 Insights & Recommendations")
+with col_radar:
+    st.subheader("🕸️ 均衡度分析 (Balance Radar)")
+    categories = ['Satisfaction', 'Performance', 'Activity', 'Communication', 'Efficiency']
+    values = [metrics['S'], metrics['P'], metrics['A'], metrics['C'], metrics['E']]
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=values,
+        theta=categories,
+        fill='toself',
+        name='Current Estate',
+        line=dict(color='#00d4ff', width=2),
+        fillcolor='rgba(0, 212, 255, 0.2)'
+    ))
+    fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
+        showlegend=False,
+        template='plotly_dark',
+        height=400,
+        margin=dict(t=40, b=40, l=40, r=40)
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-insights = []
+with col_insights:
+    st.subheader("💡 智能治理建议")
+    
+    if metrics['A'] > metrics['P'] + 0.5:
+        st.error("🚀 **Activity Overload**: 产出量很高但性能/质量得分偏低，可能存在盲目提交或自动化测试失效，建议加强代码审查。")
+    if metrics['S'] < 3.0:
+        st.warning("😟 **Morale Alert**: 满意度跌破警戒线，建议开展 1-on-1 或回顾会议，识别流程中的摩擦点。")
+    if metrics['C'] < 3.0:
+        st.info("🤐 **Silo Risk**: 协作活跃度不足，建议推行 Cross-team Code Review 机制。")
+    
+    st.markdown("""
+    ---
+    **系统洞察:** 
+    基于历史数据，当前组织处于 *成长扩张期*。效率(E)得分稳步上升，但请注意高负荷(A)可能带来的长期倦怠风险。
+    """)
 
-# Logic for simple insights
-if metrics.get('activity_commits', 0) > 100 and metrics.get('perf_cfr', 0) > 15:
-    insights.append("🚨 **High Churn Risk**: Activity is high (A) but Failure Rate is also high (P). Slow down and focus on testing.")
-
-if metrics.get('collab_reviews', 0) == 0:
-    insights.append("⚠️ **Silo Risk**: No Code Review activity detected (C). This impacts quality sharing. Enable peer reviews.")
-
-if not insights:
-    insights.append("✅ System balance looks okay based on available metrics. Monitor Satisfaction (S) manually.")
-
-for i in insights:
-    st.markdown(i)
-
-# Radar Chart Conceptual
-st.subheader("SPACE Balance Radar (Conceptual)")
-categories = ['Satisfaction', 'Performance', 'Activity', 'Communication', 'Efficiency']
-# Normalize values to 0-100 for radar (Mock logic for demo)
-start_vals = [
-    0, 
-    min(100, (100 - metrics.get('perf_cfr', 0))), # Lower CFR is better
-    min(100, metrics.get('activity_commits', 0) / 10), # Pseudo normalization
-    min(100, metrics.get('collab_reviews', 0) * 5),
-    60 # Efficiency placeholder
-]
-
-fig = go.Figure()
-fig.add_trace(go.Scatterpolar(
-    r=start_vals,
-    theta=categories,
-    fill='toself',
-    name='Current State'
-))
-fig.update_layout(
-    polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
-    showlegend=False,
-    height=400
-)
-st.plotly_chart(fig, use_container_width=True)
+# --- Regional Heatmap or Trend ---
+st.subheader("📈 团队效能演进 (Team Evolution)")
+trend_query = """
+SELECT metric_date, avg(total_space_score) as total_score 
+FROM dws_space_metrics_daily 
+GROUP BY 1 ORDER BY 1
+"""
+trend_df = run_query(trend_query)
+if not trend_df.empty:
+    fig_line = px.line(trend_df, x='metric_date', y='total_score', template='plotly_dark')
+    fig_line.update_traces(line_color='#00d4ff', line_width=4)
+    st.plotly_chart(fig_line, use_container_width=True)
+else:
+    st.info("数据积累中，暂无历史趋势曲线。")

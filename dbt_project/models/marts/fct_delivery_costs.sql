@@ -1,52 +1,59 @@
 
 /*
-    交付成本度量衡 (The FinOps Bridge / Cost-to-Value)
+    交付成本度量衡 (The FinOps Bridge / Cost-to-Value) - Refactored v2
     
     逻辑：
-    1. 整合审计模型中的用户投入。
-    2. 关联资源成本表中的单价。
-    3. 核算每个战略 Epic 消耗的估算财务金额。
+    1. 整合重构后的 DWS 层项目周成本。
+    2. 计算每个项目的“单个 MR 成本”及“单位产出价值”。
 */
 
 with 
--- 获取用户对 Epic 的投入占比（这里简化为基于 Commit 的分步投入）
-user_epic_efforts as (
+
+project_costs as (
     select
-        m2i.epic_id,
-        c.author_user_id as user_id,
-        count(distinct c.commit_sha) as commit_count
-    from {{ ref('stg_gitlab_merge_requests') }} mr
-    join {{ ref('stg_gitlab_commits') }} c on mr.project_id = c.project_id -- 简化逻辑
-    join {{ ref('stg_mdm_epics') }} e on mr.external_issue_id::text ilike '%' || e.portfolio_link || '%' -- 软连接
-    group by 1, 2
+        project_id,
+        sum(total_human_cost) as total_accrued_cost,
+        sum(contributor_count) as total_contributors -- 简化汇总
+    from {{ ref('dws_project_costs_weekly') }}
+    group by 1
 ),
 
--- 获取资源成本
-costs as (
-    select * from {{ ref('stg_mdm_resource_costs') }}
+project_output as (
+    -- 从交付 DWS 获取产出
+    select
+        project_id,
+        sum(mrs_merged) as total_mrs,
+        sum(prod_deploys) as total_deploys
+    from {{ ref('dws_project_metrics_daily') }}
+    group by 1
 ),
 
--- 合并成本
-calculated_costs as (
-    select
-        uee.epic_id,
-        uee.user_id,
-        uee.commit_count,
-        coalesce(rc.hourly_rate, 100.0) as rate, -- 默认单价
-        -- 这里假设一个 Commit 平均代表 4 小时工作量 (演示逻辑)
-        (uee.commit_count * 4 * coalesce(rc.hourly_rate, 100.0)) as estimated_cost
-    from user_epic_efforts uee
-    left join costs rc on uee.user_id = rc.user_id
+projects as (
+    select * from {{ ref('stg_gitlab_projects') }}
 )
 
--- 最终汇聚到 Epic 级别
 select
-    e.epic_id,
-    e.epic_title,
-    e.portfolio_link,
-    sum(cc.commit_count) as total_commits,
-    sum(cc.estimated_cost) as total_accrued_cost,
-    current_date as calculated_at
-from {{ ref('stg_mdm_epics') }} e
-join calculated_costs cc on e.epic_id = cc.epic_id
-group by 1, 2, 3
+    p.gitlab_project_id,
+    p.project_name,
+    coalesce(pc.total_accrued_cost, 0) as total_cost,
+    
+    -- 效率指标
+    case 
+        when coalesce(po.total_mrs, 0) > 0 
+        then round((pc.total_accrued_cost / po.total_mrs)::numeric, 2)
+        else null 
+    end as cost_per_mr,
+    
+    coalesce(po.total_deploys, 0) as prod_deploys,
+    
+    -- 成本效益等级
+    case 
+        when (pc.total_accrued_cost / nullif(po.total_mrs, 0)) < 500 then 'High Efficiency'
+        when (pc.total_accrued_cost / nullif(po.total_mrs, 0)) > 2000 then 'Heavy Investment'
+        else 'Optimal'
+    end as efficiency_rating
+
+from projects p
+left join project_costs pc on p.gitlab_project_id = pc.project_id
+left join project_output po on p.gitlab_project_id = po.project_id
+where p.is_archived = false

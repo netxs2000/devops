@@ -10,13 +10,13 @@
 function switchView(view) {
     const navItems = [
         'nav-dashboard', 'nav-tests', 'nav-defects', 'nav-reqs',
-        'nav-matrix', 'nav-reports', 'nav-governance', 'nav-support', 'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-projects'
+        'nav-matrix', 'nav-reports', 'nav-governance', 'nav-support', 'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-projects', 'nav-admin-users'
     ];
 
     const viewItems = [
         'results', 'statsGrid', 'bugView', 'matrixView',
         'requirementsView', 'reportsView', 'view-servicedesk',
-        'sdSubmitView', 'sdMyView', 'decisionHubView', 'governanceView', 'adminProjectsView'
+        'sdSubmitView', 'sdMyView', 'decisionHubView', 'governanceView', 'adminProjectsView', 'adminUsersView'
     ];
 
     // Reset all nav and views
@@ -75,6 +75,9 @@ function switchView(view) {
     } else if (view === 'admin_projects') {
         document.getElementById('adminProjectsView').style.display = 'block';
         loadAdminProjects();
+    } else if (view === 'admin_users') {
+        document.getElementById('adminUsersView').style.display = 'block';
+        loadAdminUsers();
     }
 }
 
@@ -175,6 +178,13 @@ function initUserProfile(user) {
             if (scopeIconV2) scopeIconV2.innerText = '🌐';
         }
         badgeV2.style.display = 'inline-flex';
+    }
+
+    // 管理员菜单显示逻辑
+    const roles = user.roles || [];
+    const isAdmin = roles.some(r => r.code === 'SYSTEM_ADMIN' || r.code === 'ADMIN');
+    if (isAdmin) {
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
     }
 
     window.currentUser = user;
@@ -344,5 +354,103 @@ async function loadServiceDeskProjects() {
         });
     } catch (e) {
         console.error('Failed to load business projects:', e);
+    }
+}
+
+// --- Admin: Identity Mapping Center ---
+
+async function loadAdminUsers() {
+    try {
+        const tbody = document.getElementById('userMappingsTableBody');
+        tbody.innerHTML = '<tr><td colspan="6">加载中...</td></tr>';
+
+        // 1. 获取所有映射和用户列表
+        const mappings = await Api.request('/admin/identity-mappings');
+        const users = await Api.request('/admin/users');
+
+        // 2. 渲染表格
+        tbody.innerHTML = '';
+        if (mappings.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-dim);">暂无身份绑定数据</td></tr>';
+        }
+
+        mappings.forEach(m => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <div style="font-weight:bold;">${m.user_name}</div>
+                    <code style="font-size:10px; opacity:0.6;">${m.global_user_id}</code>
+                </td>
+                <td><span class="badge">${m.source_system}</span></td>
+                <td><code style="color:var(--primary);">${m.external_user_id}</code></td>
+                <td>${m.external_username || '-'}</td>
+                <td>${m.external_email || '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="deleteMapping(${m.id})" style="background:rgba(239, 68, 68, 0.1); color:var(--failed); border:1px solid rgba(239, 68, 68, 0.2);">删除</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // 3. 填充 Modal 下拉框
+        const userSelect = document.getElementById('mapGlobalUser');
+        userSelect.innerHTML = '<option value="">-- 选择员工 --</option>';
+        users.sort((a, b) => a.full_name.localeCompare(b.full_name)).forEach(u => {
+            const opt = document.createElement('option');
+            opt.value = u.user_id;
+            opt.textContent = `${u.full_name} (${u.email})`;
+            userSelect.appendChild(opt);
+        });
+
+    } catch (e) {
+        UI.showToast('加载失败: ' + e.message, 'error');
+    }
+}
+
+function openCreateMappingModal() {
+    document.getElementById('createMappingModal').style.display = 'flex';
+}
+
+function closeCreateMappingModal() {
+    document.getElementById('createMappingModal').style.display = 'none';
+}
+
+async function submitCreateMapping() {
+    const payload = {
+        global_user_id: document.getElementById('mapGlobalUser').value,
+        source_system: document.getElementById('mapSourceSystem').value,
+        external_user_id: document.getElementById('mapExternalId').value,
+        external_username: document.getElementById('mapExternalUsername').value || null,
+        external_email: document.getElementById('mapExternalEmail').value || null
+    };
+
+    if (!payload.global_user_id || !payload.external_user_id) {
+        UI.showToast('请选择员工并填写外部 UID', 'warning');
+        return;
+    }
+
+    try {
+        await Api.request('/admin/identity-mappings', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        UI.showToast('身份绑定添加成功', 'success');
+        closeCreateMappingModal();
+        loadAdminUsers();
+    } catch (e) {
+        UI.showToast('添加失败: ' + e.message, 'error');
+    }
+}
+
+async function deleteMapping(id) {
+    if (!confirm('确定要删除这条身份映射吗？这可能会影响该员工在活动流中的识别。')) return;
+    try {
+        await Api.request(`/admin/identity-mappings/${id}`, {
+            method: 'DELETE'
+        });
+        UI.showToast('删除成功', 'success');
+        loadAdminUsers();
+    } catch (e) {
+        UI.showToast('删除失败: ' + e.message, 'error');
     }
 }

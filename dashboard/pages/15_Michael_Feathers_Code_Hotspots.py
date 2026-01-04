@@ -1,66 +1,68 @@
 
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from sqlalchemy.sql import text
-from dashboard.common.db import get_db_engine
+st.set_page_config(page_title="Code Hotspots Radar", page_icon="[Heat]", layout="wide")
 
-st.set_page_config(page_title="Code Hotspots Radar", page_icon="🔥", layout="wide")
-
-st.title("🔥 Code Hotspots Radar (Code Quality Risk)")
-st.markdown("""
-**Michael Feathers' F-C Analysis**: Identifying technical debt by correlating **Change Frequency** (Churn) with **Code Complexity**.
-* **Hotspots (Top-Right)**: High Churn & High Complexity. High risk, bug-prone. **Candidates for Refactoring.**
-* **Stable Core (Bottom-Right)**: Complex but stable. Don't touch unless necessary.
-* **Peripherals (Top-Left)**: Frequent changes to simple files (config, text). Consider automation.
-""")
-
-# --- CSS Styles ---
+# --- Premium Glassmorphism CSS ---
 st.markdown("""
 <style>
-    .risk-high { color: #ff4b4b; font-weight: bold; }
-    .risk-med { color: #ffa421; font-weight: bold; }
-    .stMetric { background-color: #f0f2f6; padding: 10px; border-radius: 5px; }
+    .reportview-container {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }
+    .glass-card {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #6366f1, #a855f7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .risk-tag {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .tag-red { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .tag-amber { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .tag-clear { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
 </style>
+""", unsafe_allow_html=True)
+
+st.title("Code Hotspots Radar")
+st.markdown("""
+<div class="glass-card">
+    <strong>Michael Feathers' F-C Analysis</strong>: Identifying technical debt by correlating <strong>Change Frequency</strong> (Churn) with <strong>Code Complexity</strong>.
+    <ul>
+        <li><span style="color: #ef4444;">●</span> <strong>Hotspots</strong>: High Churn & High Complexity. High risk, bug-prone.</li>
+        <li><span style="color: #f59e0b;">●</span> <strong>Stable Core</strong>: Complex but stable. High knowledge value.</li>
+        <li><span style="color: #10b981;">●</span> <strong>Peripherals</strong>: Low churn, low complexity. General maintenance.</li>
+    </ul>
+</div>
 """, unsafe_allow_html=True)
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
 def load_data():
     engine = get_db_engine()
-    try:
-        # Note: In a real environment, verify view exists.
-        # Fallback query if view doesn't exist yet (for robustness)
-        query = "SELECT * FROM view_file_hotspots"
-        with engine.connect() as conn:
-            return pd.read_sql(text(query), conn)
-    except Exception as e:
-        # Fallback execution logic if view is missing in DB (Development Mode)
-        st.warning(f"View not found, using raw query fallback. Error: {e}")
-        raw_query = """
-        SELECT 
-            f.project_id,
-            f.file_path,
-            COUNT(DISTINCT c.id) as churn_90d,
-            ABS(SUM(fs.code_added) - SUM(fs.code_deleted)) as estimated_loc
-        FROM commit_file_stats fs
-        JOIN commits c ON fs.commit_id = c.id
-        WHERE c.committed_date >= DATE('now', '-90 days')
-        GROUP BY f.project_id, f.file_path, f.committed_date
-        HAVING churn_90d > 0
-        """
-        # Note: Raw query simplified for safety fallback; prefer View deployment.
-        return pd.DataFrame() 
+    query = "SELECT * FROM fct_code_hotspots"
+    with engine.connect() as conn:
+        return pd.read_sql(text(query), conn)
 
 df = load_data()
 
 if df.empty:
-    st.info("No data available yet. Please wait for the collector to process commits.")
+    st.info("No data available yet. Please run dbt to build fct_code_hotspots.")
     st.stop()
 
 # --- Sidebar Filters ---
-unique_projects = df['project_id'].unique()
+unique_projects = sorted(df['project_id'].unique())
 selected_projects = st.sidebar.multiselect("Filter by Project", unique_projects, default=unique_projects)
 
 if selected_projects:
@@ -68,79 +70,85 @@ if selected_projects:
 else:
     filtered_df = df
 
-if filtered_df.empty:
-    st.warning("No data for selected filters.")
-    st.stop()
+# --- Global KPIs ---
+kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+with kpi1:
+    st.markdown(f'<div class="glass-card"><p>Total Files</p><p class="metric-value">{len(filtered_df)}</p></div>', unsafe_allow_html=True)
+with kpi2:
+    red_count = len(filtered_df[filtered_df['risk_zone'] == 'RED_ZONE'])
+    st.markdown(f'<div class="glass-card"><p>Red Zone (Critical)</p><p class="metric-value" style="background: linear-gradient(90deg, #ef4444, #f87171); -webkit-background-clip: text;">{red_count}</p></div>', unsafe_allow_html=True)
+with kpi3:
+    avg_churn = round(filtered_df['churn_90d'].mean(), 1)
+    st.markdown(f'<div class="glass-card"><p>Avg Churn (90d)</p><p class="metric-value">{avg_churn}</p></div>', unsafe_allow_html=True)
+with kpi4:
+    max_risk = round(filtered_df['risk_factor'].max(), 1)
+    st.markdown(f'<div class="glass-card"><p>Peak Risk Score</p><p class="metric-value">{max_risk}</p></div>', unsafe_allow_html=True)
 
-# --- Layout: Main Chart ---
+# --- Main Visualization ---
 col_main, col_list = st.columns([2, 1])
 
 with col_main:
-    st.subheader("F-C Quadrant Analysis")
-    
-    # Thresholds for Quadrants (Dynamic based on median or fixed)
-    churn_threshold = filtered_df['churn_90d'].quantile(0.8) # Top 20% freq
-    if churn_threshold < 5: churn_threshold = 5 # Minimum floor
-    
-    loc_threshold = filtered_df['estimated_loc'].quantile(0.8) # Top 20% size
-    if loc_threshold < 100: loc_threshold = 100
+    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+    st.subheader("Complexity vs Churn Quadrant")
     
     fig = px.scatter(
         filtered_df,
         x="estimated_loc",
         y="churn_90d",
-        color="churn_90d", # Color by heat
-        size="estimated_loc", # Size by mass
-        hover_data=["file_path", "project_id"],
-        labels={
-            "estimated_loc": "Complexity Proxy (Est. LOC)",
-            "churn_90d": "Change Freq (90 Days)"
+        color="risk_zone",
+        size="risk_factor",
+        hover_data=["file_path", "project_id", "risk_factor"],
+        color_discrete_map={
+            "RED_ZONE": "#ef4444",
+            "AMBER_ZONE": "#f59e0b",
+            "CLEAR": "#10b981"
         },
-        color_continuous_scale="RdYlGn_r", # Red is high churn
-        log_x=True, # Code size varies wildly, Log scale helps
-        title=f"Hotspot Map (Thresholds: >{int(churn_threshold)} commits, >{int(loc_threshold)} LOC)"
+        labels={
+            "estimated_loc": "Complexity (Est. LOC)",
+            "churn_90d": "Churn (Last 90d)"
+        },
+        log_x=True,
+        template="plotly_dark"
     )
     
-    # Add Quadrant Lines
-    fig.add_hline(y=churn_threshold, line_dash="dash", line_color="red", annotation_text="High Churn")
-    fig.add_vline(x=loc_threshold, line_dash="dash", line_color="red", annotation_text="High Complexity")
-    
-    # Annotate "Death Zone"
-    fig.add_annotation(
-        x=loc_threshold * 1.5, 
-        y=churn_threshold * 1.5,
-        text="⚠️ Hotspots (Refactor Priority)",
-        showarrow=False,
-        font=dict(color="red", size=14)
+    fig.update_layout(
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)'),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)'),
     )
     
     st.plotly_chart(fig, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Layout: Top Risky Files ---
 with col_list:
-    st.subheader("🚨 Top 10 High-Risk Files")
+    st.subheader("Critical Hotspots")
+    hotspots = filtered_df[filtered_df['risk_zone'] == 'RED_ZONE'].sort_values('risk_factor', ascending=False).head(15)
     
-    # Risk Score = Churn * Log(Complexity)
-    # (Simple logic: Large files changed often are riskiest)
-    risky_files = filtered_df[
-        (filtered_df['churn_90d'] >= churn_threshold) & 
-        (filtered_df['estimated_loc'] >= loc_threshold)
-    ].sort_values(by='churn_90d', ascending=False).head(10)
-    
-    if not risky_files.empty:
-        for index, row in risky_files.iterrows():
-            with st.expander(f"🔴 {row['file_path'].split('/')[-1]}"):
-                st.markdown(f"**Path:** `{row['file_path']}`")
-                st.markdown(f"**Changes (90d):** {row['churn_90d']}")
-                st.markdown(f"**Est. Size:** {row['estimated_loc']} LOC")
-                st.markdown("**Action:** Review testing coverage & consider splitting.")
+    if not hotspots.empty:
+        for _, row in hotspots.iterrows():
+            tag_class = "tag-red"
+            st.markdown(f"""
+            <div class="glass-card" style="padding: 12px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div style="font-size: 0.9rem; font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis;">{row['file_path'].split('/')[-1]}</div>
+                    <span class="risk-tag {tag_class}">Rank #{row['project_risk_rank']}</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 4px;">{row['file_path']}</div>
+                <div style="display: flex; gap: 15px; margin-top: 8px; font-size: 0.8rem;">
+                    <span>Churn: <b>{row['churn_90d']}</b></span>
+                    <span>LOC: <b>{row['estimated_loc']}</b></span>
+                    <span style="color: #ef4444;">Risk: <b>{row['risk_factor']}</b></span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
     else:
-        st.success("🎉 No critical hotspots detected in the selected projects!")
+        st.success("No RED_ZONE files detected in selection.")
 
-# --- Detailed Data Table ---
-st.subheader("All File Metrics")
-st.dataframe(
-    filtered_df[['project_id', 'file_path', 'churn_90d', 'estimated_loc']]
-    .sort_values(by='churn_90d', ascending=False),
-    use_container_width=True
-)
+# --- Detailed View ---
+with st.expander("Full Data Explorer"):
+    st.dataframe(
+        filtered_df[['project_id', 'file_path', 'churn_90d', 'estimated_loc', 'risk_factor', 'risk_zone', 'last_modified_at']]
+        .sort_values('risk_factor', ascending=False),
+        use_container_width=True
+    )

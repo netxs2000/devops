@@ -1,17 +1,15 @@
 
 /*
-    DORA 指标核心模型 (DORA Metrics Mart)
+    DORA 精细化度量模型 (Refined DORA Metrics)
     
-    逻辑：
-    1. Deployment Frequency: 生产环境部署次数。
-    2. Lead Time for Changes: 从代码合并到发布的时间。
-    3. Change Failure Rate: 部署失败比率。
-    4. MTTR: 故障恢复时间（通过 Issue 标签识别 Incident）。
+    逻辑：集成瓶颈分析，提供更具深度的 DORA 指标报告。
 */
 
 with 
+bottlenecks as (
+    select * from {{ ref('dws_delivery_bottleneck_analysis') }}
+),
 
--- 1. 发布频率 (Deployment Frequency)
 deployments as (
     select 
         project_id,
@@ -23,38 +21,33 @@ deployments as (
     group by 1, 2
 ),
 
--- 2. 变更前置时间 (Lead Time for Changes)
-lead_times as (
-    select
-        project_id,
-        date_trunc('month', merged_at) as month,
-        avg(extract(epoch from (merged_at - created_at))/60.0) as avg_lead_time_minutes
-    from {{ ref('stg_gitlab_merge_requests') }}
-    where state = 'merged'
-    group by 1, 2
-),
-
--- 3. MTTR (基于 Issue 识别 Incident)
-mttr as (
-    select
-        project_id,
-        date_trunc('month', closed_at) as month,
-        avg(extract(epoch from (closed_at - created_at))/3600.0) as avg_recovery_time_hours
-    from {{ ref('stg_gitlab_issues') }}
-    where state = 'closed'
-      and labels::text ilike '%incident%' -- 简单识别逻辑
-    group by 1, 2
+projects as (
+    select * from {{ ref('stg_gitlab_projects') }}
 )
 
 select
     p.project_name,
-    d.month,
+    b.audit_month as month,
+    
+    -- DORA Core 4
     coalesce(d.deploy_count, 0) as deployment_frequency,
-    round(coalesce(lt.avg_lead_time_minutes, 0)::numeric, 1) as lead_time_minutes,
+    b.avg_cycle_time_hours as lead_time_hours,
     round((coalesce(d.failed_deploys, 0)::numeric / nullif(d.deploy_count, 0) * 100), 2) as change_failure_rate_pct,
-    round(coalesce(m.avg_recovery_time_hours, 0)::numeric, 1) as mttr_hours
-from {{ ref('stg_gitlab_projects') }} p
-join deployments d on p.gitlab_project_id = d.project_id
-left join lead_times lt on p.gitlab_project_id = lt.project_id and d.month = lt.month
-left join mttr m on p.gitlab_project_id = m.project_id and d.month = m.month
-order by d.month desc, p.project_name
+    
+    -- 精细化分析维度
+    b.avg_pickup_delay_hours as wait_time_hours,
+    b.avg_review_duration_hours as work_time_hours,
+    b.primary_bottleneck,
+    
+    -- 效能评级
+    case 
+        when b.avg_cycle_time_hours < 24 then 'ELITE'
+        when b.avg_cycle_time_hours < 72 then 'HIGH'
+        when b.avg_cycle_time_hours < 168 then 'MEDIUM'
+        else 'LOW'
+    end as performance_rating
+
+from bottlenecks b
+left join deployments d on b.project_id = d.project_id and b.audit_month = d.month
+left join projects p on b.project_id = p.gitlab_project_id
+order by month desc, lead_time_hours asc
