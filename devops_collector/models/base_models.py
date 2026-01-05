@@ -72,6 +72,7 @@ class User(Base, TimestampMixin, SCDMixin):
     requirements = relationship('Requirement', back_populates='author')
     managed_products_as_pm = relationship('Product', back_populates='product_manager')
     project_memberships = relationship('ProjectMember', back_populates='user')
+    team_memberships = relationship('TeamMember', back_populates='user')
     
     # ELOC Stats (Cached for leaderboard)
     total_eloc = Column(Float, default=0.0)
@@ -109,7 +110,7 @@ class DailyDevStats(Base, TimestampMixin):
     __tablename__ = 'daily_dev_stats'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('mdm_identities.id'), index=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), index=True)
     date = Column(Date, index=True)
     
     # Flow Metrics
@@ -191,15 +192,66 @@ class Role(Base):
     description = Column(String(255))
 
 class IdentityMapping(Base, TimestampMixin):
-    """外部身份映射表。"""
+    """外部身份映射表。
+
+    用于管理全局用户(MDM)与第三方系统(GitLab, Jira等)账号的绑定关系。
+    """
     __tablename__ = 'mdm_identity_mappings'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    global_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    source_system = Column(String(50), nullable=False)
+    global_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), index=True)
+    source_system = Column(String(50), nullable=False, index=True)
     external_user_id = Column(String(100), nullable=False)
     external_username = Column(String(100))
     external_email = Column(String(100))
+    
+    # 增强治理字段
+    mapping_status = Column(String(20), default='VERIFIED', comment='映射状态: PENDING(待确认), VERIFIED(已确认为本人), AUTO(系统算法自动关联)')
+    confidence_score = Column(Float, default=1.0, comment='匹配算法置信度 (0.0-1.0)')
+    last_active_at = Column(DateTime(timezone=True), comment='该身份在外部系统最后一次检测到活跃的时间')
+
     user = relationship('User', back_populates='identities')
+
+class Team(Base, TimestampMixin):
+    """虚拟业务团队/项目组。
+
+    用于解决 HR 行政组织架构过于死板，无法支撑跨部门项目的问题。
+    支持树状结构以构建业务维度的组织树。
+    """
+    __tablename__ = 'sys_teams'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False)
+    team_code = Column(String(50), unique=True, index=True)
+    description = Column(Text)
+    parent_id = Column(Integer, ForeignKey('sys_teams.id'), nullable=True)
+    org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True) # 挂载的行政组织节点
+    leader_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
+    
+    parent = relationship('Team', remote_side=[id], backref=backref('children', cascade='all, delete-orphan'))
+    leader = relationship('User', foreign_keys=[leader_id])
+    members = relationship('TeamMember', back_populates='team', cascade='all, delete-orphan')
+
+    def __repr__(self) -> str:
+        """返回团队的字符串表示。"""
+        return f"<Team(name='{self.name}', code='{self.team_code}')>"
+
+class TeamMember(Base, TimestampMixin):
+    """虚拟团队成员关联表。
+
+    支持记录成员在多个团队中的角色和投入百分比，用于精确的效能核算。
+    """
+    __tablename__ = 'sys_team_members'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    team_id = Column(Integer, ForeignKey('sys_teams.id'), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=False)
+    role_code = Column(String(50), default='MEMBER', comment='成员角色: LEADER, MAINTAINER, MEMBER')
+    allocation_ratio = Column(Float, default=1.0, comment='投入百分比 (0.0-1.0)')
+
+    team = relationship('Team', back_populates='members')
+    user = relationship('User', back_populates='team_memberships')
+
+    def __repr__(self) -> str:
+        """返回成员关联的字符串表示。"""
+        return f"<TeamMember(team_id={self.team_id}, user_id={self.user_id}, role={self.role_code})>"
 
 class Product(Base, TimestampMixin):
     """产品主数据表 (mdm_product)。
