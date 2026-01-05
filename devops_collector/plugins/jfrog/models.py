@@ -62,7 +62,7 @@ class JFrogArtifact(Base):
     properties = Column(JSON)
     created_by_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     created_by_name = Column(String(100))
-    product_id = Column(Integer, ForeignKey('products.id'))
+    product_id = Column(String(100), ForeignKey('mdm_product.product_id'))
     created_by = relationship('User', primaryjoin='and_(User.global_user_id==JFrogArtifact.created_by_id, User.is_current==True)')
     product = relationship('Product')
     created_at = Column(DateTime(timezone=True))

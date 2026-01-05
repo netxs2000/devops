@@ -2,6 +2,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
+import uuid
 
 class TestStep(BaseModel):
     """结构化测试步骤模型"""
@@ -225,7 +226,7 @@ class AIResponse(BaseModel):
 
 class IdentityMappingCreate(BaseModel):
     """创建外部身份映射的请求模型"""
-    global_user_id: str
+    global_user_id: uuid.UUID
     source_system: str
     external_user_id: str
     external_username: Optional[str] = None
@@ -236,3 +237,58 @@ class IdentityMappingView(IdentityMappingCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
     user_name: Optional[str] = None
+    mapping_status: str
+    confidence_score: float
+    last_active_at: Optional[datetime] = None
+
+class IdentityMappingUpdateStatus(BaseModel):
+    """更新身份映射状态的请求模型"""
+    mapping_status: str
+
+class TeamMemberView(BaseModel):
+    """虚拟团队成员视图"""
+    model_config = ConfigDict(from_attributes=True)
+    user_id: uuid.UUID
+    full_name: str
+    role_code: str
+    allocation_ratio: float
+
+class TeamView(BaseModel):
+    """业务虚拟团队视图"""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    team_code: str
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
+    org_id: Optional[str] = None
+    leader_id: Optional[uuid.UUID] = None
+    leader_name: Optional[str] = None
+    members: List[TeamMemberView] = []
+
+class TeamCreate(BaseModel):
+    """创建虚拟团队的请求载荷"""
+    name: str
+    team_code: str
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
+    org_id: Optional[str] = None
+    leader_id: Optional[uuid.UUID] = None
+
+class TeamMemberCreate(BaseModel):
+    """添加团队成员的请求载荷"""
+    user_id: uuid.UUID
+    role_code: Optional[str] = 'MEMBER'
+    allocation_ratio: Optional[float] = 1.0
+
+class UserFullProfile(BaseModel):
+    """用户全景画像模型"""
+    global_user_id: uuid.UUID
+    full_name: str
+    username: Optional[str]
+    primary_email: str
+    employee_id: Optional[str]
+    department_name: Optional[str]
+    is_active: bool
+    identities: List[IdentityMappingView] = []
+    teams: List[Dict[str, Any]] = []

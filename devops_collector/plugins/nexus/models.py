@@ -25,7 +25,7 @@ class NexusComponent(Base):
     group = Column(String(255))
     name = Column(String(255), nullable=False)
     version = Column(String(100))
-    product_id = Column(Integer, ForeignKey('products.id'))
+    product_id = Column(String(100), ForeignKey('mdm_product.product_id'))
     product = relationship('Product')
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
