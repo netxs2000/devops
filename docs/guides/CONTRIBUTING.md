@@ -7,12 +7,16 @@
 ### 1.1 代码风格与质量
 
 * 严格遵循 **Google Python Style Guide**。
-* **Docstring 规范**: 所有类、方法及核心代码必须包含 **Google Style Docstrings**。
+* **语言与符号**:
+  * 项目文档的主体语言必须是中文。
+  * **严禁**在文件名称、文件内容、注释及 UI 界面出现表情符号。
+* **Docstring 规范**: 所有类、方法及核心代码必须包含 **Google Style Docstrings**（中文）。
   * 必须包含 `Attributes` 或 `Args`/`Returns` 节段。
   * 每一项必须包含类型标注，如 `attr_name (type): description`。
+* **模型命名原则**: 为了避免与测试框架（如 pytest）发生自动收集冲突，所有测试管理相关的核心模型必须加 `GTM` 前缀（例如：`GTMTestCase`、`GTMRequirement`）。
 * **调试友好性**: 所有 ORM 模型类必须实现结构化的 `__repr__` 方法，包含关键识别字段。
-* **高内聚，低耦合**: 代码应以模块化方式生成，功能逻辑应尽量下沉至 Service 或 Utility 层。
-* **配置外部化**: API 地址、Token 及公共参数必须通过 `config.ini` 获取，严禁硬编码。
+* **高内聚，低耦合**: 代码应以模块化方式生成，实现高内聚，低耦合；功能逻辑应尽量下沉至 Service 或 Utility 层。
+* **配置外部化**: API 地址、Token 及公共参数必须通过配置文件（如 `config.ini`）获取，严禁硬编码。
 
 ### 1.2 提交规范 (Commit Message)
 

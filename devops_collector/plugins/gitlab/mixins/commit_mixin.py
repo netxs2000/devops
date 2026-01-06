@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 from devops_collector.core.utils import parse_iso8601
-from devops_collector.plugins.gitlab.models import Project, Commit, CommitFileStats
+from ..models import GitLabProject, GitLabCommit, GitLabCommitFileStats
 from devops_collector.core.analytics.eloc import ELOCAnalyzer, ELOCOptions
 from devops_collector.models.base_models import CommitMetrics # Import Core Model
 import pytz
@@ -14,18 +14,18 @@ from dateutil import parser
 logger = logging.getLogger(__name__)
 
 class CommitMixin:
-    """提供 Commit 相关的同步逻辑。
+    """提供 GitLabCommit 相关的同步逻辑。
     
     包含提交记录的批量同步、Staging 落盘、Diff 代码量统计及行为特征分析。
     """
 
-    def _sync_commits(self, project: Project, since: Optional[str]) -> int:
+    def _sync_commits(self, project: GitLabProject, since: Optional[str]) -> int:
         """同步项目的提交记录。
         
         使用生成器流式同步项目的 Git 提交。
         
         Args:
-            project (Project): 项目实体对象。
+            project (GitLabProject): 项目实体对象。
             since (Optional[str]): ISO 格式的时间字符串，仅同步该时间之后的提交。
             
         Returns:
@@ -33,27 +33,27 @@ class CommitMixin:
         """
         return self._process_generator(self.client.get_project_commits(project.id, since=since), lambda batch: self._save_commits_batch(project, batch))
 
-    def _save_commits_batch(self, project: Project, batch: List[dict]) -> None:
+    def _save_commits_batch(self, project: GitLabProject, batch: List[dict]) -> None:
         """批量保存提交记录，并触发追溯与行为分析。
 
         流程包括：
-        1. 过滤已存在的 Commit。
-        2. 创建新 Commit 实体并保存基本统计 (additions, deletions)。
+        1. 过滤已存在的 GitLabCommit。
+        2. 创建新 GitLabCommit 实体并保存基本统计 (additions, deletions)。
         3. 触发 Traceability 提取 (关联 Issue)。
         4. 触发行为特征分析 (加班识别)。
         5. (可选) 触发深度 Diff 分析。
         
         Args:
-            project (Project): 关联的项目实体。
+            project (GitLabProject): 关联的项目实体。
             batch (List[dict]): 从 API 获取的原始提交数据列表。
         """
-        existing = self.session.query(Commit.id).filter(Commit.project_id == project.id, Commit.id.in_([c['id'] for c in batch])).all()
+        existing = self.session.query(GitLabCommit.id).filter(GitLabCommit.project_id == project.id, GitLabCommit.id.in_([c['id'] for c in batch])).all()
         existing_ids = {c.id for c in existing}
         new_commits = []
         for data in batch:
             if data['id'] in existing_ids:
                 continue
-            commit = Commit(id=data['id'], project_id=project.id, short_id=data['short_id'], title=data['title'], author_name=data['author_name'], author_email=data['author_email'], message=data['message'], authored_date=parse_iso8601(data['authored_date']), committed_date=parse_iso8601(data['committed_date']))
+            commit = GitLabCommit(id=data['id'], project_id=project.id, short_id=data['short_id'], title=data['title'], author_name=data['author_name'], author_email=data['author_email'], message=data['message'], authored_date=parse_iso8601(data['authored_date']), committed_date=parse_iso8601(data['committed_date']))
             stats = data.get('stats', {})
             commit.additions = stats.get('additions', 0)
             commit.deletions = stats.get('deletions', 0)
@@ -67,8 +67,8 @@ class CommitMixin:
             for commit in new_commits:
                 self._process_commit_diffs(project, commit)
 
-    def _process_commit_diffs(self, project: Project, commit: Commit) -> None:
-        """分析 Commit 的 Diff 并计算 ELOC / Impact / Churn。
+    def _process_commit_diffs(self, project: GitLabProject, commit: GitLabCommit) -> None:
+        """分析 GitLabCommit 的 Diff 并计算 ELOC / Impact / Churn。
         
         升级版逻辑 (v2.0)：
         1. 使用 ELOCAnalyzer 替代简单的 DiffAnalyzer。
@@ -76,8 +76,8 @@ class CommitMixin:
         3. 聚合计算结果并写入核心数据表 commit_metrics (供 Streamlit 看板使用)。
         
         Args:
-            project (Project): 关联的项目实体。
-            commit (Commit): 需要分析的提交对象。
+            project (GitLabProject): 关联的项目实体。
+            commit (GitLabCommit): 需要分析的提交对象。
         """
         try:
             diffs = self.client.get_commit_diff(project.id, commit.id)
@@ -135,10 +135,10 @@ class CommitMixin:
                 )
                 
                 # --- 3. Save File Stats (Legacy Plugin Model - Optional but kept for compatibility) ---
-                # mapping ELOC result back to old CommitFileStats fields where possible
+                # mapping ELOC result back to old GitLabCommitFileStats fields where possible
                 # Note: This is partial mapping as old mode didn't have impact/churn.
                 # We prioritize the NEW CommitMetrics table below.
-                file_stats = CommitFileStats(
+                file_stats = GitLabCommitFileStats(
                     commit_id=commit.id,
                     file_path=file_path,
                     language=None, # DiffAnalyzer had this, ELOCAnalyzer currently infers basic types
@@ -184,17 +184,17 @@ class CommitMixin:
             
             self.session.add(metrics)
             
-            # Also update the original Commit object with summary data if needed
+            # Also update the original GitLabCommit object with summary data if needed
             commit.total = total_changes
 
         except Exception as e:
             logger.warning(f'Failed to analyze diff for commit {commit.id}: {e}')
 
-    def _apply_commit_behavior_analysis(self, commit: Commit) -> None:
-        """分析 Commit 的行为特征（主要检测是否为非工作时间提交）。
+    def _apply_commit_behavior_analysis(self, commit: GitLabCommit) -> None:
+        """分析 GitLabCommit 的行为特征（主要检测是否为非工作时间提交）。
 
         Args:
-            commit (Commit): 待分析的提交对象。
+            commit (GitLabCommit): 待分析的提交对象。
         """
         if not commit.committed_date:
             return

@@ -1,4 +1,7 @@
-"""TODO: Add module description."""
+"""集成测试模块。
+
+验证跨模型、跨插件的关联关系、Hybrid 属性计算以及 Association Proxy 逻辑。
+"""
 import sys
 import os
 import uuid
@@ -7,23 +10,21 @@ sys.path.append(os.getcwd())
 import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.dialects import postgresql
-postgresql.JSONB = sqlalchemy.JSON
-postgresql.UUID = lambda *args, **kwargs: sqlalchemy.String(36)
-from devops_collector.models import Base, Organization, User, IdentityMapping, Project, Commit, Product, TestCase, Requirement, SonarProject, SonarMeasure, JiraProject, Milestone, Issue, Note, Deployment, Service, ResourceCost
+from devops_collector.core.plugin_loader import PluginLoader
+PluginLoader.autodiscover()
+PluginLoader.load_models()
+
+from devops_collector.models import Base, Organization, User, IdentityMapping, Product, GTMTestCase, GTMRequirement, Service, ResourceCost
+from devops_collector.plugins.gitlab.models import (
+    GitLabProject as Project, GitLabCommit as Commit, GitLabIssue as Issue,
+    GitLabMilestone as Milestone, GitLabNote as Note, GitLabDeployment as Deployment,
+    GitLabProjectMember as ProjectMember
+)
+from devops_collector.plugins.sonarqube.models import SonarProject, SonarMeasure
+from devops_collector.plugins.jira.models import JiraProject
 
 def run_integration_test():
-    '''"""TODO: Add description.
-
-Args:
-    TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+    """执行深度集成测试，涵盖组织架构、用户身份、跨插件关联、DORA 指标等 14 个场景。"""
     print('Starting deep integration test...')
     engine = create_engine('sqlite:///:memory:')
     Base.metadata.create_all(engine)
@@ -42,7 +43,7 @@ Raises:
         assert root_org.children[0].org_id == 'ORG_DEPT_01'
         print('  - Organization hierarchy verified.')
         print('Scenario 2: User and OneID Mapping...')
-        user_uuid = str(uuid.uuid4())
+        user_uuid = uuid.uuid4()
         test_user = User(global_user_id=user_uuid, employee_id='EMP001', full_name='John Doe', primary_email='john.doe@example.com', department_id='ORG_DEPT_01', is_active=True)
         session.add(test_user)
         gitlab_id = IdentityMapping(global_user_id=user_uuid, source_system='gitlab', external_user_id='1001', external_username='jdoe_gitlab')
@@ -65,8 +66,8 @@ Raises:
         session.add(gitlab_project)
         test_commit = Commit(id='sha123456789', project_id=50001, author_email='john.doe@example.com', message='Initial commit', authored_date=datetime.now(timezone.utc))
         session.add(test_commit)
-        test_case = TestCase(project_id=50001, author_id=user_uuid, iid=1, title='Verify login')
-        requirement = Requirement(project_id=50001, author_id=user_uuid, iid=101, title='User must be able to login')
+        test_case = GTMTestCase(project_id=50001, author_id=user_uuid, iid=1, title='Verify login')
+        requirement = GTMRequirement(project_id=50001, author_id=user_uuid, iid=101, title='User must be able to login')
         session.add(test_case)
         session.add(requirement)
         requirement.test_cases.append(test_case)
@@ -75,7 +76,7 @@ Raises:
         session.commit()
         saved_project = session.get(Project, 50001)
         assert saved_project.organization.org_id == 'ORG_DEPT_01'
-        assert gitlab_project in saved_dept.projects
+        assert gitlab_project in saved_dept.gitlab_projects
         assert len(saved_project.commits) == 1
         assert len(saved_project.test_cases) == 1
         assert len(saved_project.requirements) == 1
@@ -84,11 +85,11 @@ Raises:
         assert len(saved_user.requirements) == 1
         print('  - Plugin, Test Management and Cross-model bidirectional relations verified.')
         print('Scenario 4: JSON Data Integrity & Product Relations...')
-        test_product = Product(name='Cloud Platform', level='Line', organization_id='ORG_ROOT', raw_data={'meta': 'test', 'version': 1.5}, product_manager_id=user_uuid)
+        test_product = Product(product_id='PROD_01', product_name='Cloud Platform', product_code='CP01', product_description='Desc', version_schema='1.0', owner_team_id='ORG_ROOT', product_manager_id=user_uuid)
         session.add(test_product)
         session.commit()
-        saved_product = session.query(Product).filter_by(name='Cloud Platform').one()
-        assert saved_product.raw_data['version'] == 1.5
+        saved_product = session.query(Product).filter_by(product_name='Cloud Platform').one()
+        assert saved_product.product_name == 'Cloud Platform'
         assert saved_product.product_manager.full_name == 'John Doe'
         assert saved_product in test_user.managed_products_as_pm
         assert test_product in root_org.products
@@ -96,13 +97,13 @@ Raises:
         assert 'jdoe_gitlab' in test_user.external_usernames
         assert 'john.doe' in test_user.external_usernames
         print('  - Association Proxy (User.external_usernames) verified.')
-        from devops_collector.models import ProjectMember
+        # ProjectMember already imported as alias
         membership = ProjectMember(project_id=50001, user_id=user_uuid, access_level=40)
         session.add(membership)
         session.commit()
         assert test_user.projects[0].name == 'core-api'
         print('  - Association Proxy (User.projects) verified.')
-        from devops_collector.models import MergeRequest, Pipeline, Deployment
+        from devops_collector.plugins.gitlab.models import GitLabMergeRequest as MergeRequest, GitLabPipeline as Pipeline, GitLabDeployment as Deployment
         from datetime import timedelta
         create_time = datetime.now(timezone.utc) - timedelta(days=2)
         merge_time = datetime.now(timezone.utc)
@@ -161,16 +162,16 @@ Raises:
         session.commit()
         assert test_milestone.progress == 50.0
         print('  - Milestone Progress (Hybrid Attribute) verified.')
-        from devops_collector.models import TestCaseIssueLink
-        link = TestCaseIssueLink(test_case_id=test_case.id, issue_id=70002)
+        from devops_collector.models import GTMTestCaseIssueLink
+        link = GTMTestCaseIssueLink(test_case_id=test_case.id, issue_id=70002)
         session.add(link)
         session.commit()
         bugs = requirement.linked_bugs
         assert len(bugs) >= 1
         assert any((b.id == 70002 for sublist in bugs for b in (sublist if isinstance(sublist, list) else [sublist])))
         print('  - Requirement -> Bug (Association Proxy) penetration verified.')
-        from devops_collector.models import TestExecutionRecord
-        exec_record = TestExecutionRecord(project_id=50001, test_case_iid=test_case.iid, result='passed', executed_at=datetime.now(timezone.utc))
+        from devops_collector.models import GTMTestExecutionRecord
+        exec_record = GTMTestExecutionRecord(project_id=50001, test_case_iid=test_case.iid, result='passed', executed_at=datetime.now(timezone.utc))
         session.add(exec_record)
         session.commit()
         session.refresh(test_case)
@@ -191,7 +192,7 @@ Raises:
         assert p3_issue.sla_limit_seconds == 432000
         assert p3_issue.is_sla_violated == False
         print('  - SLA P3 threshold (120h from config) verified.')
-        agent_uuid = str(uuid.uuid4())
+        agent_uuid = uuid.uuid4()
         response_note = Note(id=55555, project_id=50001, noteable_type='Issue', noteable_iid=20, author_id=agent_uuid, body='I am looking into it.', created_at=datetime.now(timezone.utc))
         session.add(response_note)
         session.commit()

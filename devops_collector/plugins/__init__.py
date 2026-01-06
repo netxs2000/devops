@@ -24,8 +24,9 @@ def load_all_plugins():
     return PluginLoader.autodiscover()
 
 
-# 自动加载所有插件
-_loaded_plugins = PluginLoader.autodiscover()
-logger.info(f'Auto-loaded {len(_loaded_plugins)} plugins: {_loaded_plugins}')
+# 自动加载所有插件已移除，请显式调用 load_all_plugins()
+# 这样做是为了避免循环导入和导入时的副作用
+# _loaded_plugins = PluginLoader.autodiscover()
+# logger.info(f'Auto-loaded {len(_loaded_plugins)} plugins: {_loaded_plugins}')
 
 __all__ = ['load_all_plugins']

@@ -1,14 +1,17 @@
-"""TODO: Add module description."""
+"""DevOps Collector 核心基础模型模块。
+
+定义了跨插件通用的 MDM (Master Data Management) 模型、
+SCD Type 2 支持、以及 RBAC 特权模型。
+"""
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Any
 import uuid
 from sqlalchemy import Column, String, Integer, BigInteger, Boolean, Text, DateTime, Date, ForeignKey, Table, JSON, Index, func, UniqueConstraint, Float, select, UUID
 from sqlalchemy.orm import relationship, backref, DeclarativeBase
-JSONB = JSON
 from sqlalchemy.ext.hybrid import hybrid_property
 
 class Base(DeclarativeBase):
-    '''"""TODO: Add class description."""'''
+    """SQLAlchemy 声明式模型基类。"""
     pass
 
 class TimestampMixin:
@@ -40,19 +43,15 @@ class Organization(Base, TimestampMixin, SCDMixin):
     products = relationship('Product', back_populates='owner_team')
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回组织架构的字符串表示。"""
         return f"<Organization(org_id='{self.org_id}', name='{self.org_name}', version={self.sync_version})>"
-user_roles = Table('sys_user_roles', Base.metadata, Column('user_id', UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), primary_key=True), Column('role_id', Integer, ForeignKey('rbac_roles.id'), primary_key=True))
+
+user_roles = Table(
+    'sys_user_roles', 
+    Base.metadata, 
+    Column('user_id', UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), primary_key=True), 
+    Column('role_id', Integer, ForeignKey('rbac_roles.id'), primary_key=True)
+)
 
 class User(Base, TimestampMixin, SCDMixin):
     """全局用户映射表。"""
@@ -68,123 +67,72 @@ class User(Base, TimestampMixin, SCDMixin):
     managed_organizations = relationship('Organization', foreign_keys='Organization.manager_user_id', back_populates='manager')
     identities = relationship('IdentityMapping', back_populates='user')
     roles = relationship('Role', secondary=user_roles, backref='users')
-    test_cases = relationship('TestCase', back_populates='author')
-    requirements = relationship('Requirement', back_populates='author')
+    test_cases = relationship('GTMTestCase', back_populates='author')
+    requirements = relationship('GTMRequirement', back_populates='author')
     managed_products_as_pm = relationship('Product', back_populates='product_manager')
     project_memberships = relationship('GitLabProjectMember', back_populates='user')
     team_memberships = relationship('TeamMember', back_populates='user')
     
-    # ELOC Stats (Cached for leaderboard)
     total_eloc = Column(Float, default=0.0)
     eloc_rank = Column(Integer, default=0)
 
-class CommitMetrics(Base, TimestampMixin):
-    """Detailed metrics for a single commit (ELOC)."""
-    __tablename__ = 'commit_metrics'
-    
-    commit_id = Column(String(100), primary_key=True)
-    project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True) # Updated to string
-    author_email = Column(String(255), index=True)
-    committed_at = Column(DateTime(timezone=True))
-    
-    # Raw stats
-    raw_additions = Column(Integer, default=0)
-    raw_deletions = Column(Integer, default=0)
-    
-    # Advanced stats
-    eloc_score = Column(Float, default=0.0)
-    impact_score = Column(Float, default=0.0)  # GitPrime Style: Impact
-    churn_lines = Column(Integer, default=0)   # GitPrime Style: Churn
-    
-    comment_lines = Column(Integer, default=0)
-    test_lines = Column(Integer, default=0)
-    file_count = Column(Integer, default=0)    # Impact factor
-    
-    # Analysis metadata
-    is_merge = Column(Boolean, default=False)
-    is_legacy_refactor = Column(Boolean, default=False) # Impact factor
-    refactor_ratio = Column(Float, default=0.0)
-
-class DailyDevStats(Base, TimestampMixin):
-    """Daily snapshot of developer behavior (Flow & Check-in)."""
-    __tablename__ = 'daily_dev_stats'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), index=True)
-    date = Column(Date, index=True)
-    
-    # Flow Metrics
-    first_commit_time = Column(DateTime)
-    last_commit_time = Column(DateTime)
-    commit_count = Column(Integer, default=0)
-    
-    # Value Metrics
-    total_impact = Column(Float, default=0.0)
-    total_churn = Column(Integer, default=0)
-    
-    # Sherpa Metrics (Review)
-
-class SatisfactionRecord(Base, TimestampMixin):
-    """Developer Experience Pulse / Satisfaction survey record.
-    
-    Implementation of SPACE Framework's 'S' (Satisfaction) dimension.
-    Typically collected via 'Niko-Niko' calendar or weekly pulse checks.
-    """
-    __tablename__ = 'satisfaction_records'
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_email = Column(String(255), index=True) # Linked via email to Identity
-    score = Column(Integer) # 1-5 Scale (1=Very Sad, 5=Very Happy)
-    date = Column(Date, index=True) # One record per user per day/week
-    tags = Column(String(255), nullable=True) # Optional context: "Tools, Process, Meeting"
-    comment = Column(String(500), nullable=True)
-
     @property
     def external_usernames(self) -> List[str]:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回用户关联的所有外部系统用户名。"""
         return [i.external_username for i in self.identities]
 
     @property
     def projects(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回用户参与的所有 GitLab 项目。"""
         return [pm.project for pm in self.project_memberships]
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回用户的字符串表示。"""
         return f"<User(name='{self.full_name}', email='{self.primary_email}', version={self.sync_version})>"
 
+class CommitMetrics(Base, TimestampMixin):
+    """单个提交的详细度量数据 (ELOC)。"""
+    __tablename__ = 'commit_metrics'
+    commit_id = Column(String(100), primary_key=True)
+    project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True)
+    author_email = Column(String(255), index=True)
+    committed_at = Column(DateTime(timezone=True))
+    raw_additions = Column(Integer, default=0)
+    raw_deletions = Column(Integer, default=0)
+    eloc_score = Column(Float, default=0.0)
+    impact_score = Column(Float, default=0.0)
+    churn_lines = Column(Integer, default=0)
+    comment_lines = Column(Integer, default=0)
+    test_lines = Column(Integer, default=0)
+    file_count = Column(Integer, default=0)
+    is_merge = Column(Boolean, default=False)
+    is_legacy_refactor = Column(Boolean, default=False)
+    refactor_ratio = Column(Float, default=0.0)
+
+class DailyDevStats(Base, TimestampMixin):
+    """开发人员行为的每日快照。"""
+    __tablename__ = 'daily_dev_stats'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), index=True)
+    date = Column(Date, index=True)
+    first_commit_time = Column(DateTime)
+    last_commit_time = Column(DateTime)
+    commit_count = Column(Integer, default=0)
+    total_impact = Column(Float, default=0.0)
+    total_churn = Column(Integer, default=0)
+
+class SatisfactionRecord(Base, TimestampMixin):
+    """开发人员体验/满意度调查记录 (SPACE 框架中的 Satisfaction)。"""
+    __tablename__ = 'satisfaction_records'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_email = Column(String(255), index=True)
+    score = Column(Integer)
+    date = Column(Date, index=True)
+    tags = Column(String(255), nullable=True)
+    comment = Column(String(500), nullable=True)
+
 class Role(Base):
-    """系统角色表 (rbac_roles)。"""
+    """系统角色参考表 (rbac_roles)。"""
     __tablename__ = 'rbac_roles'
     id = Column(Integer, primary_key=True)
     code = Column(String(50), unique=True, nullable=False)
@@ -192,10 +140,7 @@ class Role(Base):
     description = Column(String(255))
 
 class IdentityMapping(Base, TimestampMixin):
-    """外部身份映射表。
-
-    用于管理全局用户(MDM)与第三方系统(GitLab, Jira等)账号的绑定关系。
-    """
+    """外部身份映射表，连接 MDM 用户与第三方系统账号。"""
     __tablename__ = 'mdm_identity_mappings'
     id = Column(Integer, primary_key=True, autoincrement=True)
     global_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), index=True)
@@ -203,29 +148,21 @@ class IdentityMapping(Base, TimestampMixin):
     external_user_id = Column(String(100), nullable=False)
     external_username = Column(String(100))
     external_email = Column(String(100))
-    
-    # 增强治理字段
-    mapping_status = Column(String(20), default='VERIFIED', comment='映射状态: PENDING(待确认), VERIFIED(已确认为本人), AUTO(系统算法自动关联)')
-    confidence_score = Column(Float, default=1.0, comment='匹配算法置信度 (0.0-1.0)')
-    last_active_at = Column(DateTime(timezone=True), comment='该身份在外部系统最后一次检测到活跃的时间')
-
+    mapping_status = Column(String(20), default='VERIFIED')
+    confidence_score = Column(Float, default=1.0)
+    last_active_at = Column(DateTime(timezone=True))
     user = relationship('User', back_populates='identities')
 
 class Team(Base, TimestampMixin):
-    """虚拟业务团队/项目组。
-
-    用于解决 HR 行政组织架构过于死板，无法支撑跨部门项目的问题。
-    支持树状结构以构建业务维度的组织树。
-    """
+    """虚拟业务团队/项目组表。"""
     __tablename__ = 'sys_teams'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
     team_code = Column(String(50), unique=True, index=True)
     description = Column(Text)
     parent_id = Column(Integer, ForeignKey('sys_teams.id'), nullable=True)
-    org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True) # 挂载的行政组织节点
+    org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True)
     leader_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
-    
     parent = relationship('Team', remote_side=[id], backref=backref('children', cascade='all, delete-orphan'))
     leader = relationship('User', foreign_keys=[leader_id])
     members = relationship('TeamMember', back_populates='team', cascade='all, delete-orphan')
@@ -235,17 +172,13 @@ class Team(Base, TimestampMixin):
         return f"<Team(name='{self.name}', code='{self.team_code}')>"
 
 class TeamMember(Base, TimestampMixin):
-    """虚拟团队成员关联表。
-
-    支持记录成员在多个团队中的角色和投入百分比，用于精确的效能核算。
-    """
+    """团队成员关联表。"""
     __tablename__ = 'sys_team_members'
     id = Column(Integer, primary_key=True, autoincrement=True)
     team_id = Column(Integer, ForeignKey('sys_teams.id'), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=False)
-    role_code = Column(String(50), default='MEMBER', comment='成员角色: LEADER, MAINTAINER, MEMBER')
-    allocation_ratio = Column(Float, default=1.0, comment='投入百分比 (0.0-1.0)')
-
+    role_code = Column(String(50), default='MEMBER')
+    allocation_ratio = Column(Float, default=1.0)
     team = relationship('Team', back_populates='members')
     user = relationship('User', back_populates='team_memberships')
 
@@ -254,62 +187,44 @@ class TeamMember(Base, TimestampMixin):
         return f"<TeamMember(team_id={self.team_id}, user_id={self.user_id}, role={self.role_code})>"
 
 class Product(Base, TimestampMixin):
-    """产品主数据表 (mdm_product)。
-    
-    在主数据管理 (MDM) 中，产品表字段是标准化产品数据的核心组成部分。
-    旨在确保跨系统 (如电商平台、库存管理、营销系统) 的一致性。
-    """
+    """产品主数据表 (mdm_product)。"""
     __tablename__ = 'mdm_product'
-    product_id = Column(String(100), primary_key=True, comment='主键, 唯一, 唯一标识 (如 SOFT-DATAHUB-001)')
-    product_code = Column(String(25), nullable=False, index=True, comment='软件代码')
-    product_name = Column(String(255), nullable=False, comment='软件标准名称')
-    product_description = Column(Text, nullable=False, comment='产品特性用途')
-    category = Column(String(100), comment='引用分类表，关联产品分类')
-    version_schema = Column(String(50), nullable=False, comment='允许部署的版本范围或版本号')
-    specification = Column(JSON, comment='键值对形式存储 {软件名称, 版本, 最小内存}')
-    runtime_env = Column(JSON, comment='允许运行的目标环境 (Array)')
-    checksum = Column(String(255), comment='发布包的哈希值')
-    lifecycle_status = Column(String(50), default='Active', comment='生命周期状态: Active, End-of-Life')
-    repo_url = Column(String(255), comment='源代码仓库地址')
-    artifact_path = Column(String(255), comment='产物库路径')
-    owner_team_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment='负责该产品部门的组织ID')
+    product_id = Column(String(100), primary_key=True)
+    product_code = Column(String(25), nullable=False, index=True)
+    product_name = Column(String(255), nullable=False)
+    product_description = Column(Text, nullable=False)
+    category = Column(String(100))
+    version_schema = Column(String(50), nullable=False)
+    specification = Column(JSON)
+    runtime_env = Column(JSON)
+    checksum = Column(String(255))
+    lifecycle_status = Column(String(50), default='Active')
+    repo_url = Column(String(255))
+    artifact_path = Column(String(255))
+    owner_team_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     product_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     owner_team = relationship('Organization', back_populates='products')
     product_manager = relationship('User', back_populates='managed_products_as_pm')
     project_relations = relationship('ProjectProductRelation', back_populates='product')
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回产品的字符串表示。"""
         return f"<Product(code='{self.product_code}', name='{self.product_name}')>"
 
 class ProjectProductRelation(Base, TimestampMixin):
-    """项目与产品的多对多关联关系表。
-    
-    用于支持从产品维度统计项目的投入产出（ROI）。
-    支持一个项目服务于多个产品（如中台项目），并配置分摊权重。
-    """
+    """项目与产品的关联权重表。"""
     __tablename__ = 'mdm_rel_project_product'
     id = Column(Integer, primary_key=True, autoincrement=True)
     project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=False, index=True)
     product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=False, index=True)
-    relation_type = Column(String(50), default='PRIMARY', comment='关系类型: PRIMARY(主产品)/SHARED(共享)/DEPENDENCY(依赖)')
-    allocation_ratio = Column(Float, default=1.0, comment='成本/统计分摊权重 (0.0-1.0)')
+    relation_type = Column(String(50), default='PRIMARY')
+    allocation_ratio = Column(Float, default=1.0)
     __table_args__ = (UniqueConstraint('project_id', 'product_id', name='uq_project_product'),)
     project = relationship('ProjectMaster', back_populates='product_relations')
     product = relationship('Product', back_populates='project_relations')
 
 class Service(Base, TimestampMixin):
-    """服务目录。"""
+    """服务目录表。"""
     __tablename__ = 'mdm_services'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(200), nullable=False)
@@ -318,37 +233,17 @@ class Service(Base, TimestampMixin):
     costs = relationship('ResourceCost', back_populates='service')
 
     @property
-    def total_cost(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+    def total_cost(self) -> float:
+        """计算服务的总资源成本。"""
         return sum((c.amount for c in self.costs))
 
     @property
-    def investment_roi(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+    def investment_roi(self) -> float:
+        """计算服务的投资回报率 (ROI)。"""
         return 10.0 if self.total_cost > 0 else 0.0
 
 class ResourceCost(Base, TimestampMixin):
-    """资源成本记录。"""
+    """资源成本记录明细表。"""
     __tablename__ = 'stg_mdm_resource_costs'
     id = Column(Integer, primary_key=True, autoincrement=True)
     service_id = Column(Integer, ForeignKey('mdm_services.id'))
@@ -358,40 +253,48 @@ class ResourceCost(Base, TimestampMixin):
     service = relationship('Service', back_populates='costs')
 
 class MetricDefinition(Base, TimestampMixin):
-    '''"""TODO: Add class description."""'''
+    """指标定义表，定义系统中支持的所有效能指标。"""
     __tablename__ = 'mdm_metric_definitions'
     metric_code = Column(String(100), primary_key=True)
     metric_name = Column(String(200), nullable=False)
     domain = Column(String(50), nullable=False)
 
 class SystemRegistry(Base, TimestampMixin):
-    '''"""TODO: Add class description."""'''
+    """三方系统注册表，记录对接的所有外部系统 (GitLab, Jira, Sonar 等)。"""
     __tablename__ = 'mdm_systems_registry'
     system_code = Column(String(50), primary_key=True)
     system_name = Column(String(100), nullable=False)
 
 class EntityTopology(Base):
-    '''"""TODO: Add class description."""'''
+    """实体拓扑关系表，记录不同系统实体间的映射关系。"""
     __tablename__ = 'mdm_entities_topology'
     id = Column(Integer, primary_key=True)
+    entity_id = Column(String(100), index=True)
+    target_id = Column(String(100))
+    internal_id = Column(String(100))
+    is_current = Column(Boolean, default=True)
+    sync_version = Column(Integer, default=1)
 
 class SyncLog(Base, TimestampMixin):
-    '''"""TODO: Add class description."""'''
+    """插件数据同步日志记录表。"""
     __tablename__ = 'sys_sync_logs'
     id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(String(100), index=True)
+    status = Column(String(50))
+    message = Column(Text)
 
 class Location(Base):
-    '''"""TODO: Add class description."""'''
+    """地理位置或机房位置参考表。"""
     __tablename__ = 'mdm_locations'
     id = Column(Integer, primary_key=True)
 
 class Calendar(Base):
-    '''"""TODO: Add class description."""'''
+    """公共日历/节假日参考表。"""
     __tablename__ = 'mdm_calendar'
     id = Column(Integer, primary_key=True)
 
 class RawDataStaging(Base):
-    '''"""TODO: Add class description."""'''
+    """原始数据暂存表 (Staging 层)，用于存放未经处理的 API Payload。"""
     __tablename__ = 'stg_raw_data'
     id = Column(Integer, primary_key=True)
     source = Column(String(50))
@@ -402,55 +305,60 @@ class RawDataStaging(Base):
     collected_at = Column(DateTime(timezone=True))
 
 class OKRObjective(Base):
-    '''"""TODO: Add class description."""'''
+    """OKR 目标定义表。"""
     __tablename__ = 'mdm_okr_objectives'
     id = Column(Integer, primary_key=True)
 
 class OKRKeyResult(Base):
-    '''"""TODO: Add class description."""'''
+    """OKR 关键结果 (KR) 定义表。"""
     __tablename__ = 'mdm_okr_key_results'
     id = Column(Integer, primary_key=True)
 
 class TraceabilityLink(Base):
-    '''"""TODO: Add class description."""'''
+    """跨系统追溯链路表，连接需求与代码、测试与发布。"""
     __tablename__ = 'mdm_traceability_links'
     id = Column(Integer, primary_key=True)
+    source_system = Column(String(50))
+    source_type = Column(String(50))
+    source_id = Column(String(100))
+    target_system = Column(String(50))
+    target_type = Column(String(50))
+    target_id = Column(String(100))
+    link_type = Column(String(50))
+    raw_data = Column(JSON)
 
 class TestExecutionSummary(Base):
-    '''"""TODO: Add class description."""'''
+    """测试执行汇总记录表。"""
     __tablename__ = 'fct_test_execution_summary'
     id = Column(Integer, primary_key=True)
 
 class PerformanceRecord(Base):
-    '''"""TODO: Add class description."""'''
+    """效能/性能表现评估记录表。"""
     __tablename__ = 'fct_performance_records'
     id = Column(Integer, primary_key=True)
 
 class Incident(Base):
-    '''"""TODO: Add class description."""'''
+    """线上事故/线上问题记录表。"""
     __tablename__ = 'mdm_incidents'
     id = Column(Integer, primary_key=True)
 
 class UserActivityProfile(Base):
-    '''"""TODO: Add class description."""'''
+    """用户活跃度画像快照表。"""
     __tablename__ = 'fct_user_activity_profiles'
     id = Column(BigInteger, primary_key=True)
 
 class ServiceProjectMapping(Base):
-    '''"""TODO: Add class description."""'''
+    """服务与工程项目的多对多关联映射表。"""
     __tablename__ = 'mdm_service_project_mapping'
     id = Column(Integer, primary_key=True)
 
 class SLO(Base):
-    '''"""TODO: Add class description."""'''
+    """SLO (服务水平目标) 定义表。"""
     __tablename__ = 'mdm_slo_definitions'
     id = Column(Integer, primary_key=True)
 
 class ProjectMaster(Base, TimestampMixin, SCDMixin):
-    """项目全生命周期主数据 (mdm_projects)。
-    
-    用于打通“需求 -> 开发 -> 测试 -> 发布”的交付链条。采用 SCD Type 2 保留历史版本。
-    """
+    """项目全生命周期主数据 (mdm_projects)。"""
     __tablename__ = 'mdm_projects'
     project_id = Column(String(100), primary_key=True)
     project_name = Column(String(200), nullable=False)
@@ -476,31 +384,21 @@ class ProjectMaster(Base, TimestampMixin, SCDMixin):
     product_relations = relationship('ProjectProductRelation', back_populates='project')
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回项目主数据的字符串表示。"""
         return f"<ProjectMaster(project_id='{self.project_id}', name='{self.project_name}')>"
 
 class ContractPaymentNode(Base):
-    '''"""TODO: Add class description."""'''
+    """合同付款节点记录表。"""
     __tablename__ = 'mdm_contract_payment_nodes'
     id = Column(Integer, primary_key=True)
 
 class RevenueContract(Base):
-    '''"""TODO: Add class description."""'''
+    """销售/收入合同主数据。"""
     __tablename__ = 'mdm_revenue_contracts'
     id = Column(Integer, primary_key=True)
 
 class PurchaseContract(Base):
-    '''"""TODO: Add class description."""'''
+    """采购/支出合同主数据。"""
     __tablename__ = 'mdm_purchase_contracts'
     id = Column(Integer, primary_key=True)
 
@@ -524,25 +422,31 @@ class UserOAuthToken(Base, TimestampMixin):
     expires_at = Column(DateTime(timezone=True))
 
 class Company(Base):
-    '''"""TODO: Add class description."""'''
+    """公司实体参考表。"""
     __tablename__ = 'mdm_company'
     company_id = Column(String(50), primary_key=True)
 
 class Vendor(Base):
-    '''"""TODO: Add class description."""'''
+    """外部供应商参考表。"""
     __tablename__ = 'mdm_vendor'
     vendor_code = Column(String(50), primary_key=True)
 
 class EpicMaster(Base):
-    '''"""TODO: Add class description."""'''
+    """跨团队/长期史诗需求 (Epic) 主数据。"""
     __tablename__ = 'mdm_epic'
     id = Column(Integer, primary_key=True)
 
 class ComplianceIssue(Base):
-    '''"""TODO: Add class description."""'''
+    """合规风险与审计问题记录表。"""
     __tablename__ = 'mdm_compliance_issues'
     id = Column(Integer, primary_key=True)
+    issue_type = Column(String(50))
+    severity = Column(String(20))
+    entity_id = Column(String(100))
+    status = Column(String(20))
+    description = Column(Text)
+    metadata_payload = Column(JSON)
 
 class RawDataMixin:
-    '''"""TODO: Add class description."""'''
+    """原始数据支持混入类。"""
     pass

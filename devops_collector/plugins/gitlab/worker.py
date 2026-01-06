@@ -5,15 +5,15 @@ from typing import Optional, Any
 from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
-from devops_collector.plugins.gitlab.models import Project, GitLabGroup, SyncLog
-from devops_collector.plugins.gitlab.identity import IdentityMatcher, UserResolver
-from devops_collector.plugins.gitlab.mixins.base_mixin import BaseMixin
-from devops_collector.plugins.gitlab.mixins.traceability_mixin import TraceabilityMixin
-from devops_collector.plugins.gitlab.mixins.commit_mixin import CommitMixin
-from devops_collector.plugins.gitlab.mixins.issue_mixin import IssueMixin
-from devops_collector.plugins.gitlab.mixins.mr_mixin import MergeRequestMixin
-from devops_collector.plugins.gitlab.mixins.pipeline_mixin import PipelineMixin
-from devops_collector.plugins.gitlab.mixins.asset_mixin import AssetMixin
+from .models import GitLabProject, GitLabGroup, SyncLog
+from .identity import IdentityMatcher, UserResolver
+from .mixins.base_mixin import BaseMixin
+from .mixins.traceability_mixin import TraceabilityMixin
+from .mixins.commit_mixin import CommitMixin
+from .mixins.issue_mixin import IssueMixin
+from .mixins.mr_mixin import MergeRequestMixin
+from .mixins.pipeline_mixin import PipelineMixin
+from .mixins.asset_mixin import AssetMixin
 logger = logging.getLogger(__name__)
 
 class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueMixin, MergeRequestMixin, PipelineMixin, AssetMixin):
@@ -67,26 +67,29 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
         self.session.add(sync_log)
         return stats
 
-    def _sync_project(self, project_id: int) -> Optional[Project]:
+    def _sync_project(self, project_id: int) -> Optional[GitLabProject]:
         """同步项目元数据并自动维护 Group 关系。"""
-        p_data = self.client.get_project(project_id)
-        if not p_data:
+        try:
+            p_data = self.client.get_project(project_id)
+            if not p_data:
+                return None
+            self.save_to_staging(source='gitlab', entity_type='project', external_id=project_id, payload=p_data)
+            project = self.session.query(GitLabProject).filter_by(id=project_id).first()
+            if not project:
+                namespace_id = p_data.get('namespace', {}).get('id')
+                if namespace_id:
+                    self._ensure_group(namespace_id)
+                project = GitLabProject(id=project_id)
+                self.session.add(project)
+            project.name = p_data.get('name')
+            project.path_with_namespace = p_data.get('path_with_namespace')
+            project.group_id = p_data.get('namespace', {}).get('id')
+            project.raw_data = p_data  # Update raw_data so hybrid properties work
+            return project
+        except Exception as e:
+            logger.error(f'Failed to sync project {project_id}: {e}')
             return None
-        self.save_to_staging(source='gitlab', entity_type='project', external_id=project_id, payload=p_data)
-        project = self.session.query(Project).filter_by(id=project_id).first()
-        if not project:
-            namespace_id = p_data.get('namespace', {}).get('id')
-            if namespace_id:
-                self._ensure_group(namespace_id)
-            project = Project(id=project_id)
-            self.session.add(project)
-        project.name = p_data.get('name')
-        project.path_with_namespace = p_data.get('path_with_namespace')
-        project.web_url = p_data.get('web_url')
-        project.group_id = p_data.get('namespace', {}).get('id')
-        project.visibility = p_data.get('visibility')
-        project.archived = p_data.get('archived')
-        return project
+
 
     def _ensure_group(self, group_id: int) -> None:
         """确保本地存在对应的 Group 记录。"""
@@ -99,9 +102,9 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
             except Exception as e:
                 logger.warning(f'Failed to sync group {group_id}: {e}')
 
-    def _match_identities(self, project: Project) -> None:
+    def _match_identities(self, project: GitLabProject) -> None:
         """匹配项目内未关联用户的提交记录。"""
-        from devops_collector.plugins.gitlab.models import Commit as CommitModel
+        from devops_collector.plugins.gitlab.models import GitLabCommit as CommitModel
         unlinked = self.session.query(CommitModel).filter_by(project_id=project.id, gitlab_user_id=None).all()
         for commit in unlinked:
             user_id = self.identity_matcher.match(commit)

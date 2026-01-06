@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 from devops_collector.core.utils import parse_iso8601
-from devops_collector.plugins.gitlab.models import Project, MergeRequest
+from ..models import GitLabProject, GitLabMergeRequest
 logger = logging.getLogger(__name__)
 
 class MergeRequestMixin:
@@ -15,11 +15,11 @@ class MergeRequestMixin:
     包含 MR 的基础信息同步、数据转换以及深度协作分析功能。
     """
 
-    def _sync_merge_requests(self, project: Project, since: Optional[str]) -> int:
+    def _sync_merge_requests(self, project: GitLabProject, since: Optional[str]) -> int:
         """从项目同步合并请求 (MR)。
 
         Args:
-            project (Project): 关联的项目实体。
+            project (GitLabProject): 关联的项目实体。
             since (Optional[str]): ISO 格式时间字符串，仅同步该时间后的 MR。
 
         Returns:
@@ -27,34 +27,34 @@ class MergeRequestMixin:
         """
         return self._process_generator(self.client.get_project_merge_requests(project.id, since=since), lambda batch: self._save_mrs_batch(project, batch))
 
-    def _save_mrs_batch(self, project: Project, batch: List[dict]) -> None:
+    def _save_mrs_batch(self, project: GitLabProject, batch: List[dict]) -> None:
         """批量保存合并请求记录。
         
         第一阶段：Extract & Load (Staging) - 原始数据落盘
         第二阶段：Transform & Load (DW) - 业务逻辑解析
 
         Args:
-            project (Project): 关联的项目实体。
+            project (GitLabProject): 关联的项目实体。
             batch (List[dict]): 包含多个 MR 原始数据的列表。
         """
         for data in batch:
             self.save_to_staging(source='gitlab', entity_type='merge_request', external_id=data['id'], payload=data, schema_version=self.SCHEMA_VERSION)
         self._transform_mrs_batch(project, batch)
 
-    def _transform_mrs_batch(self, project: Project, batch: List[dict]) -> None:
+    def _transform_mrs_batch(self, project: GitLabProject, batch: List[dict]) -> None:
         """核心解析逻辑：将原始 JSON 转换为 MergeRequest 模型。
 
         Args:
-            project (Project): 关联的项目实体。
+            project (GitLabProject): 关联的项目实体。
             batch (List[dict]): 包含多个 MR 原始数据的列表。
         """
         ids = [item['id'] for item in batch]
-        existing = self.session.query(MergeRequest).filter(MergeRequest.id.in_(ids)).all()
+        existing = self.session.query(GitLabMergeRequest).filter(GitLabMergeRequest.id.in_(ids)).all()
         existing_map = {m.id: m for m in existing}
         for data in batch:
             mr = existing_map.get(data['id'])
             if not mr:
-                mr = MergeRequest(id=data['id'])
+                mr = GitLabMergeRequest(id=data['id'])
                 self.session.add(mr)
             mr.project_id = project.id
             mr.iid = data['iid']
@@ -79,15 +79,15 @@ class MergeRequestMixin:
                 if hasattr(self, 'client'):
                     self._apply_mr_collaboration_analysis(project, mr)
 
-    def _apply_mr_collaboration_analysis(self, project: Project, mr: MergeRequest) -> None:
+    def _apply_mr_collaboration_analysis(self, project: GitLabProject, mr: GitLabMergeRequest) -> None:
         """分析合并请求的协作深度与评审质量。
         
         此方法会调用多个 API 端点以获取审批、评论和流水线信息，
         用于计算 Review Cycles, First Response Time 等效能指标。
 
         Args:
-            project (Project): 关联的项目实体。
-            mr (MergeRequest): 要分析的合并请求对象。
+            project (GitLabProject): 关联的项目实体。
+            mr (GitLabMergeRequest): 要分析的合并请求对象。
         """
         try:
             approvals = self.client.get_mr_approvals(project.id, mr.iid)

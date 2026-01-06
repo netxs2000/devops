@@ -1,7 +1,7 @@
 # 数据治理白皮书 (Data Governance Whitepaper)
 
-**版本**: 2.0.0 (Modern Data Stack Edition)  
-**日期**: 2026-01-02
+**版本**: 4.0.0 (Refactored Edition)  
+**日期**: 2026-01-06
 
 ## 1. 治理愿景
 
@@ -31,8 +31,13 @@
 
 ### 3.2 元数据目录 (DataHub)
 
-* **自动索引**: 所有的 dbt 模型说明、列描述、Dagster 资产状态必须按日同步至 DataHub。
 * **血缘要求**: DataHub 中必须能清晰看到指标报表的上游原始数据表依赖。
+
+### 3.3 命名冲突治理 (Conflict Resolution)
+
+* **模型隔离原则**: 严禁模型命名与系统工具（如测试框架、构建引擎）产生重名冲突。所有测试管理资产统一使用 `GTM_` 前缀，确保存储层与工具链的逻辑纯度。
+  * 案例：`TestCase` -> `GTMTestCase`
+  * 案例：`Requirement` -> `GTMRequirement`
 
 ## 4. 数据质量治理 (Data Quality)
 

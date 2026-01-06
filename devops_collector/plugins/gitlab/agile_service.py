@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, desc
 from devops_collector.plugins.gitlab.client import GitLabClient
-from devops_collector.plugins.gitlab.models import Project, Issue, Milestone, GitLabRelease, ReleaseMilestoneLink
+from devops_collector.plugins.gitlab.models import GitLabProject, GitLabIssue, GitLabMilestone, GitLabRelease, ReleaseMilestoneLink
 from devops_collector.models.base_models import User
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ Raises:
         self.session = session
         self.client = client
 
-    def get_backlog_issues(self, project_id: int) -> List[Issue]:
+    def get_backlog_issues(self, project_id: int) -> List[GitLabIssue]:
         """获取待办需求池 (Product Backlog)。
         
         逻辑定义:
@@ -46,7 +46,7 @@ Raises:
         - 状态为开启 (state = opened)
         - 类型为需求 (type::requirements) 或 Bug (type::bug)
         """
-        query = self.session.query(Issue).filter(Issue.project_id == project_id, Issue.state == 'opened')
+        query = self.session.query(GitLabIssue).filter(GitLabIssue.project_id == project_id, GitLabIssue.state == 'opened')
         all_issues = query.all()
         backlog = []
         for issue in all_issues:
@@ -58,14 +58,14 @@ Raises:
         backlog.sort(key=lambda x: (x.weight or 0, x.created_at), reverse=True)
         return backlog
 
-    def get_sprint_backlog(self, project_id: int, milestone_title: str) -> List[Issue]:
+    def get_sprint_backlog(self, project_id: int, milestone_title: str) -> List[GitLabIssue]:
         """获取当前迭代/里程碑的需求 (Sprint Backlog)。
         
         修改说明:
         - 移除 state='opened' 过滤，返回该 Milestone 下所有状态的任务 (Opened + Closed)。
         - 前端需要利用此全量数据来计算进度条 (e.g. 8/10 Done)。
         """
-        query = self.session.query(Issue).filter(Issue.project_id == project_id)
+        query = self.session.query(GitLabIssue).filter(GitLabIssue.project_id == project_id)
         issues = []
         for issue in query.all():
             ms = issue.raw_data.get('milestone')
@@ -74,7 +74,7 @@ Raises:
         return issues
 
     def move_issue_to_sprint(self, project_id: int, issue_iid: int, milestone_id: int) -> bool:
-        """【迭代规划】将 Issue 拖入迭代 (分配里程碑)。"""
+        """【迭代规划】将 GitLabIssue 拖入迭代 (分配里程碑)。"""
         try:
             self.client.update_issue(project_id, issue_iid, {'milestone_id': milestone_id})
             return True
@@ -83,7 +83,7 @@ Raises:
             return False
 
     def remove_issue_from_sprint(self, project_id: int, issue_iid: int) -> bool:
-        """【迭代规划】将 Issue 移出迭代 (放入 Backlog)。"""
+        """【迭代规划】将 GitLabIssue 移出迭代 (放入 Backlog)。"""
         try:
             self.client.update_issue(project_id, issue_iid, {'milestone_id': 0})
             return True
@@ -93,11 +93,11 @@ Raises:
 
     def execute_release(self, project_id: int, milestone_title: str, ref_branch: str='main', user_id: Optional[str]=None, auto_rollover: bool=False, target_milestone_id: Optional[int]=None) -> Dict:
         """【核心功能】一键执行发布。 (Refactored)"""
-        milestone = self.session.query(Milestone).filter(Milestone.project_id == project_id, Milestone.title == milestone_title).first()
+        milestone = self.session.query(GitLabMilestone).filter(GitLabMilestone.project_id == project_id, GitLabMilestone.title == milestone_title).first()
         if not milestone:
-            raise ValueError(f"Milestone '{milestone_title}' not found.")
+            raise ValueError(f"GitLabMilestone '{milestone_title}' not found.")
         open_issues = []
-        all_issues = self.session.query(Issue).filter(Issue.project_id == project_id, Issue.state == 'opened').all()
+        all_issues = self.session.query(GitLabIssue).filter(GitLabIssue.project_id == project_id, GitLabIssue.state == 'opened').all()
         for issue in all_issues:
             ms = issue.raw_data.get('milestone')
             if ms and ms.get('title') == milestone_title:
@@ -145,10 +145,10 @@ Raises:
             raise e
 
     def create_sprint(self, project_id: int, title: str, start_date: str, due_date: str, description: str=None) -> Dict:
-        """【迭代规划】创建新的冲刺 (Milestone)。"""
+        """【迭代规划】创建新的冲刺 (GitLabMilestone)。"""
         try:
             gl_milestone = self.client.create_project_milestone(project_id, title, start_date, due_date, description)
-            new_ms = Milestone(id=gl_milestone['id'], iid=gl_milestone['iid'], project_id=project_id, title=gl_milestone['title'], state=gl_milestone['state'], start_date=datetime.strptime(gl_milestone['start_date'], '%Y-%m-%d') if gl_milestone.get('start_date') else None, due_date=datetime.strptime(gl_milestone['due_date'], '%Y-%m-%d') if gl_milestone.get('due_date') else None, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc), raw_data=gl_milestone)
+            new_ms = GitLabMilestone(id=gl_milestone['id'], iid=gl_milestone['iid'], project_id=project_id, title=gl_milestone['title'], state=gl_milestone['state'], start_date=datetime.strptime(gl_milestone['start_date'], '%Y-%m-%d') if gl_milestone.get('start_date') else None, due_date=datetime.strptime(gl_milestone['due_date'], '%Y-%m-%d') if gl_milestone.get('due_date') else None, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc), raw_data=gl_milestone)
             self.session.merge(new_ms)
             self.session.commit()
             return gl_milestone
@@ -156,9 +156,9 @@ Raises:
             logger.error(f'Failed to create sprint: {e}')
             raise e
 
-    def get_sprint_issues_inclusive(self, project_id: int, milestone_title: str) -> List[Issue]:
-        """(辅助) 获取里程碑下的所有 Issue (含已完成)。"""
-        query = self.session.query(Issue).filter(Issue.project_id == project_id)
+    def get_sprint_issues_inclusive(self, project_id: int, milestone_title: str) -> List[GitLabIssue]:
+        """(辅助) 获取里程碑下的所有 GitLabIssue (含已完成)。"""
+        query = self.session.query(GitLabIssue).filter(GitLabIssue.project_id == project_id)
         issues = []
         for issue in query.all():
             ms = issue.raw_data.get('milestone')

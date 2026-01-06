@@ -48,17 +48,7 @@ class ZenTaoProduct(Base):
     actions = relationship('ZenTaoAction', back_populates='product', cascade='all, delete-orphan')
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回禅道产品的字符串表示。"""
         return f"<ZenTaoProduct(id={self.id}, name='{self.name}')>"
 
 class ZenTaoProductPlan(Base):
@@ -91,17 +81,7 @@ class ZenTaoProductPlan(Base):
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回产品计划的字符串表示。"""
         return f"<ZenTaoProductPlan(id={self.id}, title='{self.title}')>"
 
 class ZenTaoExecution(Base):
@@ -131,17 +111,7 @@ class ZenTaoExecution(Base):
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回迭代执行的字符串表示。"""
         return f"<ZenTaoExecution(id={self.id}, name='{self.name}')>"
 
 class ZenTaoIssue(Base):
@@ -174,7 +144,6 @@ class ZenTaoIssue(Base):
     assigned_to = Column(String(100))
     opened_by_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
     assigned_to_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
     created_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True))
     closed_at = Column(DateTime(timezone=True))
@@ -185,17 +154,7 @@ class ZenTaoIssue(Base):
     plan = relationship('ZenTaoProductPlan', back_populates='issues')
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回问题的字符串表示。"""
         return f"<ZenTaoIssue(id={self.id}, title='{self.title[:20]}...', type='{self.type}')>"
 
 class ZenTaoTestCase(Base):
@@ -227,17 +186,7 @@ class ZenTaoTestCase(Base):
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回测试用例的字符串表示。"""
         return f"<ZenTaoTestCase(id={self.id}, title='{self.title}')>"
 
 class ZenTaoTestResult(Base):
@@ -260,17 +209,7 @@ class ZenTaoTestResult(Base):
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回测试结果的字符串表示。"""
         return f"<ZenTaoTestResult(case_id={self.case_id}, result='{self.result}')>"
 
 class ZenTaoBuild(Base):
@@ -295,17 +234,7 @@ class ZenTaoBuild(Base):
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回构建版本的字符串表示。"""
         return f"<ZenTaoBuild(id={self.id}, name='{self.name}')>"
 
 class ZenTaoRelease(Base):
@@ -331,17 +260,7 @@ class ZenTaoRelease(Base):
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回发布记录的字符串表示。"""
         return f"<ZenTaoRelease(id={self.id}, name='{self.name}')>"
 
 class ZenTaoAction(Base):
@@ -369,15 +288,5 @@ class ZenTaoAction(Base):
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """返回操作日志的字符串表示。"""
         return f"<ZenTaoAction(obj_type='{self.object_type}', action='{self.action}')>"

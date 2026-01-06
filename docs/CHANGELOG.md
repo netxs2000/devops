@@ -2,6 +2,26 @@
 
 所有对 DevOps Data Application Platform 的重要更改都将记录在此文件中。
 
+## [4.0.0] - 2026-01-06
+
+### 新增 (Added) - v4.0.0
+
+* **GTM 测试管理模型命名规范**: 为了避免 pytest 自动收集模型类导致的冲突，引入 `GTM` (GitLab Test Management) 前缀，将 `TestCase` 重命名为 `GTMTestCase`，`Requirement` 重命名为 `GTMRequirement`，并同步更新了数据库表名。
+* **双向关联增强**: 完善了 `User`、`GitLabProject` 与 `GTM` 模型之间的双向 SQLAlchemy 关系定义。
+
+### 优化 (Improved) - v4.0.0
+
+* **认证服务代码质量**:
+  * 全面标准化 `auth/services.py` 和 `auth/router.py` 的 Docstrings 为中文 Google 风格。
+  * 修复了 `auth/services.py` 中缺失的 `uuid` 导入。
+  * 将所有 `datetime.utcnow()` 更新为推荐的 `datetime.now(timezone.utc)` 标准。
+* **模型层稳定性**: 完成了 `base_models.py`、`dependency.py` 及插件模型的文档标准化，移除了所有 100+ 处占位符 `TODO`。
+* **插件架构清理**:
+  * 彻底移除冗余的 `gitlab_sync` 目录，将功能完全过渡到标准化的插件架构。
+  * 优化了 `PluginLoader` 的动态加载逻辑，解决了 SQLAlchemy 模型重复定义触发的警告。
+  * 增强了 `禅道 (ZenTao)` 同步逻辑的文档标注。
+* **集成测试闭环**: 更新并验证了 `test_model_integration.py`，确保在重构后的 GTM 模型命名体系下，14 个核心业务集成场景全部通过。
+
 ## [3.9.0] - 2026-01-02
 
 ### 新增 (Added) - v3.9.0

@@ -83,9 +83,12 @@ class PluginLoader:
                 # 导入模块（触发 __init__.py 中的自注册代码）
                 importlib.import_module(module_path)
                 
-                cls._loaded_plugins.append(plugin_name)
-                loaded.append(plugin_name)
-                logger.info(f'Successfully loaded plugin: {plugin_name}')
+                if plugin_name not in cls._loaded_plugins:
+                    cls._loaded_plugins.append(plugin_name)
+                    loaded.append(plugin_name)
+                    logger.info(f'Successfully loaded plugin: {plugin_name}')
+                else:
+                    logger.debug(f'Plugin {plugin_name} already loaded, skipping registration.')
                 
             except Exception as e:
                 logger.error(f'Failed to load plugin {item.name}: {e}', exc_info=True)
@@ -143,26 +146,29 @@ class PluginLoader:
     
     @classmethod
     def load_models(cls) -> None:
-        """加载所有已注册插件的数据模型。
+        """加载所有已发现插件的数据模型。
         
-        这对于 SQLAlchemy 的 create_all 或 Alembic 迁移是必须的，
-        确保所有定义在插件中的表都能被 Base.metadata 收集到。
+        确保 SQLAlchemy 的 Base.metadata 能够收集到定义在插件中的所有表结构。
         """
         if not cls._loaded_plugins:
-            logger.warning("No plugins loaded yet. Calling autodiscover first.")
+            logger.debug("No plugins recorded. Triggering autodiscover.")
             cls.autodiscover()
             
         for plugin_name in cls._loaded_plugins:
+            models_path = f'devops_collector.plugins.{plugin_name}.models'
             try:
-                models_path = f'devops_collector.plugins.{plugin_name}.models'
-                # 尝试导入 models 模块
-                importlib.import_module(models_path)
-                logger.debug(f'Loaded models for plugin: {plugin_name}')
+                # 检查是否已加载，避免重复导入触发的 SQLAlchemy 警告
+                if models_path not in sys.modules:
+                    importlib.import_module(models_path)
+                    logger.debug(f'Successfully loaded models for plugin: {plugin_name}')
+                else:
+                    logger.debug(f'Models for {plugin_name} already in sys.modules, skipping.')
             except ImportError:
-                # 插件可能没有 models 模块，这是允许的
-                pass
+                # 插件可能没有定义 models 模块，这是合法的
+                logger.debug(f'Plugin {plugin_name} has no models module.')
+                continue
             except Exception as e:
-                logger.error(f'Failed to load models for plugin {plugin_name}: {e}')
+                logger.error(f'Critical error loading models for plugin {plugin_name}: {e}', exc_info=True)
 
     @classmethod
     def clear(cls) -> None:

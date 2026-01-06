@@ -12,7 +12,7 @@ import os
 from typing import Any
 
 try:
-    from devops_collector.plugins.gitlab.models import Project as GitLabProject
+    from devops_collector.plugins.gitlab.models import GitLabProject
 except ImportError:
     GitLabProject = None
 logger = logging.getLogger(__name__)

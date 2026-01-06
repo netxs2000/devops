@@ -1,7 +1,7 @@
 # 📊 DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-01-02 02:45:10  
-> **版本**: v3.0 (现代数据仓库版)  
+> **生成时间**: 2026-01-06 16:00:00  
+> **版本**: v4.0 (Refactored)  
 > **状态**: ✅ 有效 (Active)
 
 ---
@@ -36,10 +36,10 @@
 
 ### 🧪 测试管理域 (Test Management)
 
-- `requirements` - Requirement
-- `test_case_issue_links` - TestCaseIssueLink
-- `test_cases` - TestCase
-- `test_execution_records` - TestExecutionRecord
+- `gtm_requirements` - GTMRequirement
+- `gtm_test_case_issue_links` - GTMTestCaseIssueLink
+- `gtm_test_cases` - GTMTestCase
+- `gtm_test_execution_records` - GTMTestExecutionRecord
 - `test_execution_summaries` - TestExecutionSummary
 
 ### 🦊 GitLab 集成域 (GitLab Integration)
@@ -186,8 +186,8 @@
 - **identities**: one-to-many → `IdentityMapping`
 - **activity_profiles**: one-to-many → `UserActivityProfile`
 - **okr_objectives**: one-to-many → `OKRObjective`
-- **test_cases**: one-to-many → `TestCase`
-- **requirements**: one-to-many → `Requirement`
+- **test_cases**: one-to-many → `GTMTestCase`
+- **requirements**: one-to-many → `GTMRequirement`
 - **managed_products_as_pm**: one-to-many → `Product`
 - **managed_products_as_dm**: one-to-many → `Product`
 - **managed_products_as_tm**: one-to-many → `Product`
@@ -358,100 +358,100 @@
 
 ## 📦 测试管理域
 
-### Requirement (`requirements`)
+### GTMRequirement (`gtm_requirements`)
 
-**业务描述**: 需求模型。 代表业务层面的功能需求，用于实现从需求到测试用例的端到端追溯。
+**业务描述**: GTM 需求模型 (GitLab Test Management Requirement)。 代表业务层面的功能需求，用于实现从需求到测试用例的端到端追溯。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `project_id` | Integer | FK | 否 | - | - |
-| `author_id` | UUID | FK | 否 | - | - |
-| `iid` | Integer | - | 否 | - | - |
-| `title` | String(255) | - | 否 | - | - |
-| `description` | Text | - | 是 | - | - |
-| `state` | String(20) | - | 是 | opened | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x0000022FBD1C8EB0> | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `project_id` | Integer | FK | 否 | - | 关联项目 ID |
+| `author_id` | UUID | FK | 否 | - | 创建者 (User.global_user_id) |
+| `iid` | Integer | - | 否 | - | 内部 ID (Internal ID) |
+| `title` | String(255) | - | 否 | - | 需求标题 |
+| `description` | Text | - | 是 | - | 需求详述 |
+| `state` | String(20) | - | 是 | opened | 状态 (opened/closed) |
+| `created_at` | DateTime | - | 是 | now() | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 更新时间 |
 
 #### 关系映射
 
 - **author**: many-to-one → `User`
 - **project**: many-to-one → `Project`
-- **test_cases**: one-to-many → `TestCase`
+- **test_cases**: one-to-many → `GTMTestCase`
 
 ---
 
-### TestCaseIssueLink (`test_case_issue_links`)
+### GTMTestCaseIssueLink (`gtm_test_case_issue_links`)
 
-**业务描述**: 测试用例与 Issue 的关联表。 实现多对多关系。
+**业务描述**: GTM 测试用例与 Issue 的多对多关联表。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `test_case_id` | Integer | FK | 否 | - | - |
-| `issue_id` | Integer | FK | 否 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x0000022FBD1C8EB0> | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 主键 |
+| `test_case_id` | Integer | FK | 否 | - | 关联测试用例 ID |
+| `issue_id` | Integer | FK | 否 | - | 关联 Issue ID |
+| `created_at` | DateTime | - | 是 | now() | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 更新时间 |
 
 ---
 
-### TestCase (`test_cases`)
+### GTMTestCase (`gtm_test_cases`)
 
-**业务描述**: 测试用例模型。 存储测试用例的结构化信息，包括标题、描述（预置条件）和详细的执行步骤。
+**业务描述**: GTM 测试用例模型 (GitLab Test Management TestCase)。 存储测试用例的结构化信息，包括标题、描述（预置条件）和详细的执行步骤。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `project_id` | Integer | FK | 否 | - | - |
-| `author_id` | UUID | FK | 否 | - | - |
-| `iid` | Integer | - | 否 | - | - |
-| `title` | String(255) | - | 否 | - | - |
-| `priority` | String(20) | - | 是 | - | - |
-| `test_type` | String(50) | - | 是 | - | - |
-| `pre_conditions` | Text | - | 是 | - | - |
-| `description` | Text | - | 是 | - | - |
-| `test_steps` | JSON | - | 是 | [] | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x0000022FBD1C8EB0> | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `project_id` | Integer | FK | 否 | - | 关联项目 ID |
+| `author_id` | UUID | FK | 否 | - | 创建者 ID |
+| `iid` | Integer | - | 否 | - | 内部 ID |
+| `title` | String(255) | - | 否 | - | 用例标题 |
+| `priority` | String(20) | - | 是 | - | 优先级 |
+| `test_type` | String(50) | - | 是 | - | 测试类型 |
+| `pre_conditions` | Text | - | 是 | - | 前置条件 |
+| `description` | Text | - | 是 | - | 用例详述 |
+| `test_steps` | JSON | - | 是 | [] | 测试步骤 |
+| `created_at` | DateTime | - | 是 | now() | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 更新时间 |
 
 #### 关系映射
 
 - **author**: many-to-one → `User`
 - **project**: many-to-one → `Project`
-- **linked_issues**: one-to-many → `Issue`
-- **associated_requirements**: one-to-many → `Requirement`
-- **execution_records**: one-to-many → `TestExecutionRecord`
+- **linked_issues**: one-to-many → `Issue` (via `gtm_test_case_issue_links`)
+- **associated_requirements**: one-to-many → `GTMRequirement`
+- **execution_records**: one-to-many → `GTMTestExecutionRecord`
 
 ---
 
-### TestExecutionRecord (`test_execution_records`)
+### GTMTestExecutionRecord (`gtm_test_execution_records`)
 
-**业务描述**: 测试执行完整审计记录模型。 用于记录每次测试执行的详细结果、执行人及环境信息。
+**业务描述**: GTM 测试执行审计记录模型。 记录单次测试用例的执行结果。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `project_id` | Integer | FK | 否 | - | - |
-| `test_case_iid` | Integer | INDEX | 否 | - | - |
-| `result` | String(20) | - | 否 | - | - |
-| `executed_at` | DateTime | - | 是 | now() | - |
-| `executor_name` | String(100) | - | 是 | - | - |
-| `executor_uid` | UUID | - | 是 | - | - |
-| `comment` | Text | - | 是 | - | - |
-| `pipeline_id` | Integer | - | 是 | - | - |
-| `environment` | String(50) | - | 是 | Default | - |
-| `title` | String(255) | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x0000022FBD1C8EB0> | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 主键 |
+| `project_id` | Integer | FK | 否 | - | 关联项目 ID |
+| `test_case_iid` | Integer | INDEX | 否 | - | 关联用例的 IID |
+| `result` | String(20) | - | 否 | - | 执行结果 (passed/failed/etc.) |
+| `executed_at` | DateTime | - | 是 | now() | 执行时间 |
+| `executor_name` | String(100) | - | 是 | - | 执行人姓名 |
+| `executor_uid` | UUID | - | 是 | - | 执行人 OneID |
+| `comment` | Text | - | 是 | - | 备注/评论 |
+| `pipeline_id` | Integer | - | 是 | - | 关联流水线 ID |
+| `environment` | String(50) | - | 是 | Default | 测试环境 |
+| `title` | String(255) | - | 是 | - | 运行标题 |
+| `created_at` | DateTime | - | 是 | now() | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 更新时间 |
 
 #### 关系映射
 
@@ -461,26 +461,26 @@
 
 ### TestExecutionSummary (`test_execution_summaries`)
 
-**业务描述**: 测试执行汇总记录模型 (test_execution_summaries)。 聚合单次构建或测试任务的全量结果，支持测试金字塔分层分析。
+**业务描述**: 测试执行汇总记录模型。 聚合单次构建或测试任务的全量结果。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `project_id` | Integer | - | 是 | - | - |
-| `build_id` | String(100) | - | 是 | - | - |
-| `test_level` | String(50) | - | 否 | - | - |
-| `test_tool` | String(50) | - | 是 | - | - |
-| `total_cases` | Integer | - | 是 | 0 | - |
-| `passed_count` | Integer | - | 是 | 0 | - |
-| `failed_count` | Integer | - | 是 | 0 | - |
-| `skipped_count` | Integer | - | 是 | 0 | - |
-| `pass_rate` | Numeric | - | 是 | - | - |
-| `duration_ms` | BigInteger | - | 是 | - | - |
-| `raw_data` | JSON | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x0000022FBD1C8EB0> | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 主键 |
+| `project_id` | Integer | - | 是 | - | 项目 ID |
+| `build_id` | String(100) | - | 是 | - | 构建 ID |
+| `test_level` | String(50) | - | 否 | - | 测试层级 |
+| `test_tool` | String(50) | - | 是 | - | 测试工具 |
+| `total_cases` | Integer | - | 是 | 0 | 总用例数 |
+| `passed_count` | Integer | - | 是 | 0 | 通过数 |
+| `failed_count` | Integer | - | 是 | 0 | 失败数 |
+| `skipped_count` | Integer | - | 是 | 0 | 跳过数 |
+| `pass_rate` | Numeric | - | 是 | - | 通过率 |
+| `duration_ms` | BigInteger | - | 是 | - | 耗时 (ms) |
+| `raw_data` | JSON | - | 是 | - | 原始数据 |
+| `created_at` | DateTime | - | 是 | now() | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 更新时间 |
 
 ---
 
@@ -1046,7 +1046,7 @@
 - **blockages**: one-to-many → `Blockage`
 - **milestone**: many-to-one → `Milestone`
 - **merge_requests**: one-to-many → `MergeRequest`
-- **associated_test_cases**: one-to-many → `TestCase`
+- **associated_test_cases**: one-to-many → `GTMTestCase`
 
 ---
 
@@ -1635,9 +1635,9 @@
 - **issues**: one-to-many → `Issue`
 - **pipelines**: one-to-many → `Pipeline`
 - **deployments**: one-to-many → `Deployment`
-- **test_cases**: one-to-many → `TestCase`
-- **requirements**: one-to-many → `Requirement`
-- **test_execution_records**: one-to-many → `TestExecutionRecord`
+- **test_cases**: one-to-many → `GTMTestCase`
+- **requirements**: one-to-many → `GTMRequirement`
+- **test_execution_records**: one-to-many → `GTMTestExecutionRecord`
 - **sonar_projects**: one-to-many → `SonarProject`
 - **jira_projects**: one-to-many → `JiraProject`
 
