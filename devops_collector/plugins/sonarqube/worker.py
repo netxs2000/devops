@@ -6,9 +6,11 @@ from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.utils import parse_iso8601
-from .client import SonarQubeClient
 from .models import SonarProject
 from .transformer import SonarDataTransformer
+import os
+from typing import Any
+
 try:
     from devops_collector.plugins.gitlab.models import Project as GitLabProject
 except ImportError:
@@ -16,24 +18,23 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class SonarQubeWorker(BaseWorker):
-    """SonarQube 数据采集 Worker。"""
-    SCHEMA_VERSION = '1.0'
+    """SonarQube 数据采集 Worker。
+    
+    支持传统 REST API 客户端 (SonarQubeClient) 和现代 PyAirbyte 客户端 (AirbyteSonarQubeClient)。
+    """
+    SCHEMA_VERSION = '1.1'
 
-    def __init__(self, session: Session, client: SonarQubeClient, sync_issues: bool=False) -> None:
-        '''"""TODO: Add description.
+    def __init__(self, session: Session, client: Any = None, sync_issues: bool = False) -> None:
+        """初始化 SonarQube Worker。
 
-Args:
-    self: TODO
-    session: TODO
-    client: TODO
-    sync_issues: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        Args:
+            session (Session): SQLAlchemy 数据库会话。
+            client (Any): 客户端实例，若为 None 则根据配置自动选择。
+            sync_issues (bool): 是否同步问题详情。
+        """
+        if client is None:
+            raise ValueError("Client must be provided")
+                
         super().__init__(session, client)
         self.sync_issues = sync_issues
         self.transformer = SonarDataTransformer(session)

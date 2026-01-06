@@ -5,7 +5,7 @@ from typing import Optional, Dict, List
 from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
-from .client import NexusClient
+# from .client import NexusClient
 from .models import NexusComponent, NexusAsset
 logger = logging.getLogger(__name__)
 
@@ -77,4 +77,3 @@ class NexusWorker(BaseWorker):
             asset.checksum_sha256 = checksums.get('sha256')
             asset.checksum_md5 = checksums.get('md5')
             self.session.add(asset)
-PluginRegistry.register_worker('nexus', NexusWorker)

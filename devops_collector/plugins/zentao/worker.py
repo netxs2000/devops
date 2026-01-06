@@ -8,7 +8,7 @@ from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.core.services import close_current_and_insert_new
-from .client import ZenTaoClient
+# from .client import ZenTaoClient
 from .models import ZenTaoProduct, ZenTaoExecution, ZenTaoIssue, ZenTaoProductPlan, ZenTaoTestCase, ZenTaoTestResult, ZenTaoBuild, ZenTaoRelease, ZenTaoAction
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class ZenTaoWorker(BaseWorker):
     """禅道全量数据采集 Worker。"""
     SCHEMA_VERSION = '1.0'
 
-    def __init__(self, session: Session, client: ZenTaoClient):
+    def __init__(self, session: Session, client: Any):
         '''"""TODO: Add description.
 
 Args:
@@ -417,4 +417,3 @@ Raises:
                         user.department_id = org.org_id
                 user.raw_data = u_data
         self.session.flush()
-PluginRegistry.register_worker('zentao', ZenTaoWorker)

@@ -71,7 +71,7 @@ class User(Base, TimestampMixin, SCDMixin):
     test_cases = relationship('TestCase', back_populates='author')
     requirements = relationship('Requirement', back_populates='author')
     managed_products_as_pm = relationship('Product', back_populates='product_manager')
-    project_memberships = relationship('ProjectMember', back_populates='user')
+    project_memberships = relationship('GitLabProjectMember', back_populates='user')
     team_memberships = relationship('TeamMember', back_populates='user')
     
     # ELOC Stats (Cached for leaderboard)
@@ -472,7 +472,7 @@ class ProjectMaster(Base, TimestampMixin, SCDMixin):
     organization = relationship('Organization', foreign_keys=[org_id])
     project_manager = relationship('User', foreign_keys=[pm_user_id])
     source_system = relationship('SystemRegistry')
-    gitlab_repos = relationship('Project', back_populates='mdm_project')
+    gitlab_repos = relationship('GitLabProject', back_populates='mdm_project')
     product_relations = relationship('ProjectProductRelation', back_populates='project')
 
     def __repr__(self) -> str:

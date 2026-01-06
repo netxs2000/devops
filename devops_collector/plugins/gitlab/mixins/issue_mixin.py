@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional, Dict
 from devops_collector.core.utils import parse_iso8601
-from devops_collector.plugins.gitlab.models import Project, Issue, GitLabIssueEvent, IssueStateTransition, Blockage, TestCase
+from devops_collector.plugins.gitlab.models import Project, Issue, GitLabIssueEvent, IssueStateTransition, Blockage #, TestCase
 from devops_collector.plugins.gitlab.parser import GitLabTestParser
 logger = logging.getLogger(__name__)
 
@@ -75,8 +75,8 @@ class IssueMixin:
                 if self.user_resolver:
                     uid = self.user_resolver.resolve(data['author']['id'])
                     issue.author_id = uid
-            if 'type::test' in issue.labels:
-                self._sync_test_case_from_issue(project, issue, data)
+            # if 'type::test' in issue.labels:
+            #     self._sync_test_case_from_issue(project, issue, data)
             if self.enable_deep_analysis and 'iid' in data and hasattr(self, 'client'):
                 try:
                     self._sync_issue_events(project, data)

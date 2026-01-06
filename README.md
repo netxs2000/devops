@@ -29,7 +29,7 @@
   * **缺陷联动**: 支持从失败用例一键生成 Bug 链接，内置缺陷看板追踪修复进度。
   * **CI/CD 联动**: 实时关联流水线状态，自动捕捉执行时的构建上下文。
   * **一键质量报告**: 导出包含执行详情与缺陷全景分析的结构化 Markdown 报告。
-* **多源数据采集 (Multi-Source Collection)**: 支持 **GitLab** (代码/MR/流水线/Issue)、**SonarQube** (质量/问题/技术债) 和 **Jenkins** (构建任务/构建历史)。
+* **多源数据采集 (Multi-Source Collection)**: 集成 **Airbyte** 实现对 **GitLab** (代码/MR/流水线/Issue)、**SonarQube** (质量/问题/技术债)、**Jira** (敏捷管理) 和 **Jenkins** (构建任务/构建历史) 的高性能数据同步。
 * **分析数据集市 (Analytics Mart)**: 内置丰富的 SQL 视图，直接生成 DORA、部门记分卡、资源热力图等报表。
 * **战略与财务 (FinOps & ROI)**: 支持 **CBS 成本科目管理**、**合同回款对齐** 与 **ROI 成本投入产出分析**，对齐产研与业务。
 * **流动效能 (Flow & Cycle Time)**: 自动追踪 Issue 状态流转，量化阻塞时长，提升过程透明度。
@@ -50,7 +50,7 @@
 * **语言**: Python 3.9+
 * **数据库**: PostgreSQL (生产环境推荐)
 * **ORM**: SQLAlchemy
-* **架构**: ELT (Extract-Load-Transform)，重度依赖 **dbt** 进行数据建模与逻辑编排，辅以 SQL Views 进行实时分析。
+* **架构**: ELT (Extract-Load-Transform)，采用 **Airbyte** 进行统一数据抽取 (Extract) 与加载 (Load)，重度依赖 **dbt** 进行数据建模与逻辑编排，辅以 SQL Views 进行实时分析。
 
 ## 🚀 快速开始 (Quick Start)
 

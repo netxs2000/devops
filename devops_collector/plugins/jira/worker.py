@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from devops_collector.models.base_models import Organization, User as GlobalUser, TraceabilityLink
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
-from .client import JiraClient
+# from .client import JiraClient
 from .models import JiraProject, JiraBoard, JiraSprint, JiraIssue, JiraIssueHistory
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.core.services import close_current_and_insert_new
@@ -16,7 +16,7 @@ class JiraWorker(BaseWorker):
     """Jira 数据采集 Worker。"""
     SCHEMA_VERSION = '1.0'
 
-    def __init__(self, session: Session, client: JiraClient):
+    def __init__(self, session: Session, client: Any):
         '''"""TODO: Add description.
 
 Args:
@@ -241,4 +241,3 @@ Raises:
                 continue
             IdentityManager.get_or_create_user(self.session, source='jira', external_id=u_data['accountId'], email=u_data.get('emailAddress'), name=u_data.get('displayName'))
         self.session.flush()
-PluginRegistry.register_worker('jira', JiraWorker)

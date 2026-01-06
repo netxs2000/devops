@@ -33,7 +33,7 @@ class ZenTaoProduct(Base):
     code = Column(String(100))
     description = Column(Text)
     status = Column(String(20))
-    gitlab_project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
+    gitlab_project_id = Column(Integer, ForeignKey('gitlab_projects.id'), nullable=True)
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default='PENDING')
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

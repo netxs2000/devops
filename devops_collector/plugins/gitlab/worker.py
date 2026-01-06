@@ -5,7 +5,6 @@ from typing import Optional, Any
 from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
-from devops_collector.plugins.gitlab.client import GitLabClient
 from devops_collector.plugins.gitlab.models import Project, GitLabGroup, SyncLog
 from devops_collector.plugins.gitlab.identity import IdentityMatcher, UserResolver
 from devops_collector.plugins.gitlab.mixins.base_mixin import BaseMixin
@@ -18,24 +17,23 @@ from devops_collector.plugins.gitlab.mixins.asset_mixin import AssetMixin
 logger = logging.getLogger(__name__)
 
 class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueMixin, MergeRequestMixin, PipelineMixin, AssetMixin):
-    """GitLab 数据采集 Worker。"""
-    SCHEMA_VERSION = '1.1'
+    """GitLab 数据采集 Worker。
+    
+    支持传统 REST API 客户端 (GitLabClient) 和现代 PyAirbyte 客户端 (AirbyteGitLabClient)。
+    """
+    SCHEMA_VERSION = '1.2'
 
-    def __init__(self, session: Session, client: GitLabClient, enable_deep_analysis: bool=False):
-        '''"""TODO: Add description.
+    def __init__(self, session: Session, client: Any = None, enable_deep_analysis: bool = False):
+        """初始化 GitLab Worker。
 
-Args:
-    self: TODO
-    session: TODO
-    client: TODO
-    enable_deep_analysis: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        Args:
+            session (Session): SQLAlchemy 数据库会话。
+            client (Any): 客户端实例，若为 None 则根据配置自动选择。
+            enable_deep_analysis (bool): 是否开启深度 Diff 分析。
+        """
+        if client is None:
+            raise ValueError("Client must be provided")
+        
         super().__init__(session, client)
         self.enable_deep_analysis = enable_deep_analysis
         self.identity_matcher = IdentityMatcher(session)

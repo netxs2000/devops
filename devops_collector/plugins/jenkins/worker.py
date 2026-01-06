@@ -8,7 +8,7 @@ from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
-from .client import JenkinsClient
+# from .client import JenkinsClient
 from .models import JenkinsJob, JenkinsBuild
 from .parser import ReportParser
 from devops_collector.models import User, Organization, SyncLog, TestExecutionSummary
@@ -30,7 +30,7 @@ class JenkinsWorker(BaseWorker):
     """
     SCHEMA_VERSION = '1.0'
 
-    def __init__(self, session: Session, client: JenkinsClient) -> None:
+    def __init__(self, session: Session, client: Any) -> None:
         """初始化 Jenkins Worker。
         
         Args:
@@ -174,4 +174,3 @@ class JenkinsWorker(BaseWorker):
                     existing.raw_data = summary.raw_data
         except Exception as e:
             logger.warning(f'Failed to sync test report for build {build.number}: {e}')
-PluginRegistry.register_worker('jenkins', JenkinsWorker)

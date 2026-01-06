@@ -32,8 +32,9 @@ class SonarProject(Base):
     key = Column(String(500), unique=True, nullable=False)
     name = Column(String(255))
     qualifier = Column(String(10))
-    gitlab_project_id = Column(Integer, ForeignKey('projects.id'), nullable=True)
-    gitlab_project = relationship('Project', back_populates='sonar_projects')
+    gitlab_project_id = Column(Integer, ForeignKey('gitlab_projects.id'), nullable=True)
+    # 使用字符串引用 'GitLabProject' 替代直接引用类对象，以解除循环导入依赖
+    gitlab_project = relationship('GitLabProject', back_populates='sonar_projects')
     last_analysis_date = Column(DateTime(timezone=True))
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default='PENDING')
