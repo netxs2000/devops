@@ -19,7 +19,7 @@ from sqlalchemy.orm import backref, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 from devops_collector.models.base_models import Base, Organization, User, SyncLog
-Organization.projects = relationship('Project', back_populates='organization')
+Organization.gitlab_projects = relationship('GitLabProject', back_populates='organization')
 
 class GitLabGroup(Base):
     """GitLab 群组模型。
@@ -56,7 +56,7 @@ class GitLabGroup(Base):
     created_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True))
     children = relationship('GitLabGroup', backref=backref('parent', remote_side=[id]))
-    projects = relationship('Project', back_populates='group')
+    projects = relationship('GitLabProject', back_populates='group')
     raw_data = Column(JSON)
     members = relationship('GitLabGroupMember', back_populates='group', cascade='all, delete-orphan')
 
@@ -117,7 +117,7 @@ Raises:
 """'''
         return f'<GitLabGroupMember(group_id={self.group_id}, gitlab_uid={self.gitlab_uid})>'
 
-class Project(Base):
+class GitLabProject(Base):
     """GitLab 项目模型。
     
     存储 GitLab 中项目的元数据，并关联到组织架构。
@@ -149,9 +149,9 @@ class Project(Base):
         mdm_project (ProjectMaster): 关联的主项目对象。
         updated_at (datetime): 数据库记录的最后更新时间。
         milestones (List[Milestone]): 项目关联的里程碑列表。
-        members (List[ProjectMember]): 项目成员列表。
+        members (List[GitLabProjectMember]): 项目成员列表。
     """
-    __tablename__ = 'projects'
+    __tablename__ = 'gitlab_projects'
     id = Column(Integer, primary_key=True)
     name = Column(String)
     path_with_namespace = Column(String)
@@ -173,20 +173,20 @@ class Project(Base):
     tags_count = Column(Integer)
     branches_count = Column(Integer)
     organization_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
-    organization = relationship('Organization', primaryjoin='and_(Organization.org_id==Project.organization_id, Organization.is_current==True)', back_populates='projects')
+    organization = relationship('Organization', primaryjoin='and_(Organization.org_id==GitLabProject.organization_id, Organization.is_current==True)', back_populates='gitlab_projects')
     mdm_project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True)
     from devops_collector.models.base_models import ProjectMaster
     mdm_project = relationship('ProjectMaster', back_populates='gitlab_repos')
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     dependency_scans = relationship('DependencyScan', back_populates='project', cascade='all, delete-orphan')
     dependencies = relationship('Dependency', back_populates='project', cascade='all, delete-orphan')
-    milestones = relationship('Milestone', back_populates='project', cascade='all, delete-orphan')
-    members = relationship('ProjectMember', back_populates='project', cascade='all, delete-orphan')
-    commits = relationship('Commit', back_populates='project', cascade='all, delete-orphan')
-    merge_requests = relationship('MergeRequest', back_populates='project', cascade='all, delete-orphan')
-    issues = relationship('Issue', back_populates='project', cascade='all, delete-orphan')
-    pipelines = relationship('Pipeline', back_populates='project', cascade='all, delete-orphan')
-    deployments = relationship('Deployment', back_populates='project', cascade='all, delete-orphan')
+    milestones = relationship('GitLabMilestone', back_populates='project', cascade='all, delete-orphan')
+    members = relationship('GitLabProjectMember', back_populates='project', cascade='all, delete-orphan')
+    commits = relationship('GitLabCommit', back_populates='project', cascade='all, delete-orphan')
+    merge_requests = relationship('GitLabMergeRequest', back_populates='project', cascade='all, delete-orphan')
+    issues = relationship('GitLabIssue', back_populates='project', cascade='all, delete-orphan')
+    pipelines = relationship('GitLabPipeline', back_populates='project', cascade='all, delete-orphan')
+    deployments = relationship('GitLabDeployment', back_populates='project', cascade='all, delete-orphan')
     test_cases = relationship('TestCase', back_populates='project', cascade='all, delete-orphan')
     requirements = relationship('Requirement', back_populates='project', cascade='all, delete-orphan')
     test_execution_records = relationship('TestExecutionRecord', back_populates='project', cascade='all, delete-orphan')
@@ -260,20 +260,9 @@ Raises:
         return case((deploy_count > 0, cast(failures_count, Float) / cast(deploy_count, Float) * 100), else_=0.0)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
+        return f"<GitLabProject(id={self.id}, path='{self.path_with_namespace}')>"
 
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
-        return f"<Project(id={self.id}, path='{self.path_with_namespace}')>"
-
-class ProjectMember(Base):
+class GitLabProjectMember(Base):
     """GitLab 项目成员模型 (Project Level RBAC)。
     
     用于在更细粒度（项目级）控制用户权限。
@@ -294,7 +283,7 @@ class ProjectMember(Base):
     """
     __tablename__ = 'gitlab_project_members'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     gitlab_uid = Column(Integer)
     access_level = Column(Integer)
@@ -303,8 +292,8 @@ class ProjectMember(Base):
     job_title = Column(String(100))
     joined_at = Column(DateTime(timezone=True))
     expires_at = Column(DateTime(timezone=True))
-    project = relationship('Project', back_populates='members')
-    user = relationship('User', primaryjoin='and_(User.global_user_id==ProjectMember.user_id, User.is_current==True)', back_populates='project_memberships')
+    project = relationship('GitLabProject', back_populates='members')
+    user = relationship('User', primaryjoin='and_(User.global_user_id==GitLabProjectMember.user_id, User.is_current==True)', back_populates='project_memberships')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -318,9 +307,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f'<ProjectMember(project_id={self.project_id}, user_id={self.user_id})>'
+        return f'<GitLabProjectMember(project_id={self.project_id}, user_id={self.user_id})>'
 
-class MergeRequest(Base):
+class GitLabMergeRequest(Base):
     """合并请求 (MR) 模型。
     
     存储代码合并请求的核心数据及其在 DevOps 生命周期中的协作元数据。
@@ -357,10 +346,10 @@ class MergeRequest(Base):
         project (Project): 关联的 Project 对象。
         raw_data (dict): 原始 JSON 镜像存档。
     """
-    __tablename__ = 'merge_requests'
+    __tablename__ = 'gitlab_merge_requests'
     id = Column(Integer, primary_key=True)
     iid = Column(Integer)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     title = Column(String)
     description = Column(String)
     state = Column(String)
@@ -374,7 +363,7 @@ class MergeRequest(Base):
     diff_refs = Column(JSON)
     merge_commit_sha = Column(String)
     raw_data = Column(JSON)
-    deployments = relationship('Deployment', primaryjoin='and_(MergeRequest.merge_commit_sha==Deployment.sha, MergeRequest.project_id==Deployment.project_id)', foreign_keys='[Deployment.sha, Deployment.project_id]', viewonly=True)
+    deployments = relationship('GitLabDeployment', primaryjoin='and_(GitLabMergeRequest.merge_commit_sha==GitLabDeployment.sha, GitLabMergeRequest.project_id==GitLabDeployment.project_id)', foreign_keys='[GitLabDeployment.sha, GitLabDeployment.project_id]', viewonly=True)
 
     @hybrid_property
     def latest_deployment(self):
@@ -418,8 +407,8 @@ class MergeRequest(Base):
     ai_summary = Column(Text)
     ai_confidence = Column(Float)
     author_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    author = relationship('User', primaryjoin='and_(User.global_user_id==MergeRequest.author_id, User.is_current==True)')
-    project = relationship('Project', back_populates='merge_requests')
+    author = relationship('User', primaryjoin='and_(User.global_user_id==GitLabMergeRequest.author_id, User.is_current==True)')
+    project = relationship('GitLabProject', back_populates='merge_requests')
 
     @hybrid_property
     def cycle_time(self):
@@ -486,9 +475,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<MergeRequest(id={self.id}, iid={self.iid}, title='{self.title}')>"
+        return f"<GitLabMergeRequest(id={self.id}, iid={self.iid}, title='{self.title}')>"
 
-class Commit(Base):
+class GitLabCommit(Base):
     """代码提交记录模型。
     
     存储代码库的每一次提交信息，并关联需求和规范检查状态。
@@ -518,9 +507,9 @@ class Commit(Base):
         project (Project): 关联的 Project 对象。
         raw_data (dict): 原始 JSON 镜像存档。
     """
-    __tablename__ = 'commits'
+    __tablename__ = 'gitlab_commits'
     id = Column(String, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), primary_key=True)
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'), primary_key=True)
     short_id = Column(String)
     title = Column(String)
     author_name = Column(String)
@@ -540,8 +529,8 @@ class Commit(Base):
     ai_summary = Column(Text)
     ai_confidence = Column(Float)
     gitlab_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    author_user = relationship('User', primaryjoin='and_(User.global_user_id==Commit.gitlab_user_id, User.is_current==True)')
-    project = relationship('Project', back_populates='commits')
+    author_user = relationship('User', primaryjoin='and_(User.global_user_id==GitLabCommit.gitlab_user_id, User.is_current==True)')
+    project = relationship('GitLabProject', back_populates='commits')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -555,9 +544,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<Commit(id='{self.short_id}', author='{self.author_name}')>"
+        return f"<GitLabCommit(id='{self.short_id}', author='{self.author_name}')>"
 
-class CommitFileStats(Base):
+class GitLabCommitFileStats(Base):
     """提交文件级别统计模型。
     
     用于细粒度分析每次提交中不同类型文件的代码量和注释率。
@@ -576,9 +565,9 @@ class CommitFileStats(Base):
         blank_deleted (int): 删除空行数。
         commit (Commit): 关联的 Commit 对象。
     """
-    __tablename__ = 'commit_file_stats'
+    __tablename__ = 'gitlab_commit_file_stats'
     id = Column(Integer, primary_key=True)
-    commit_id = Column(String, ForeignKey('commits.id'))
+    commit_id = Column(String, ForeignKey('gitlab_commits.id'))
     file_path = Column(String)
     language = Column(String)
     file_type_category = Column(String(50))
@@ -588,7 +577,7 @@ class CommitFileStats(Base):
     comment_deleted = Column(Integer, default=0)
     blank_added = Column(Integer, default=0)
     blank_deleted = Column(Integer, default=0)
-    commit = relationship('Commit')
+    commit = relationship('GitLabCommit')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -602,9 +591,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<CommitFileStats(commit_id='{self.commit_id}', file_path='{self.file_path}')>"
+        return f"<GitLabCommitFileStats(commit_id='{self.commit_id}', file_path='{self.file_path}')>"
 
-class Issue(Base):
+class GitLabIssue(Base):
     """议题 (Issue) 模型。
     
     代表项目中的任务、缺陷或需求。
@@ -635,10 +624,10 @@ class Issue(Base):
         blockages (List[Blockage]): 关联的阻塞记录集合。
         raw_data (dict): 原始 JSON 镜像存档。
     """
-    __tablename__ = 'issues'
+    __tablename__ = 'gitlab_issues'
     id = Column(Integer, primary_key=True)
     iid = Column(Integer)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     title = Column(String)
     description = Column(String)
     state = Column(String)
@@ -657,13 +646,13 @@ class Issue(Base):
     milestone_id = Column(Integer, ForeignKey('milestones.id'), nullable=True)
     raw_data = Column(JSON)
     author_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
-    author = relationship('User', primaryjoin='and_(User.global_user_id==Issue.author_id, User.is_current==True)')
-    project = relationship('Project', back_populates='issues')
+    author = relationship('User', primaryjoin='and_(User.global_user_id==GitLabIssue.author_id, User.is_current==True)')
+    project = relationship('GitLabProject', back_populates='issues')
     events = relationship('GitLabIssueEvent', back_populates='issue', cascade='all, delete-orphan')
-    transitions = relationship('IssueStateTransition', back_populates='issue', cascade='all, delete-orphan')
-    blockages = relationship('Blockage', back_populates='issue', cascade='all, delete-orphan')
-    milestone = relationship('Milestone', back_populates='issues')
-    merge_requests = relationship('MergeRequest', primaryjoin='and_(cast(Issue.iid, String)==MergeRequest.external_issue_id, Issue.project_id==MergeRequest.project_id)', viewonly=True, foreign_keys='[MergeRequest.external_issue_id, MergeRequest.project_id]')
+    transitions = relationship('GitLabIssueStateTransition', back_populates='issue', cascade='all, delete-orphan')
+    blockages = relationship('GitLabBlockage', back_populates='issue', cascade='all, delete-orphan')
+    milestone = relationship('GitLabMilestone', back_populates='issues')
+    merge_requests = relationship('GitLabMergeRequest', primaryjoin='and_(cast(GitLabIssue.iid, String)==GitLabMergeRequest.external_issue_id, GitLabIssue.project_id==GitLabMergeRequest.project_id)', viewonly=True, foreign_keys='[GitLabMergeRequest.external_issue_id, GitLabMergeRequest.project_id]')
 
     @hybrid_property
     def is_deployed(self):
@@ -809,7 +798,7 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<Issue(id={self.id}, iid={self.iid}, title='{self.title}')>"
+        return f"<GitLabIssue(id={self.id}, iid={self.iid}, title='{self.title}')>"
 
 class GitLabIssueEvent(Base):
     """GitLab Issue 变更事件流。
@@ -830,14 +819,14 @@ class GitLabIssueEvent(Base):
     """
     __tablename__ = 'gitlab_issue_events'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    issue_id = Column(Integer, ForeignKey('issues.id'))
+    issue_id = Column(Integer, ForeignKey('gitlab_issues.id'))
     user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     event_type = Column(String(50))
     action = Column(String(50))
     external_event_id = Column(Integer)
     meta_info = Column(JSON)
     created_at = Column(DateTime(timezone=True))
-    issue = relationship('Issue', back_populates='events')
+    issue = relationship('GitLabIssue', back_populates='events')
     user = relationship('User')
 
     def __repr__(self) -> str:
@@ -854,7 +843,7 @@ Raises:
 """'''
         return f"<GitLabIssueEvent(issue_id={self.issue_id}, type='{self.event_type}')>"
 
-class IssueStateTransition(Base):
+class GitLabIssueStateTransition(Base):
     """Issue 状态流转记录。
     
     用于计算 Cycle Time 和分析流动效率。
@@ -868,14 +857,14 @@ class IssueStateTransition(Base):
         duration_hours (float): 在上一状态停留的时长 (小时)。
         issue (Issue): 关联的 Issue 对象。
     """
-    __tablename__ = 'issue_state_transitions'
+    __tablename__ = 'gitlab_issue_state_transitions'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    issue_id = Column(Integer, ForeignKey('issues.id'), nullable=False)
+    issue_id = Column(Integer, ForeignKey('gitlab_issues.id'), nullable=False)
     from_state = Column(String(50))
     to_state = Column(String(50), nullable=False)
     timestamp = Column(DateTime(timezone=True), nullable=False)
     duration_hours = Column(Float)
-    issue = relationship('Issue', back_populates='transitions')
+    issue = relationship('GitLabIssue', back_populates='transitions')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -889,9 +878,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<IssueStateTransition(issue_id={self.issue_id}, to_state='{self.to_state}')>"
+        return f"<GitLabIssueStateTransition(issue_id={self.issue_id}, to_state='{self.to_state}')>"
 
-class Blockage(Base):
+class GitLabBlockage(Base):
     """Issue 阻塞记录。
     
     用于分析阻碍流动的原因和时长 (Flow Efficiency)。
@@ -904,13 +893,13 @@ class Blockage(Base):
         end_time (datetime): 阻塞结束时间。
         issue (Issue): 关联的 Issue 对象。
     """
-    __tablename__ = 'issue_blockages'
+    __tablename__ = 'gitlab_issue_blockages'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    issue_id = Column(Integer, ForeignKey('issues.id'), nullable=False)
+    issue_id = Column(Integer, ForeignKey('gitlab_issues.id'), nullable=False)
     reason = Column(String(200))
     start_time = Column(DateTime(timezone=True), nullable=False)
     end_time = Column(DateTime(timezone=True))
-    issue = relationship('Issue', back_populates='blockages')
+    issue = relationship('GitLabIssue', back_populates='blockages')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -924,9 +913,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<Blockage(issue_id={self.issue_id}, reason='{self.reason}')>"
+        return f"<GitLabBlockage(issue_id={self.issue_id}, reason='{self.reason}')>"
 
-class Pipeline(Base):
+class GitLabPipeline(Base):
     """流水线 (CI/CD Pipeline) 模型。
     
     记录 CI/CD 执行的结果、时长和覆盖率等工程效能核心指标。
@@ -946,9 +935,9 @@ class Pipeline(Base):
         raw_data (dict): 原始 JSON。
         project (Project): 关联的 Project 对象。
     """
-    __tablename__ = 'pipelines'
+    __tablename__ = 'gitlab_pipelines'
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     status = Column(String)
     ref = Column(String)
     sha = Column(String)
@@ -959,7 +948,7 @@ class Pipeline(Base):
     coverage = Column(String)
     failure_reason = Column(String)
     raw_data = Column(JSON)
-    project = relationship('Project', back_populates='pipelines')
+    project = relationship('GitLabProject', back_populates='pipelines')
 
     @hybrid_property
     def is_success(self):
@@ -1033,9 +1022,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<Pipeline(id={self.id}, project_id={self.project_id}, status='{self.status}')>"
+        return f"<GitLabPipeline(id={self.id}, project_id={self.project_id}, status='{self.status}')>"
 
-class Deployment(Base):
+class GitLabDeployment(Base):
     """部署记录模型。
     
     记录代码被部署到不同环境的执行结果及其追踪 SHA。
@@ -1053,10 +1042,10 @@ class Deployment(Base):
         raw_data (dict): 原始 JSON。
         project (Project): 关联的 Project 对象。
     """
-    __tablename__ = 'deployments'
+    __tablename__ = 'gitlab_deployments'
     id = Column(Integer, primary_key=True)
     iid = Column(Integer)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     status = Column(String)
     created_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True))
@@ -1064,7 +1053,7 @@ class Deployment(Base):
     sha = Column(String)
     environment = Column(String)
     raw_data = Column(JSON)
-    project = relationship('Project', back_populates='deployments')
+    project = relationship('GitLabProject', back_populates='deployments')
 
     @hybrid_property
     def is_success(self):
@@ -1140,9 +1129,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<Deployment(id={self.id}, env='{self.environment}', status='{self.status}')>"
+        return f"<GitLabDeployment(id={self.id}, env='{self.environment}', status='{self.status}')>"
 
-class Note(Base):
+class GitLabNote(Base):
     """评论/笔记模型。
     
     存储 Issue、MR 等对象下的讨论内容和系统通知。
@@ -1161,9 +1150,9 @@ class Note(Base):
         raw_data (dict): 原始 JSON。
         project (Project): 关联的项目对象。
     """
-    __tablename__ = 'notes'
+    __tablename__ = 'gitlab_notes'
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     noteable_type = Column(String)
     noteable_iid = Column(Integer)
     body = Column(String)
@@ -1173,7 +1162,7 @@ class Note(Base):
     system = Column(Boolean)
     resolvable = Column(Boolean)
     raw_data = Column(JSON)
-    project = relationship('Project')
+    project = relationship('GitLabProject')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -1187,9 +1176,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<Note(id={self.id}, type='{self.noteable_type}')>"
+        return f"<GitLabNote(id={self.id}, type='{self.noteable_type}')>"
 
-class Tag(Base):
+class GitLabTag(Base):
     """标签/版本号模型。
     
     Attributes:
@@ -1201,14 +1190,14 @@ class Tag(Base):
         created_at (datetime): 创建时间。
         project (Project): 关联的 Project 对象。
     """
-    __tablename__ = 'tags'
+    __tablename__ = 'gitlab_tags'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     name = Column(String)
     message = Column(String)
     commit_sha = Column(String)
     created_at = Column(DateTime(timezone=True))
-    project = relationship('Project')
+    project = relationship('GitLabProject')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -1222,9 +1211,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<Tag(name='{self.name}', project_id={self.project_id})>"
+        return f"<GitLabTag(name='{self.name}', project_id={self.project_id})>"
 
-class Branch(Base):
+class GitLabBranch(Base):
     """分支模型。
     
     Attributes:
@@ -1240,9 +1229,9 @@ class Branch(Base):
         raw_data (dict): 原始 JSON。
         project (Project): 关联的项目对象。
     """
-    __tablename__ = 'branches'
+    __tablename__ = 'gitlab_branches'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     name = Column(String)
     last_commit_sha = Column(String)
     last_commit_date = Column(DateTime(timezone=True))
@@ -1251,7 +1240,7 @@ class Branch(Base):
     is_protected = Column(Boolean)
     is_default = Column(Boolean)
     raw_data = Column(JSON)
-    project = relationship('Project')
+    project = relationship('GitLabProject')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -1265,9 +1254,9 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<Branch(name='{self.name}', project_id={self.project_id})>"
+        return f"<GitLabBranch(name='{self.name}', project_id={self.project_id})>"
 
-class Milestone(Base):
+class GitLabMilestone(Base):
     """里程碑模型。
     
     Attributes:
@@ -1285,10 +1274,10 @@ class Milestone(Base):
         project (Project): 关联的 Project 对象。
         releases (List[GitLabRelease]): 关联的发布记录列表。
     """
-    __tablename__ = 'milestones'
+    __tablename__ = 'gitlab_milestones'
     id = Column(Integer, primary_key=True)
     iid = Column(Integer)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     title = Column(String)
     description = Column(String)
     state = Column(String)
@@ -1297,9 +1286,9 @@ class Milestone(Base):
     created_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True))
     raw_data = Column(JSON)
-    project = relationship('Project', back_populates='milestones')
+    project = relationship('GitLabProject', back_populates='milestones')
     releases = relationship('GitLabRelease', secondary='release_milestone_links', back_populates='milestones')
-    issues = relationship('Issue', back_populates='milestone')
+    issues = relationship('GitLabIssue', back_populates='milestone')
 
     @hybrid_property
     def progress(self):
@@ -1331,7 +1320,7 @@ Returns:
 Raises:
     TODO
 """'''
-        return f"<Milestone(id={self.id}, title='{self.title}')>"
+        return f"<GitLabMilestone(id={self.id}, title='{self.title}')>"
 
 class ReleaseMilestoneLink(Base):
     """发布与里程碑的关联表。
@@ -1344,7 +1333,7 @@ class ReleaseMilestoneLink(Base):
     """
     __tablename__ = 'release_milestone_links'
     release_id = Column(Integer, ForeignKey('gitlab_releases.id'), primary_key=True)
-    milestone_id = Column(Integer, ForeignKey('milestones.id'), primary_key=True)
+    milestone_id = Column(Integer, ForeignKey('gitlab_milestones.id'), primary_key=True)
 
 class GitLabRelease(Base):
     """GitLab 发布记录模型。
@@ -1366,7 +1355,7 @@ class GitLabRelease(Base):
     """
     __tablename__ = 'gitlab_releases'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False)
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'), nullable=False)
     tag_name = Column(String(255), nullable=False)
     name = Column(String(255))
     description = Column(Text)
@@ -1374,8 +1363,8 @@ class GitLabRelease(Base):
     released_at = Column(DateTime(timezone=True))
     author_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     raw_data = Column(JSON)
-    project = relationship('Project')
-    milestones = relationship('Milestone', secondary='release_milestone_links', back_populates='releases')
+    project = relationship('GitLabProject')
+    milestones = relationship('GitLabMilestone', secondary='release_milestone_links', back_populates='releases')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -1409,14 +1398,14 @@ class GitLabPackage(Base):
     """
     __tablename__ = 'gitlab_packages'
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     name = Column(String(255), nullable=False)
     version = Column(String(100))
     package_type = Column(String(50))
     status = Column(String(50))
     created_at = Column(DateTime(timezone=True))
     web_url = Column(String(500))
-    project = relationship('Project')
+    project = relationship('GitLabProject')
     files = relationship('GitLabPackageFile', back_populates='package', cascade='all, delete-orphan')
     raw_data = Column(JSON)
 
@@ -1491,14 +1480,14 @@ class GitLabWikiLog(Base):
     """
     __tablename__ = 'gitlab_wiki_logs'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     title = Column(String(255))
     slug = Column(String(255))
     format = Column(String(20))
     action = Column(String(50))
     user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     created_at = Column(DateTime(timezone=True))
-    project = relationship('Project')
+    project = relationship('GitLabProject')
     user = relationship('User')
     raw_data = Column(JSON)
 
@@ -1531,12 +1520,12 @@ class GitLabDependency(Base):
     """
     __tablename__ = 'gitlab_dependencies'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'))
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     name = Column(String(255), nullable=False)
     version = Column(String(100))
     package_manager = Column(String(50))
     dependency_type = Column(String(50))
-    project = relationship('Project')
+    project = relationship('GitLabProject')
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:

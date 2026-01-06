@@ -30,7 +30,7 @@ class DependencyScan(Base):
     """
     __tablename__ = 'dependency_scans'
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id', ondelete='CASCADE'), nullable=False)
     scan_date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     scanner_name = Column(String(50), nullable=False, default='OWASP Dependency-Check')
     scanner_version = Column(String(20))
@@ -42,7 +42,7 @@ class DependencyScan(Base):
     raw_json = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    project = relationship('Project', back_populates='dependency_scans')
+    project = relationship('GitLabProject', back_populates='dependency_scans')
     dependencies = relationship('Dependency', back_populates='scan', cascade='all, delete-orphan')
 
     def __repr__(self):
@@ -132,7 +132,7 @@ class Dependency(Base):
     __table_args__ = (UniqueConstraint('scan_id', 'package_name', 'package_version', name='uq_dependency_scan_package'),)
     id = Column(Integer, primary_key=True)
     scan_id = Column(Integer, ForeignKey('dependency_scans.id', ondelete='CASCADE'), nullable=False)
-    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id', ondelete='CASCADE'), nullable=False)
     package_name = Column(String(500), nullable=False)
     package_version = Column(String(100))
     package_manager = Column(String(50))
@@ -154,7 +154,7 @@ class Dependency(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     scan = relationship('DependencyScan', back_populates='dependencies')
-    project = relationship('Project', back_populates='dependencies')
+    project = relationship('GitLabProject', back_populates='dependencies')
     cves = relationship('DependencyCVE', back_populates='dependency', cascade='all, delete-orphan')
 
     def __repr__(self):

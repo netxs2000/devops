@@ -8,6 +8,10 @@ from alembic import context
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from devops_collector.models.base_models import Base
 from devops_collector.config import settings
+from devops_collector.core.plugin_loader import PluginLoader
+
+# 动态加载所有插件模型，确保 Base.metadata 收集到完整的表结构
+PluginLoader.load_models()
 config = context.config
 fileConfig(config.config_file_name)
 

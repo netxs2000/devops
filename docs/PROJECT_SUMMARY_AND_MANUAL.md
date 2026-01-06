@@ -25,7 +25,7 @@
 
 ### 2.1 多源数据采集 (Multi-Source Collection)
 
-系统采用**插件化架构**，支持多种数据源的扩展。
+系统采用 **Airbyte** 作为核心数据同步引擎，结合**插件化架构**，支持多种数据源的扩展。目前 **GitLab**, **SonarQube**, **Jira**, **Jenkins** 等核心插件均已通过 Airbyte Connector 完成集成，实现了标准化的 ELT 数据接入。
 
 #### 2.1.1 GitLab 采集插件
 

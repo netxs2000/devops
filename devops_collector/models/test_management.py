@@ -39,7 +39,7 @@ class TestCase(Base, TimestampMixin):
     """
     __tablename__ = 'test_cases'
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id', ondelete='CASCADE'), nullable=False)
     author_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=False)
     iid = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
@@ -49,8 +49,8 @@ class TestCase(Base, TimestampMixin):
     description = Column(Text)
     test_steps = Column(JSON, default=[])
     author = relationship('User', primaryjoin='and_(User.global_user_id==TestCase.author_id, User.is_current==True)', back_populates='test_cases')
-    project = relationship('Project', back_populates='test_cases')
-    linked_issues = relationship('Issue', secondary='test_case_issue_links', back_populates='associated_test_cases')
+    project = relationship('GitLabProject', back_populates='test_cases')
+    linked_issues = relationship('GitLabIssue', secondary='test_case_issue_links', back_populates='associated_test_cases')
     associated_requirements = relationship('Requirement', secondary='requirement_test_case_links', back_populates='test_cases')
 
     @hybrid_property
@@ -101,7 +101,7 @@ class TestCaseIssueLink(Base, TimestampMixin):
     __tablename__ = 'test_case_issue_links'
     id = Column(Integer, primary_key=True)
     test_case_id = Column(Integer, ForeignKey('test_cases.id', ondelete='CASCADE'), nullable=False)
-    issue_id = Column(Integer, ForeignKey('issues.id', ondelete='CASCADE'), nullable=False)
+    issue_id = Column(Integer, ForeignKey('gitlab_issues.id', ondelete='CASCADE'), nullable=False)
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
@@ -136,14 +136,14 @@ class Requirement(Base, TimestampMixin):
     """
     __tablename__ = 'requirements'
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id', ondelete='CASCADE'), nullable=False)
     author_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=False)
     iid = Column(Integer, nullable=False)
     title = Column(String(255), nullable=False)
     description = Column(Text)
     state = Column(String(20), default='opened')
     author = relationship('User', primaryjoin='and_(User.global_user_id==Requirement.author_id, User.is_current==True)', back_populates='requirements')
-    project = relationship('Project', back_populates='requirements')
+    project = relationship('GitLabProject', back_populates='requirements')
     test_cases = relationship('TestCase', secondary='requirement_test_case_links', back_populates='associated_requirements')
     linked_bugs = association_proxy('test_cases', 'linked_issues')
 
@@ -208,7 +208,7 @@ class TestExecutionRecord(Base, TimestampMixin):
     """
     __tablename__ = 'test_execution_records'
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id', ondelete='CASCADE'), nullable=False)
     test_case_iid = Column(Integer, nullable=False, index=True)
     result = Column(String(20), nullable=False)
     executed_at = Column(DateTime(timezone=True), default=func.now())
@@ -218,7 +218,7 @@ class TestExecutionRecord(Base, TimestampMixin):
     pipeline_id = Column(Integer)
     environment = Column(String(50), default='Default')
     title = Column(String(255))
-    project = relationship('Project', back_populates='test_execution_records')
+    project = relationship('GitLabProject', back_populates='test_execution_records')
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.identity_manager import IdentityManager
-from .client import JFrogClient
+# from .client import JFrogClient
 from .models import JFrogArtifact, JFrogScan, JFrogVulnerabilityDetail
 logger = logging.getLogger(__name__)
 
@@ -98,4 +98,3 @@ class JFrogWorker(BaseWorker):
             vuln.description = issue.get('description')
         scan.raw_data = scan_data
         self.session.flush()
-PluginRegistry.register_worker('jfrog', JFrogWorker)
