@@ -6,7 +6,7 @@ import re
 import logging
 from typing import List, Any
 from devops_collector.models.base_models import TraceabilityLink
-from devops_collector.plugins.gitlab.models import Commit, MergeRequest
+from ..models import GitLabCommit, GitLabMergeRequest
 logger = logging.getLogger(__name__)
 
 class TraceabilityMixin:
@@ -17,7 +17,7 @@ class TraceabilityMixin:
     """
 
     def _apply_traceability_extraction(self, obj: Any) -> None:
-        """从项目对象（Commit/MR）的文本内容中提取业务需求追溯信息。
+        """从项目对象（GitLabCommit/MR）的文本内容中提取业务需求追溯信息。
         
         支持正则匹配:
         - Jira: [A-Z]+-\\d+ (如 PROJ-123)
@@ -26,12 +26,12 @@ class TraceabilityMixin:
         提取到的 ID 会更新到对象的 metadata 中，并创建 TraceabilityLink 记录。
         
         Args:
-            obj (Any): 提交记录 (Commit) 或合并请求 (MergeRequest) 实体。
+            obj (Any): 提交记录 (GitLabCommit) 或合并请求 (GitLabMergeRequest) 实体。
         """
         text_to_scan = ''
-        if isinstance(obj, Commit):
+        if isinstance(obj, GitLabCommit):
             text_to_scan = f'{obj.title}\n{obj.message}'
-        elif isinstance(obj, MergeRequest):
+        elif isinstance(obj, GitLabMergeRequest):
             text_to_scan = f"{obj.title}\n{obj.description or ''}"
         if not text_to_scan:
             return
@@ -46,24 +46,24 @@ class TraceabilityMixin:
         """保存提取到的追溯 ID 到对象并创建映射表记录。
         
         Args:
-            obj (Any): 目标实体对象 (Commit 或 MergeRequest)。
+            obj (Any): 目标实体对象 (GitLabCommit 或 GitLabMergeRequest)。
             ids (List[str]): 提取到的外部 ID 列表。
             source (str): 来源系统类型 (jira, zentao)。
             text_content (str): 原始文本内容，用于存证 (截取前200字符)。
         """
-        if isinstance(obj, MergeRequest):
+        if isinstance(obj, GitLabMergeRequest):
             if not obj.external_issue_id:
                 obj.external_issue_id = ids[0]
                 obj.issue_source = source
-        elif isinstance(obj, Commit):
+        elif isinstance(obj, GitLabCommit):
             if not obj.linked_issue_ids:
                 obj.linked_issue_ids = []
             current_ids = set(obj.linked_issue_ids)
             current_ids.update(ids)
             obj.linked_issue_ids = list(current_ids)
             obj.issue_source = source
-        target_type = 'commit' if isinstance(obj, Commit) else 'mr'
-        target_id = obj.id if isinstance(obj, Commit) else str(obj.iid)
+        target_type = 'commit' if isinstance(obj, GitLabCommit) else 'mr'
+        target_id = obj.id if isinstance(obj, GitLabCommit) else str(obj.iid)
         for ext_id in ids:
             existing = self.session.query(TraceabilityLink).filter_by(source_system=source, source_id=ext_id, target_system='gitlab', target_type=target_type, target_id=target_id).first()
             if not existing:

@@ -57,8 +57,8 @@ def apply_plugin_privacy_filter(db: Session, query: Query, model_class: Any, cur
     if hasattr(model_class, 'product_id'):
         return query.join(Product).filter(Product.organization_id.in_(scope_ids))
     if hasattr(model_class, 'gitlab_project_id'):
-        from devops_collector.plugins.gitlab.models import Project
-        return query.join(Project).filter(Project.organization_id.in_(scope_ids))
+        from devops_collector.plugins.gitlab.models import GitLabProject
+        return query.join(GitLabProject).filter(GitLabProject.organization_id.in_(scope_ids))
     if model_class == User:
         return query.filter(User.department_id.in_(scope_ids), User.is_current == True)
     if model_class == Organization:

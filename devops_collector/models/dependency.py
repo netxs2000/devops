@@ -6,7 +6,7 @@ from sqlalchemy import Column, Integer, String, Boolean, Float, Text, DateTime, 
 JSONB = JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from devops_collector.models import Base
+from .base_models import Base
 
 class DependencyScan(Base):
     """依赖扫描记录表 (dependency_scans)。
@@ -45,18 +45,8 @@ class DependencyScan(Base):
     project = relationship('GitLabProject', back_populates='dependency_scans')
     dependencies = relationship('Dependency', back_populates='scan', cascade='all, delete-orphan')
 
-    def __repr__(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+    def __repr__(self) -> str:
+        """返回依赖扫描记录的字符串表示。"""
         return f"<DependencyScan(id={self.id}, project_id={self.project_id}, status='{self.scan_status}')>"
 
 class LicenseRiskRule(Base):
@@ -92,18 +82,8 @@ class LicenseRiskRule(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    def __repr__(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+    def __repr__(self) -> str:
+        """返回许可证风险规则的字符串表示。"""
         return f"<LicenseRiskRule(name='{self.license_name}', risk='{self.risk_level}')>"
 
 class Dependency(Base):
@@ -157,18 +137,8 @@ class Dependency(Base):
     project = relationship('GitLabProject', back_populates='dependencies')
     cves = relationship('DependencyCVE', back_populates='dependency', cascade='all, delete-orphan')
 
-    def __repr__(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+    def __repr__(self) -> str:
+        """返回项目依赖的字符串表示。"""
         return f"<Dependency(name='{self.package_name}', version='{self.package_version}')>"
 
 class DependencyCVE(Base):

@@ -17,19 +17,12 @@ class ZenTaoWorker(BaseWorker):
     SCHEMA_VERSION = '1.0'
 
     def __init__(self, session: Session, client: Any):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    session: TODO
-    client: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """初始化禅道 Worker。
+        
+        Args:
+            session (Session): 数据库会话。
+            client (Any): 禅道 API 客户端。
+        """
         super().__init__(session, client)
 
     def process_task(self, task: dict) -> None:
@@ -80,18 +73,14 @@ Raises:
             raise
 
     def _sync_product(self, product_id: int) -> Optional[ZenTaoProduct]:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    product_id: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """同步禅道产品的元数据。
+        
+        Args:
+            product_id (int): 禅道产品 ID。
+            
+        Returns:
+            Optional[ZenTaoProduct]: 同步后的产品模型对象。
+        """
         product = self.session.query(ZenTaoProduct).filter_by(id=product_id).first()
         if not product:
             response = self.client._get(f'/products/{product_id}')
@@ -103,19 +92,15 @@ Raises:
         return product
 
     def _sync_execution(self, product_id: int, data: dict) -> ZenTaoExecution:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    product_id: TODO
-    data: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """同步禅道执行（迭代/阶段）记录。
+        
+        Args:
+            product_id (int): 所属产品 ID。
+            data (dict): 原始执行数据。
+            
+        Returns:
+            ZenTaoExecution: 同步后的执行模型对象。
+        """
         exe = self.session.query(ZenTaoExecution).filter_by(id=data['id']).first()
         if not exe:
             exe = ZenTaoExecution(id=data['id'], product_id=product_id)
@@ -134,19 +119,15 @@ Raises:
         return exe
 
     def _sync_plan(self, product_id: int, data: dict) -> ZenTaoProductPlan:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    product_id: TODO
-    data: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """同步禅道产品计划记录。
+        
+        Args:
+            product_id (int): 所属产品 ID。
+            data (dict): 原始计划数据。
+            
+        Returns:
+            ZenTaoProductPlan: 同步后的计划模型对象。
+        """
         plan = self.session.query(ZenTaoProductPlan).filter_by(id=data['id']).first()
         if not plan:
             plan = ZenTaoProductPlan(id=data['id'], product_id=product_id)
@@ -213,19 +194,15 @@ Raises:
         return issue
 
     def _sync_test_case(self, product_id: int, data: dict) -> ZenTaoTestCase:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    product_id: TODO
-    data: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """同步禅道测试用例记录。
+        
+        Args:
+            product_id (int): 关联产品 ID。
+            data (dict): 原始用例数据。
+            
+        Returns:
+            ZenTaoTestCase: 同步后的用例模型对象。
+        """
         tc = self.session.query(ZenTaoTestCase).filter_by(id=data['id']).first()
         if not tc:
             tc = ZenTaoTestCase(id=data['id'], product_id=product_id)
@@ -246,19 +223,15 @@ Raises:
         return tc
 
     def _sync_test_result(self, case_id: int, data: dict) -> ZenTaoTestResult:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    case_id: TODO
-    data: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """同步禅道测试执行结果记录。
+        
+        Args:
+            case_id (int): 关联用例的 ID。
+            data (dict): 原始测试结果数据。
+            
+        Returns:
+            ZenTaoTestResult: 同步后的测试结果模型对象。
+        """
         res = self.session.query(ZenTaoTestResult).filter_by(id=data['id']).first()
         if not res:
             res = ZenTaoTestResult(id=data['id'], case_id=case_id)
@@ -272,20 +245,16 @@ Raises:
         return res
 
     def _sync_build(self, product_id: int, execution_id: int, data: dict) -> ZenTaoBuild:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    product_id: TODO
-    execution_id: TODO
-    data: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """同步禅道构建/版本记录。
+        
+        Args:
+            product_id (int): 所属产品 ID。
+            execution_id (int): 关联执行 ID。
+            data (dict): 原始构建数据。
+            
+        Returns:
+            ZenTaoBuild: 同步后的构建模型对象。
+        """
         build = self.session.query(ZenTaoBuild).filter_by(id=data['id']).first()
         if not build:
             build = ZenTaoBuild(id=data['id'], product_id=product_id, execution_id=execution_id)
@@ -311,19 +280,15 @@ Raises:
         return build
 
     def _sync_release(self, product_id: int, data: dict) -> ZenTaoRelease:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    product_id: TODO
-    data: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """同步禅道发布记录。
+        
+        Args:
+            product_id (int): 产品 ID。
+            data (dict): 原始发布数据。
+            
+        Returns:
+            ZenTaoRelease: 同步后的发布模型对象。
+        """
         rel = self.session.query(ZenTaoRelease).filter_by(id=data['id']).first()
         if not rel:
             rel = ZenTaoRelease(id=data['id'], product_id=product_id)
@@ -351,19 +316,15 @@ Raises:
         return rel
 
     def _sync_action(self, product_id: int, data: dict) -> ZenTaoAction:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    product_id: TODO
-    data: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """同步禅道操作日志记录。
+        
+        Args:
+            product_id (int): 产品 ID。
+            data (dict): 原始操作日志数据。
+            
+        Returns:
+            ZenTaoAction: 同步后的操作日志模型对象。
+        """
         action = self.session.query(ZenTaoAction).filter_by(id=data['id']).first()
         if not action:
             action = ZenTaoAction(id=data['id'], product_id=product_id)

@@ -78,54 +78,18 @@ class BaseWorker(ABC):
             raise e
 
     def log_success(self, message: str) -> None:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    message: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """记录成功日志。"""
         logger.info(f'[SUCCESS] {message}')
 
-    def log_failure(self, message: str, error: Optional[Exception]=None) -> None:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    message: TODO
-    error: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+    def log_failure(self, message: str, error: Optional[Exception] = None) -> None:
+        """记录失败日志并记录异常信息。"""
         if error:
             logger.error(f'[FAILURE] {message}: {error}')
         else:
             logger.error(f'[FAILURE] {message}')
 
     def log_progress(self, message: str, current: int, total: int) -> None:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-    message: TODO
-    current: TODO
-    total: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        """记录任务进度。"""
         percent = current / total * 100 if total > 0 else 0
         logger.info(f'[PROGRESS] {message}: {current}/{total} ({percent:.1f}%)')
 

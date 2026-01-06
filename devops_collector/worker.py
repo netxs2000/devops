@@ -12,7 +12,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .config import Config
 from .models.base_models import Base
-from .models.base_models import Base
 from .mq import MessageQueue
 from .core.registry import PluginRegistry
 from .core.plugin_loader import PluginLoader

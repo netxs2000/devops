@@ -1,7 +1,7 @@
 # 系统架构设计文档 (System Architecture Design)
 
 **版本**: 4.0.0 (Refactored)
-**日期**: 2026-01-04
+**日期**: 2026-01-06
 
 ## 1. 架构概览 (Architecture Overview)
 
@@ -111,7 +111,8 @@ graph TD
 
 ## 5. 扩展性与治理 (Extensibility & Governance)
 
-* **Plugin 插件化**: 新增外部系统只需继承 `BaseWorker` 并注册至 `PluginRegistry`。
+* **Plugin 插件化**: 新增外部系统只需继承 `BaseWorker` 并注册至 `PluginRegistry`。冗余的旧版 `gitlab_sync` 模块已完全移除，所有 GitLab 数据同步任务统一由标准化插件驱动。
+* **模型命名规范 (GTM Prefix)**: 为了消除自动化测试工具（如 pytest）的类收集冲突，测试管理相关的核心模型已重构为 `GTM` 前缀（如 `GTMTestCase`），实现了模型层与测试框架的解耦。
 * **元数据透明**: 任何数据字段的变动通过 dbt 自动扩散至全局文档，开发者可通过 DataHub 搜索任何指标的口径定义。
 
 ## 6. 技术栈总结 (Technology Stack)

@@ -17,7 +17,7 @@ from .base_models import (
     ComplianceIssue, CommitMetrics, DailyDevStats, Team, TeamMember, user_roles
 )
 from .dependency import DependencyScan, LicenseRiskRule, Dependency, DependencyCVE
-from .test_management import TestCase, TestCaseIssueLink, Requirement, TestExecutionRecord
+from .test_management import GTMTestCase, GTMTestCaseIssueLink, GTMRequirement, GTMTestExecutionRecord
 
 __all__ = [
     'Base', 'Organization', 'User', 'Role', 'Location', 'Calendar', 'SyncLog', 'RawDataStaging', 
@@ -28,7 +28,7 @@ __all__ = [
     'MetricDefinition', 'SystemRegistry', 'EntityTopology', 'Company', 'Vendor', 'EpicMaster', 
     'ComplianceIssue', 'CommitMetrics', 'DailyDevStats', 'Team', 'TeamMember', 'user_roles',
     'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE',
-    'TestCase', 'TestCaseIssueLink', 'Requirement', 'TestExecutionRecord'
+    'GTMTestCase', 'GTMTestCaseIssueLink', 'GTMRequirement', 'GTMTestExecutionRecord'
 ]
 
 from . import events

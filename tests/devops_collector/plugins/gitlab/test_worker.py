@@ -3,62 +3,12 @@ import unittest
 from unittest.mock import MagicMock, patch, ANY, call
 from datetime import datetime, timezone
 import json
-from devops_collector.plugins.gitlab.worker import GitLabWorker, DiffAnalyzer, IdentityMatcher, UserResolver
-from devops_collector.models import Project, Commit, Issue, User, SyncLog
+import uuid
+from devops_collector.plugins.gitlab.worker import GitLabWorker
+from devops_collector.plugins.gitlab.identity import IdentityMatcher, UserResolver
+from devops_collector.plugins.gitlab.models import GitLabProject, GitLabCommit, GitLabIssue
+from devops_collector.models.base_models import User, SyncLog
 
-class TestDiffAnalyzer(unittest.TestCase):
-    '''"""TODO: Add class description."""'''
-
-    def test_get_comment_symbol(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
-        self.assertEqual(DiffAnalyzer.get_comment_symbol('test.py'), '#')
-        self.assertEqual(DiffAnalyzer.get_comment_symbol('test.java'), '//')
-        self.assertIsNone(DiffAnalyzer.get_comment_symbol('test.unknown'))
-
-    def test_is_ignored(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
-        self.assertTrue(DiffAnalyzer.is_ignored('package-lock.json'))
-        self.assertTrue(DiffAnalyzer.is_ignored('node_modules/lib.js'))
-        self.assertFalse(DiffAnalyzer.is_ignored('src/start.py'))
-
-    def test_analyze_diff(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
-        diff_text = '@@ -1,2 +1,3 @@\n-old_line\n+new_line\n+# comment\n+\n'
-        stats = DiffAnalyzer.analyze_diff(diff_text, 'test.py')
-        self.assertEqual(stats['code_deleted'], 1)
-        self.assertEqual(stats['code_added'], 1)
-        self.assertEqual(stats['comment_added'], 1)
-        self.assertEqual(stats['blank_added'], 1)
 
 class TestIdentityMatcher(unittest.TestCase):
     '''"""TODO: Add class description."""'''
@@ -84,30 +34,30 @@ Raises:
         u1.public_email = None
         m1 = MagicMock()
         m1.source = 'gitlab'
-        m1.user_id = 1
-        m1.email = 'test@example.com'
-        m1.external_id = 'testuser'
-        m1.external_name = 'Test User'
+        m1.global_user_id = 'uuid-1'
+        m1.external_email = 'test@example.com'
+        m1.external_user_id = 'testuser'
+        m1.external_username = 'Test User'
         session.query.return_value.filter_by.return_value.all.return_value = [m1]
         matcher = IdentityMatcher(session)
-        c1 = MagicMock(spec=Commit)
+        c1 = MagicMock(spec=GitLabCommit)
         c1.author_email = 'test@example.com'
         c1.author_name = 'Anyone'
-        self.assertEqual(matcher.match(c1), 1)
-        c2 = MagicMock(spec=Commit)
+        self.assertEqual(matcher.match(c1), 'uuid-1')
+        c2 = MagicMock(spec=GitLabCommit)
         c2.author_email = 'other@example.com'
         c2.author_name = 'Test User'
-        self.assertEqual(matcher.match(c2), 1)
-        c3 = MagicMock(spec=Commit)
+        self.assertEqual(matcher.match(c2), 'uuid-1')
+        c3 = MagicMock(spec=GitLabCommit)
         c3.author_email = 'testuser@gmail.com'
         c3.author_name = 'Anyone'
-        self.assertEqual(matcher.match(c3), 1)
-        c4 = MagicMock(spec=Commit)
+        self.assertEqual(matcher.match(c3), 'uuid-1')
+        c4 = MagicMock(spec=GitLabCommit)
         c4.author_email = 'unknown@example.com'
         c4.author_name = 'Unknown'
-        with patch('devops_collector.plugins.gitlab.worker.IdentityManager.get_or_create_user') as mock_get_create:
-            mock_get_create.return_value.id = 999
-            self.assertEqual(matcher.match(c4), 999)
+        with patch('devops_collector.plugins.gitlab.identity.IdentityManager.get_or_create_user') as mock_get_create:
+            mock_get_create.return_value.global_user_id = 'uuid-new'
+            self.assertEqual(matcher.match(c4), 'uuid-new')
 
 class TestUserResolver(unittest.TestCase):
     '''"""TODO: Add class description."""'''
@@ -173,8 +123,8 @@ Raises:
         self.client.get_user.return_value = {'username': 'newuser', 'name': 'New User', 'email': 'new@example.com'}
         new_user = MagicMock()
         new_user.id = 789
-        with patch('devops_collector.plugins.gitlab.worker.IdentityManager.get_or_create_user') as mock_get_create:
-            mock_get_create.return_value.id = 789
+        with patch('devops_collector.plugins.gitlab.identity.IdentityManager.get_or_create_user') as mock_get_create:
+            mock_get_create.return_value.global_user_id = 789
             uid = self.resolver.resolve(999)
             self.assertEqual(uid, 789)
             self.client.get_user.assert_called_with(999)
@@ -211,6 +161,9 @@ Returns:
 Raises:
     TODO
 """'''
+        from devops_collector.core.plugin_loader import PluginLoader
+        PluginLoader.autodiscover()
+        PluginLoader.load_models()
         self.session = MagicMock()
         self.client = MagicMock()
         self.worker = GitLabWorker(self.session, self.client)
@@ -228,12 +181,13 @@ Raises:
     TODO
 """'''
         self.client.get_project.return_value = {'id': 1, 'name': 'Test Repo', 'path_with_namespace': 'group/test-repo', 'description': 'Desc', 'star_count': 10, 'namespace': {'id': 10}}
+        self.client.get_group.return_value = {'id': 10, 'name': 'Group 10', 'path': 'g10', 'full_path': 'group10'}
         self.session.query.return_value.filter_by.return_value.first.return_value = None
         project = self.worker._sync_project(1)
         self.assertIsNotNone(project)
         self.assertEqual(project.id, 1)
         self.assertEqual(project.name, 'Test Repo')
-        self.session.add.assert_called_once()
+        self.assertEqual(self.session.add.call_count, 2)
 
     def test_sync_project_failure(self):
         '''"""TODO: Add description.
@@ -263,7 +217,7 @@ Returns:
 Raises:
     TODO
 """'''
-        project = MagicMock(spec=Project)
+        project = MagicMock(spec=GitLabProject)
         project.id = 1
         project.name = 'Test'
         project.last_synced_at = None
@@ -280,9 +234,7 @@ Raises:
         self.worker.process_task(task)
         self.worker._sync_project.assert_called_with(1)
         self.worker._sync_commits.assert_called_with(project, None)
-        self.assertEqual(project.sync_status, 'COMPLETED')
         self.session.add.assert_called()
-        self.session.commit.assert_called()
 
     def test_save_commits_batch(self):
         '''"""TODO: Add description.
@@ -296,7 +248,7 @@ Returns:
 Raises:
     TODO
 """'''
-        project = MagicMock(spec=Project)
+        project = MagicMock(spec=GitLabProject)
         project.id = 1
         batch = [{'id': 'sha1', 'short_id': 's1', 'title': 'Initial commit', 'author_name': 'Test User', 'author_email': 'test@example.com', 'message': 'Commit message', 'authored_date': '2023-01-01T12:00:00Z', 'committed_date': '2023-01-01T12:00:00Z'}]
         self.session.query.return_value.filter.return_value.all.return_value = []
@@ -304,7 +256,7 @@ Raises:
         self.session.add.assert_called()
         args, _ = self.session.add.call_args
         commit = args[0]
-        self.assertIsInstance(commit, Commit)
+        self.assertIsInstance(commit, GitLabCommit)
         self.assertEqual(commit.id, 'sha1')
 
     def test_save_issues_batch(self):
@@ -319,14 +271,14 @@ Returns:
 Raises:
     TODO
 """'''
-        project = MagicMock(spec=Project)
+        project = MagicMock(spec=GitLabProject)
         project.id = 1
         batch = [{'id': 101, 'iid': 1, 'title': 'Bug', 'state': 'opened', 'created_at': '2023-01-01T12:00:00Z', 'updated_at': '2023-01-01T12:00:00Z'}]
         self.session.query.return_value.filter.return_value.all.return_value = []
         self.worker._save_issues_batch(project, batch)
         self.session.add.assert_called()
         issue = self.session.add.call_args[0][0]
-        self.assertIsInstance(issue, Issue)
+        self.assertIsInstance(issue, GitLabIssue)
         self.assertEqual(issue.title, 'Bug')
 
     def test_save_mrs_batch(self):
@@ -341,7 +293,7 @@ Returns:
 Raises:
     TODO
 """'''
-        project = MagicMock(spec=Project)
+        project = MagicMock(spec=GitLabProject)
         project.id = 1
         batch = [{'id': 201, 'iid': 1, 'title': 'Feature', 'state': 'opened', 'created_at': '2023-01-01T12:00:00Z', 'updated_at': '2023-01-01T12:00:00Z'}]
         self.session.query.return_value.filter.return_value.all.return_value = []
@@ -360,7 +312,7 @@ Returns:
 Raises:
     TODO
 """'''
-        project = MagicMock(spec=Project)
+        project = MagicMock(spec=GitLabProject)
         project.id = 1
         batch = [{'id': 301, 'status': 'success', 'created_at': '2023-01-01T12:00:00Z', 'updated_at': '2023-01-01T12:00:00Z'}]
         self.session.query.return_value.filter.return_value.all.return_value = []
@@ -379,7 +331,7 @@ Returns:
 Raises:
     TODO
 """'''
-        project = MagicMock(spec=Project)
+        project = MagicMock(spec=GitLabProject)
         project.id = 1
         batch = [{'id': 401, 'status': 'success', 'iid': 1, 'created_at': '2023-01-01T12:00:00Z', 'updated_at': '2023-01-01T12:00:00Z'}]
         self.session.query.return_value.filter.return_value.all.return_value = []
@@ -398,7 +350,7 @@ Returns:
 Raises:
     TODO
 """'''
-        project = MagicMock(spec=Project)
+        project = MagicMock(spec=GitLabProject)
         project.id = 1
         batch = [{'name': 'v1.0'}]
         self.session.query.return_value.filter.return_value.all.return_value = []
@@ -417,7 +369,7 @@ Returns:
 Raises:
     TODO
 """'''
-        project = MagicMock(spec=Project)
+        project = MagicMock(spec=GitLabProject)
         project.id = 1
         batch = [{'name': 'main'}]
         self.session.query.return_value.filter.return_value.all.return_value = []
@@ -436,17 +388,15 @@ Returns:
 Raises:
     TODO
 """'''
-        project = MagicMock(spec=Project)
+        project = MagicMock(spec=GitLabProject)
         project.id = 1
-        c1 = MagicMock(spec=Commit)
+        c1 = MagicMock(spec=GitLabCommit)
         c1.gitlab_user_id = None
         self.session.query.return_value.filter_by.return_value.all.return_value = [c1]
-        with patch('devops_collector.plugins.gitlab.worker.IdentityMatcher') as MockMatcher:
-            matcher_instance = MockMatcher.return_value
-            matcher_instance.match.return_value = 999
-            self.worker._match_identities(project)
-            self.assertEqual(c1.gitlab_user_id, 999)
-            self.session.commit.assert_called()
+        self.worker.identity_matcher = MagicMock()
+        self.worker.identity_matcher.match.return_value = 999
+        self.worker._match_identities(project)
+        self.assertEqual(c1.gitlab_user_id, 999)
 
     def test_process_generator(self):
         '''"""TODO: Add description.

@@ -31,19 +31,12 @@ class RateLimiter:
         limiter.wait_for_token()   # 阻塞直到可以发送请求
     """
 
-    def __init__(self, rate_limit: int=10):
-        '''"""TODO: Add description.
+    def __init__(self, rate_limit: int = 10):
+        """初始化速率限制器。
 
-Args:
-    self: TODO
-    rate_limit: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        Args:
+            rate_limit (int): 每秒允许的请求数 (TPS)。
+        """
         self.rate_limit = rate_limit
         self.tokens = float(rate_limit)
         self.last_update = time.time()
