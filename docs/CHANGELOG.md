@@ -2,6 +2,19 @@
 
 所有对 DevOps Data Application Platform 的重要更改都将记录在此文件中。
 
+## [4.1.0] - 2026-01-08
+
+### 新增 (Added) - v4.1.0
+
+* **生产环境专用配置**: 新增 `docker-compose.prod.yml`，移除代码卷挂载，限制 RabbitMQ 管理端口对外暴露，并添加 `restart: always` 策略，显著提升生产环境的安全性和稳定性。
+
+### 优化 (Improved) - v4.1.0
+
+* **构建速度提升**: 优化 `Makefile` 的 `init` 流程，移除冗余的 `pip install` 步骤（利用 Docker 镜像层已包含依赖的特性），大幅缩短容器启动和初始化时间。
+* **傻瓜式部署**: 新增 `deploy.sh` 脚本和 `make deploy-prod` 指令，自动处理环境检查、配置加载与服务启动，降低服务器运维门槛。
+* **生产环境加固**: `docker-compose.prod.yml` 全面升级，新增 **日志轮转** (Log Rotation) 防止磁盘爆满，统一配置 **Asia/Shanghai 时区**，并显式注入 RabbitMQ 账号密码，消除安全隐患。
+* **部署文档更新**: 同步更新 README 和用户手册，补充生产环境标准部署指南。
+
 ## [4.0.0] - 2026-01-06
 
 ### 新增 (Added) - v4.0.0

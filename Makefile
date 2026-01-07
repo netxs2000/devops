@@ -27,12 +27,47 @@ deploy: down build up init ## [一键部署] 重建镜像 -> 启动服务 -> 初
 
 init: ## [初始化] 在容器内安装依赖并初始化数据库数据
 	@echo "$(GREEN)🚀 Initializing data inside container...$(RESET)"
-	$(EXEC_CMD) pip install -r requirements.txt
 	$(EXEC_CMD) python scripts/init_discovery.py
 	$(EXEC_CMD) python scripts/init_cost_codes.py
 	$(EXEC_CMD) python scripts/init_labor_rates.py
 	$(EXEC_CMD) python scripts/init_purchase_contracts.py
 	$(EXEC_CMD) python scripts/init_revenue_contracts.py
+
+# =============================================================================
+# 🏭 生产环境部署 (Production Deployment)
+# =============================================================================
+
+PROD_COMPOSE := -f docker-compose.prod.yml
+PROD_CMD := docker-compose $(PROD_COMPOSE)
+
+check-env:
+	@if [ ! -f .env ]; then \
+		echo "$(YELLOW)⚠️  .env file not found! Copying from .env.example...$(RESET)"; \
+		cp .env.example .env; \
+		echo "$(RED)❌ Please edit .env file with your production credentials before running deploy!$(RESET)"; \
+		exit 1; \
+	fi
+
+deploy-prod: check-env ## [服务器专用] 生产环境一键部署 (安全/稳定)
+	@echo "$(GREEN)🚀 Starting Production Deployment...$(RESET)"
+	$(PROD_CMD) down --remove-orphans
+	@echo "$(GREEN)📦 Building optimized production images...$(RESET)"
+	$(PROD_CMD) build
+	@echo "$(GREEN)🆙 Starting services...$(RESET)"
+	$(PROD_CMD) up -d --wait
+	@echo "$(GREEN)🔧 Initializing system data...$(RESET)"
+	$(PROD_CMD) exec -T api python scripts/init_discovery.py
+	$(PROD_CMD) exec -T api python scripts/init_cost_codes.py
+	$(PROD_CMD) exec -T api python scripts/init_labor_rates.py
+	$(PROD_CMD) exec -T api python scripts/init_purchase_contracts.py
+	$(PROD_CMD) exec -T api python scripts/init_revenue_contracts.py
+	@echo "$(CYAN)✅ Production deployment completed successfully!$(RESET)"
+
+prod-logs: ## [服务器专用] 查看生产日志
+	$(PROD_CMD) logs -f --tail=100
+
+prod-down: ## [服务器专用] 停止生产服务
+	$(PROD_CMD) down
 
 # =============================================================================
 # 🐳 Docker 基础操作

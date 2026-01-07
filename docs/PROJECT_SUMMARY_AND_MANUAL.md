@@ -1,7 +1,7 @@
 # DevOps Data Collector - 项目总结与系统功能手册
 
-**版本**: 4.0.0
-**日期**: 2026-01-06
+**版本**: 4.1.0
+**日期**: 2026-01-08
 **维护**: DevOps 效能平台团队
 
 ---
@@ -601,6 +601,14 @@
 2. **一键部署**:
 
     ```bash
+    # 方式 A: 傻瓜式部署脚本 (推荐 Linux/Mac 服务器)
+    chmod +x deploy.sh
+    ./deploy.sh
+
+    # 方式 B: Make 命令 (生产模式)
+    make deploy-prod
+
+    # 方式 C: 开发调试 (本地环境)
     make deploy
     ```
 
