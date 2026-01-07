@@ -3,14 +3,14 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "devops-collector"
+name = "DevOps Data Application Platform"
 version = "3.4.0"
-description = "企业级研发效能数据采集与分析平台"
+description = "DevOps Data Application Platform"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-    {name = "DevOps Team", email = "devops@example.com"}
+    {name = "Netxs Team", email = "netxs2000@163.com"}
 ]
 keywords = ["devops", "gitlab", "sonarqube", "jenkins", "dora", "metrics"]
 classifiers = [
@@ -49,10 +49,10 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/devops-collector"
-Documentation = "https://github.com/your-org/devops-collector/blob/main/README.md"
-Repository = "https://github.com/your-org/devops-collector"
-Issues = "https://github.com/your-org/devops-collector/issues"
+Homepage = "https://github.com/netxs2000/devops"
+Documentation = "https://github.com/netxs2000/devops/README.md"
+Repository = "https://github.com/netxs2000/devops"
+Issues = "https://github.com/netxs2000/devops/projects"
 
 [project.scripts]
 devops-collector = "devops_collector.cli:main"
