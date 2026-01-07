@@ -1,6 +1,6 @@
 # DevOps Data Application Platform (研发效能数据应用平台)
 
-![Version](https://img.shields.io/badge/version-3.8.0-blue)
+![Version](https://img.shields.io/badge/version-4.1.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-green)
 ![PostgreSQL](https://img.shields.io/badge/postgres-13+-blue)
 
@@ -58,6 +58,16 @@
 
 确保已安装 **Docker** 和 **Docker Compose**。本项目实现了完全容器化部署，无需本地配置 Python 环境。
 
+> **🇨🇳 中国大陆用户特别提示**:
+> 由于网络原因，拉取 Docker Hub 镜像可能会失败。本项目提供了自动配置脚本：
+>
+> ```bash
+> # 自动配置国内镜像加速 (需要 root 权限)
+> sudo bash scripts/setup_china_mirrors.sh
+> ```
+>
+> 此外，`Dockerfile` 已默认集成了阿里云 (Debian) 和清华源 (PyPI) 加速，`deploy.sh` 脚本在部署时也会自动检测网络状况并提示优化。
+
 ### 2. 配置说明
 
 本项目采用 **环境驱动配置 (Environment-Based Configuration)**，完全遵循 12-Factor App 原则。所有配置（基础设施 + 业务逻辑）均通过环境变量管理。
@@ -76,8 +86,16 @@ cp .env.example .env
 使用 `make` 命令即可完成从构建、启动到初始化的全流程：
 
 ```bash
-# 🚀 一键部署：构建镜像 -> 启动容器 -> 等待DB就绪 -> 初始化数据
+# 🚀 开发环境一键部署 (支持代码热重载)
 make deploy
+
+# 🏭 生产环境部署 (傻瓜式脚本) -> 推荐!
+# 自动检测环境、使用安全配置、无代码挂载
+chmod +x deploy.sh
+./deploy.sh
+
+# 或者使用 Make 命令 (生产模式)
+make deploy-prod
 ```
 
 部署完成后，服务将运行在后台：

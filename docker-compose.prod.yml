@@ -1,0 +1,114 @@
+services:
+  # 1. 后端 API 服务 (FastAPI + Test Hub)
+  api:
+    build: .
+    image: devops-platform:latest
+    container_name: devops-api
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./persistence_data:/app/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Asia/Shanghai
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
+    command: uvicorn devops_portal.main:app --host 0.0.0.0 --port 8000
+    logging: &logging
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # 2. 数据异步采集 Worker
+  worker:
+    build: .
+    image: devops-platform:latest
+    container_name: devops-worker
+    restart: always
+    volumes:
+      - ./persistence_data:/app/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Asia/Shanghai
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
+    command: python -m devops_collector.worker
+    logging: *logging
+
+  # 3. 任务调度器
+  scheduler:
+    build: .
+    image: devops-platform:latest
+    container_name: devops-scheduler
+    restart: always
+    environment:
+      - TZ=Asia/Shanghai
+    env_file:
+      - .env
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      mq:
+        condition: service_healthy
+    command: python -m devops_collector.scheduler
+    logging: *logging
+
+  # 4. PostgreSQL 数据库
+  db:
+    image: postgres:15-alpine
+    container_name: devops-db
+    restart: always
+    environment:
+      - TZ=Asia/Shanghai
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+
+  # 5. RabbitMQ 消息队列
+  mq:
+    image: rabbitmq:3-management-alpine
+    container_name: devops-mq
+    restart: always
+    ports:
+      - "5672:5672"
+      # 生产环境通常不需要暴露管理端口到公网，但这里保留供内部使用，或建议通过 ssh tunnel 访问
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Asia/Shanghai
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
