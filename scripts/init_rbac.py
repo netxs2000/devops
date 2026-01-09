@@ -17,8 +17,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
 sys.path.append(os.getcwd())
-from devops_collector.config import Config
-from devops_collector.models.base_models import Base, User, Role, Permission, RolePermission, UserCredential, UserRole
+from devops_collector.config import settings
+from devops_collector.models import Base, User, Role, Permission, RolePermission, UserCredential, UserRole
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger('InitRBAC')
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -99,7 +99,8 @@ Raises:
     TODO
 """'''
     logger.info('Starting RBAC Initialization...')
-    engine = create_engine(Config.DB_URI)
+    engine = create_engine(settings.database.uri)
+    Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
     try:

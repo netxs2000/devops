@@ -12,7 +12,7 @@ import sys
 import logging
 from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from devops_collector.config import get_config
+from devops_collector.config import settings
 from devops_collector.models.base_models import Base, RevenueContract, ContractPaymentNode, Product
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -25,15 +25,14 @@ def init_revenue_contracts():
 
     演示如何将技术里程碑 (GitLab Milestone) 的状态与财务回款节点进行对齐。
     """
-    config = get_config()
-    db_uri = config.get('database', 'uri')
+    db_uri = settings.database.uri
     engine = create_engine(db_uri)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
     session = Session()
     try:
         logger.info('开始录入收入合同及 3-4-3 收款节点...')
-        product = session.query(Product).filter(Product.name == SAMPLE_CONTRACT['product_name']).first()
+        product = session.query(Product).filter(Product.product_name == SAMPLE_CONTRACT['product_name']).first()
         if not product:
             logger.warning(f"产品 {SAMPLE_CONTRACT['product_name']} 不存在，将作为独立合同录入。")
         contract = session.query(RevenueContract).filter(RevenueContract.contract_no == SAMPLE_CONTRACT['contract_no']).first()
@@ -46,7 +45,7 @@ def init_revenue_contracts():
         contract.total_value = SAMPLE_CONTRACT['total_value']
         contract.sign_date = SAMPLE_CONTRACT['sign_date']
         if product:
-            contract.product_id = product.id
+            contract.product_id = product.product_id
         session.flush()
         session.query(ContractPaymentNode).filter(ContractPaymentNode.contract_id == contract.id).delete()
         for node_data in SAMPLE_CONTRACT['nodes']:

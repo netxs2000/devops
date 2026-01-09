@@ -27,8 +27,14 @@ deploy: down build up init ## [一键部署] 重建镜像 -> 启动服务 -> 初
 
 init: ## [初始化] 在容器内安装依赖并初始化数据库数据
 	@echo "$(GREEN)🚀 Initializing data inside container...$(RESET)"
+	$(EXEC_CMD) pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 	$(EXEC_CMD) pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements-dev.txt || echo "$(YELLOW)⚠️ Failed to install dev dependencies$(RESET)"
 	$(EXEC_CMD) python scripts/init_discovery.py
+	$(EXEC_CMD) python scripts/init_rbac.py
+	$(EXEC_CMD) python scripts/init_organizations.py
+	$(EXEC_CMD) python scripts/init_calendar.py
+	$(EXEC_CMD) python scripts/init_mdm_location.py
+	$(EXEC_CMD) python scripts/init_service_catalog.py
 	$(EXEC_CMD) python scripts/init_cost_codes.py
 	$(EXEC_CMD) python scripts/init_labor_rates.py
 	$(EXEC_CMD) python scripts/init_purchase_contracts.py

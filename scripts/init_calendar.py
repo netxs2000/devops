@@ -2,7 +2,7 @@
 
 本脚本执行以下操作:
 1. 确保 mdm_calendar 表已创建。
-2. 批量生成指定年份范围（如 2024-2030）的基础日历数据。
+2. 批量生成指定年份范围（如 2015-2030）的基础日历数据。
 3. 自动标记周末为非工作日。
 4. 预置 2025 年中国法定节假日与调休安排（示例）。
 
@@ -14,7 +14,7 @@ import sys
 import logging
 from datetime import date, timedelta, datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from devops_collector.config import Config
+from devops_collector.config import settings
 from devops_collector.models.base_models import Base, Calendar
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -29,9 +29,9 @@ def get_fiscal(d: date):
     quarter = (d.month - 1) // 3 + 1
     return (f'FY{year}', f'FY{str(year)[2:]}Q{quarter}')
 
-def init_calendar(start_year=2024, end_year=2030):
+def init_calendar(start_year=2015, end_year=2030):
     """初始化日历表数据。"""
-    db_uri = Config.DB_URI
+    db_uri = settings.database.uri
     engine = create_engine(db_uri)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)

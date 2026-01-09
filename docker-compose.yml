@@ -16,6 +16,10 @@ services:
         condition: service_healthy
       mq:
         condition: service_healthy
+    environment:
+      - RABBITMQ__HOST=mq
+      - RABBITMQ__USER=admin
+      - RABBITMQ__PASSWORD=admin123
     command: uvicorn devops_portal.main:app --host 0.0.0.0 --port 8000
 
   # 2. 数据异步采集 Worker
@@ -33,6 +37,10 @@ services:
         condition: service_healthy
       mq:
         condition: service_healthy
+    environment:
+      - RABBITMQ__HOST=mq
+      - RABBITMQ__USER=admin
+      - RABBITMQ__PASSWORD=admin123
     command: python -m devops_collector.worker
 
   # 3. 任务调度器
@@ -47,6 +55,10 @@ services:
         condition: service_healthy
       mq:
         condition: service_healthy
+    environment:
+      - RABBITMQ__HOST=mq
+      - RABBITMQ__USER=admin
+      - RABBITMQ__PASSWORD=admin123
     command: python -m devops_collector.scheduler
 
   # 4. PostgreSQL 数据库
@@ -69,14 +81,14 @@ services:
   mq:
     image: rabbitmq:3-management-alpine
     container_name: devops-mq
-    user: root
     environment:
       - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=admin123
-      - RABBITMQ_ERLANG_COOKIE=DEVOPS_SECRET_COOKIE
     ports:
       - "5672:5672"
       - "15672:15672" # 管理后台
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 5s
