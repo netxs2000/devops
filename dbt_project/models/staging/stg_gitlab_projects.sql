@@ -10,9 +10,8 @@ renamed as (
         path_with_namespace,
         description,
         created_at,
-        last_activity_at,
-        visibility,
-        archived as is_archived
+        last_activity_at
+        -- visibility and archived are missing in DB schema
     from source
 )
 

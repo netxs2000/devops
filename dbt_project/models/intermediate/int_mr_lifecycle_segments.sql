@@ -20,7 +20,7 @@ notes as (
 
 first_interactions as (
     select
-        noteable_id as merge_request_id,
+        noteable_iid as merge_request_iid, -- DB has noteable_iid for GitLab notes
         min(created_at) as first_human_comment_at
     from notes
     group by 1
@@ -46,7 +46,7 @@ lifecycle as (
         -- 总计耗时 (Cycle Time)
         extract(epoch from (m.merged_at - m.created_at)) / 3600.0 as cycle_time_hours
     from mrs m
-    left join first_interactions f on m.merge_request_id = f.merge_request_id
+    left join first_interactions f on m.iid = f.merge_request_iid
 )
 
 select * from lifecycle

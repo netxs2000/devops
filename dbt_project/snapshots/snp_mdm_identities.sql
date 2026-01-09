@@ -2,7 +2,6 @@
 
 {{
     config(
-      target_database='devops_collector',
       target_schema='snapshots',
       unique_key='user_id',
       strategy='check',

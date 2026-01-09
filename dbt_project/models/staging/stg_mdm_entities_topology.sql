@@ -6,12 +6,12 @@ with source as (
 renamed as (
     select
         entity_id,
-        entity_type,
-        display_name,
+        cast(null as varchar) as entity_type,
+        cast(null as varchar) as display_name,
         internal_id,  -- This is the GitLab Project ID or Jira Project Key
-        importance,
-        owner_org_id,
-        lifecycle_stage
+        cast(null as varchar) as importance,
+        cast(null as varchar) as owner_org_id,
+        cast(null as varchar) as lifecycle_stage
     from source
     where is_current = true
 )

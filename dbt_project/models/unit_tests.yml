@@ -28,7 +28,7 @@ unit_tests:
           - {user_id: 'u1', source_system: 'GITLAB', external_email: 'zs@co.com'}
     expect:
       rows:
-        -- 应产生两条规则：一条是 EXACT_MAPPING (priority 10)，一条是 EMAIL_FALLBACK (priority 20)
+        # 应产生两条规则：一条是 EXACT_MAPPING (priority 10)，一条是 EMAIL_FALLBACK (priority 20)
         - {master_user_id: 'u1', strategy: 'EXACT_MAPPING', priority: 10}
         - {master_user_id: 'u1', strategy: 'EMAIL_FALLBACK', priority: 20}
         - {master_user_id: 'u1', strategy: 'USERNAME_AUTO_MATCH', priority: 30}

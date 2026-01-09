@@ -10,12 +10,10 @@ renamed as (
         iid,
         title,
         state,
-        author_user_id,
-        merged_by_user_id,
+        author_id as author_user_id,
         merged_at,
-        created_at,
-        -- Extract Labels from JSONB if needed, keeping it simple for now
-        labels
+        created_at
+        -- labels is missing in DB schema
     from source
 )
 

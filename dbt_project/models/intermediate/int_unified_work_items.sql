@@ -30,7 +30,7 @@ jira_items as (
 -- 2. 来自 GitLab 的工作项
 gitlab_items as (
     select
-        id::text as work_item_id,
+        issue_id::text as work_item_id,
         iid::text as work_item_key,
         project_id::text as source_project_id,
         title,

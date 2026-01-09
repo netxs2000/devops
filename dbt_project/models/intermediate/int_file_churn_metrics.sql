@@ -16,7 +16,7 @@ joined as (
         f.code_added,
         f.code_deleted
     from file_stats f
-    join commits c on f.commit_id = c.id
+    join commits c on f.commit_id = c.commit_sha
     where f.file_path not like '%.json'
       and f.file_path not like '%.lock'
       and f.file_path not like '%.md'
