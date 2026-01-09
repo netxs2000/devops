@@ -7,7 +7,7 @@ renamed as (
     select
         id as note_id,
         project_id,
-        noteable_id,
+        noteable_iid, -- DB has noteable_iid instead of noteable_id
         noteable_type,  -- 'Issue' or 'MergeRequest'
         body,
         author_id as author_user_id,

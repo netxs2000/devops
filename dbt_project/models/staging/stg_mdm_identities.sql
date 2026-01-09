@@ -6,12 +6,11 @@ with source as (
 renamed as (
     select
         global_user_id as user_id,
-        email,
+        primary_email as email,
         employee_id,
-        real_name,
-        department,
+        full_name as real_name,
+        department_id as department,
         is_active,
-        is_vendor,
         sync_version
     from source
     where is_current = true  -- Only look at current active records

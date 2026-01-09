@@ -13,8 +13,8 @@ renamed as (
         environment,
         status,
         created_at,
-        updated_at,
-        finished_at
+        updated_at
+        -- finished_at is missing in DB schema
     from source
 )
 

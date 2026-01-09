@@ -15,7 +15,7 @@ with recursive org_tree as (
         org_name,
         org_level,
         parent_org_id,
-        org_name as full_path,
+        cast(org_name as varchar(1000)) as full_path,
         org_id as root_org_id,
         org_name as root_org_name
     from {{ ref('stg_mdm_organizations') }}
@@ -29,7 +29,7 @@ with recursive org_tree as (
         child.org_name,
         child.org_level,
         child.parent_org_id,
-        parent.full_path || ' > ' || child.org_name as full_path,
+        cast(parent.full_path || ' > ' || child.org_name as varchar(1000)) as full_path,
         parent.root_org_id,
         parent.root_org_name
     from {{ ref('stg_mdm_organizations') }} child

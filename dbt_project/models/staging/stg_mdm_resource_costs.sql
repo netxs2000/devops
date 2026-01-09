@@ -5,15 +5,21 @@ with source as (
 
 renamed as (
     select
-        cost_id,
-        user_id,
-        hourly_rate,
+        id as cost_id,
+        service_id,
+        cost_code_id,
+        purchase_contract_id,
+        period,
+        amount,
         currency,
-        effective_from,
-        effective_to,
-        is_current
+        cost_type,
+        cost_item,
+        vendor_name,
+        capex_opex_flag,
+        source_system,
+        created_at,
+        updated_at
     from source
-    where is_current = true
 )
 
 select * from renamed

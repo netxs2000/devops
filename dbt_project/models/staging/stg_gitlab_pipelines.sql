@@ -12,9 +12,8 @@ renamed as (
         sha,
         created_at,
         updated_at,
-        duration,
-        started_at,
-        finished_at
+        duration
+        -- started_at and finished_at are missing in DB schema
     from source
 )
 

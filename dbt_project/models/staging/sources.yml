@@ -2,16 +2,73 @@ version: 2
 
 sources:
   - name: raw
+    schema: public
     description: "多源原始数据 landing 层"
     tables:
-      # 1. HR 系统原始表 (信任级别：高 - 属性：姓名、组织)
+      # 1. 人力与组织主数据 (HR & Identity)
       - name: hr_employees
         description: "HR 系统员工全量表"
-      
-      # 2. LDAP 系统原始表 (信任级别：高 - 属性：邮箱、账号)
       - name: ldap_accounts
         description: "LDAP 目录服务账号表"
-
-      # 3. MDM Identities (作为主键映射表)
       - name: mdm_identities
-        description: "主数据 ID 索引表"
+        description: "全局统一身份索引表"
+      - name: mdm_identity_mappings
+        description: "外部账号映射关系表"
+      - name: mdm_organizations
+        description: "组织架构主数据表"
+
+      # 2. GitLab 原始数据 (Engineering Activity)
+      - name: gitlab_projects
+        description: "GitLab 项目详情"
+      - name: gitlab_commits
+        description: "GitLab 提交记录"
+      - name: commit_file_stats
+        identifier: gitlab_commit_file_stats
+        description: "GitLab 提交文件级统计"
+      - name: gitlab_issues
+        description: "GitLab 议题/任务"
+      - name: gitlab_merge_requests
+        description: "GitLab 合并请求"
+      - name: gitlab_pipelines
+        description: "GitLab CI/CD 流水线"
+      - name: gitlab_deployments
+        description: "GitLab 部署记录"
+      - name: gitlab_notes
+        description: "GitLab 评论记录"
+      - name: gitlab_packages
+        description: "GitLab 制品包记录"
+      - name: gitlab_dependencies
+        description: "GitLab 项目依赖项"
+
+      # 3. Jira 原始数据 (Project Management)
+      - name: jira_issues
+        description: "Jira 问题详情表"
+      - name: jira_projects
+        description: "Jira 项目定义表"
+      - name: jira_boards
+        description: "Jira 看板表"
+      - name: jira_sprints
+        description: "Jira 迭代表"
+      - name: jira_issue_histories
+        description: "Jira 问题变更历史表"
+
+      # 4. SonarQube 原始数据 (Code Quality)
+      - name: sonar_projects
+        description: "SonarQube 项目表"
+      - name: sonar_measures
+        description: "SonarQube 质量指标快照表"
+      - name: sonar_issues
+        description: "SonarQube 代码缺陷明细表"
+
+      # 5. 其他 MDM 子系统与元数据 (System & Cost)
+      - name: mdm_projects
+        description: "业务主项目定义表"
+      - name: mdm_epic
+        description: "跨团队史诗需求表"
+      - name: mdm_entities_topology
+        description: "实体拓扑关系表"
+      - name: mdm_resource_costs
+        identifier: stg_mdm_resource_costs
+        description: "资源与人力费率快照表"
+      - name: satisfaction_records
+        description: "SPACE 框架满意度调查记录表 (Satisfaction)"

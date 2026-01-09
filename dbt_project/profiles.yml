@@ -4,10 +4,10 @@ devops_analytics:
   outputs:
     dev:
       type: postgres
-      host: "{{ env_var('DB_HOST', 'localhost') }}"
-      user: "{{ env_var('DB_USER', 'devops') }}"
-      pass: "{{ env_var('DB_PASSWORD', 'devops_password') }}"
-      port: {{ env_var('DB_PORT', 5432) | as_number }}
-      dbname: "{{ env_var('DB_NAME', 'devops_collector') }}"
+      host: "{{ env_var('DB_HOST', 'db') }}"
+      user: "{{ env_var('POSTGRES_USER', 'postgres') }}"
+      pass: "{{ env_var('POSTGRES_PASSWORD', 'devops123') }}"
+      port: "{{ env_var('DB_PORT', 5432) | as_number }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'devops_db') }}"
       schema: public
       threads: 4

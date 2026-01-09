@@ -13,7 +13,11 @@ renamed as (
         author_id as author_user_id,
         created_at,
         closed_at,
-        updated_at
+        updated_at,
+        time_estimate,
+        total_time_spent,
+        weight,
+        work_item_type
     from source
 )
 

@@ -60,8 +60,9 @@ mr_activities as (
         'GITLAB' as source_system,
         json_build_object('iid', m.iid, 'title', m.title) as metadata
     from {{ ref('stg_gitlab_merge_requests') }} m
-    left join gitlab_users u on m.merged_by_user_id::text = u.gitlab_user_id
-    where m.state = 'merged'
+    -- merged_by_user_id is missing in DB, fallback to author_user_id for now or leave as unknown
+    left join gitlab_users u on m.author_user_id::text = u.gitlab_user_id
+    where m.state = 'merged' and m.merged_at is not null
 ),
 
 -- 3. 需求/任务活动 (Issues)
@@ -92,9 +93,9 @@ issue_activities as (
         'GITLAB' as source_system,
         json_build_object('iid', i.iid, 'title', i.title) as metadata
     from {{ ref('stg_gitlab_issues') }} i
-    -- 这里我们假设关闭者映射到原作者，或者可以通过 staging 扩展 closed_by_user_id
+    -- 这里我们假设关闭者映射到原作者
     left join gitlab_users u on i.author_user_id::text = u.gitlab_user_id
-    where i.state = 'closed'
+    where i.state = 'closed' and i.closed_at is not null
 ),
 
 -- 4. 评审/讨论活动 (Notes/Comments)
@@ -107,7 +108,7 @@ note_activities as (
             when n.noteable_type = 'MergeRequest' then 'REVIEW_COMMENT'
             else 'ISSUE_DISCUSSION'
         end as activity_type,
-        n.noteable_id::text as target_entity_id,
+        n.noteable_iid::text as target_entity_id, -- Use noteable_iid
         n.noteable_type as target_entity_type,
         2.0 as base_impact_score,
         'GITLAB' as source_system,
