@@ -27,6 +27,7 @@ deploy: down build up init ## [一键部署] 重建镜像 -> 启动服务 -> 初
 
 init: ## [初始化] 在容器内安装依赖并初始化数据库数据
 	@echo "$(GREEN)🚀 Initializing data inside container...$(RESET)"
+	$(EXEC_CMD) pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements-dev.txt || echo "$(YELLOW)⚠️ Failed to install dev dependencies$(RESET)"
 	$(EXEC_CMD) python scripts/init_discovery.py
 	$(EXEC_CMD) python scripts/init_cost_codes.py
 	$(EXEC_CMD) python scripts/init_labor_rates.py
@@ -34,7 +35,40 @@ init: ## [初始化] 在容器内安装依赖并初始化数据库数据
 	$(EXEC_CMD) python scripts/init_revenue_contracts.py
 
 # =============================================================================
-# 🏭 生产环境部署 (Production Deployment)
+# 📦 离线包构建与部署 (Offline Deployment)
+# =============================================================================
+
+package: ## [本地构建] 构建并打包镜像为 tar 文件 (devops-platform.tar)
+	@echo "$(GREEN)🏗️  Building Docker images (App & DataHub)...$(RESET)"
+	docker build -t devops-platform:latest .
+	docker build -t devops-platform-datahub:latest datahub/
+	@echo "$(GREEN)📦 Saving images to devops-platform.tar...$(RESET)"
+	docker save -o devops-platform.tar devops-platform:latest devops-platform-datahub:latest
+	@echo "$(CYAN)✅ Package created: devops-platform.tar$(RESET)"
+	@echo "👉 Upload this file to your server and run 'make deploy-offline'"
+
+deploy-offline: check-env ## [服务器专用] 加载本地镜像并部署 (无需构建/网络)
+	@if [ ! -f devops-platform.tar ]; then \
+		echo "$(YELLOW)⚠️  devops-platform.tar not found. Checking if image exists...$(RESET)"; \
+	else \
+		echo "$(GREEN)📥 Loading Docker image from tar...$(RESET)"; \
+		docker load -i devops-platform.tar; \
+	fi
+	@echo "$(GREEN)🚀 Starting Offline Deployment...$(RESET)"
+	$(PROD_CMD) down --remove-orphans
+	@echo "$(GREEN)🆙 Starting services...$(RESET)"
+	# 注意：这里不执行 build，直接启动，依赖已加载的镜像
+	$(PROD_CMD) up -d --wait --no-build
+	@echo "$(GREEN)🔧 Initializing system data...$(RESET)"
+	$(PROD_CMD) exec -T api python scripts/init_discovery.py
+	$(PROD_CMD) exec -T api python scripts/init_cost_codes.py
+	$(PROD_CMD) exec -T api python scripts/init_labor_rates.py
+	$(PROD_CMD) exec -T api python scripts/init_purchase_contracts.py
+	$(PROD_CMD) exec -T api python scripts/init_revenue_contracts.py
+	@echo "$(CYAN)✅ Offline deployment completed successfully!$(RESET)"
+
+# =============================================================================
+# 🏭 生产环境部署 (Production Deployment - Legacy)
 # =============================================================================
 
 PROD_COMPOSE := -f docker-compose.prod.yml
@@ -112,10 +146,14 @@ validate: ## 执行数据质量校验 (Great Expectations)
 	@echo "$(GREEN)⚖️ Running Data Quality Validation...$(RESET)"
 	$(EXEC_CMD) python scripts/validate_models.py
 
+
+# 定义 DataHub CLI 运行命令 (临时容器)
+DATAHUB_CMD := docker-compose run --rm datahub-cli
+
 datahub-ingest: ## 同步元数据到 DataHub (PostgreSQL & dbt)
 	@echo "$(GREEN)🔭 Ingesting metadata to DataHub...$(RESET)"
-	$(EXEC_CMD) datahub ingest -c datahub/recipe_postgres.yml
-	$(EXEC_CMD) datahub ingest -c datahub/recipe_dbt.yml
+	$(DATAHUB_CMD) datahub ingest -c datahub/recipe_postgres.yml
+	$(DATAHUB_CMD) datahub ingest -c datahub/recipe_dbt.yml
 
 clean: ## 清理临时文件
 	@echo "$(GREEN)🧹 Cleaning temporary files...$(RESET)"

@@ -60,7 +60,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -75,10 +75,25 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # 6. DataHub CLI (独立采集容器)
+  datahub-cli:
+    build:
+      context: ./datahub
+      dockerfile: Dockerfile
+    image: devops-platform-datahub:latest
+    container_name: devops-datahub-cli
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
