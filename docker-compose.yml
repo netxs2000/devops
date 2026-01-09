@@ -69,11 +69,14 @@ services:
   mq:
     image: rabbitmq:3-management-alpine
     container_name: devops-mq
+    user: root
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
+      - RABBITMQ_ERLANG_COOKIE=DEVOPS_SECRET_COOKIE
     ports:
       - "5672:5672"
       - "15672:15672" # 管理后台
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 5s

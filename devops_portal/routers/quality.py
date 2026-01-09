@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 import httpx
 from devops_collector.config import Config
 from devops_portal import schemas
-from devops_collector.gitlab_sync.services.testing_service import TestingService
+# from devops_collector.gitlab_sync.services.testing_service import TestingService
 from devops_collector.auth import router as auth_router
 from devops_portal.dependencies import get_current_user, filter_issues_by_province
 router = APIRouter(prefix='/projects/{project_id}', tags=['quality'])
@@ -45,39 +45,9 @@ async def get_province_quality(project_id: int, current_user=Depends(get_current
         logger.error(f'Failed to fetch province quality: {e}')
         return []
 
-@router.get('/requirements/stats', response_model=schemas.RequirementCoverage)
-async def get_requirement_stats(project_id: int, current_user=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
-    """获取项目的需求复盖率与健康度统计。"""
-    try:
-        service = TestingService()
-        reqs = await service.list_requirements(project_id, current_user, db)
-        total_count = len(reqs)
-        approved_reqs = [r for r in reqs if r.review_state == 'approved']
-        approved_count = len(approved_reqs)
-        if approved_count == 0:
-            return schemas.RequirementCoverage(total_count=total_count, approved_count=0, covered_count=0, passed_count=0, coverage_rate=0.0, pass_rate=0.0, risk_requirements=[])
-        details = await asyncio.gather(*[service.get_requirement_detail(project_id, r.iid) for r in approved_reqs])
-        covered_count = 0
-        passed_count = 0
-        risk_reqs = []
-        for req in details:
-            if not req:
-                continue
-            has_cases = len(req.test_cases) > 0
-            if has_cases:
-                covered_count += 1
-                all_passed = all((tc.result == 'passed' for tc in req.test_cases))
-                any_failed = any((tc.result == 'failed' for tc in req.test_cases))
-                if all_passed:
-                    passed_count += 1
-                if any_failed:
-                    risk_reqs.append(schemas.RequirementSummary(iid=req.iid, title=req.title, state=req.state, review_state=req.review_state))
-            else:
-                risk_reqs.append(schemas.RequirementSummary(iid=req.iid, title=req.title, state=req.state, review_state=req.review_state))
-        return schemas.RequirementCoverage(total_count=total_count, approved_count=approved_count, covered_count=covered_count, passed_count=passed_count, coverage_rate=covered_count / approved_count * 100 if approved_count > 0 else 0.0, pass_rate=passed_count / covered_count * 100 if covered_count > 0 else 0.0, risk_requirements=risk_reqs)
-    except Exception as e:
-        logger.error(f'Req Stats Failed: {e}')
-        raise HTTPException(status_code=500, detail=str(e))
+
+# Temporarily disabled - TestingService not implemented
+
 
 @router.get('/quality-gate', response_model=schemas.QualityGateStatus)
 async def get_quality_gate(project_id: int, current_user=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):

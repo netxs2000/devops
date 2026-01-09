@@ -467,7 +467,7 @@ class GitLabCommit(Base):
     __tablename__ = 'gitlab_commits'
     __table_args__ = {'extend_existing': True}
     id = Column(String, primary_key=True)
-    project_id = Column(Integer, ForeignKey('gitlab_projects.id'), primary_key=True)
+    project_id = Column(Integer, ForeignKey('gitlab_projects.id'))
     short_id = Column(String)
     title = Column(String)
     author_name = Column(String)

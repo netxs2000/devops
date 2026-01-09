@@ -13,7 +13,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 sys.path.append(os.getcwd())
 from devops_collector.config import Config
-from devops_collector.models import Base, Project, SonarProject
+from devops_collector.models import Base
+from devops_collector.plugins.gitlab.models import GitLabProject as Project
+from devops_collector.plugins.sonarqube.models import SonarProject
 from devops_collector.plugins.gitlab.client import GitLabClient
 from devops_collector.plugins.sonarqube.client import SonarQubeClient
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,11 +23,11 @@ logger = logging.getLogger('Discovery')
 
 def discover_gitlab(session):
     """从 GitLab 发现所有项目。"""
-    if not Config.GITLAB_URL or not Config.GITLAB_PRIVATE_TOKEN:
+    if not Config.GITLAB_URL or not Config.GITLAB_TOKEN:
         logger.warning('GitLab config missing, skipping discovery.')
         return
     logger.info(f'Connecting to GitLab at {Config.GITLAB_URL}...')
-    client = GitLabClient(Config.GITLAB_URL, Config.GITLAB_PRIVATE_TOKEN)
+    client = GitLabClient(Config.GITLAB_URL, Config.GITLAB_TOKEN)
     if not client.test_connection():
         logger.error('Failed to connect to GitLab. Check URL and Token.')
         return
