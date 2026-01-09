@@ -12,7 +12,7 @@ import sys
 import logging
 from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from devops_collector.config import get_config
+from devops_collector.config import settings
 from devops_collector.models.base_models import Base, PurchaseContract, CostCode, ResourceCost
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -25,8 +25,7 @@ def init_purchase_contracts():
 
     涵盖了云服务认购、外包人力框架合同等典型场景。
     """
-    config = get_config()
-    db_uri = config.get('database', 'uri')
+    db_uri = settings.database.uri
     engine = create_engine(db_uri)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)

@@ -34,10 +34,10 @@ class Organization(Base, TimestampMixin, SCDMixin):
     org_id = Column(String(100), nullable=False, unique=True, index=True)
     org_name = Column(String(200), nullable=False)
     org_level = Column(Integer, default=1)
-    parent_org_id = Column(String(100))
+    parent_org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True)
     manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     is_active = Column(Boolean, default=True)
-    parent = relationship('Organization', remote_side=[org_id], backref=backref('children', cascade='all'))
+    parent = relationship('Organization', remote_side=[org_id], primaryjoin='Organization.parent_org_id == Organization.org_id', backref=backref('children', cascade='all'))
     manager = relationship('User', foreign_keys=[manager_user_id], back_populates='managed_organizations')
     users = relationship('User', foreign_keys='User.department_id', primaryjoin='and_(User.department_id==Organization.org_id, User.is_current==True)', back_populates='department')
     products = relationship('Product', back_populates='owner_team')
@@ -46,12 +46,7 @@ class Organization(Base, TimestampMixin, SCDMixin):
         """返回组织架构的字符串表示。"""
         return f"<Organization(org_id='{self.org_id}', name='{self.org_name}', version={self.sync_version})>"
 
-user_roles = Table(
-    'sys_user_roles', 
-    Base.metadata, 
-    Column('user_id', UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), primary_key=True), 
-    Column('role_id', Integer, ForeignKey('rbac_roles.id'), primary_key=True)
-)
+
 
 class User(Base, TimestampMixin, SCDMixin):
     """全局用户映射表。"""
@@ -61,12 +56,13 @@ class User(Base, TimestampMixin, SCDMixin):
     username = Column(String(100))
     full_name = Column(String(200))
     primary_email = Column(String(255), unique=True, index=True)
-    department_id = Column(String(100))
+    department_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     is_active = Column(Boolean, default=True)
+    is_survivor = Column(Boolean, default=False)
     department = relationship('Organization', foreign_keys=[department_id], back_populates='users')
     managed_organizations = relationship('Organization', foreign_keys='Organization.manager_user_id', back_populates='manager')
     identities = relationship('IdentityMapping', back_populates='user')
-    roles = relationship('Role', secondary=user_roles, backref='users')
+    roles = relationship('Role', secondary='sys_user_roles', backref='users')
     test_cases = relationship('GTMTestCase', back_populates='author')
     requirements = relationship('GTMRequirement', back_populates='author')
     managed_products_as_pm = relationship('Product', back_populates='product_manager')
@@ -138,6 +134,26 @@ class Role(Base):
     code = Column(String(50), unique=True, nullable=False)
     name = Column(String(100), unique=True, nullable=False)
     description = Column(String(255))
+    permissions = relationship('Permission', secondary='sys_role_permissions', backref='roles')
+
+class Permission(Base):
+    """原子权限定义表 (rbac_permissions)。"""
+    __tablename__ = 'rbac_permissions'
+    code = Column(String(100), primary_key=True)
+    category = Column(String(50))
+    description = Column(String(255))
+
+class RolePermission(Base):
+    """角色与权限映射表。"""
+    __tablename__ = 'sys_role_permissions'
+    role_id = Column(Integer, ForeignKey('rbac_roles.id'), primary_key=True)
+    permission_code = Column(String(100), ForeignKey('rbac_permissions.code'), primary_key=True)
+
+class UserRole(Base):
+    """用户与角色映射表。"""
+    __tablename__ = 'sys_user_roles'
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), primary_key=True)
+    role_id = Column(Integer, ForeignKey('rbac_roles.id'), primary_key=True)
 
 class IdentityMapping(Base, TimestampMixin):
     """外部身份映射表，连接 MDM 用户与第三方系统账号。"""
@@ -161,7 +177,7 @@ class Team(Base, TimestampMixin):
     team_code = Column(String(50), unique=True, index=True)
     description = Column(Text)
     parent_id = Column(Integer, ForeignKey('sys_teams.id'), nullable=True)
-    org_id = Column(String(100), nullable=True)
+    org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True)
     leader_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
     parent = relationship('Team', remote_side=[id], backref=backref('children', cascade='all, delete-orphan'))
     leader = relationship('User', foreign_keys=[leader_id])
@@ -201,7 +217,7 @@ class Product(Base, TimestampMixin):
     lifecycle_status = Column(String(50), default='Active')
     repo_url = Column(String(255))
     artifact_path = Column(String(255))
-    owner_team_id = Column(String(100))
+    owner_team_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     product_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     owner_team = relationship('Organization', back_populates='products')
     product_manager = relationship('User', back_populates='managed_products_as_pm')
@@ -230,8 +246,12 @@ class Service(Base, TimestampMixin):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(200), nullable=False)
     tier = Column(String(20))
+    org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True)
     description = Column(Text)
+    organization = relationship('Organization')
     costs = relationship('ResourceCost', back_populates='service')
+    slos = relationship('SLO', back_populates='service', cascade='all, delete-orphan')
+    project_mappings = relationship('ServiceProjectMapping', back_populates='service', cascade='all, delete-orphan')
 
     @property
     def total_cost(self) -> float:
@@ -247,11 +267,20 @@ class ResourceCost(Base, TimestampMixin):
     """资源成本记录明细表。"""
     __tablename__ = 'stg_mdm_resource_costs'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    service_id = Column(Integer, ForeignKey('mdm_services.id'))
-    period = Column(String(20))
+    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=True)
+    cost_code_id = Column(Integer, ForeignKey('mdm_cost_codes.id'), nullable=True)
+    purchase_contract_id = Column(Integer, ForeignKey('mdm_purchase_contracts.id'), nullable=True)
+    period = Column(String(20), index=True) # YYYY-MM
     amount = Column(Float, default=0.0)
-    cost_item = Column(String(100))
+    currency = Column(String(10), default='CNY')
+    cost_type = Column(String(50))
+    cost_item = Column(String(200))
+    vendor_name = Column(String(200))
+    capex_opex_flag = Column(String(10))
+    source_system = Column(String(100))
     service = relationship('Service', back_populates='costs')
+    cost_code = relationship('CostCode')
+    purchase_contract = relationship('PurchaseContract')
 
 class MetricDefinition(Base, TimestampMixin):
     """指标定义表，定义系统中支持的所有效能指标。"""
@@ -284,15 +313,35 @@ class SyncLog(Base, TimestampMixin):
     status = Column(String(50))
     message = Column(Text)
 
-class Location(Base):
+class Location(Base, TimestampMixin):
     """地理位置或机房位置参考表。"""
     __tablename__ = 'mdm_locations'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    location_id = Column(String(50), unique=True, index=True)
+    location_name = Column(String(200), nullable=False)
+    short_name = Column(String(50))
+    location_type = Column(String(50)) # country, province, city, datacenter
+    parent_id = Column(String(50))
+    region = Column(String(50)) # 华北, 华东, etc.
+    is_active = Column(Boolean, default=True)
+    manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
 
-class Calendar(Base):
+class Calendar(Base, TimestampMixin):
     """公共日历/节假日参考表。"""
     __tablename__ = 'mdm_calendar'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    date_day = Column(Date, unique=True, index=True, nullable=False)
+    year_number = Column(Integer, index=True)
+    month_number = Column(Integer)
+    quarter_number = Column(Integer)
+    day_of_week = Column(Integer)
+    is_workday = Column(Boolean, default=True)
+    is_holiday = Column(Boolean, default=False)
+    holiday_name = Column(String(100))
+    fiscal_year = Column(String(20))
+    fiscal_quarter = Column(String(20))
+    week_of_year = Column(Integer)
+    season_tag = Column(String(20))
 
 class RawDataStaging(Base):
     """原始数据暂存表 (Staging 层)，用于存放未经处理的 API Payload。"""
@@ -348,15 +397,26 @@ class UserActivityProfile(Base):
     __tablename__ = 'fct_user_activity_profiles'
     id = Column(BigInteger, primary_key=True)
 
-class ServiceProjectMapping(Base):
+class ServiceProjectMapping(Base, TimestampMixin):
     """服务与工程项目的多对多关联映射表。"""
     __tablename__ = 'mdm_service_project_mapping'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False)
+    source = Column(String(50)) # gitlab, jira, etc.
+    project_id = Column(Integer) # or UUID depending on system
+    service = relationship('Service', back_populates='project_mappings')
 
-class SLO(Base):
+class SLO(Base, TimestampMixin):
     """SLO (服务水平目标) 定义表。"""
     __tablename__ = 'mdm_slo_definitions'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False)
+    name = Column(String(100), nullable=False)
+    indicator_type = Column(String(50)) # Availability, Latency, etc.
+    target_value = Column(Float)
+    metric_unit = Column(String(20)) # %, ms, etc.
+    time_window = Column(String(20)) # 28d, 7d
+    service = relationship('Service', back_populates='slos')
 
 class ProjectMaster(Base, TimestampMixin, SCDMixin):
     """项目全生命周期主数据 (mdm_projects)。"""
@@ -367,7 +427,7 @@ class ProjectMaster(Base, TimestampMixin, SCDMixin):
     status = Column(String(50), default='PLAN')
     is_active = Column(Boolean, default=True)
     pm_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
-    org_id = Column(String(100))
+    org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
     plan_start_date = Column(Date)
     plan_end_date = Column(Date)
     actual_start_at = Column(DateTime(timezone=True))
@@ -388,20 +448,73 @@ class ProjectMaster(Base, TimestampMixin, SCDMixin):
         """返回项目主数据的字符串表示。"""
         return f"<ProjectMaster(project_id='{self.project_id}', name='{self.project_name}')>"
 
-class ContractPaymentNode(Base):
-    """合同付款节点记录表。"""
-    __tablename__ = 'mdm_contract_payment_nodes'
-    id = Column(Integer, primary_key=True)
+class CostCode(Base, TimestampMixin):
+    """成本科目 (CBS) 模型。"""
+    __tablename__ = 'mdm_cost_codes'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    name = Column(String(200), nullable=False)
+    category = Column(String(50))
+    description = Column(Text)
+    parent_id = Column(Integer, ForeignKey('mdm_cost_codes.id'), nullable=True)
+    default_capex_opex = Column(String(10))
+    is_active = Column(Boolean, default=True)
+    parent = relationship('CostCode', remote_side=[id], backref='children')
 
-class RevenueContract(Base):
-    """销售/收入合同主数据。"""
+class LaborRateConfig(Base, TimestampMixin):
+    """人工标准费率配置表。"""
+    __tablename__ = 'mdm_labor_rate_config'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    job_title_level = Column(String(50), nullable=False)
+    daily_rate = Column(Float, nullable=False)
+    hourly_rate = Column(Float)
+    currency = Column(String(10), default='CNY')
+    effective_date = Column(DateTime(timezone=True))
+    is_active = Column(Boolean, default=True)
+
+class RevenueContract(Base, TimestampMixin):
+    """销售/收入合同主数据表格。"""
     __tablename__ = 'mdm_revenue_contracts'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contract_no = Column(String(100), unique=True, nullable=False, index=True)
+    title = Column(String(255))
+    client_name = Column(String(255))
+    total_value = Column(Float, default=0.0)
+    currency = Column(String(10), default='CNY')
+    sign_date = Column(Date)
+    product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True)
+    product = relationship('Product')
+    payment_nodes = relationship('ContractPaymentNode', back_populates='contract', cascade='all, delete-orphan')
 
-class PurchaseContract(Base):
+class PurchaseContract(Base, TimestampMixin):
     """采购/支出合同主数据。"""
     __tablename__ = 'mdm_purchase_contracts'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contract_no = Column(String(100), unique=True, nullable=False, index=True)
+    title = Column(String(255))
+    vendor_name = Column(String(255))
+    vendor_id = Column(String(100))
+    total_amount = Column(Float, default=0.0)
+    currency = Column(String(10), default='CNY')
+    start_date = Column(Date)
+    end_date = Column(Date)
+    cost_code_id = Column(Integer, ForeignKey('mdm_cost_codes.id'), nullable=True)
+    capex_opex_flag = Column(String(10))
+    cost_code = relationship('CostCode')
+
+class ContractPaymentNode(Base, TimestampMixin):
+    """合同付款节点/收款计划记录表。"""
+    __tablename__ = 'mdm_contract_payment_nodes'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contract_id = Column(Integer, ForeignKey('mdm_revenue_contracts.id'), nullable=False)
+    node_name = Column(String(200), nullable=False)
+    billing_percentage = Column(Float)
+    billing_amount = Column(Float)
+    linked_system = Column(String(50)) # gitlab, jira, manual
+    linked_milestone_id = Column(Integer)
+    is_achieved = Column(Boolean, default=False)
+    achieved_at = Column(DateTime(timezone=True))
+    contract = relationship('RevenueContract', back_populates='payment_nodes')
 
 class UserCredential(Base, TimestampMixin):
     """用户凭证表。"""
@@ -409,6 +522,7 @@ class UserCredential(Base, TimestampMixin):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), unique=True)
     password_hash = Column(String(255), nullable=False)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
     user = relationship('User', backref=backref('credential', uselist=False))
 
 class UserOAuthToken(Base, TimestampMixin):

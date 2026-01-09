@@ -11,9 +11,9 @@ import os
 import sys
 import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from devops_collector.config import get_config
+from devops_collector.config import settings
 from devops_collector.models.base_models import Base, Service, ServiceProjectMapping, SLO, Organization
-from devops_collector.plugins.gitlab.models import Project
+from devops_collector.plugins.gitlab.models import GitLabProject as Project
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 SERVICE_CATALOG = [{'name': '用户中心 (User Center)', 'tier': 'P0', 'org_name': '研发中心/核心业务部', 'description': '负责全站用户账号、OAuth 鉴权及基础信息管理。', 'projects': ['platform/user-api', 'platform/user-service'], 'slos': [{'name': '可用性 (Availability)', 'type': 'Availability', 'target': 99.9, 'unit': '%'}, {'name': '响应延迟 (Latency P99)', 'type': 'Latency', 'target': 200, 'unit': 'ms'}]}, {'name': '订单系统 (Order System)', 'tier': 'P0', 'org_name': '研发中心/核心业务部', 'description': '负责交易下单、状态机流转及库存扣减逻辑。', 'projects': ['order-center/order-manager'], 'slos': [{'name': '可用性 (Availability)', 'type': 'Availability', 'target': 99.95, 'unit': '%'}]}]
@@ -32,8 +32,7 @@ Returns:
 Raises:
     TODO
 """'''
-    config = get_config()
-    db_uri = config.get('database', 'uri')
+    db_uri = settings.database.uri
     engine = create_engine(db_uri)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
@@ -41,7 +40,7 @@ Raises:
     try:
         logger.info('开始初始化服务目录...')
         for s_data in SERVICE_CATALOG:
-            org = session.query(Organization).filter(Organization.name == s_data['org_name']).first()
+            org = session.query(Organization).filter(Organization.org_name == s_data['org_name']).first()
             if not org:
                 logger.warning(f"组织 {s_data['org_name']} 不存在，跳过该服务。请先确保组织架构已同步。")
                 continue
@@ -51,7 +50,7 @@ Raises:
                 session.add(service)
             service.tier = s_data['tier']
             service.description = s_data['description']
-            service.organization_id = org.id
+            service.org_id = org.org_id
             session.flush()
             session.query(ServiceProjectMapping).filter(ServiceProjectMapping.service_id == service.id).delete()
             for p_path in s_data['projects']:

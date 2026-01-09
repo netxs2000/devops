@@ -12,7 +12,7 @@ import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 sys.path.append(os.getcwd())
-from devops_collector.config import Config
+from devops_collector.config import settings
 from devops_collector.models import Base
 from devops_collector.plugins.gitlab.models import GitLabProject as Project
 from devops_collector.plugins.sonarqube.models import SonarProject
@@ -23,11 +23,11 @@ logger = logging.getLogger('Discovery')
 
 def discover_gitlab(session):
     """从 GitLab 发现所有项目。"""
-    if not Config.GITLAB_URL or not Config.GITLAB_TOKEN:
+    if not settings.gitlab.url or not settings.gitlab.private_token:
         logger.warning('GitLab config missing, skipping discovery.')
         return
-    logger.info(f'Connecting to GitLab at {Config.GITLAB_URL}...')
-    client = GitLabClient(Config.GITLAB_URL, Config.GITLAB_TOKEN)
+    logger.info(f'Connecting to GitLab at {settings.gitlab.url}...')
+    client = GitLabClient(settings.gitlab.url, settings.gitlab.private_token)
     if not client.test_connection():
         logger.error('Failed to connect to GitLab. Check URL and Token.')
         return
@@ -62,11 +62,11 @@ def discover_gitlab(session):
 
 def discover_sonarqube(session):
     """从 SonarQube 发现所有项目。"""
-    if not Config.SONARQUBE_URL or not Config.SONARQUBE_TOKEN:
+    if not settings.sonarqube.url or not settings.sonarqube.token:
         logger.warning('SonarQube config missing, skipping discovery.')
         return
-    logger.info(f'Connecting to SonarQube at {Config.SONARQUBE_URL}...')
-    client = SonarQubeClient(Config.SONARQUBE_URL, Config.SONARQUBE_TOKEN)
+    logger.info(f'Connecting to SonarQube at {settings.sonarqube.url}...')
+    client = SonarQubeClient(settings.sonarqube.url, settings.sonarqube.token)
     if not client.test_connection():
         logger.error('Failed to connect to SonarQube. Check URL and Token.')
         return
@@ -104,8 +104,8 @@ Raises:
     TODO
 """'''
     logger.info('Starting Discovery Service...')
-    logger.info(f'DB_URI: {Config.DB_URI}')
-    engine = create_engine(Config.DB_URI)
+    logger.info(f'DB_URI: {settings.database.uri}')
+    engine = create_engine(settings.database.uri)
     Session = sessionmaker(bind=engine)
     session = Session()
     Base.metadata.create_all(engine)

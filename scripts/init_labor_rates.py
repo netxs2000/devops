@@ -12,7 +12,7 @@ import sys
 import logging
 from datetime import datetime, timezone
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from devops_collector.config import get_config
+from devops_collector.config import settings
 from devops_collector.models.base_models import Base, LaborRateConfig
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -25,8 +25,7 @@ def init_labor_rates():
 
     建立职级与标准人天成本的映射关系，为 FinOps 成本分摊提供计算依据。
     """
-    config = get_config()
-    db_uri = config.get('database', 'uri')
+    db_uri = settings.database.uri
     engine = create_engine(db_uri)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)

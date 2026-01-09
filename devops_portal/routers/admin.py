@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from devops_collector.auth.router import get_db
 from devops_collector.models.base_models import Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember
-from devops_collector.plugins.gitlab.models import Project
+from devops_collector.plugins.gitlab.models import GitLabProject as Project
 from devops_portal.dependencies import get_current_user
 from devops_portal.schemas import (
     IdentityMappingCreate, IdentityMappingView, IdentityMappingUpdateStatus,
