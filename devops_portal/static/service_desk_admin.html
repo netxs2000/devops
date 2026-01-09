@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>后台管理 - Service Desk</title>
+    <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -14,26 +15,27 @@
         }
 
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --dark-bg: #0f172a;
-            --card-bg: #1e293b;
-            --border-color: #334155;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --success: #10b981;
-            --danger: #ef4444;
+            /* Map old vars to new light theme */
+            --primary-gradient: var(--primary);
+            --dark-bg: var(--bg-main);
+            --card-bg: var(--card-bg);
+            --border-color: var(--border-color);
+            --text-primary: var(--text-main);
+            --text-secondary: var(--text-dim);
+            --success: var(--passed);
+            --danger: var(--failed);
             --warning: #f59e0b;
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background: var(--dark-bg);
+            background: var(--bg-main);
             color: var(--text-primary);
             min-height: 100vh;
         }
 
         header {
-            background: #020617;
+            background: var(--bg-sidebar);
             border-bottom: 1px solid var(--border-color);
             padding: 1rem 2rem;
             position: sticky;
@@ -59,7 +61,8 @@
 
         .admin-badge {
             font-size: 0.625rem;
-            background: var(--primary-gradient);
+            background: var(--primary);
+            color: #fff;
             padding: 0.125rem 0.375rem;
             border-radius: 4px;
             text-transform: uppercase;
@@ -95,6 +98,7 @@
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
         }
 
         .stat-label {
@@ -126,8 +130,8 @@
         }
 
         .tab.active {
-            color: #6366f1;
-            border-bottom-color: #6366f1;
+            color: var(--primary);
+            border-bottom-color: var(--primary);
         }
 
         .table-container {
@@ -144,7 +148,7 @@
         }
 
         th {
-            background: #0f172a;
+            background: var(--bg-sidebar);
             color: var(--text-secondary);
             font-weight: 600;
             font-size: 0.75rem;
@@ -232,13 +236,13 @@
         }
 
         .btn-reject:hover {
-            background: #dc2626;
+            opacity: 0.9;
         }
 
         .btn-token {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border-color: var(--border-color);
+            background: var(--bg-sidebar);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
         }
 
         .token-modal {
@@ -252,7 +256,7 @@
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            backdrop-filter: blur(4px);
+            /* backdrop-filter: blur(4px); */
         }
 
         .modal-content {
@@ -276,10 +280,10 @@
         .modal-content input {
             width: 100%;
             padding: 0.75rem 1rem;
-            background: #020617;
+            background: var(--bg-sidebar);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            color: white;
+            color: var(--text-primary);
             margin-bottom: 1.5rem;
         }
 
@@ -306,9 +310,9 @@
         .reject-content textarea {
             width: 100%;
             height: 100px;
-            background: #020617;
+            background: var(--bg-sidebar);
             border: 1px solid var(--border-color);
-            color: white;
+            color: var(--text-primary);
             padding: 0.75rem;
             border-radius: 8px;
             margin: 1rem 0;
@@ -331,7 +335,7 @@
 <body>
     <header>
         <div class="header-content">
-            <div class="logo">🎯 Service Desk <span class="admin-badge">Admin</span></div>
+            <div class="logo">Service Desk <span class="admin-badge">Admin</span></div>
             <div id="adminInfo"></div>
         </div>
     </header>
@@ -394,6 +398,17 @@
         </div>
     </main>
 
+    <footer style="
+        background: var(--bg-sidebar);
+        border-top: 1px solid var(--border-color);
+        padding: 1.5rem;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin-top: 2rem;">
+        <p>© 2025 TJHQ</p>
+    </footer>
+
     <script>
         let currentTab = 'pending';
         let adminToken = '';
@@ -438,7 +453,7 @@
                 displayUsers(result.users);
 
             } catch (err) {
-                container.innerHTML = `<tr><td colspan="5" class="empty">❌ 加载出错: ${err.message}</td></tr>`;
+                container.innerHTML = `<tr><td colspan="5" class="empty">加载出错: ${err.message}</td></tr>`;
             }
         }
 
@@ -467,15 +482,15 @@
         function displayUsers(users) {
             const container = document.getElementById('userTableBody');
             if (!users || users.length === 0) {
-                container.innerHTML = `<tr><td colspan="5" class="empty">📭 暂无用户记录</td></tr>`;
+                container.innerHTML = `<tr><td colspan="5" class="empty">暂无用户记录</td></tr>`;
                 return;
             }
 
             container.innerHTML = users.map(user => {
                 const statusLabel = {
-                    'pending': '⏳ 待处理',
-                    'approved': '✅ 已通过',
-                    'rejected': '❌ 已拒绝'
+                    'pending': '待处理',
+                    'approved': '已通过',
+                    'rejected': '已拒绝'
                 }[user.status];
 
                 const date = new Date(user.created_at).toLocaleString();
@@ -492,7 +507,7 @@
                         <td style="color: var(--text-secondary)">${date}</td>
                         <td>
                             <span class="status-badge status-${user.status}">${statusLabel}</span>
-                            ${user.gitlab_user_id ? `<div style="font-size: 0.7rem; color: #6366f1; margin-top: 4px;">ID: ${user.gitlab_user_id}</div>` : ''}
+                            ${user.gitlab_user_id ? `<div style="font-size: 0.7rem; color: var(--primary); margin-top: 4px;">ID: ${user.gitlab_user_id}</div>` : ''}
                         </td>
                         <td>
                             ${user.status === 'pending' ? `

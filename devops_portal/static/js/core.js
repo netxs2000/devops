@@ -56,7 +56,7 @@ class UI {
      * @param {string} message 提示文本
      * @param {boolean} show 是否显示
      */
-    static toggleLoading(message = "✨ Synchronizing Data...", show = true) {
+    static toggleLoading(message = "Synchronizing Data...", show = true) {
         const loadingDiv = document.getElementById('loading');
         if (loadingDiv) {
             loadingDiv.innerText = message;
@@ -76,7 +76,7 @@ class UI {
         const t = document.createElement('div');
         t.className = `toast toast-${type}`;
         t.innerHTML = `
-            <div style="font-size:18px">${type === 'success' ? '🚀' : (type === 'error' ? '🚫' : '💡')}</div>
+            <div style="font-size:18px"></div>
             <div style="flex:1">
                 <div style="font-weight:600; font-size:13px; color:var(--text-main)">System Update</div>
                 <div style="font-size:12px; color:var(--text-dim);">${message}</div>

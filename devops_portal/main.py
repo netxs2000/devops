@@ -64,12 +64,10 @@ app.include_router(auth_router.router)
 # app.include_router(test_management_router.router)
 app.include_router(iteration_router.router)
 app.include_router(admin_router.router)
-app.mount('/static', StaticFiles(directory='devops_portal/static'), name='static')
 
-@app.get('/')
-async def serve_index():
-    """提供主前端页面。"""
-    return FileResponse('devops_portal/static/index.html')
+
+# Mount static files to root to serve index.html, css, js and other html pages directly
+app.mount("/", StaticFiles(directory="devops_portal/static", html=True), name="static")
 
 @app.get('/notifications/stream')
 async def notification_stream(current_user=Depends(get_current_user)):

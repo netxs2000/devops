@@ -1,16 +1,18 @@
 :root {
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --accent: #00f2fe;
-    --passed: #10b981;
-    --failed: #ef4444;
-    --warning: #f59e0b;
-    --bg-dark: #0f172a;
-    --card-dark: rgba(30, 41, 59, 0.7);
-    --text-main: #f8fafc;
-    --text-dim: #94a3b8;
-    --glass: rgba(255, 255, 255, 0.03);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    --primary: #2563eb;
+    --primary-dark: #1e40af;
+    --accent: #0284c7;
+    --passed: #059669;
+    --failed: #dc2626;
+    --warning: #d97706;
+    --bg-main: #ffffff;
+    --bg-sidebar: #f8fafc;
+    --card-bg: #ffffff;
+    --text-main: #0f172a;
+    --text-dim: #64748b;
+    --border-color: #e2e8f0;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 * {
@@ -21,7 +23,7 @@
 }
 
 body {
-    background-color: var(--bg-dark);
+    background-color: var(--bg-main);
     color: var(--text-main);
     overflow: hidden;
     height: 100vh;
@@ -31,17 +33,16 @@ body {
 .app-container {
     display: flex;
     height: 100vh;
-    background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+    background: var(--bg-main);
 }
 
 .sidebar {
     width: 260px;
-    background: rgba(15, 23, 42, 0.9);
-    border-right: 1px solid var(--glass-border);
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     padding: 24px 0;
-    backdrop-filter: blur(10px);
     z-index: 100;
 }
 
@@ -53,12 +54,13 @@ body {
 }
 
 /* Components */
+/* Components */
 .glass-panel {
-    background: var(--card-dark);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
-    border-radius: 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
     padding: 24px;
+    box-shadow: var(--shadow-sm);
 }
 
 /* Status Badges */
@@ -67,9 +69,21 @@ body {
     height: 10px;
     border-radius: 50%;
 }
-.blob-passed { background: var(--passed); box-shadow: 0 0 10px var(--passed); }
-.blob-failed { background: var(--failed); box-shadow: 0 0 10px var(--failed); }
-.blob-pending { background: var(--warning); box-shadow: 0 0 10px var(--warning); }
+
+.blob-passed {
+    background: var(--passed);
+    box-shadow: 0 0 10px var(--passed);
+}
+
+.blob-failed {
+    background: var(--failed);
+    box-shadow: 0 0 10px var(--failed);
+}
+
+.blob-pending {
+    background: var(--warning);
+    box-shadow: 0 0 10px var(--warning);
+}
 
 /* Stale/Governance Badge */
 .status-stale-badge {
@@ -85,16 +99,24 @@ body {
 }
 
 @keyframes pulse-red {
-    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-    70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
 }
 
 /* Forms & Modals */
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(4px);
     display: none;
     align-items: center;
@@ -103,8 +125,10 @@ body {
 }
 
 .modal {
-    background: #1e293b;
-    border-radius: 20px;
+    background: var(--card-bg);
+    border-radius: 12px;
     padding: 32px;
     max-width: 90%;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
 }
