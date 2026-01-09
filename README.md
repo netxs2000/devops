@@ -51,6 +51,7 @@
 * **数据库**: PostgreSQL (生产环境推荐)
 * **ORM**: SQLAlchemy
 * **架构**: ELT (Extract-Load-Transform)，采用 **Airbyte** 进行统一数据抽取 (Extract) 与加载 (Load)，重度依赖 **dbt** 进行数据建模与逻辑编排，辅以 SQL Views 进行实时分析。
+* **数据质量**: Great Expectations (v1.10.0) - 用于深度数据质量校验。
 
 ## 🚀 快速开始 (Quick Start)
 
@@ -81,22 +82,59 @@ cp .env.example .env
 #    - 业务集成: 设置 GITLAB__URL, SONARQUBE__TOKEN 等 (注意使用双下划线 __ 处理层级)
 ```
 
-### 3. 一键部署 (Make Deploy)
+### 3. 多环境部署指南 (Deployment Modes)
 
-使用 `make` 命令即可完成从构建、启动到初始化的全流程：
+系统支持三种标准的构建与部署模式，请根据您的使用场景选择：
+
+| 模式 | 适用场景 | 配置文件 | 镜像策略 | 包含组件 |
+| :--- | :--- | :--- | :--- | :--- |
+| **A. 开发环境** | 本地编码/调试 | `docker-compose.yml` | 本地构建 + Dev依赖 | API, dbt, Streamlit, **Pytest, Black** |
+| **B. 生产环境** | 在线服务器 | `docker-compose.prod.yml` | 纯净精简镜像 | API, dbt, Streamlit, **DataHub CLI** |
+| **C. 离线环境** | 内网隔离环境 | `docker-compose.prod.yml` | `tar` 包导入 | 同生产环境 (**含 DataHub 独立镜像**) |
+
+#### A. 开发环境 (Development)
+> 适用于开发人员本地使用，支持代码热重载，并自动安装测试框架。
 
 ```bash
-# 🚀 开发环境一键部署 (支持代码热重载)
 make deploy
+```
+*   **动作**: 停止旧容器 -> 构建镜像 -> 启动服务 -> **安装开发依赖 (`requirements-dev.txt`)** -> 初始化数据。
+*   **依赖**: 容器启动后会自动执行 `pip install` 安装 `pytest`, `black`, `flake8` 等工具。
+*   **验证**: 运行 `make test` 确保开发环境正常。
 
-# 🏭 生产环境部署 (傻瓜式脚本) -> 推荐!
-# 自动检测环境、使用安全配置、无代码挂载
-chmod +x deploy.sh
+#### B. 生产环境 (Production)
+> 适用于可联网的生产服务器。使用精简镜像，剥离了编译器和开发工具，确保安全与稳定。
+
+```bash
+# 方式 1: 使用脚本 (推荐)
 ./deploy.sh
 
-# 或者使用 Make 命令 (生产模式)
+# 方式 2: 使用 Make 命令
 make deploy-prod
 ```
+*   **动作**: 停止旧容器 -> 构建生产镜像 (`--target release`) -> 启动服务 -> 初始化数据。
+*   **特点**: 自动配置 `restart: always`，日志滚动策略，以及时区同步。
+
+#### C. 离线环境 (Offline / Air-gapped)
+> 适用于银行/军工等无法连接外网的敏感环境。
+
+**步骤 1: 在有网机器上打包**
+```bash
+make package
+```
+*   **产物**: 生成 `devops-platform.tar` 文件（约 800MB+）。
+*   **包含**: 
+    1. `devops-platform:latest`: 核心应用镜像。
+    2. `devops-platform-datahub:latest`: 独立 DataHub 采集器镜像。
+
+**步骤 2: 上传至离线服务器并部署**
+将 `tar` 包、`Makefile`、`docker-compose.prod.yml` 和 `.env` 上传至服务器。
+
+```bash
+make deploy-offline
+```
+*   **动作**: 加载 Docker 镜像 -> 启动服务 (跳过构建) -> 初始化数据。
+
 
 部署完成后，服务将运行在后台：
 
