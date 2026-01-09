@@ -6,7 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>追踪工单 - Service Desk</title>
     <meta name="description" content="查询工单处理进度">
+    <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="auth_utils.js"></script>
+    <script>
+        if (!Auth.isLoggedIn()) {
+            window.location.replace('service_desk_login.html');
+        }
+    </script>
     <style>
         * {
             margin: 0;
@@ -15,17 +22,18 @@
         }
 
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --success-color: #00f2fe;
+            /* Map old vars to new light theme */
+            --primary-gradient: var(--primary);
+            --success-color: var(--passed);
             --warning-color: #ffa500;
-            --danger-color: #f5576c;
-            --dark-bg: #0f0f23;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --card-border: rgba(255, 255, 255, 0.1);
-            --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.7);
-            --input-bg: rgba(255, 255, 255, 0.08);
-            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+            --danger-color: var(--failed);
+            --dark-bg: var(--bg-main);
+            --card-bg: var(--card-bg);
+            --card-border: var(--border-color);
+            --text-primary: var(--text-main);
+            --text-secondary: var(--text-dim);
+            --input-bg: var(--bg-sidebar);
+            --shadow-lg: var(--shadow-md);
         }
 
         body {
@@ -37,21 +45,11 @@
             flex-direction: column;
         }
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 50% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%);
-            z-index: -1;
-        }
+        /* Removed dynamic background */
 
         header {
-            background: rgba(15, 15, 35, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--card-border);
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border-color);
             padding: 1.5rem 2rem;
         }
 
@@ -66,10 +64,7 @@
         .logo {
             font-size: 1.5rem;
             font-weight: 700;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--primary);
         }
 
         .back-link {
@@ -109,10 +104,10 @@
         /* 搜索框 */
         .search-section {
             background: var(--card-bg);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 2rem;
-            backdrop-filter: blur(10px);
+            /* backdrop-filter: blur(10px); */
             margin-bottom: 2rem;
         }
 
@@ -125,7 +120,7 @@
             flex: 1;
             padding: 1rem 1.5rem;
             background: var(--input-bg);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             color: var(--text-primary);
             font-size: 1rem;
@@ -134,8 +129,8 @@
 
         .search-input:focus {
             outline: none;
-            border-color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
+            border-color: var(--primary);
+            background: var(--bg-sidebar);
         }
 
         .search-btn {
@@ -157,10 +152,10 @@
         /* 工单详情卡片 */
         .ticket-card {
             background: var(--card-bg);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 2.5rem;
-            backdrop-filter: blur(10px);
+            /* backdrop-filter: blur(10px); */
             display: none;
             animation: fadeIn 0.5s ease-out;
         }
@@ -219,21 +214,21 @@
         }
 
         .status-in-progress {
-            background: rgba(79, 172, 254, 0.2);
-            color: var(--success-color);
-            border: 1px solid var(--success-color);
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
         }
 
         .status-completed {
-            background: rgba(0, 242, 254, 0.2);
+            background: rgba(16, 185, 129, 0.1);
             color: var(--success-color);
             border: 1px solid var(--success-color);
         }
 
         .status-rejected {
-            background: rgba(245, 87, 108, 0.2);
-            color: var(--danger-color);
-            border: 1px solid var(--danger-color);
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--failed);
+            border: 1px solid var(--failed);
         }
 
         .ticket-info {
@@ -245,7 +240,7 @@
 
         .info-item {
             padding: 1rem;
-            background: rgba(255, 255, 255, 0.03);
+            background: var(--bg-sidebar);
             border-radius: 8px;
         }
 
@@ -265,8 +260,8 @@
             align-items: center;
             gap: 0.5rem;
             padding: 0.75rem 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid var(--card-border);
+            background: var(--bg-sidebar);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             color: var(--text-primary);
             text-decoration: none;
@@ -276,7 +271,7 @@
         }
 
         .gitlab-link:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: var(--bg-card-hover);
             transform: translateX(4px);
         }
 
@@ -302,9 +297,9 @@
         }
 
         .alert.error {
-            background: rgba(245, 87, 108, 0.1);
-            border: 1px solid rgba(245, 87, 108, 0.3);
-            color: #f5576c;
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid var(--failed);
+            color: var(--failed);
             display: block;
         }
 
@@ -312,9 +307,9 @@
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            border: 3px solid rgba(0, 0, 0, 0.1);
             border-radius: 50%;
-            border-top-color: #fff;
+            border-top-color: var(--primary);
             animation: spin 1s linear infinite;
             margin-left: 10px;
         }
@@ -326,8 +321,8 @@
         }
 
         footer {
-            background: rgba(15, 15, 35, 0.8);
-            border-top: 1px solid var(--card-border);
+            background: var(--bg-sidebar);
+            border-top: 1px solid var(--border-color);
             padding: 1.5rem;
             text-align: center;
             color: var(--text-secondary);
@@ -354,7 +349,7 @@
 <body>
     <header>
         <div class="header-content">
-            <div class="logo">🔍 追踪工单</div>
+            <div class="logo">追踪工单</div>
             <a href="service_desk.html" class="back-link">← 返回服务台</a>
         </div>
     </header>
@@ -407,18 +402,18 @@
             </div>
 
             <a id="gitlabLink" href="#" target="_blank" class="gitlab-link" style="display: none;">
-                🔗 在 GitLab 中查看详情 →
+                在 GitLab 中查看详情 →
             </a>
         </div>
 
         <div id="emptyState" class="empty-state">
-            <div class="empty-state-icon">📦</div>
+            <div class="empty-state-icon"></div>
             <p>请输入追踪码查询工单信息</p>
         </div>
     </main>
 
     <footer>
-        <p>© 2025 GitLab 测试管理中台 Service Desk</p>
+        <p>© 2025 TJHQ</p>
     </footer>
 
     <script>
@@ -438,8 +433,8 @@
         };
 
         const typeMap = {
-            'bug': '🐛 缺陷报告',
-            'requirement': '📋 需求提交'
+            'bug': '缺陷报告',
+            'requirement': '需求提交'
         };
 
         // 从 URL 参数获取追踪码
@@ -451,7 +446,7 @@
         }
 
         function showError(message) {
-            errorAlert.textContent = `❌ ${message}`;
+            errorAlert.textContent = `${message}`;
             errorAlert.style.display = 'block';
             setTimeout(() => {
                 errorAlert.style.display = 'none';

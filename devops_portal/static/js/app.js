@@ -150,6 +150,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 /**
+ * 监听 URL hash 变化，支持浏览器后退/前进
+ */
+window.addEventListener('hashchange', () => {
+    if (window.location.hash) {
+        switchView(window.location.hash.substring(1));
+    }
+});
+
+/**
  * 渲染用户身份信息
  * @param {Object} user 用户对象
  */

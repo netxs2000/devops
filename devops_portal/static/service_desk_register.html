@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>用户注册 - Service Desk</title>
     <meta name="description" content="Service Desk 用户注册申请">
+    <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -15,14 +16,14 @@
         }
 
         :root {
-            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            --dark-bg: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --card-border: rgba(255, 255, 255, 0.1);
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --input-bg: rgba(15, 23, 42, 0.5);
-            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+            --primary-gradient: var(--primary);
+            --dark-bg: var(--bg-main);
+            --card-bg: var(--card-bg);
+            --card-border: var(--border-color);
+            --text-primary: var(--text-main);
+            --text-secondary: var(--text-dim);
+            --input-bg: var(--bg-sidebar);
+            --shadow-lg: var(--shadow-md);
         }
 
         body {
@@ -34,21 +35,11 @@
             flex-direction: column;
         }
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 50%);
-            z-index: -1;
-        }
+        /* Removed dynamic background */
 
         header {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--card-border);
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border-color);
             padding: 1.5rem 2rem;
         }
 
@@ -63,10 +54,7 @@
         .logo {
             font-size: 1.5rem;
             font-weight: 700;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--primary);
         }
 
         .back-link {
@@ -109,11 +97,11 @@
 
         .register-card {
             background: var(--card-bg);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 2.5rem;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            /* backdrop-filter: blur(10px); */
+            box-shadow: var(--shadow-md);
         }
 
         .form-grid {
@@ -143,7 +131,7 @@
             width: 100%;
             padding: 0.75rem 1rem;
             background: var(--input-bg);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             color: var(--text-primary);
             font-family: inherit;
@@ -154,8 +142,8 @@
         .form-group input:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #6366f1;
-            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
         }
 
         .register-btn {
@@ -174,7 +162,7 @@
 
         .register-btn:hover:not(:disabled) {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            box-shadow: var(--shadow-sm);
         }
 
         .register-btn:disabled {
@@ -194,15 +182,15 @@
         }
 
         .alert.success {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            color: #6ee7b7;
+            background: rgba(5, 150, 105, 0.1);
+            border: 1px solid var(--passed);
+            color: var(--passed);
         }
 
         .alert.error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid var(--failed);
+            color: var(--failed);
         }
 
         .alert.show {
@@ -229,7 +217,7 @@
         }
 
         .login-link a {
-            color: #8b5cf6;
+            color: var(--primary);
             text-decoration: none;
             font-weight: 600;
         }
@@ -239,8 +227,8 @@
         }
 
         footer {
-            background: rgba(15, 23, 42, 0.8);
-            border-top: 1px solid var(--card-border);
+            background: var(--bg-sidebar);
+            border-top: 1px solid var(--border-color);
             padding: 1.5rem;
             text-align: center;
             color: var(--text-secondary);
@@ -266,7 +254,7 @@
 <body>
     <header>
         <div class="header-content">
-            <div class="logo">📝 注册申请</div>
+            <div class="logo">注册申请</div>
             <a href="service_desk_login.html" class="back-link">← 返回登录</a>
         </div>
     </header>
@@ -323,7 +311,7 @@
     </main>
 
     <footer>
-        <p>© 2025 GitLab 测试管理中台 Service Desk</p>
+        <p>© 2025 TJHQ</p>
     </footer>
 
     <script>
@@ -370,7 +358,7 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    showAlert('✅ 注册成功！请使用新账号登录', 'success');
+                    showAlert('注册成功！请使用新账号登录', 'success');
                     registerForm.reset();
                     registerForm.style.display = 'none';
 
@@ -385,13 +373,13 @@
                     `;
                     document.querySelector('.register-card').appendChild(successAction);
                 } else {
-                    showAlert(`❌ ${result.detail || '注册失败，请稍后重试'}`, 'error');
+                    showAlert(`Error: ${result.detail || '注册失败，请稍后重试'}`, 'error');
                     registerBtn.disabled = false;
                     registerBtn.textContent = '注册账号';
                 }
             } catch (error) {
                 console.error(error);
-                showAlert(`❌ 网络错误，请检查连接`, 'error');
+                showAlert(`网络错误，请检查连接`, 'error');
                 registerBtn.disabled = false;
                 registerBtn.textContent = '注册账号';
             }

@@ -11,11 +11,17 @@
     <link rel="stylesheet" href="css/main.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="auth_utils.js"></script>
+    <script>
+        // Enforce Authentication
+        if (!Auth.isLoggedIn()) {
+            window.location.replace('service_desk_login.html');
+        }
+    </script>
     <script src="js/core.js"></script>
 </head>
 
 <body>
-    <div class="layout">
+    <div class="app-container">
         <!-- Toast Notification Container for Real-time Pulse -->
         <div id="toast-container"></div>
 
@@ -26,20 +32,20 @@
                 <p>Enterprise Grade Quality Assurance & DevOps Analytics</p>
                 <!-- P3: Data Scope Badge -->
                 <div id="data-scope-badge-v2"
-                    style="display: none; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px; color: #c7d2fe; margin-top: 10px;">
-                    <span id="scope-icon-v2">📍</span>
+                    style="display: none; align-items: center; gap: 8px; background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px; color: var(--primary); margin-top: 10px;">
+                    <span id="scope-icon-v2"></span>
                     <span style="opacity: 0.6;">数据范围:</span>
                     <strong id="scope-value-v2">Loading...</strong>
                 </div>
                 <div id="data-scope-badge" style="display:none" class="scope-badge">
-                    <span class="scope-icon">🛡️</span>
+                    <span class="scope-icon"></span>
                     <span class="scope-label">Data Scope:</span>
                     <strong id="user-province">Loading...</strong>
                 </div>
             </div>
 
             <nav class="controls">
-                <a href="#" class="nav-link active">
+                <a href="#dashboard" class="nav-link active" onclick="switchView('dashboard')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <rect x="3" y="3" width="7" height="7"></rect>
                         <rect x="14" y="3" width="7" height="7"></rect>
@@ -56,7 +62,7 @@
                     </svg>
                     Iteration Plan
                 </a>
-                <a href="#" class="nav-link" id="nav-tests" onclick="switchView('test-cases')">
+                <a href="#test-cases" class="nav-link" id="nav-tests" onclick="switchView('test-cases')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -66,7 +72,7 @@
                     </svg>
                     Test Cases
                 </a>
-                <a href="#" class="nav-link" id="nav-defects" onclick="switchView('defects')">
+                <a href="#defects" class="nav-link" id="nav-defects" onclick="switchView('defects')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -74,14 +80,14 @@
                     </svg>
                     Defects
                 </a>
-                <a href="#" class="nav-link" id="nav-reqs" onclick="switchView('requirements')">
+                <a href="#requirements" class="nav-link" id="nav-reqs" onclick="switchView('requirements')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 11l3 3L22 4"></path>
                         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
                     </svg>
                     Requirements
                 </a>
-                <a href="#" class="nav-link" id="nav-support" onclick="switchView('servicedesk')">
+                <a href="#support" class="nav-link" id="nav-support" onclick="switchView('support')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                         <path d="M8 9h8"></path>
@@ -89,27 +95,27 @@
                     </svg>
                     Support Center
                 </a>
-                <a href="#" class="nav-link" id="nav-matrix" onclick="switchView('matrix')">
+                <a href="#matrix" class="nav-link" id="nav-matrix" onclick="switchView('matrix')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2v20M2 12h20"></path>
                         <path d="M17 7l-5 5-5-5"></path>
                     </svg>
                     Traceability
                 </a>
-                <a href="#" class="nav-link" id="nav-reports" onclick="switchView('reports')">
+                <a href="#reports" class="nav-link" id="nav-reports" onclick="switchView('reports')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
                         <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
                     </svg>
                     Insights
                 </a>
-                <a href="#" class="nav-link" id="nav-governance" onclick="switchView('governance')">
+                <a href="#governance" class="nav-link" id="nav-governance" onclick="switchView('governance')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                     </svg>
                     Governance
                 </a>
-                <a href="#" class="nav-link" id="nav-decision-hub" onclick="switchView('decision_hub')"
+                <a href="#decision_hub" class="nav-link" id="nav-decision-hub" onclick="switchView('decision_hub')"
                     style="color: var(--passed);">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -117,15 +123,16 @@
                     </svg>
                     Decision Hub
                 </a>
-                <a href="#" class="nav-link admin-only" id="nav-admin-projects" onclick="switchView('admin_projects')"
+                <a href="#admin_projects" class="nav-link admin-only" id="nav-admin-projects"
+                    onclick="switchView('admin_projects')"
                     style="display:none; border-top: 1px solid var(--border-color); margin-top: 10px; padding-top: 15px;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
                     </svg>
                     Project Admin
                 </a>
-                <a href="#" class="nav-link admin-only" id="nav-admin-users" onclick="switchView('admin_users')"
-                    style="display:none;">
+                <a href="#admin_users" class="nav-link admin-only" id="nav-admin-users"
+                    onclick="switchView('admin_users')" style="display:none;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                         <circle cx="9" cy="7" r="4"></circle>
@@ -137,14 +144,14 @@
                 <div
                     style="margin: 20px 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); opacity: 0.6;">
                     Business Service Desk</div>
-                <a href="#" class="nav-link" id="nav-sd-submit" onclick="switchView('sd_submit')">
+                <a href="#sd_submit" class="nav-link" id="nav-sd-submit" onclick="switchView('sd_submit')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                     </svg>
                     New Feedback
                 </a>
-                <a href="#" class="nav-link" id="nav-sd-my" onclick="switchView('sd_my')">
+                <a href="#sd_my" class="nav-link" id="nav-sd-my" onclick="switchView('sd_my')">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                     </svg>
@@ -159,7 +166,7 @@
                     <div class="user-dept" id="user-display-dept">Please wait</div>
                     <a href="#" id="gitlab-bind-link" onclick="openGitLabBindModal()"
                         style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 4px; text-decoration: none;">
-                        <span id="gitlab-status-icon">🔌</span> <span id="gitlab-status-text">Connect GitLab</span>
+                        <span id="gitlab-status-icon"></span> <span id="gitlab-status-text">Connect GitLab</span>
                     </a>
                 </div>
                 <button class="logout-btn" onclick="Auth.logout()" title="Logout">
@@ -287,7 +294,7 @@
                 </div>
             </header>
 
-            <div id="loading">✨ Synchronizing Data...</div>
+            <div id="loading">Synchronizing Data...</div>
 
             <!-- Stats Bar -->
             <div class="stats-grid" id="statsGrid" style="display: none;">
@@ -301,7 +308,8 @@
                     <div class="stat-header">
                         <span class="stat-title">Defects Found</span>
                         <span class="stat-indicator" id="bug-alert-icon"
-                            style="display:none; background: rgba(239, 68, 68, 0.1); color: var(--failed);">🔥</span>
+                            style="display:none; background: rgba(220, 38, 38, 0.1); color: var(--failed);">High
+                            Priority</span>
                     </div>
                     <div class="stat-value" id="stat-bugs" style="color: var(--failed);">0</div>
                 </div>
@@ -461,7 +469,7 @@
                     <div
                         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                         <div>
-                            <h2 style="margin: 0;">🏛️ 业务项目管理 (Two-Layer)</h2>
+                            <h2 style="margin: 0;">业务项目管理 (Two-Layer)</h2>
                             <p style="color: var(--text-dim); margin: 5px 0 0;">管理业务主项目 (MDM) 及其关联的 GitLab 技术仓库。</p>
                         </div>
                         <button class="btn btn-primary" onclick="openCreateProjectModal()">➕ 新建主项目</button>
@@ -509,7 +517,7 @@
                             <div
                                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                                 <div>
-                                    <h2 style="margin: 0;">🧬 人员身份校准中心 (User Mapping)</h2>
+                                    <h2 style="margin: 0;">人员身份校准中心 (User Mapping)</h2>
                                     <p style="color: var(--text-dim); margin: 5px 0 0;">建立员工全局 ID 与外部系统 (GitLab/Jira)
                                         账号的强关联。</p>
                                 </div>
@@ -539,7 +547,7 @@
                     <!-- Create Identity Mapping Modal -->
                     <div id="createMappingModal" class="modal-overlay">
                         <div class="modal" style="width: 500px;">
-                            <h3>➕ 添加身份绑定</h3>
+                            <h3>添加身份绑定</h3>
                             <div class="form-group" style="margin-top: 15px;">
                                 <label>选择员工</label>
                                 <select id="mapGlobalUser" class="form-control"></select>
@@ -581,7 +589,7 @@
                     <!-- Create MDM Project Modal -->
                     <div id="createProjectModal" class="modal-overlay">
                         <div class="modal" style="width: 600px; max-height: 90vh; overflow-y: auto;">
-                            <h3>➕ 新建业务主项目</h3>
+                            <h3>新建业务主项目</h3>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
                                 <div class="form-group">
                                     <label>项目唯一ID (ID)</label>
@@ -654,7 +662,7 @@
                     <div style="display:flex; gap:8px;">
                         <input type="number" id="new_req_iid" placeholder="Associated ID" style="flex:1;">
                         <button class="btn-primary" style="background:var(--accent); font-size:12px; padding:4px 10px;"
-                            onclick="generateMagicSteps()" title="AI Generative Steps from AC">🪄 AI</button>
+                            onclick="generateMagicSteps()" title="AI Generative Steps from AC">AI Generate</button>
                     </div>
                 </div>
             </div>
@@ -733,7 +741,7 @@
             </div>
             <div class="image-paste-area" id="paste-area"
                 style="border: 2px dashed rgba(255,255,255,0.1); padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 15px;">
-                📸 Click or Paste Screenshot here
+                Click or Paste Screenshot here
                 <img id="img-preview" style="display:none; max-height:150px; margin-top:10px;">
             </div>
             <div style="display:flex; justify-content: flex-end; gap: 12px;">
@@ -832,7 +840,7 @@
     <!-- GitLab Binding Modal -->
     <div class="modal-overlay" id="bindGitLabModal">
         <div class="modal">
-            <h2>🔗 Connect GitLab Account</h2>
+            <h2>Connect GitLab Account</h2>
             <p>Link your personal GitLab account to enable advanced features:</p>
             <ul style="color: var(--text-secondary); margin-bottom: 20px;">
                 <li>Create and manage Iterations</li>
@@ -872,7 +880,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('bind_success')) {
                 window.history.replaceState({}, document.title, window.location.pathname);
-                alert('🎉 GitLab Account Linked Successfully!');
+                alert('GitLab Account Linked Successfully!');
             }
 
             // Fetch status from backend
@@ -918,7 +926,7 @@
             const text = document.getElementById('gitlab-status-text');
 
             if (isConnected) {
-                icon.innerText = '✅';
+                icon.innerText = '';
                 text.innerText = 'GitLab Linked';
                 link.onclick = (e) => { e.preventDefault(); }; // Disable click or show unlink
                 link.style.color = 'var(--passed)';

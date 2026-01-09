@@ -8,18 +8,21 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
+    <link href="css/main.css" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
     <style>
         :root {
-            --primary: #8b5cf6;
-            --accent: #d946ef;
-            --primary-gradient: linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%);
-            --card-dark: rgba(30, 30, 50, 0.7);
-            --text-main: #ffffff;
-            --text-dim: rgba(255, 255, 255, 0.5);
-            --glass: rgba(255, 255, 255, 0.03);
-            --border: rgba(255, 255, 255, 0.08);
-            --passed: #10b981;
-            --failed: #ef4444;
+            /* Map old vars to new light theme */
+            --primary-gradient: var(--primary);
+            --card-dark: var(--card-bg);
+            --text-main: var(--text-main);
+            --text-dim: var(--text-dim);
+            --glass: var(--bg-sidebar);
+            --border: var(--border-color);
+            --passed: var(--passed);
+            --failed: var(--failed);
             --pending: #f59e0b;
         }
 
@@ -31,12 +34,9 @@
 
         body {
             font-family: 'Outfit', sans-serif;
-            background: #0a0a14;
+            background: var(--bg-main);
             color: var(--text-main);
             min-height: 100vh;
-            background-image:
-                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.05) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(217, 70, 239, 0.05) 0%, transparent 40%);
         }
 
         .layout {
@@ -77,11 +77,12 @@
         }
 
         .stat-card {
-            background: var(--card-dark);
-            border: 1px solid var(--border);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
             padding: 24px;
             border-radius: 20px;
-            backdrop-filter: blur(12px);
+            /* backdrop-filter: blur(12px); */
+            box-shadow: var(--shadow-sm);
         }
 
         .stat-label {
@@ -98,11 +99,12 @@
         }
 
         .tickets-panel {
-            background: var(--card-dark);
-            border: 1px solid var(--border);
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
             border-radius: 24px;
             padding: 30px;
-            backdrop-filter: blur(20px);
+            /* backdrop-filter: blur(20px); */
+            box-shadow: var(--shadow-md);
         }
 
         .panel-header {
@@ -115,7 +117,7 @@
         .filter-pills {
             display: flex;
             gap: 10px;
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--bg-sidebar);
             padding: 6px;
             border-radius: 12px;
         }
@@ -131,7 +133,7 @@
         }
 
         .pill.active {
-            background: var(--primary-gradient);
+            background: var(--primary);
             color: white;
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
         }
@@ -154,9 +156,9 @@
         }
 
         .ticket-card:hover {
-            background: rgba(255, 255, 255, 0.06);
+            background: var(--bg-card-hover);
             transform: translateX(8px);
-            border-color: rgba(139, 92, 246, 0.3);
+            border-color: var(--primary);
         }
 
         .ticket-main {
@@ -173,7 +175,7 @@
             align-items: center;
             justify-content: center;
             font-size: 20px;
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--bg-sidebar);
         }
 
         .ticket-info h3 {
@@ -213,7 +215,7 @@
         .status-completed {
             background: rgba(16, 185, 129, 0.1);
             color: var(--passed);
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            border: 1px solid var(--passed);
         }
 
         .btn-back {
@@ -231,7 +233,7 @@
         }
 
         .btn-back:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--bg-card-hover);
         }
     </style>
     </style>
@@ -340,7 +342,7 @@
             }
 
             container.innerHTML = filtered.map(t => {
-                const typeIcon = t.ticket_type === 'bug' ? '🐛' : '💡';
+                const typeIcon = t.ticket_type === 'bug' ? 'Bug' : 'Req';
                 const date = new Date(t.created_at).toLocaleDateString();
                 const statusMap = {
                     'pending': 'Pending',

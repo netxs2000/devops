@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>提交需求 - Service Desk</title>
     <meta name="description" content="提交功能需求或改进建议">
+    <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -15,14 +16,15 @@
         }
 
         :root {
-            --primary-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            --dark-bg: #0f0f23;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --card-border: rgba(255, 255, 255, 0.1);
-            --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.7);
-            --input-bg: rgba(255, 255, 255, 0.08);
-            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+            /* Map old vars to new light theme */
+            --primary-gradient: var(--primary);
+            --dark-bg: var(--bg-main);
+            --card-bg: var(--card-bg);
+            --card-border: var(--border-color);
+            --text-primary: var(--text-main);
+            --text-secondary: var(--text-dim);
+            --input-bg: var(--bg-sidebar);
+            --shadow-lg: var(--shadow-md);
         }
 
         body {
@@ -34,21 +36,11 @@
             flex-direction: column;
         }
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 80% 20%, rgba(79, 172, 254, 0.1) 0%, transparent 50%);
-            z-index: -1;
-        }
+        /* Removed dynamic background */
 
         header {
-            background: rgba(15, 15, 35, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--card-border);
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border-color);
             padding: 1.5rem 2rem;
         }
 
@@ -63,10 +55,7 @@
         .logo {
             font-size: 1.5rem;
             font-weight: 700;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--primary);
         }
 
         .back-link {
@@ -105,10 +94,10 @@
 
         .form-container {
             background: var(--card-bg);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 3rem;
-            backdrop-filter: blur(10px);
+            /* backdrop-filter: blur(10px); */
         }
 
         .form-group {
@@ -144,8 +133,8 @@
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #4facfe;
-            background: rgba(79, 172, 254, 0.1);
+            border-color: var(--primary);
+            background: var(--bg-sidebar);
         }
 
         .form-group textarea {
@@ -199,15 +188,15 @@
         }
 
         .alert.success {
-            background: rgba(0, 242, 254, 0.1);
-            border: 1px solid rgba(0, 242, 254, 0.3);
-            color: #00f2fe;
+            background: rgba(5, 150, 105, 0.1);
+            border: 1px solid var(--passed);
+            color: var(--passed);
         }
 
         .alert.error {
-            background: rgba(245, 87, 108, 0.1);
-            border: 1px solid rgba(245, 87, 108, 0.3);
-            color: #f5576c;
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid var(--failed);
+            color: var(--failed);
         }
 
         .alert.show {
@@ -230,7 +219,7 @@
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            border: 3px solid rgba(0, 0, 0, 0.1);
             border-radius: 50%;
             border-top-color: #fff;
             animation: spin 1s linear infinite;
@@ -244,8 +233,8 @@
         }
 
         footer {
-            background: rgba(15, 15, 35, 0.8);
-            border-top: 1px solid var(--card-border);
+            background: var(--bg-sidebar);
+            border-top: 1px solid var(--border-color);
             padding: 1.5rem;
             text-align: center;
             color: var(--text-secondary);
@@ -267,8 +256,8 @@
         }
 
         .reporter-info {
-            background: rgba(79, 172, 254, 0.1);
-            border: 1px solid rgba(79, 172, 254, 0.2);
+            background: var(--bg-sidebar);
+            border: 1px solid var(--border-color);
             padding: 1rem;
             border-radius: 8px;
             margin-bottom: 2rem;
@@ -280,7 +269,7 @@
         .reporter-avatar {
             width: 32px;
             height: 32px;
-            background: var(--primary-gradient);
+            background: var(--primary);
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -294,7 +283,7 @@
 <body>
     <header>
         <div class="header-content">
-            <div class="logo">📋 提交需求</div>
+            <div class="logo">提交需求</div>
             <a href="service_desk.html" class="back-link">← 返回服务台</a>
         </div>
     </header>
@@ -370,7 +359,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>📎 需求原型/说明附件</label>
+                    <label>需求原型/说明附件</label>
                     <div id="uploadArea" style="
                         border: 2px dashed var(--card-border);
                         border-radius: 12px;
@@ -378,12 +367,12 @@
                         text-align: center;
                         cursor: pointer;
                         transition: all 0.3s;
-                        background: rgba(255, 255, 255, 0.02);
+                        background: var(--bg-sidebar);
                         margin-bottom: 1rem;
-                    " onmouseover="this.style.borderColor='#4facfe';this.style.background='rgba(79, 172, 254, 0.05)'"
-                        onmouseout="this.style.borderColor='var(--card-border)';this.style.background='rgba(255, 255, 255, 0.02)'"
+                    " onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--bg-card-hover)'"
+                        onmouseout="this.style.borderColor='var(--border-color)';this.style.background='var(--bg-sidebar)'"
                         onclick="document.getElementById('fileInput').click()">
-                        <div style="font-size: 2rem; margin-bottom: 1rem;">📁</div>
+                        <div style="font-size: 2rem; margin-bottom: 1rem;"></div>
                         <div style="font-weight: 500;">点击或拖拽需求文档至此处上传</div>
                         <div style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 0.5rem;">支持 PDF,
                             Word, 图片等</div>
@@ -403,7 +392,7 @@
     </main>
 
     <footer>
-        <p>© 2025 GitLab 测试管理中台 Service Desk</p>
+        <p>© 2025 TJHQ</p>
     </footer>
 
     <script src="auth_utils.js"></script>
@@ -480,10 +469,10 @@
 
                     if (result.markdown) {
                         uploadedAttachments.push(result.markdown);
-                        previewItem.innerHTML = `<div style="font-size: 1.5rem;">📄</div><div style="font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</div><div style="color: #00f2fe; font-size: 0.75rem;">已准备</div>`;
+                        previewItem.innerHTML = `<div style="font-size: 1.5rem;">F</div><div style="font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</div><div style="color: var(--passed); font-size: 0.75rem;">已准备</div>`;
                     }
                 } catch (error) {
-                    previewItem.innerHTML = `<div style="color: #f5576c;">❌</div><div style="font-size: 0.75rem;">失败</div>`;
+                    previewItem.innerHTML = `<div style="color: var(--failed);">x</div><div style="font-size: 0.75rem;">失败</div>`;
                 }
             }
         }
@@ -517,13 +506,13 @@
                 const url = `/service-desk/submit-requirement?mdm_id=${mdmId}`;
                 const result = await Api.post(url, formData);
 
-                showAlert(`✅ ${result.message}`, 'success');
+                showAlert(`提交成功: ${result.message}`, 'success');
                 setTimeout(() => {
                     alert(`追踪码：${result.tracking_code}\n\n请保存。`);
                     window.location.href = `service_desk_track.html?code=${result.tracking_code}`;
                 }, 1000);
             } catch (error) {
-                showAlert(`❌ 提交失败：${error.message || '网络错误'}`, 'error');
+                showAlert(`提交失败：${error.message || '网络错误'}`, 'error');
                 submitBtn.disabled = false;
                 submitBtn.textContent = '提交需求';
             }
