@@ -25,15 +25,17 @@ from devops_collector.auth import services as auth_services
 from devops_collector.auth.database import SessionLocal
 from devops_collector.models import User
 from devops_collector.core import security
-from devops_collector.gitlab_sync.services.testing_service import TestingService
-from devops_collector.gitlab_sync.services.gitlab_client import GitLabClient
+# from devops_collector.gitlab_sync.services.testing_service import TestingService
+from devops_collector.plugins.gitlab.client import GitLabClient
 from devops_portal import schemas
+
+
 from devops_portal.state import NOTIFICATION_QUEUES, PIPELINE_STATUS
 from devops_portal.events import push_notification
 from devops_portal.dependencies import get_current_user
-from devops_portal.routers import quality as quality_router
-from devops_portal.routers import service_desk as service_desk_router
-from devops_portal.routers import test_management as test_management_router
+# from devops_portal.routers import quality as quality_router
+# from devops_portal.routers import service_desk as service_desk_router
+# from devops_portal.routers import test_management as test_management_router
 from devops_portal.routers import iteration as iteration_router
 from devops_portal.routers import admin as admin_router
 logger = logging.getLogger(__name__)
@@ -57,9 +59,9 @@ Raises:
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
 app.include_router(auth_router.router)
-app.include_router(quality_router.router)
-app.include_router(service_desk_router.router)
-app.include_router(test_management_router.router)
+# app.include_router(quality_router.router)
+# app.include_router(service_desk_router.router)
+# app.include_router(test_management_router.router)
 app.include_router(iteration_router.router)
 app.include_router(admin_router.router)
 app.mount('/static', StaticFiles(directory='devops_portal/static'), name='static')
@@ -162,8 +164,8 @@ async def gitlab_webhook(request: Request):
                 changes = payload.get('changes', {})
                 if 'title' in changes or 'description' in changes:
                     logger.warning(f'Requirement Governance: #{issue_iid} changed. Cascading to linked tests...')
-                    service = TestingService()
-                    asyncio.create_task(service.mark_associated_tests_as_stale(p_id, issue_iid))
+                    # service = TestingService()
+                    # asyncio.create_task(service.mark_associated_tests_as_stale(p_id, issue_iid))
             if 'type::requirement' in labels:
                 review_state = next((l.replace('review-state::', '') for l in labels if l.startswith('review-state::')), 'draft')
                 old_review_state = next((l.replace('review-state::', '') for l in old_labels if l.startswith('review-state::')), None)

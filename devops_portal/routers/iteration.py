@@ -9,7 +9,7 @@ from devops_collector.plugins.gitlab.agile_service import GitLabAgileService
 from devops_collector.models import User
 from devops_collector.config import Config
 from devops_collector.core import security
-from devops_collector.plugins.gitlab.models import Project, Milestone
+from devops_collector.plugins.gitlab.models import GitLabProject, GitLabMilestone
 from devops_portal.dependencies import get_current_user
 router = APIRouter(prefix='/agile', tags=['iteration-management'], responses={404: {'description': 'Not found'}})
 
@@ -44,15 +44,15 @@ def get_agile_service(db: Session=Depends(get_db), client: GitLabClient=Depends(
 @router.get('/projects')
 async def list_projects(db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     """获取所有可用项目列表 (用于下拉框选择)。"""
-    query = db.query(Project)
-    query = security.apply_plugin_privacy_filter(db, query, Project, current_user)
+    query = db.query(GitLabProject)
+    query = security.apply_plugin_privacy_filter(db, query, GitLabProject, current_user)
     projects = query.all()
     return [{'id': p.id, 'name': p.name, 'path': p.path_with_namespace} for p in projects]
 
 @router.get('/projects/{project_id}/milestones')
 async def list_milestones(project_id: int, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     """获取指定项目的里程碑列表 (用于下拉框选择)。"""
-    milestones = db.query(Milestone).filter(Milestone.project_id == project_id, Milestone.state == 'active').order_by(Milestone.due_date).all()
+    milestones = db.query(GitLabMilestone).filter(GitLabMilestone.project_id == project_id, GitLabMilestone.state == 'active').order_by(GitLabMilestone.due_date).all()
     return [{'id': m.id, 'title': m.title, 'due_date': m.due_date} for m in milestones]
 
 @router.post('/projects/{project_id}/milestones')
