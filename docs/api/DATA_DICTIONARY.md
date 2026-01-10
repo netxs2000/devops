@@ -26,7 +26,7 @@
 
 ### 🏢 核心主数据域 (Core Master Data)
 
-- `mdm_calendar` - Calendar
+- mdm_calendar - Calendar
 - mdm_identities - User
 - mdm_identity_mappings - IdentityMapping
 - mdm_location - Location
