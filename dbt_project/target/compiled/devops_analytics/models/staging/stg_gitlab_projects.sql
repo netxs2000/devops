@@ -9,8 +9,8 @@ renamed as (
         path_with_namespace,
         description,
         created_at,
-        last_activity_at
-        -- visibility and archived are missing in DB schema
+        last_activity_at,
+        coalesce((raw_data->>'archived')::boolean, false) as is_archived
     from source
 )
 

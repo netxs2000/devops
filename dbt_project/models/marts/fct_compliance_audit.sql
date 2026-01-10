@@ -18,7 +18,8 @@ mr_reviews as (
         count(distinct n.author_user_id) filter (where n.author_user_id != mr.author_user_id) as independent_reviewer_count
     from {{ ref('stg_gitlab_merge_requests') }} mr
     left join {{ ref('stg_gitlab_notes') }} n 
-        on mr.merge_request_id = n.noteable_id 
+        on mr.iid = n.noteable_iid 
+        and mr.project_id = n.project_id
         and n.noteable_type = 'MergeRequest'
     where mr.state = 'merged'
     group by 1, 2

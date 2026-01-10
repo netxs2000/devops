@@ -39,8 +39,24 @@ function switchView(view) {
     if (activeNav) activeNav.classList.add('active');
     if (view === 'dashboard' && dashboardLink) dashboardLink.classList.add('active');
 
+    // 控制主 Header 的显隐 (Test Repository Header)
+    // 仅在测试管理相关视图显示：dashboard, test-cases, defects, requirements, matrix, reports
+    const headerEl = document.getElementById('main-header');
+    const headerViews = ['dashboard', 'tests', 'test-cases', 'defects', 'requirements', 'matrix', 'reports'];
+    
+    if (headerEl) {
+        if (headerViews.includes(view) || !view) { // !view implies default dashboard
+            headerEl.style.display = 'flex';
+        } else {
+            headerEl.style.display = 'none';
+        }
+    }
+
     // 显示对应视图
-    if (view === 'tests' || view === 'test-cases') {
+    if (view === 'tests' || view === 'test-cases' || view === 'dashboard') {
+        if (view === 'dashboard' && dashboardLink) dashboardLink.classList.add('active'); // Re-add active just in case
+        document.getElementById('results').style.display = 'flex';
+        document.getElementById('statsGrid').style.display = 'grid';
         document.getElementById('results').style.display = 'flex';
         document.getElementById('statsGrid').style.display = 'grid';
     } else if (view === 'defects') {

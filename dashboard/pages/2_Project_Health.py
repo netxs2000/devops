@@ -42,7 +42,7 @@ query = """
         merged_mr_total,
         mr_backlog,
         prod_deploys
-    FROM fct_project_delivery_health
+    FROM public_marts.fct_project_delivery_health
     ORDER BY health_score DESC
 """
 df = run_query(query)

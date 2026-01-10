@@ -12,7 +12,8 @@ renamed as (
         state,
         author_id as author_user_id,
         merged_at,
-        created_at
+        created_at,
+        merge_commit_sha
         -- labels is missing in DB schema
     from source
 )

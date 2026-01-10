@@ -59,6 +59,7 @@ select
     p.path_with_namespace,
     coalesce(i.total_in_degree, 0) as impact_in_degree,
     coalesce(q.complexity, 0) as complexity_score,
+    coalesce(q.cognitive_complexity, 0) as cognitive_complexity,
     coalesce(q.coverage, 0) as coverage_pct,
     
     -- ABI 算法 (演示逻辑)

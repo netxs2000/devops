@@ -5,19 +5,18 @@
       target_schema='snapshots',
       unique_key='user_id',
       strategy='check',
-      check_cols=['department', 'real_name', 'is_active', 'is_vendor'],
+      check_cols=['department_id', 'real_name', 'is_active'],
       invalidate_hard_deletes=True,
     )
 }}
 
 select 
     global_user_id as user_id,
-    email,
+    primary_email as email,
     employee_id,
-    real_name,
-    department,
+    full_name as real_name,
+    department_id,
     is_active,
-    is_vendor,
     sync_version
 from {{ source('raw', 'mdm_identities') }}
 where is_current = true

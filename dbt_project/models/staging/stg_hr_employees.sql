@@ -1,6 +1,6 @@
 
 with source as (
-    select * from {{ source('raw', 'hr_employees') }}
+    select * from {{ ref('hr_employees') }}
 ),
 
 renamed as (

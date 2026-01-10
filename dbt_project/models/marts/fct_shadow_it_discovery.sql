@@ -24,6 +24,7 @@ recent_activity as (
     select 
         target_entity_id,
         count(*) as total_actions,
+        count(distinct author_user_id) as contributor_count,
         max(occurred_at) as last_action_at
     from {{ ref('int_unified_activities') }}
     where occurred_at >= current_date - interval '30 days'
@@ -38,10 +39,19 @@ select
     r.created_at,
     ra.total_actions as last_30d_activity_count,
     ra.last_action_at,
+    extract(day from (current_timestamp - ra.last_action_at)) as last_activity_days_ago,
+    coalesce(ra.contributor_count, 0) as contributor_count,
+    'Asset Catalog Missing' as discovery_reason,
     
-    -- 风险分级逻辑
+    -- 风险分级与评分逻辑
     case 
-        when ra.total_actions > 100 then 'HIGH_RISK_SHADOW'  -- 非常活跃但没登记
+        when ra.total_actions > 100 then 90
+        when ra.total_actions > 20 then 50
+        else 20
+    end as risk_score,
+
+    case 
+        when ra.total_actions > 100 then 'HIGH_RISK_SHADOW'
         when ra.total_actions > 20 then 'ACTIVE_UNREGISTERED'
         else 'LOW_PRIORITY_UNREGISTERED'
     end as shadow_it_status

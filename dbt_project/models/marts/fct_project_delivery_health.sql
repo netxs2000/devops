@@ -22,7 +22,8 @@ dws_project_summary as (
         -- 质量指标取最新一天的记录 (或均值)
         max(sonar_bugs) as latest_bug_count,
         max(test_coverage_pct) as latest_coverage,
-        max(tech_debt_minutes) as latest_tech_debt
+        max(tech_debt_hours) as latest_tech_debt,
+        max(quality_gate_status) as quality_gate
     from {{ ref('dws_project_metrics_daily') }}
     group by 1
 ),
@@ -45,7 +46,8 @@ select
     -- 质量指标
     coalesce(s.latest_bug_count, 0) as bug_count,
     coalesce(s.latest_coverage, 0) as test_coverage_pct,
-    round(coalesce(s.latest_tech_debt, 0) / 60.0, 1) as tech_debt_hours,
+    round(coalesce(s.latest_tech_debt, 0), 1) as tech_debt_hours,
+    coalesce(s.quality_gate, 'N/A') as quality_gate,
     
     -- 产出指标
     coalesce(s.merged_mr_total, 0) as merged_mr_total,

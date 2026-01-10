@@ -45,7 +45,7 @@ st.markdown("""
 
 # --- Data Loading ---
 try:
-    users_df = run_query('SELECT user_id, real_name, department FROM fct_developer_activity_profile')
+    users_df = run_query('SELECT user_id, real_name, department FROM public_marts.fct_developer_activity_profile')
     if users_df.empty:
         st.warning("暂无开发者画像数据。请确认 dbt 模型 `fct_developer_activity_profile` 已运行。")
         st.stop()
@@ -57,7 +57,7 @@ selected_user_name = st.selectbox('🔍 搜索开发者 (姓名/ID)', users_df['
 selected_user_id = users_df[users_df['real_name'] == selected_user_name]['user_id'].iloc[0]
 
 # Detailed User Profile
-profile_df = run_query(f"SELECT * FROM fct_developer_activity_profile WHERE user_id = {selected_user_id}")
+profile_df = run_query(f"SELECT * FROM public_marts.fct_developer_activity_profile WHERE user_id = '{selected_user_id}'")
 if profile_df.empty:
     st.error("无法获取该开发者的详细信息。")
     st.stop()
@@ -120,8 +120,8 @@ with col_radar:
 st.subheader("📊 近期活跃度趋势 (Daily Activity Stream)")
 activity_query = f"""
     SELECT metric_date, activity_count 
-    FROM dws_developer_metrics_daily 
-    WHERE master_user_id = (SELECT master_user_id FROM stg_mdm_identities WHERE user_id = {selected_user_id} LIMIT 1)
+    FROM public_marts.dws_developer_metrics_daily 
+    WHERE master_user_id = (SELECT master_user_id FROM public_staging.stg_mdm_identities WHERE user_id = '{selected_user_id}' LIMIT 1)
     ORDER BY metric_date ASC
 """
 activity_df = run_query(activity_query)
@@ -140,7 +140,7 @@ st.divider()
 st.subheader("🏆 全站研发影响力排行榜 (Top 10)")
 top_df = run_query("""
     SELECT real_name, total_impact_score, developer_archetype, daily_velocity 
-    FROM fct_developer_activity_profile 
+    FROM public_marts.fct_developer_activity_profile 
     ORDER BY total_impact_score DESC LIMIT 10
 """)
 

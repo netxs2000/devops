@@ -5,7 +5,7 @@ from utils import run_query, set_page_config
 set_page_config()
 st.title('🛡️ 指标一致性哨兵 (Metrics Audit Guard)')
 st.markdown('---')
-audit_df = run_query('SELECT * FROM fct_metrics_audit_guard')
+audit_df = run_query('SELECT * FROM public_marts.fct_metrics_audit_guard')
 anomalies = audit_df[audit_df['is_anomaly'] == True]
 if not anomalies.empty:
     st.error(f'🚨 警告：发现 {len(anomalies)} 处指标异常！')

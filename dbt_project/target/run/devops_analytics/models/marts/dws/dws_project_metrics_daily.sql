@@ -62,7 +62,8 @@ sonar_stats as (
         bugs as bug_count,
         vulnerabilities as vulnerability_count,
         coverage as avg_test_coverage,
-        tech_debt_hours as tech_debt_hours
+        tech_debt_hours as tech_debt_hours,
+        quality_gate_status
     from "devops_db"."public_marts"."dws_project_quality_daily"
 )
 
@@ -81,6 +82,7 @@ select
     coalesce(ss.vulnerability_count, 0) as sonar_vulnerabilities,
     coalesce(ss.avg_test_coverage, 0) as test_coverage_pct,
     coalesce(ss.tech_debt_hours, 0) as tech_debt_hours,
+    ss.quality_gate_status,
     
     -- 活跃度标记
     (coalesce(ms.mrs_opened_count, 0) + coalesce(ds.successful_prod_deploys, 0) > 0) as is_active_day

@@ -53,13 +53,13 @@ def load_space_data():
     # v3.0 Use dws_space_metrics_daily
     query = """
     SELECT 
-        avg(satisfaction_score) as satisfaction,
-        avg(performance_score) as performance,
-        avg(activity_score) as activity,
-        avg(communication_score) as communication,
-        avg(efficiency_score) as efficiency,
-        avg(total_space_score) as total
-    FROM dws_space_metrics_daily
+        avg(s_satisfaction) as satisfaction,
+        avg(p_performance) as performance,
+        avg(a_activity) as activity,
+        avg(c_collaboration) as communication,
+        avg(e_efficiency_hours) as efficiency,
+        (avg(s_satisfaction) + avg(p_performance) + avg(a_activity) + avg(c_collaboration) + avg(e_efficiency_hours)) / 5.0 as total
+    FROM public_marts.dws_space_metrics_daily
     WHERE metric_date >= CURRENT_DATE - INTERVAL '30 days'
     """
     df = run_query(query)
@@ -186,7 +186,7 @@ with col_insights:
 st.subheader("📈 团队效能演进 (Team Evolution)")
 trend_query = """
 SELECT metric_date, avg(total_space_score) as total_score 
-FROM dws_space_metrics_daily 
+FROM public_marts.dws_space_metrics_daily 
 GROUP BY 1 ORDER BY 1
 """
 trend_df = run_query(trend_query)

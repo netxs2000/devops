@@ -54,7 +54,7 @@ st.markdown("""
 def load_data():
     engine = get_db_engine()
     try:
-        query = "SELECT * FROM fct_capitalization_audit"
+        query = "SELECT * FROM public_marts.fct_capitalization_audit"
         with engine.connect() as conn:
             return pd.read_sql(text(query), conn)
     except:

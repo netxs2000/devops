@@ -1,7 +1,7 @@
 """TODO: Add module description."""
 import streamlit as st
 import pandas as pd
-from utils import get_db_connection
+
 
 def run():
     '''"""TODO: Add description.

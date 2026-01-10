@@ -54,6 +54,6 @@ select
     end as efficiency_rating
 
 from projects p
-left join project_costs pc on p.gitlab_project_id = pc.project_id
+left join project_costs pc on cast(p.gitlab_project_id as varchar) = pc.project_id
 left join project_output po on p.gitlab_project_id = po.project_id
 where p.is_archived = false

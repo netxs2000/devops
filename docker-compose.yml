@@ -24,7 +24,6 @@ services:
 
   # 2. 数据异步采集 Worker
   worker:
-    build: .
     image: devops-platform:latest
     container_name: devops-worker
     volumes:
@@ -45,7 +44,6 @@ services:
 
   # 3. 任务调度器
   scheduler:
-    build: .
     image: devops-platform:latest
     container_name: devops-scheduler
     env_file:
@@ -109,6 +107,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
+
+  # 7. Decision Hub (Streamlit Dashboard)
+  dashboard:
+    image: devops-platform:latest
+    container_name: devops-dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/app
+    command: streamlit run dashboard/Home.py
 
 volumes:
   postgres_data:

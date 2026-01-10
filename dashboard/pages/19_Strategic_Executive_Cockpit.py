@@ -4,6 +4,18 @@ import plotly.graph_objects as go
 import pandas as pd
 from utils import set_page_config, run_query
 
+
+def safe_float(val, default=0.0):
+    """安全地将值转换为 float，处理 None 和 NaN。"""
+    if val is None:
+        return default
+    try:
+        if pd.isna(val):
+            return default
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
 # --- Premium Page Configuration ---
 set_page_config()
 
@@ -69,17 +81,17 @@ st.caption("Strategic Intelligence for Engineering Leaders | v3.0 Powered by dbt
 # --- Strategic Data Ingestion ---
 try:
     # 1. Overall Portfolio Health
-    health_data = run_query("SELECT avg(health_score) as avg_score, count(*) as project_count FROM fct_project_delivery_health")
-    avg_health = health_data['avg_score'][0] if not health_data.empty else 0
-    total_projects = health_data['project_count'][0] if not health_data.empty else 0
+    health_data = run_query("SELECT avg(health_score) as avg_score, count(*) as project_count FROM public_marts.fct_project_delivery_health")
+    avg_health = safe_float(health_data['avg_score'][0]) if not health_data.empty else 0
+    total_projects = int(health_data['project_count'][0]) if not health_data.empty else 0
 
     # 2. DORA Aggregates (Current Month)
     dora_data = run_query("""
         SELECT 
             avg(deployment_frequency) as freq,
-            avg(lead_time_minutes) as lead_time,
+            avg(lead_time_hours) as lead_time,
             avg(change_failure_rate_pct) as cfr
-        FROM fct_dora_metrics
+        FROM public_marts.fct_dora_metrics
         WHERE month = date_trunc('month', current_date)::date
     """)
     if dora_data.empty or pd.isna(dora_data['freq'][0]):
@@ -87,26 +99,26 @@ try:
         dora_data = run_query("""
             SELECT 
                 avg(deployment_frequency) as freq,
-                avg(lead_time_minutes) as lead_time,
+                avg(lead_time_hours) as lead_time,
                 avg(change_failure_rate_pct) as cfr
-            FROM fct_dora_metrics
-            WHERE month = (SELECT max(month) FROM fct_dora_metrics)
+            FROM public_marts.fct_dora_metrics
+            WHERE month = (SELECT max(month) FROM public_marts.fct_dora_metrics)
         """)
 
-    # 3. Financial Distribution (Features vs Debt)
+    # 3. Financial Distribution (CapEx vs OpEx)
     fin_data = run_query("""
-        SELECT 
-            category,
-            sum(cost_amount) as total_cost
-        FROM fct_capitalization_audit
-        GROUP BY 1
+        SELECT 'CapEx (资本化支出)' as category, sum(capex_impact) as total_cost
+        FROM public_marts.fct_capitalization_audit
+        UNION ALL
+        SELECT 'OpEx (运营支出)' as category, sum(opex_impact) as total_cost
+        FROM public_marts.fct_capitalization_audit
     """)
 
     # 4. Critical Technical Debt (Hotspots)
     brittleness_data = run_query("""
         SELECT 
-            module_name, brittleness_index, risk_level
-        FROM fct_architectural_brittleness
+            project_name, brittleness_index, architectural_health_status
+        FROM public_marts.fct_architectural_brittleness
         ORDER BY brittleness_index DESC
         LIMIT 5
     """)
@@ -128,7 +140,7 @@ with c1:
     """, unsafe_allow_html=True)
 
 with c2:
-    freq = dora_data['freq'][0] if not dora_data.empty else 0
+    freq = safe_float(dora_data['freq'][0]) if not dora_data.empty else 0
     st.markdown(f"""
     <div class="glass-card">
         <div class="kpi-title">部署频率 (Avg)</div>
@@ -138,7 +150,7 @@ with c2:
     """, unsafe_allow_html=True)
 
 with c3:
-    cfr = dora_data['cfr'][0] if not dora_data.empty else 0
+    cfr = safe_float(dora_data['cfr'][0]) if not dora_data.empty else 0
     st.markdown(f"""
     <div class="glass-card">
         <div class="kpi-title">变更失败率</div>
@@ -177,7 +189,7 @@ with col_left:
         )
         st.plotly_chart(fig_pie, use_container_width=True)
     else:
-        st.info("暂无财务审计数据 (fct_capitalization_audit)")
+        st.info("暂无财务审计数据，请确保已运行数据同步和 dbt build")
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_right:
@@ -185,14 +197,16 @@ with col_right:
     st.markdown("#### 🚨 核心架构风险 (Brittleness Top 5)")
     if not brittleness_data.empty:
         for idx, row in brittleness_data.iterrows():
-            badge_class = "badge-danger" if row['risk_level'] == 'CRITICAL' else "badge-warning"
+            status = row['architectural_health_status'] or 'NORMAL'
+            brittleness_idx = safe_float(row['brittleness_index'])
+            badge_class = "badge-danger" if status == 'CRITICAL_BRITTLE_CORE' else "badge-warning"
             st.markdown(f"""
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding:8px; background:rgba(255,255,255,0.03); border-radius:10px;">
                     <div>
-                        <div style="font-size:0.85rem; color:#eee;">{row['module_name']}</div>
-                        <div style="font-size:0.7rem; color:#888;">Index: {row['brittleness_index']:.2f}</div>
+                        <div style="font-size:0.85rem; color:#eee;">{row['project_name']}</div>
+                        <div style="font-size:0.7rem; color:#888;">Index: {brittleness_idx:.2f}</div>
                     </div>
-                    <span class="status-badge {badge_class}">{row['risk_level']}</span>
+                    <span class="status-badge {badge_class}">{status}</span>
                 </div>
             """, unsafe_allow_html=True)
     else:
@@ -203,7 +217,7 @@ with col_right:
 st.markdown('<div class="glass-card">', unsafe_allow_html=True)
 st.markdown("#### 📈 组织效能演进趋势 (DORA Elite Evolution)")
 # Mocking trend if table is small, or joining with history
-trend_query = "SELECT month, avg(deployment_frequency) as freq, avg(lead_time_minutes) as lead_time FROM fct_dora_metrics GROUP BY 1 ORDER BY 1"
+trend_query = "SELECT month, avg(deployment_frequency) as freq, avg(lead_time_hours) as lead_time FROM public_marts.fct_dora_metrics GROUP BY 1 ORDER BY 1"
 trend_df = run_query(trend_query)
 
 if not trend_df.empty:

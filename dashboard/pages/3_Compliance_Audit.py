@@ -5,7 +5,18 @@ from utils import set_page_config, run_query
 set_page_config()
 st.title('⚠️ 合规审计与过程风控')
 st.caption('基于“四眼原则”与分支保护规范，识别研发流程中的违规隐患。')
-query = '\n    select \n        project_name,\n        path_with_namespace,\n        total_merged_mrs,\n        suspicious_bypass_mrs,\n        bypass_rate_pct,\n        direct_push_incidents,\n        compliance_status\n    from fct_compliance_audit\n    order by bypass_rate_pct desc\n'
+query = """
+    SELECT 
+        project_name,
+        path_with_namespace,
+        total_merged_mrs,
+        suspicious_bypass_mrs,
+        bypass_rate_pct,
+        direct_push_incidents,
+        compliance_status
+    FROM public_marts.fct_compliance_audit
+    ORDER BY bypass_rate_pct DESC
+"""
 df = run_query(query)
 if df.empty:
     st.warning('暂无合规数据。请确保 dbt 模型 `fct_compliance_audit` 已生成。')
