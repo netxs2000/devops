@@ -1,4 +1,10 @@
 
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from sqlalchemy import text
+from dashboard.common.db import get_db_engine
+
 st.set_page_config(page_title="Code Hotspots Radar", page_icon="[Heat]", layout="wide")
 
 # --- Premium Glassmorphism CSS ---
@@ -51,7 +57,7 @@ st.markdown("""
 @st.cache_data(ttl=600)
 def load_data():
     engine = get_db_engine()
-    query = "SELECT * FROM fct_code_hotspots"
+    query = "SELECT * FROM public_marts.fct_code_hotspots"
     with engine.connect() as conn:
         return pd.read_sql(text(query), conn)
 

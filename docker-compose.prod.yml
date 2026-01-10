@@ -28,7 +28,6 @@ services:
 
   # 2. 数据异步采集 Worker
   worker:
-    build: .
     image: devops-platform:latest
     container_name: devops-worker
     restart: always
@@ -49,7 +48,6 @@ services:
 
   # 3. 任务调度器
   scheduler:
-    build: .
     image: devops-platform:latest
     container_name: devops-scheduler
     restart: always
@@ -107,6 +105,25 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    logging: *logging
+
+  # 6. Decision Hub (Streamlit Dashboard)
+  dashboard:
+    image: devops-platform:latest
+    container_name: devops-dashboard
+    restart: always
+    ports:
+      - "8501:8501"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Asia/Shanghai
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: streamlit run dashboard/Home.py
     logging: *logging
 
 volumes:

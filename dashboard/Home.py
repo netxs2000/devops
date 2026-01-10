@@ -2,6 +2,7 @@
 import streamlit as st
 from utils import set_page_config, run_query
 set_page_config()
+st.cache_data.clear()
 st.title('🚀 DevOps 智能决策指挥中心')
 st.markdown("""
 <div style="background-color: #1e2130; padding: 25px; border-radius: 15px; border-left: 8px solid #00d4ff; margin-bottom: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);">
@@ -21,13 +22,13 @@ if st.button('🔥 进入战略指挥中心 (Executive Cockpit)', use_container_
 st.divider()
 col1, col2, col3, col4 = st.columns(4)
 try:
-    project_stats = run_query('SELECT count(*) as total FROM mdm_projects')
+    project_stats = run_query('SELECT count(*) as total FROM public.mdm_projects')
     total_projects = project_stats['total'][0] if not project_stats.empty else 0
-    health_stats = run_query('SELECT avg(health_score) as avg_score FROM fct_project_delivery_health')
+    health_stats = run_query('SELECT avg(health_score) as avg_score FROM public_marts.fct_project_delivery_health')
     avg_health = round(health_stats['avg_score'][0], 1) if not health_stats.empty else 0
-    deploy_stats = run_query('SELECT count(*) as count FROM stg_gitlab_deployments WHERE created_at >= CURRENT_DATE')
+    deploy_stats = run_query('SELECT count(*) as count FROM public_staging.stg_gitlab_deployments WHERE created_at >= CURRENT_DATE')
     today_deploys = deploy_stats['count'][0] if not deploy_stats.empty else 0
-    compliance_stats = run_query("SELECT count(*) as count FROM fct_compliance_audit WHERE compliance_status = 'NON_COMPLIANT'")
+    compliance_stats = run_query("SELECT count(*) as count FROM public_marts.fct_compliance_audit WHERE compliance_status = 'NON_COMPLIANT'")
     risk_count = compliance_stats['count'][0] if not compliance_stats.empty else 0
     try:
         quality_stats = run_query('SELECT success FROM sys_data_quality_results')

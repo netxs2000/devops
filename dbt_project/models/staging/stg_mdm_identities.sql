@@ -9,7 +9,7 @@ renamed as (
         primary_email as email,
         employee_id,
         full_name as real_name,
-        department_id as department,
+        department_id,
         is_active,
         sync_version
     from source

@@ -5,7 +5,7 @@ from utils import run_query, set_page_config
 set_page_config()
 st.title('💸 交付成本与 FinOps (Delivery Costs)')
 st.markdown('---')
-costs_df = run_query('SELECT * FROM fct_delivery_costs')
+costs_df = run_query('SELECT * FROM public_marts.fct_delivery_costs')
 if not costs_df.empty:
     st.markdown('### 交付成本概览')
     c1, c2 = st.columns(2)

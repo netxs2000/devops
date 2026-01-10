@@ -11,7 +11,19 @@ with col1:
     activity_type = st.multiselect('活动类型', ['COMMIT', 'ISSUE_OPEN', 'ISSUE_CLOSE', 'MR_OPEN', 'MR_MERGE', 'REVIEW_COMMENT'], default=['COMMIT', 'MR_MERGE'])
 with col2:
     limit = st.slider('显示最近记录数', 100, 1000, 500)
-query = f"""\n    SELECT occurred_at, activity_type, author_name, project_id, summary, base_impact_score \n    FROM int_unified_activities \n    WHERE activity_type IN ({','.join([f"'{t}'" for t in activity_type])})\n    ORDER BY occurred_at DESC \n    LIMIT {limit}\n"""
+query = f"""
+    SELECT 
+        occurred_at, 
+        activity_type, 
+        author_name, 
+        project_id, 
+        summary, 
+        base_impact_score 
+    FROM public_intermediate.int_unified_activities 
+    WHERE activity_type IN ({','.join([f"'{t}'" for t in activity_type])})
+    ORDER BY occurred_at DESC 
+    LIMIT {limit}
+"""
 activities_df = run_query(query)
 st.markdown(f'### 最近 {len(activities_df)} 条平台活动')
 st.dataframe(activities_df, use_container_width=True)

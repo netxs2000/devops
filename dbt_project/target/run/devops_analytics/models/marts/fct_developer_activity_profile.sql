@@ -38,7 +38,7 @@ users as (
 select
     u.user_id,
     u.real_name,
-    u.department,
+    u.department_id as department,
     s.commit_count,
     s.review_comment_count,
     s.mr_open_count,

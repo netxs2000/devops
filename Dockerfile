@@ -44,7 +44,8 @@ ENV PYTHONPATH=/app
 
 # 给予启动脚本执行权限
 COPY docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # 默认启动后端 API 服务
 EXPOSE 8000

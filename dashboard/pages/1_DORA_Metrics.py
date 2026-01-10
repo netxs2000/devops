@@ -55,7 +55,7 @@ st.markdown("""
 def load_dora_data():
     engine = get_db_engine()
     try:
-        query = "SELECT * FROM fct_dora_metrics"
+        query = "SELECT * FROM public_marts.fct_dora_metrics"
         with engine.connect() as conn:
             return pd.read_sql(text(query), conn)
     except:

@@ -55,7 +55,7 @@ st.markdown("""
 def load_talent_data():
     engine = get_db_engine()
     try:
-        query = "SELECT * FROM fct_talent_radar"
+        query = "SELECT * FROM public_marts.fct_talent_radar"
         with engine.connect() as conn:
             return pd.read_sql(text(query), conn)
     except:
@@ -65,7 +65,7 @@ def load_talent_data():
 def load_bus_factor():
     engine = get_db_engine()
     try:
-        query = "SELECT * FROM dws_subsystem_bus_factor WHERE knowledge_risk_status != 'HEALTHY_DISTRIBUTION'"
+        query = "SELECT * FROM public_marts.dws_subsystem_bus_factor WHERE knowledge_risk_status != 'HEALTHY_DISTRIBUTION'"
         with engine.connect() as conn:
             return pd.read_sql(text(query), conn)
     except:
@@ -79,11 +79,11 @@ if df.empty:
     st.stop()
 
 # --- Sidebar Filters ---
-unique_depts = sorted(df['department'].fillna('Unknown').unique())
+unique_depts = sorted(df['department_id'].fillna('Unknown').unique())
 selected_depts = st.sidebar.multiselect("Filter by Department", unique_depts, default=unique_depts)
 
 if selected_depts:
-    filtered_df = df[df['department'].isin(selected_depts)]
+    filtered_df = df[df['department_id'].isin(selected_depts)]
 else:
     filtered_df = df
 
@@ -115,7 +115,7 @@ with col1:
         size="talent_influence_index",
         color="talent_archetype",
         hover_name="real_name",
-        hover_data=["department", "talent_influence_index"],
+        hover_data=["department_id", "talent_influence_index"],
         color_discrete_map={
             "Domain Specialist": "#a855f7",
             "Collaborative Leader": "#38bdf8",
@@ -150,7 +150,7 @@ with col2:
                 <div style="font-weight: 600; color: #f8fafc;">{row['real_name']}</div>
                 <span class="archetype-tag {arch_class}">{row['talent_archetype']}</span>
             </div>
-            <div style="font-size: 0.75rem; color: #94a3b8;">{row['department']}</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">{row['department_id']}</div>
             <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.85rem;">
                 <span style="color: #38bdf8;">Index: <b>{row['talent_influence_index']}</b></span>
                 <span style="color: #94a3b8;">Domains: <b>{row['metric_knowledge_domains']}</b></span>

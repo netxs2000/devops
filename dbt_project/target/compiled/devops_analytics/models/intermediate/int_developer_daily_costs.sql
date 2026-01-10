@@ -13,14 +13,6 @@ dev_activity as (
     select * from "devops_db"."public_marts"."dws_developer_metrics_daily"
 ),
 
-rates as (
-    select 
-        user_id,
-        hourly_rate,
-        currency
-    from "devops_db"."public_staging"."stg_mdm_resource_costs"
-),
-
 -- 合并活动与费率
 joined as (
     select
@@ -29,15 +21,14 @@ joined as (
         a.project_id,
         a.commit_count,
         a.daily_impact_score,
-        coalesce(r.hourly_rate, 100.0) as hourly_rate, -- 默认保底费率
-        r.currency,
+        100.0 as hourly_rate, -- 默认保底费率 (Mocked)
+        'CNY' as currency,
         
         -- 分摊逻辑：假设每天标准工时为 8 小时
         -- 如果有具体的工时录入，则使用工时；否则按 8 小时均摊
         8.0 as estimated_hours
         
     from dev_activity a
-    left join rates r on a.user_id = r.user_id
 )
 
 select

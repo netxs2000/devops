@@ -43,12 +43,12 @@ def load_flow_data():
     
     try:
         # v3.0 Update: Use dws layer
-        query = "SELECT * FROM dws_flow_metrics_weekly"
+        query = "SELECT * FROM public_marts.dws_flow_metrics_weekly"
         with engine.connect() as conn:
             df_weekly = pd.read_sql(text(query), conn)
             
         # Raw items for scatter
-        query_items = "SELECT * FROM int_unified_activities WHERE activity_type IN ('issue', 'mr') AND created_at >= CURRENT_DATE - INTERVAL '90 days'"
+        query_items = "SELECT * FROM public_marts.view_flow_items WHERE created_at >= CURRENT_DATE - INTERVAL '90 days'"
         with engine.connect() as conn:
             df_items = pd.read_sql(text(query_items), conn)
             
@@ -75,13 +75,13 @@ st.subheader("1. Flow Distribution (Allocations)")
 st.caption("Are we investing enough in Debt and Risk? Or drowning in Defects?")
 
 # Prepare Stacked Data
-fd_chart_data = df_weekly.sort_values('week_start_date')
+fd_chart_data = df_weekly.sort_values('metric_week')
 
 fig_dist = go.Figure()
-fig_dist.add_trace(go.Bar(name='Features', x=fd_chart_data['week_start_date'], y=fd_chart_data['closed_features'], marker_color='#5B9BD5'))
-fig_dist.add_trace(go.Bar(name='Defects', x=fd_chart_data['week_start_date'], y=fd_chart_data['closed_defects'], marker_color='#C00000'))
-fig_dist.add_trace(go.Bar(name='Debts', x=fd_chart_data['week_start_date'], y=fd_chart_data['closed_debts'], marker_color='#FFC000'))
-fig_dist.add_trace(go.Bar(name='Risks', x=fd_chart_data['week_start_date'], y=fd_chart_data['closed_risks'], marker_color='#ED7D31'))
+fig_dist.add_trace(go.Bar(name='Features', x=fd_chart_data['metric_week'], y=fd_chart_data['closed_features'], marker_color='#5B9BD5'))
+fig_dist.add_trace(go.Bar(name='Defects', x=fd_chart_data['metric_week'], y=fd_chart_data['closed_defects'], marker_color='#C00000'))
+fig_dist.add_trace(go.Bar(name='Debts', x=fd_chart_data['metric_week'], y=fd_chart_data['closed_debts'], marker_color='#FFC000'))
+fig_dist.add_trace(go.Bar(name='Risks', x=fd_chart_data['metric_week'], y=fd_chart_data['closed_risks'], marker_color='#ED7D31'))
 
 fig_dist.update_layout(barmode='stack', title="Weekly Work Distribution", height=400, xaxis_title="Week", yaxis_title="Items Completed")
 st.plotly_chart(fig_dist, use_container_width=True)
@@ -92,7 +92,7 @@ c1, c2 = st.columns(2)
 with c1:
     st.subheader("2. Flow Velocity")
     st.caption("Throughput of value delivered per week.")
-    fig_vel = px.line(fd_chart_data, x='week_start_date', y='flow_velocity', markers=True, title="Items Completed per Week")
+    fig_vel = px.line(fd_chart_data, x='metric_week', y='flow_velocity', markers=True, title="Items Completed per Week")
     fig_vel.update_traces(line_color='#00B050', line_width=3)
     st.plotly_chart(fig_vel, use_container_width=True)
 
@@ -123,7 +123,7 @@ try:
     with engine.connect() as conn:
         wip_query = """
         SELECT flow_type, count(*) as count 
-        FROM view_flow_items 
+        FROM public_marts.view_flow_items 
         WHERE state = 'opened' 
         GROUP BY flow_type
         """

@@ -8,7 +8,7 @@ def get_engine():
     """Returns a SQLAlchemy engine using the project settings."""
     return create_engine(settings.database.uri)
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=1)
 def run_query(query: str):
     """Runs a SQL query and returns a pandas DataFrame, with caching."""
     engine = get_engine()

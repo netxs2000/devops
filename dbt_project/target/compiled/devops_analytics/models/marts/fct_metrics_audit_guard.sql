@@ -30,6 +30,7 @@ select
     m.project_id,
     m.merge_request_id,
     m.lead_time_seconds,
+    'Lead Time (Seconds)' as metric_name,
     
     case 
         when m.lead_time_seconds < 0 then 'INVALID_TIME_SEQUENCE'  -- 时间倒流
@@ -38,6 +39,21 @@ select
         else 'TRUSTWORTHY'
     end as data_tag,
     
+    -- Dashboard 兼容字段：is_anomaly
+    case 
+        when m.lead_time_seconds < 0 
+          or m.lead_time_seconds > (s.avg_lt + 3 * s.std_lt) 
+          or m.lead_time_seconds < 60 
+          then true
+        else false
+    end as is_anomaly,
+
+    -- Dashboard 兼容字段：variance_percentage (相对于均值的偏差)
+    case 
+        when s.avg_lt = 0 then 0
+        else (m.lead_time_seconds - s.avg_lt) / s.avg_lt 
+    end as variance_percentage,
+
     case 
         when m.lead_time_seconds < 0 or m.lead_time_seconds > (s.avg_lt + 3 * s.std_lt) then false
         else true

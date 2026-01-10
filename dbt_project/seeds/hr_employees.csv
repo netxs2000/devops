@@ -1,0 +1,3 @@
+employee_id,full_name,department_name,job_title,status,updated_at
+EMP001,Super Admin,IT,System Admin,Active,2023-01-01 00:00:00
+EMP002,Developer,Engineering,SeniorDev,Active,2023-01-01 00:00:00

@@ -62,7 +62,7 @@ users as (
 select
     u.user_id,
     u.real_name,
-    u.department,
+    u.department_id,
     coalesce(rs.review_comment_count, 0) as metric_review_comments,
     coalesce(ais.active_repo_count, 0) as metric_active_repos,
     coalesce(kd.owned_subsystems_count, 0) as metric_knowledge_domains,
