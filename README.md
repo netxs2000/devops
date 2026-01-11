@@ -1,6 +1,6 @@
 # DevOps Data Application Platform (研发效能数据应用平台)
 
-![Version](https://img.shields.io/badge/version-4.1.0-blue)
+![Version](https://img.shields.io/badge/version-4.1.1-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-green)
 ![PostgreSQL](https://img.shields.io/badge/postgres-13+-blue)
 
@@ -203,8 +203,12 @@ dbt_project/          # 现代数仓建模层 (dbt)
 
 * **[架构技术白皮书 (ARCHITECTURE_WHITE_PAPER.md)](./docs/design/ARCHITECTURE_WHITE_PAPER.md)**: 🚀 **CORE** 深入解读“主数据 (MDM) + 现代数仓 (dbt)”的六层深度重构架构。
 * **[度量体系白皮书 (METRICS_ARCHITECTURE.md)](./docs/design/METRICS_ARCHITECTURE.md)**: 🔥 **NEW** 详解 ELOC 2.0、DORA、SPACE、Flow 等核心算法与实现逻辑。
-* [用户手册 (PROJECT_SUMMARY_AND_MANUAL.md)](./PROJECT_SUMMARY_AND_MANUAL.md): 功能说明与操作指南。
-* [数据字典 (DATA_DICTIONARY.md)](./DATA_DICTIONARY.md): 表结构定义。
+* [用户手册 (PROJECT_SUMMARY_AND_MANUAL.md)](./docs/PROJECT_SUMMARY_AND_MANUAL.md): 功能说明与操作指南。
+* [数据字典 (DATA_DICTIONARY.md)](./docs/api/DATA_DICTIONARY.md): 表结构定义。
+* [API 接口参考 (API_REFERENCE.md)](./docs/api/API_REFERENCE.md): RESTful API 接口文档。
+* [部署与运维 (DEPLOYMENT.md)](./docs/guides/DEPLOYMENT.md): 环境配置与部署指南。
+* [故障排查 (TROUBLESHOOTING.md)](./docs/guides/TROUBLESHOOTING.md): 常见问题解决方案。
+* [安全政策 (SECURITY.md)](./docs/SECURITY.md): 漏洞报告与安全最佳实践。
 
 ## 📂 看板与视图 (Analytics Mapping)
 

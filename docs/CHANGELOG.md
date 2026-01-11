@@ -2,6 +2,21 @@
 
 所有对 DevOps Data Application Platform 的重要更改都将记录在此文件中。
 
+## [4.1.1] - 2026-01-11
+
+### 新增 (Added) - v4.1.1
+
+* **安全政策文档**: 新增 `docs/SECURITY.md`，包含漏洞报告流程、安全最佳实践、依赖安全扫描和事件响应指南。
+* **故障排查指南**: 新增 `docs/guides/TROUBLESHOOTING.md`，汇总部署、数据库、同步、认证、Dashboard 等常见问题及解决方案。
+* **API 接口参考**: 新增 `docs/api/API_REFERENCE.md`，提供 RESTful API 接口的 Markdown 格式文档。
+
+### 优化 (Improved) - v4.1.1
+
+* **README 文档链接修复**: 修正 `用户手册` 和 `数据字典` 的链接路径为正确的 `docs/` 子目录。
+* **README 文档索引扩展**: 新增安全政策、故障排查、API 参考、部署运维等文档的快速链接。
+* **DEPLOYMENT.md 版本同步**: 将版本号从 3.8.0 更新至 4.1.0。
+* **文档完整性检查**: 完成项目收尾阶段的文档标准化审查与补全。
+
 ## [4.1.0] - 2026-01-08
 
 ### 新增 (Added) - v4.1.0
