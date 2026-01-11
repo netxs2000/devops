@@ -216,7 +216,6 @@ with col_right:
 # --- Third Row: Trend Analysis ---
 st.markdown('<div class="glass-card">', unsafe_allow_html=True)
 st.markdown("#### 📈 组织效能演进趋势 (DORA Elite Evolution)")
-# Mocking trend if table is small, or joining with history
 trend_query = "SELECT month, avg(deployment_frequency) as freq, avg(lead_time_hours) as lead_time FROM public_marts.fct_dora_metrics GROUP BY 1 ORDER BY 1"
 trend_df = run_query(trend_query)
 
@@ -241,6 +240,72 @@ if not trend_df.empty:
     )
     st.plotly_chart(fig_trend, use_container_width=True)
 st.markdown('</div>', unsafe_allow_html=True)
+
+# --- NEW: Strategic Portfolio Battle Map (The 18-Module Classification) ---
+st.divider()
+st.subheader("🗺️ 研发治理资产全景图 (Asset Battle Map)")
+
+cat_efficiency, cat_quality, cat_governance, cat_economics = st.columns(4)
+
+with cat_efficiency:
+    st.markdown("""
+    <div class="glass-card" style="border-top: 3px solid #00d4ff; height: 350px;">
+        <div class="kpi-title" style="color:#00d4ff; margin-bottom:15px;">🚀 效能与交付频率</div>
+        <ul style="list-style-type: none; padding: 0; font-size: 0.85rem; color: #ccc;">
+            <li style="margin-bottom:8px;">🔹 <a href="/Gitprime" target="_self" style="color:#eee;text-decoration:none;">Gitprime 核心吞吐</a></li>
+            <li style="margin-bottom:8px;">🔹 <a href="/DORA_Metrics" target="_self" style="color:#eee;text-decoration:none;">DORA 四大核心指标</a></li>
+            <li style="margin-bottom:8px;">🔹 <a href="/Unified_Activities" target="_self" style="color:#eee;text-decoration:none;">统一研发活动流</a></li>
+            <li style="margin-bottom:8px;">🔹 <a href="/Work_Items" target="_self" style="color:#eee;text-decoration:none;">工作项交付漏斗</a></li>
+            <li style="margin-bottom:8px;">🔹 <a href="/SPACE_Framework" target="_self" style="color:#eee;text-decoration:none;">SPACE 多维生产力</a></li>
+            <li style="margin-bottom:8px;">🔹 <a href="/Value_Stream" target="_self" style="color:#eee;text-decoration:none;">价值流图谱分析</a></li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with cat_quality:
+    st.markdown("""
+    <div class="glass-card" style="border-top: 3px solid #00ff7f; height: 350px;">
+        <div class="kpi-title" style="color:#00ff7f; margin-bottom:15px;">🛡️ 质量保证与稳健性</div>
+        <ul style="list-style-type: none; padding: 0; font-size: 0.85rem; color: #ccc;">
+            <li style="margin-bottom:8px;">✅ <a href="/Project_Health" target="_self" style="color:#eee;text-decoration:none;">项目交付健康度</a></li>
+            <li style="margin-bottom:8px;">✅ <a href="/Compliance_Audit" target="_self" style="color:#eee;text-decoration:none;">合规性自动审计</a></li>
+            <li style="margin-bottom:8px;">✅ <a href="/Metrics_Guard" target="_self" style="color:#eee;text-decoration:none;">核心北极星指标监控</a></li>
+            <li style="margin-bottom:8px;">✅ <a href="/Michael_Feathers_Code_Hotspots" target="_self" style="color:#eee;text-decoration:none;">代码高危热点分析</a></li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with cat_governance:
+    st.markdown("""
+    <div class="glass-card" style="border-top: 3px solid #8F00FF; height: 350px;">
+        <div class="kpi-title" style="color:#8F00FF; margin-bottom:15px;">🏛️ 资产治理与身份</div>
+        <ul style="list-style-type: none; padding: 0; font-size: 0.85rem; color: #ccc;">
+            <li style="margin-bottom:8px;">💠 <a href="/ABI_Analysis" target="_self" style="color:#eee;text-decoration:none;">ABI 架构接口治理</a></li>
+            <li style="margin-bottom:8px;">💠 <a href="/User_Profile" target="_self" style="color:#eee;text-decoration:none;">研发人员数字画像</a></li>
+            <li style="margin-bottom:8px;">💠 <a href="/Talent_Radar" target="_self" style="color:#eee;text-decoration:none;">人才矩阵雷达分析</a></li>
+            <li style="margin-bottom:8px;">💠 <a href="/Entity_Alignment" target="_self" style="color:#eee;text-decoration:none;">多系统实体对齐中心</a></li>
+            <li style="margin-bottom:8px;">💠 <a href="/Metadata_Governance" target="_self" style="color:#eee;text-decoration:none;">元数据血缘治理</a></li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with cat_economics:
+    st.markdown("""
+    <div class="glass-card" style="border-top: 3px solid #ffab00; height: 350px;">
+        <div class="kpi-title" style="color:#ffab00; margin-bottom:15px;">💰 研发经济与成本</div>
+        <ul style="list-style-type: none; padding: 0; font-size: 0.85rem; color: #ccc;">
+            <li style="margin-bottom:8px;">💎 <a href="/Capitalization_Audit" target="_self" style="color:#eee;text-decoration:none;">资本化投入占比审计</a></li>
+            <li style="margin-bottom:8px;">💎 <a href="/Shadow_IT" target="_self" style="color:#eee;text-decoration:none;">影子 IT 风险发现</a></li>
+            <li style="margin-bottom:8px;">💎 <a href="/Delivery_Costs" target="_self" style="color:#eee;text-decoration:none;">系统级交付成本核算</a></li>
+        </ul>
+        <div style="margin-top:50px; text-align:center; opacity:0.3;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+               <circle cx="12" cy="12" r="10"></circle>
+               <path d="M12 8v8M8 12h8"></path>
+            </svg>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- Footer Actionable Insights ---
 st.markdown("""
