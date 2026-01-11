@@ -9,14 +9,14 @@
  */
 function switchView(view) {
     const navItems = [
-        'nav-dashboard', 'nav-tests', 'nav-defects', 'nav-reqs',
-        'nav-matrix', 'nav-reports', 'nav-governance', 'nav-support', 'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-projects', 'nav-admin-users'
+        'nav-dashboard', 'nav-tests', 'nav-test-execution', 'nav-defects', 'nav-reqs',
+        'nav-matrix', 'nav-reports', 'nav-governance', 'nav-pulse', 'nav-support', 'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-projects', 'nav-admin-users'
     ];
 
     const viewItems = [
-        'results', 'statsGrid', 'bugView', 'matrixView',
+        'results', 'statsGrid', 'testExecutionView', 'bugView', 'matrixView',
         'requirementsView', 'reportsView', 'view-servicedesk',
-        'sdSubmitView', 'sdMyView', 'decisionHubView', 'governanceView', 'adminProjectsView', 'adminUsersView'
+        'sdSubmitView', 'sdMyView', 'decisionHubView', 'governanceView', 'pulseView', 'adminProjectsView', 'adminUsersView'
     ];
 
     // Reset all nav and views
@@ -43,7 +43,7 @@ function switchView(view) {
     // 仅在测试管理相关视图显示：dashboard, test-cases, defects, requirements, matrix, reports
     const headerEl = document.getElementById('main-header');
     const headerViews = ['dashboard', 'tests', 'test-cases', 'defects', 'requirements', 'matrix', 'reports'];
-    
+
     if (headerEl) {
         if (headerViews.includes(view) || !view) { // !view implies default dashboard
             headerEl.style.display = 'flex';
@@ -59,6 +59,8 @@ function switchView(view) {
         document.getElementById('statsGrid').style.display = 'grid';
         document.getElementById('results').style.display = 'flex';
         document.getElementById('statsGrid').style.display = 'grid';
+    } else if (view === 'test-execution') {
+        document.getElementById('testExecutionView').style.display = 'block';
     } else if (view === 'defects') {
         document.getElementById('bugView').style.display = 'block';
         if (typeof loadBugs === 'function') loadBugs();
@@ -85,9 +87,35 @@ function switchView(view) {
         // 生产环境建议通过反向代理，开发环境先直连 Streamlit 默认端口
         document.getElementById('decisionHubFrame').src = 'http://localhost:8501/?embed=true';
     } else if (view === 'governance') {
-        document.getElementById('governanceView').style.display = 'block';
-        // DataHub 默认运行在 9002 端口
-        document.getElementById('governanceFrame').src = 'http://localhost:9002/';
+        const govView = document.getElementById('governanceView');
+        const govFrame = document.getElementById('governanceFrame');
+        govView.style.display = 'block';
+
+        // Use a placeholder or check service
+        govFrame.src = 'about:blank'; // Clear previous failed load
+
+        // Elegant service check
+        fetch('http://localhost:9002/', { mode: 'no-cors', cache: 'no-cache' })
+            .then(() => {
+                govFrame.src = 'http://localhost:9002/';
+            })
+            .catch(() => {
+                govView.innerHTML = `
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-main); background:#0e1117; padding:40px; text-align:center;">
+                        <div style="font-size:60px; margin-bottom:20px;">🛡️</div>
+                        <h2 style="color:var(--primary);">DataHub 治理服务未就绪</h2>
+                        <p style="color:var(--text-dim); max-width:500px; margin:15px 0;">
+                            元数据中心 (DataHub) 通常作为独立的基础设施运行。目前系统检测到端口 9002 尚未开启，请联系管理员启动元数据技术栈。
+                        </p>
+                        <div style="background:rgba(255,255,255,0.03); padding:20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); margin-top:20px;">
+                            <code style="color:var(--accent);">docker-compose -f docker-compose-datahub.yml up -d</code>
+                        </div>
+                    </div>
+                `;
+            });
+    } else if (view === 'pulse') {
+        document.getElementById('pulseView').style.display = 'block';
+        document.getElementById('pulseFrame').src = 'devex_pulse.html';
     } else if (view === 'admin_projects') {
         document.getElementById('adminProjectsView').style.display = 'block';
         loadAdminProjects();
