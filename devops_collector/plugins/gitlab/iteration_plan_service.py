@@ -17,23 +17,19 @@ from devops_collector.plugins.gitlab.models import GitLabProject, GitLabIssue, G
 from devops_collector.models.base_models import User
 logger = logging.getLogger(__name__)
 
-class GitLabAgileService:
-    '''"""TODO: Add class description."""'''
+class IterationPlanService:
+    """GitLab 迭代计划管理业务逻辑服务。
+
+    该类负责处理与 GitLab 里程碑、需求池规划以及自动化发布相关的核心业务。
+    """
 
     def __init__(self, session: Session, client: GitLabClient):
-        '''"""TODO: Add description.
+        """初始化服务。
 
-Args:
-    self: TODO
-    session: TODO
-    client: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        Args:
+            session (Session): 数据库会话。
+            client (GitLabClient): GitLab API 客户端。
+        """
         self.session = session
         self.client = client
 
@@ -91,49 +87,123 @@ Raises:
             logger.error(f'Failed to remove issue {issue_iid} from sprint: {e}')
             return False
 
-    def execute_release(self, project_id: int, milestone_title: str, ref_branch: str='main', user_id: Optional[str]=None, auto_rollover: bool=False, target_milestone_id: Optional[int]=None) -> Dict:
-        """【核心功能】一键执行发布。 (Refactored)"""
-        milestone = self.session.query(GitLabMilestone).filter(GitLabMilestone.project_id == project_id, GitLabMilestone.title == milestone_title).first()
+    def execute_release(self,
+                        project_id: int,
+                        milestone_title: str,
+                        new_title: Optional[str] = None,
+                        ref_branch: str = 'main',
+                        user_id: Optional[str] = None,
+                        auto_rollover: bool = False,
+                        target_milestone_id: Optional[int] = None) -> Dict:
+        """执行发布流程：结转任务、打 Tag、生成 Release Notes 以及关闭里程碑。
+
+        Args:
+            project_id: GitLab 项目 ID。
+            milestone_title: 当前选择的里程碑原标题。
+            new_title: 可选的里程碑新标题（及未来的 Tag 名）。
+            ref_branch: 基准分支，默认 'main'。
+            user_id: 当前操作者全局用户 ID。
+            auto_rollover: 是否自动结转未完成任务。
+            target_milestone_id: 结转目标里程碑 ID。
+
+        Returns:
+            Dict: 包含状态、Tag 名和发布说明的字典。
+
+        Raises:
+            ValueError: 当里程碑不存在、任务校验失败或結转失败时。
+        """
+        # 1. 查找本地缓存的里程碑
+        milestone = self.session.query(GitLabMilestone).filter(
+            GitLabMilestone.project_id == project_id,
+            GitLabMilestone.title == milestone_title).first()
         if not milestone:
-            raise ValueError(f"GitLabMilestone '{milestone_title}' not found.")
+            raise ValueError(f"GitLab 里程碑 '{milestone_title}' 未找到。")
+
+        # 2. 如果用户修改了标题，先同步更新 GitLab
+        effective_title = milestone_title
+        if new_title and new_title != milestone_title:
+            logger.info(f"正在重命名里程碑: {milestone_title} -> {new_title}")
+            try:
+                self.client.update_project_milestone(project_id, milestone.id,
+                                                     {'title': new_title})
+                milestone.title = new_title
+                self.session.commit()
+                effective_title = new_title
+            except Exception as e:
+                logger.error(f"重命名里程碑失败: {e}")
+                raise ValueError(f"无法重命名里程碑: {str(e)}")
+
+        # 3. 校验未完成任务
         open_issues = []
-        all_issues = self.session.query(GitLabIssue).filter(GitLabIssue.project_id == project_id, GitLabIssue.state == 'opened').all()
+        all_issues = self.session.query(GitLabIssue).filter(
+            GitLabIssue.project_id == project_id,
+            GitLabIssue.state == 'opened').all()
         for issue in all_issues:
             ms = issue.raw_data.get('milestone')
+            # 注意：此处要用原 title 查找 issue，因为 Issue 里的 raw_data 还没同步
             if ms and ms.get('title') == milestone_title:
                 open_issues.append(issue)
+
         if len(open_issues) > 0:
             if auto_rollover:
                 target_ms_id = target_milestone_id or 0
-                logger.info(f'Auto-rollover triggered: Moving {len(open_issues)} issues to milestone_id={target_ms_id}')
+                logger.info(f"自动结转启动: 移动 {len(open_issues)} 个任务到 ID={target_ms_id}")
                 for issue in open_issues:
                     try:
-                        self.client.update_issue(project_id, issue.iid, {'milestone_id': target_ms_id})
+                        self.client.update_issue(project_id, issue.iid,
+                                                 {'milestone_id': target_ms_id})
                     except Exception as e:
-                        logger.error(f'Failed to rollover issue {issue.iid}: {e}')
-                        raise ValueError(f'ROLLOVER_FAILED: 无法结转任务 #{issue.iid}，发布中止。')
+                        logger.error(f"结转任务 #{issue.iid} 失败: {e}")
+                        raise ValueError(f"结转失败: 无法结转任务 #{issue.iid}，发布中止。")
             else:
-                issue_titles = ', '.join([f'#{i.iid} {i.title}' for i in open_issues[:3]])
+                issue_titles = ', '.join(
+                    [f'#{i.iid} {i.title}' for i in open_issues[:3]])
                 if len(open_issues) > 3:
                     issue_titles += '...'
-                raise ValueError(f'CHECK_FAILED: 检测到 {len(open_issues)} 个未完成任务 ({issue_titles})。请选择“自动结转”或手动处理。')
-        sprint_issues = self.get_sprint_issues_inclusive(project_id, milestone_title)
-        notes = f'## 🚀 Release {milestone_title}\n\n### 变更日志\n'
+                raise ValueError(
+                    f"校验失败: 检测到 {len(open_issues)} 个未完成任务 ({issue_titles})。请选择“自动结转”或手动处理。"
+                )
+
+        # 4. 生成变更日志并执行发布
+        sprint_issues = self.get_sprint_issues_inclusive(
+            project_id, effective_title)
+        notes = f"## Release {effective_title}\n\n### 变更日志\n"
         for i in sprint_issues:
-            icon = '🐛' if 'type::bug' in (i.labels or []) else '✨'
-            notes += f'- {icon} {i.title} (#{i.iid})\n'
-        tag_name = milestone_title
+            # 移除表情符号，使用文字描述类型
+            type_symbol = "[缺陷]" if 'type::bug' in (i.labels or []) else "[新功能]"
+            notes += f"- {type_symbol} {i.title} (#{i.iid})\n"
+
+        tag_name = effective_title
         try:
-            logger.info(f'Creating tag {tag_name} on branch {ref_branch}...')
+            logger.info(f"正在创建 Tag: {tag_name} (分支: {ref_branch})...")
             try:
-                self.client.create_project_tag(project_id, tag_name, ref_branch, message=f'Release {tag_name}')
+                self.client.create_project_tag(project_id,
+                                               tag_name,
+                                               ref_branch,
+                                               message=f"Release {tag_name}")
             except Exception as e:
-                logger.warning(f'Tag creation failed (might exist): {e}')
-            logger.info(f'Creating release {tag_name}...')
-            gl_release_data = self.client.create_project_release(project_id, tag_name, description=notes, milestones=[milestone_title])
-            logger.info(f'Closing milestone {milestone_title}...')
-            self.client.update_project_milestone(project_id, milestone.id, {'state_event': 'close'})
-            local_release = GitLabRelease(project_id=project_id, tag_name=tag_name, name=gl_release_data.get('name'), description=gl_release_data.get('description'), created_at=datetime.now(timezone.utc), released_at=datetime.now(timezone.utc), author_id=user_id, raw_data=gl_release_data)
+                logger.warning(f"创建 Tag 可能已存在或失败: {e}")
+
+            logger.info(f"正在创建 Release: {tag_name}...")
+            gl_release_data = self.client.create_project_release(
+                project_id,
+                tag_name,
+                description=notes,
+                milestones=[effective_title])
+
+            logger.info(f"正在关闭里程碑: {effective_title}...")
+            self.client.update_project_milestone(project_id, milestone.id,
+                                                 {'state_event': 'close'})
+
+            # 更新本地存储
+            local_release = GitLabRelease(project_id=project_id,
+                                          tag_name=tag_name,
+                                          name=gl_release_data.get('name'),
+                                          description=gl_release_data.get('description'),
+                                          created_at=datetime.now(timezone.utc),
+                                          released_at=datetime.now(timezone.utc),
+                                          author_id=user_id,
+                                          raw_data=gl_release_data)
             self.session.add(local_release)
             self.session.flush()
             local_release.milestones.append(milestone)
@@ -141,7 +211,7 @@ Raises:
             return {'status': 'success', 'tag': tag_name, 'release_notes': notes}
         except Exception as e:
             self.session.rollback()
-            logger.error(f'Release execution failed: {e}')
+            logger.error(f"发布执行失败: {e}")
             raise e
 
     def create_sprint(self, project_id: int, title: str, start_date: str, due_date: str, description: str=None) -> Dict:

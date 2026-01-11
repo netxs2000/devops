@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>迭代管理工作台 - DevOps Portal</title>
+    <title>迭代计划工作台 - DevOps Portal</title>
     <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="auth_utils.js"></script>
@@ -300,7 +300,7 @@
 
     <header>
         <div class="header-left">
-            <h1>迭代管理工作台</h1>
+            <h1>迭代计划工作台</h1>
             <div class="controls">
                 <select id="projectSelect">
                     <option value="" disabled selected>选择项目...</option>
@@ -371,16 +371,25 @@
     <!-- 发布确认弹窗 -->
     <div id="releaseModal" class="modal-overlay">
         <div class="modal">
-            <h2>确认发布版本?</h2>
-            <p>将对迭代 <b><span id="releaseVersion">v1.0.0</span></b> 执行以下操作：</p>
-            <ul style="color: var(--text-secondary)">
-                <li>为代码库打 Tag</li>
-                <li>生成 Release Notes</li>
-                <li>关闭 GitLab 里程碑</li>
+            <h2>确认发布版本</h2>
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">版本名称 (将作为 Git Tag 名)</label>
+                <input type="text" id="releaseVersionInput"
+                    style="width: 100%; padding: 0.625rem; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 0.375rem;"
+                    placeholder="v1.0.0">
+                <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;">
+                    提示：确认后系统将同步更新 GitLab 里程碑标题，并自动创建同名 Tag。
+                </p>
+            </div>
+            <ul style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">
+                <li>同步更新 GitLab 里程碑标题</li>
+                <li>自动在代码库创建 Git Tag</li>
+                <li>生成版本变更日志</li>
+                <li>正式关闭该里程碑</li>
             </ul>
             <div class="modal-actions">
                 <button class="secondary" onclick="closeReleaseModal()">取消</button>
-                <button class="release-btn" onclick="executeRelease()">确认发布</button>
+                <button id="confirmReleaseBtn" class="release-btn" onclick="executeRelease()">确认并同步发布</button>
             </div>
         </div>
     </div>
@@ -476,7 +485,7 @@
 
             // 1. 动态加载项目列表
             try {
-                const res = await fetch('/agile/projects');
+                const res = await fetch('/iteration-plan/projects');
                 if (res.ok) {
                     const projects = await res.json();
                     projectSelect.innerHTML = '<option value="" disabled selected>选择项目...</option>';
@@ -520,7 +529,7 @@
             msSelect.innerHTML = '<option value="" disabled selected>加载中...</option>';
 
             try {
-                const res = await fetch(`/agile/projects/${projectId}/milestones`);
+                const res = await fetch(`/iteration-plan/projects/${projectId}/milestones`);
                 if (res.ok) {
                     const milestones = await res.json();
                     msSelect.innerHTML = '<option value="" disabled selected>选择迭代...</option>';
@@ -556,7 +565,7 @@
             if (!title) { alert('请输入迭代名称'); return; }
 
             try {
-                const res = await fetch(`/agile/projects/${currentProjectId}/milestones`, {
+                const res = await fetch(`/iteration-plan/projects/${currentProjectId}/milestones`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -585,12 +594,12 @@
             if (!currentProjectId || !currentMilestoneTitle) return;
 
             // 1. Load Backlog
-            const backlogRes = await fetch(`/agile/projects/${currentProjectId}/backlog`);
+            const backlogRes = await fetch(`/iteration-plan/projects/${currentProjectId}/backlog`);
             const backlogIssues = await backlogRes.json();
             renderList('backlogList', backlogIssues, 'backlogCount');
 
             // 2. Load Sprint
-            const sprintRes = await fetch(`/agile/projects/${currentProjectId}/sprint/${currentMilestoneTitle}`);
+            const sprintRes = await fetch(`/iteration-plan/projects/${currentProjectId}/sprint/${currentMilestoneTitle}`);
             const sprintIssues = await sprintRes.json();
             renderList('sprintList', sprintIssues, 'sprintCount');
 
@@ -685,7 +694,7 @@
 
             if (targetListId === 'sprintList') {
                 // Backlog -> Sprint
-                const res = await fetch(`/agile/projects/${currentProjectId}/plan`, {
+                const res = await fetch(`/iteration-plan/projects/${currentProjectId}/plan`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -696,7 +705,7 @@
                 if (res.ok) loadData();
             } else {
                 // Sprint -> Backlog
-                const res = await fetch(`/agile/projects/${currentProjectId}/remove`, {
+                const res = await fetch(`/iteration-plan/projects/${currentProjectId}/remove`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -707,9 +716,9 @@
             }
         }
 
-        // Release Logic
+        // 发布逻辑
         function showReleaseModal() {
-            document.getElementById('releaseVersion').innerText = currentMilestoneTitle;
+            document.getElementById('releaseVersionInput').value = currentMilestoneTitle;
             document.getElementById('releaseModal').style.display = 'flex';
         }
 
@@ -718,17 +727,24 @@
         }
 
         async function executeRelease() {
-            const btn = document.querySelector('.release-btn');
+            const newTitle = document.getElementById('releaseVersionInput').value.trim();
+            if (!newTitle) {
+                alert('版本名称不能为空');
+                return;
+            }
+
+            const btn = document.getElementById('confirmReleaseBtn');
             btn.disabled = true;
-            btn.innerText = "🚀 发布中...";
+            btn.innerText = "发布中...";
 
             try {
-                const res = await fetch(`/agile/projects/${currentProjectId}/release`, {
+                const res = await fetch(`/iteration-plan/projects/${currentProjectId}/release`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         version: currentMilestoneTitle,
-                        ref_branch: 'main' // default
+                        new_title: newTitle,
+                        ref_branch: 'main'
                     })
                 });
 
@@ -760,25 +776,26 @@
                 alert('系统错误');
             } finally {
                 btn.disabled = false;
-                btn.innerText = "🚀 执行发布";
+                btn.innerText = "执行发布";
             }
         }
 
         async function handleRollover() {
-            // Re-trigger release with auto_rollover = true
+            const newTitle = document.getElementById('releaseVersionInput').value.trim();
             const btn = document.querySelector('#rolloverModal .release-btn');
             btn.disabled = true;
-            btn.innerText = "🔄 结转发布中...";
+            btn.innerText = "结转发布中...";
 
             try {
-                const res = await fetch(`/agile/projects/${currentProjectId}/release`, {
+                const res = await fetch(`/iteration-plan/projects/${currentProjectId}/release`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         version: currentMilestoneTitle,
+                        new_title: newTitle,
                         ref_branch: 'main',
                         auto_rollover: true,
-                        target_milestone_id: null // 默认移回 Backlog，V2可加选择框
+                        target_milestone_id: null
                     })
                 });
 
