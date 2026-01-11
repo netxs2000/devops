@@ -125,6 +125,6 @@ def read_users_me(token: str = Depends(services.oauth2_scheme), db: Session = De
         raise HTTPException(status_code=401, detail='User not found')
     
     token_obj = db.query(UserOAuthToken).filter_by(user_id=user.global_user_id, provider='gitlab').first()
-    resp = schemas.UserResponse.from_orm(user)
+    resp = schemas.UserResponse.model_validate(user)
     resp.gitlab_connected = True if token_obj else False
     return resp
