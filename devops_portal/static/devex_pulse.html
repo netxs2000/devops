@@ -1,15 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DevEx Pulse - Developer Experience Tracker</title>
+    <title>心情指数打卡 - 开发者体验追踪</title>
     <style>
+        :root {
+            --primary: #2563eb;
+            --bg-main: #ffffff;
+            --card-bg: #f8fafc;
+            --text-main: #0f172a;
+            --text-dim: #64748b;
+            --border-color: #e2e8f0;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0e1117;
-            color: #ffffff;
+            font-family: 'Inter', -apple-system, 'Microsoft YaHei', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -18,66 +27,83 @@
         }
 
         .container {
-            background-color: #1e2130;
+            background-color: var(--bg-main);
             padding: 40px;
             border-radius: 12px;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            max-width: 400px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            max-width: 450px;
             width: 100%;
         }
 
         h1 {
-            color: #ffffff;
+            color: var(--text-main);
             font-size: 24px;
             margin-bottom: 10px;
+            font-weight: 700;
         }
 
         p {
-            color: #b0b0b0;
+            color: var(--text-dim);
             margin-bottom: 30px;
         }
 
         .faces {
             display: flex;
             justify-content: space-between;
+            gap: 10px;
             margin-bottom: 30px;
         }
 
         .face-btn {
-            font-size: 40px;
-            background: none;
-            border: none;
+            flex: 1;
+            padding: 10px 5px;
+            font-size: 13px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
             cursor: pointer;
-            transition: transform 0.2s opacity 0.2s;
-            opacity: 0.6;
+            transition: all 0.2s ease;
+            color: var(--text-dim);
         }
 
-        .face-btn:hover {
-            transform: scale(1.2);
-            opacity: 1;
+        .face-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+            background-color: #eff6ff;
         }
 
         .face-btn.selected {
-            transform: scale(1.3);
-            opacity: 1;
+            background-color: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+        }
+
+        .face-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
         }
 
         #message {
             margin-top: 20px;
-            padding: 10px;
-            border-radius: 6px;
+            padding: 12px;
+            border-radius: 8px;
             display: none;
+            font-size: 14px;
+            font-weight: 500;
         }
 
         .success {
-            background-color: rgba(76, 175, 80, 0.2);
-            color: #4CAF50;
+            background-color: rgba(5, 150, 105, 0.1);
+            color: #059669;
+            border: 1px solid rgba(5, 150, 105, 0.2);
         }
 
         .error {
-            background-color: rgba(244, 67, 54, 0.2);
-            color: #F44336;
+            background-color: rgba(220, 38, 38, 0.1);
+            color: #dc2626;
+            border: 1px solid rgba(220, 38, 38, 0.2);
         }
     </style>
 </head>
@@ -85,38 +111,39 @@
 <body>
 
     <div class="container">
-        <h1>😊 DevEx Pulse</h1>
-        <p>How was your developer experience today?</p>
+        <h1>心情指数打卡</h1>
+        <p>您今日的研发心情如何？</p>
 
         <div class="faces" id="faces-container">
-            <button class="face-btn" onclick="submitFeedback(1)">😞</button>
-            <button class="face-btn" onclick="submitFeedback(2)">🙁</button>
-            <button class="face-btn" onclick="submitFeedback(3)">😐</button>
-            <button class="face-btn" onclick="submitFeedback(4)">🙂</button>
-            <button class="face-btn" onclick="submitFeedback(5)">😀</button>
+            <button class="face-btn" onclick="submitFeedback(1)" id="btn-1">非常不满意</button>
+            <button class="face-btn" onclick="submitFeedback(2)" id="btn-2">不满意</button>
+            <button class="face-btn" onclick="submitFeedback(3)" id="btn-3">一般</button>
+            <button class="face-btn" onclick="submitFeedback(4)" id="btn-4">满意</button>
+            <button class="face-btn" onclick="submitFeedback(5)" id="btn-5">非常满意</button>
         </div>
 
         <div id="message"></div>
     </div>
 
     <script>
-        // In a real app, this would come from session/cookie
+        // 在实际应用中，这通常来自会话或 Cookie
         const USER_EMAIL = "demo_user@example.com";
 
-        // Check status on load
+        // 页面加载时检查打卡状态
         async function checkStatus() {
             try {
                 const res = await fetch(`/devex-pulse/status/${USER_EMAIL}`);
                 const data = await res.json();
                 if (data.submitted) {
-                    showSuccess("You've already checked in today. Thanks! 🚀");
+                    showSuccess(data.message || "您今日已完成打卡");
                     disableButtons();
                 }
             } catch (e) {
-                console.error("Failed to check status", e);
+                console.error("无法获取打卡状态", e);
             }
         }
 
+        // 提交反馈
         async function submitFeedback(score) {
             try {
                 const res = await fetch('/devex-pulse/submit', {
@@ -128,14 +155,14 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    showSuccess("Feedback recorded! Have a great day.");
+                    showSuccess(data.message || "打卡成功");
                     disableButtons();
                     highlightButton(score);
                 } else {
-                    showError(data.detail || "Failed to submit.");
+                    showError(data.detail || "提交失败");
                 }
             } catch (e) {
-                showError("Network error.");
+                showError("网络错误");
             }
         }
 
@@ -159,12 +186,11 @@
         }
 
         function highlightButton(score) {
-            const btns = document.querySelectorAll('.face-btn');
-            // score is 1-based, index is 0-based
-            if (btns[score - 1]) btns[score - 1].classList.add('selected');
+            const btn = document.getElementById(`btn-${score}`);
+            if (btn) btn.classList.add('selected');
         }
 
-        // Init
+        // 初始化
         checkStatus();
     </script>
 

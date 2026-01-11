@@ -36,7 +36,8 @@ from devops_portal.dependencies import get_current_user
 # from devops_portal.routers import quality as quality_router
 # from devops_portal.routers import service_desk as service_desk_router
 # from devops_portal.routers import test_management as test_management_router
-from devops_portal.routers import iteration as iteration_router
+from devops_portal.routers import \
+    iteration_plan_router as iteration_plan_router
 from devops_portal.routers import admin as admin_router
 from devops_portal.routers import devex_pulse as devex_pulse_router
 
@@ -64,7 +65,7 @@ app.include_router(auth_router.router)
 # app.include_router(quality_router.router)
 # app.include_router(service_desk_router.router)
 # app.include_router(test_management_router.router)
-app.include_router(iteration_router.router)
+app.include_router(iteration_plan_router.router)
 app.include_router(admin_router.router)
 app.include_router(devex_pulse_router.router)
 
