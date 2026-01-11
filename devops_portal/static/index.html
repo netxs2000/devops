@@ -27,145 +27,177 @@
 
         <!-- Sidebar -->
         <aside class="sidebar">
-            <div class="page-info">
-                <h1>Test Management Hub</h1>
-                <p>Enterprise Grade Quality Assurance & DevOps Analytics</p>
-                <!-- P3: Data Scope Badge -->
+            <div class="sidebar-header">
+                <h1>DevOps Portal</h1>
+                <p>Enterprise Management Hub</p>
                 <div id="data-scope-badge-v2"
-                    style="display: none; align-items: center; gap: 8px; background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); padding: 4px 12px; border-radius: 20px; font-size: 13px; color: var(--primary); margin-top: 10px;">
+                    style="display: none; align-items: center; gap: 6px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.1); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: var(--primary); margin-top: 12px; font-weight: 600;">
                     <span id="scope-icon-v2"></span>
-                    <span style="opacity: 0.6;">数据范围:</span>
-                    <strong id="scope-value-v2">Loading...</strong>
-                </div>
-                <div id="data-scope-badge" style="display:none" class="scope-badge">
-                    <span class="scope-icon"></span>
-                    <span class="scope-label">Data Scope:</span>
-                    <strong id="user-province">Loading...</strong>
+                    <span id="scope-value-v2">Loading...</span>
                 </div>
             </div>
 
-            <nav class="controls">
-                <a href="#dashboard" class="nav-link active" onclick="switchView('dashboard')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                    Dashboard
-                </a>
-                <a href="iteration.html" class="nav-link" id="nav-iterations">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path
-                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z">
-                        </path>
-                    </svg>
-                    Iteration Plan
-                </a>
-                <a href="#test-cases" class="nav-link" id="nav-tests" onclick="switchView('test-cases')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    Test Cases
-                </a>
-                <a href="#defects" class="nav-link" id="nav-defects" onclick="switchView('defects')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    Defects
-                </a>
-                <a href="#requirements" class="nav-link" id="nav-reqs" onclick="switchView('requirements')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M9 11l3 3L22 4"></path>
-                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-                    </svg>
-                    Requirements
-                </a>
-                <a href="#support" class="nav-link" id="nav-support" onclick="switchView('support')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        <path d="M8 9h8"></path>
-                        <path d="M8 13h6"></path>
-                    </svg>
-                    Support Center
-                </a>
-                <a href="#matrix" class="nav-link" id="nav-matrix" onclick="switchView('matrix')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v20M2 12h20"></path>
-                        <path d="M17 7l-5 5-5-5"></path>
-                    </svg>
-                    Traceability
-                </a>
-                <a href="#reports" class="nav-link" id="nav-reports" onclick="switchView('reports')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
-                        <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
-                    </svg>
-                    Insights
-                </a>
-                <a href="#governance" class="nav-link" id="nav-governance" onclick="switchView('governance')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                    </svg>
-                    Governance
-                </a>
-                <a href="devex_pulse.html" class="nav-link" id="nav-pulse">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-                        <line x1="9" y1="9" x2="9.01" y2="9"></line>
-                        <line x1="15" y1="9" x2="15.01" y2="9"></line>
-                    </svg>
-                    DevEx Pulse
-                </a>
-                <a href="#decision_hub" class="nav-link" id="nav-decision-hub" onclick="switchView('decision_hub')"
-                    style="color: var(--passed);">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    Decision Hub
-                </a>
-                <a href="#admin_projects" class="nav-link admin-only" id="nav-admin-projects"
-                    onclick="switchView('admin_projects')"
-                    style="display:none; border-top: 1px solid var(--border-color); margin-top: 10px; padding-top: 15px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
-                    </svg>
-                    Project Admin
-                </a>
-                <a href="#admin_users" class="nav-link admin-only" id="nav-admin-users"
-                    onclick="switchView('admin_users')" style="display:none;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </svg>
-                    User Mapping
-                </a>
-                <div
-                    style="margin: 20px 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); opacity: 0.6;">
-                    Business Service Desk</div>
-                <a href="#sd_submit" class="nav-link" id="nav-sd-submit" onclick="switchView('sd_submit')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
-                    New Feedback
-                </a>
-                <a href="#sd_my" class="nav-link" id="nav-sd-my" onclick="switchView('sd_my')">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    My Requests
-                </a>
+            <nav class="sidebar-nav" style="flex: 1; overflow-y: auto;">
+                <!-- 分类：执行 -->
+                <div class="nav-group">
+                    <div class="nav-group-title">项目执行</div>
+                    <a href="iteration.html" class="nav-link" id="nav-iterations">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z">
+                            </path>
+                        </svg>
+                        迭代计划
+                    </a>
+                    <a href="#requirements" class="nav-link" id="nav-reqs" onclick="switchView('requirements')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M9 11l3 3L22 4"></path>
+                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                        </svg>
+                        需求管理
+                    </a>
+                    <a href="#support" class="nav-link" id="nav-support" onclick="switchView('support')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            <path d="M8 9h8"></path>
+                            <path d="M8 13h6"></path>
+                        </svg>
+                        工单管理
+                    </a>
+                </div>
+
+                <!-- 分类：质量 -->
+                <div class="nav-group">
+                    <div class="nav-group-title">质量保障</div>
+                    <a href="#dashboard" class="nav-link active" onclick="switchView('dashboard')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                        质量看板
+                    </a>
+                    <a href="#test-cases" class="nav-link" id="nav-tests" onclick="switchView('test-cases')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                            </path>
+                        </svg>
+                        用例库
+                    </a>
+                    <a href="#test-execution" class="nav-link" id="nav-test-execution"
+                        onclick="switchView('test-execution')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                        </svg>
+                        测试执行
+                    </a>
+                    <a href="#defects" class="nav-link" id="nav-defects" onclick="switchView('defects')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        缺陷管理 <span class="nav-badge" id="badge-defects" style="display:none;">0</span>
+                    </a>
+                    <a href="#matrix" class="nav-link" id="nav-matrix" onclick="switchView('matrix')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2v20M2 12h20"></path>
+                            <path d="M17 7l-5 5-5-5"></path>
+                        </svg>
+                        追溯矩阵
+                    </a>
+                </div>
+
+                <!-- 分类：治理 -->
+                <div class="nav-group">
+                    <div class="nav-group-title">洞察与治理</div>
+                    <a href="#reports" class="nav-link" id="nav-reports" onclick="switchView('reports')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                            <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                        </svg>
+                        质量分析洞察
+                    </a>
+                    <a href="#governance" class="nav-link" id="nav-governance" onclick="switchView('governance')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        元数据治理 (DataHub)
+                    </a>
+                    <a href="#pulse" class="nav-link" id="nav-pulse" onclick="switchView('pulse')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                        DevEx 指数打卡
+                    </a>
+                </div>
+
+                <!-- 分类：支持 -->
+                <div class="nav-group">
+                    <div class="nav-group-title">支持与战略</div>
+                    <a href="#sd_submit" class="nav-link" id="nav-sd-submit" onclick="switchView('sd_submit')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        工单反馈
+                    </a>
+                    <a href="#sd_my" class="nav-link" id="nav-sd-my" onclick="switchView('sd_my')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            <path d="M8 9h8"></path>
+                            <path d="M8 13h6"></path>
+                        </svg>
+                        我的工单
+                    </a>
+                    <a href="#decision_hub" class="nav-link" id="nav-decision-hub" onclick="switchView('decision_hub')"
+                        style="color:var(--primary); font-weight:600;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        决策中心 (Decision Hub)
+                    </a>
+                </div>
+
+                <!-- 管理工具 -->
+                <div class="nav-group admin-only" style="display:none;">
+                    <div class="nav-group-title">平台管理</div>
+                    <a href="#admin_projects" class="nav-link" id="nav-admin-projects"
+                        onclick="switchView('admin_projects')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                        </svg>
+                        项目映射配置
+                    </a>
+                    <a href="#admin_users" class="nav-link" id="nav-admin-users" onclick="switchView('admin_users')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                        </svg>
+                        员工身份目录
+                    </a>
+                </div>
             </nav>
 
             <div class="user-profile">
@@ -173,13 +205,9 @@
                 <div class="user-info">
                     <div class="user-name" id="user-display-name">Loading...</div>
                     <div class="user-dept" id="user-display-dept">Please wait</div>
-                    <a href="#" id="gitlab-bind-link" onclick="openGitLabBindModal()"
-                        style="font-size: 11px; color: var(--text-dim); display: block; margin-top: 4px; text-decoration: none;">
-                        <span id="gitlab-status-icon"></span> <span id="gitlab-status-text">Connect GitLab</span>
-                    </a>
                 </div>
-                <button class="logout-btn" onclick="Auth.logout()" title="Logout">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button class="logout-btn" onclick="Auth.logout()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                         <polyline points="16 17 21 12 16 7"></polyline>
                         <line x1="21" y1="12" x2="9" y2="12"></line>
@@ -352,6 +380,35 @@
                 </div>
             </div>
 
+            <div id="testExecutionView" style="display:none;">
+                <div class="glass-panel"
+                    style="padding: 40px; text-align: center; background: rgba(37, 99, 235, 0.02);">
+                    <div style="font-size: 48px; margin-bottom: 20px;">⚡</div>
+                    <h2 style="color: var(--primary); margin-bottom: 12px;">测试执行工作台</h2>
+                    <p style="color: var(--text-dim); max-width: 500px; margin: 0 auto 24px;">
+                        在此处管理并执行当前的测试轮次。您可以从用例库中指派用例到特定版本，并实时记录执行状态。
+                    </p>
+                    <div
+                        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 800px; margin: 0 auto;">
+                        <div
+                            style="background: var(--bg-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--primary);">0</div>
+                            <div style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">待指派任务</div>
+                        </div>
+                        <div
+                            style="background: var(--bg-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--warning);">0</div>
+                            <div style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">正在执行</div>
+                        </div>
+                        <div
+                            style="background: var(--bg-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--passed);">0</div>
+                            <div style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">今日已封闭</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="bugView" style="display:none;">
                 <div class="test-list" id="bugResults" style="margin-top:20px;">
                     <!-- Bug list here -->
@@ -469,6 +526,14 @@
             <div id="governanceView" style="display:none; height: calc(100vh - 120px); margin-top: -20px;">
                 <div class="glass-panel" style="height: 100%; padding: 0; overflow: hidden; background: #f3f4f7;">
                     <iframe id="governanceFrame" src=""
+                        style="width:100%; height:100%; border:none; border-radius: 12px;"></iframe>
+                </div>
+            </div>
+
+            <div id="pulseView" style="display:none; height: calc(100vh - 120px); margin-top: -20px;">
+                <div class="glass-panel"
+                    style="height: 100%; padding: 0; overflow: hidden; background: var(--bg-main);">
+                    <iframe id="pulseFrame" src=""
                         style="width:100%; height:100%; border:none; border-radius: 12px;"></iframe>
                 </div>
             </div>
