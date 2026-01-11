@@ -93,16 +93,19 @@ cp .env.example .env
 | **C. 离线环境** | 内网隔离环境 | `docker-compose.prod.yml` | `tar` 包导入 | 同生产环境 (**含 DataHub 独立镜像**) |
 
 #### A. 开发环境 (Development)
+>
 > 适用于开发人员本地使用，支持代码热重载，并自动安装测试框架。
 
 ```bash
 make deploy
 ```
-*   **动作**: 停止旧容器 -> 构建镜像 -> 启动服务 -> **安装开发依赖 (`requirements-dev.txt`)** -> 初始化数据。
-*   **依赖**: 容器启动后会自动执行 `pip install` 安装 `pytest`, `black`, `flake8` 等工具。
-*   **验证**: 运行 `make test` 确保开发环境正常。
+
+* **动作**: 停止旧容器 -> 构建镜像 -> 启动服务 -> **安装开发依赖 (`requirements-dev.txt`)** -> 初始化数据。
+* **依赖**: 容器启动后会自动执行 `pip install` 安装 `pytest`, `black`, `flake8` 等工具。
+* **验证**: 运行 `make test` 确保开发环境正常。
 
 #### B. 生产环境 (Production)
+>
 > 适用于可联网的生产服务器。使用精简镜像，剥离了编译器和开发工具，确保安全与稳定。
 
 ```bash
@@ -112,18 +115,22 @@ make deploy
 # 方式 2: 使用 Make 命令
 make deploy-prod
 ```
-*   **动作**: 停止旧容器 -> 构建生产镜像 (`--target release`) -> 启动服务 -> 初始化数据。
-*   **特点**: 自动配置 `restart: always`，日志滚动策略，以及时区同步。
+
+* **动作**: 停止旧容器 -> 构建生产镜像 (`--target release`) -> 启动服务 -> 初始化数据。
+* **特点**: 自动配置 `restart: always`，日志滚动策略，以及时区同步。
 
 #### C. 离线环境 (Offline / Air-gapped)
+>
 > 适用于银行/军工等无法连接外网的敏感环境。
 
 **步骤 1: 在有网机器上打包**
+
 ```bash
 make package
 ```
-*   **产物**: 生成 `devops-platform.tar` 文件（约 800MB+）。
-*   **包含**: 
+
+* **产物**: 生成 `devops-platform.tar` 文件（约 800MB+）。
+* **包含**:
     1. `devops-platform:latest`: 核心应用镜像。
     2. `devops-platform-datahub:latest`: 独立 DataHub 采集器镜像。
 
@@ -133,8 +140,8 @@ make package
 ```bash
 make deploy-offline
 ```
-*   **动作**: 加载 Docker 镜像 -> 启动服务 (跳过构建) -> 初始化数据。
 
+* **动作**: 加载 Docker 镜像 -> 启动服务 (跳过构建) -> 初始化数据。
 
 部署完成后，服务将运行在后台：
 
@@ -205,8 +212,8 @@ dbt_project/          # 现代数仓建模层 (dbt)
 
 | Dashboard Page | SQL Definition (`devops_collector/sql/`) |
 | :--- | :--- |
-| `0_Gitprime.py` | `Gitprime.sql` |
-| `1_DORA_Metrics.py` | `dws_project_metrics_daily.sql / fct_dora_metrics.sql` (dbt) |
-| `15_Michael_Feathers_Code_Hotspots.py` | `Michael_Feathers_Code_Hotspots.sql` |
-| `16_SPACE_Framework.py` | `dws_space_metrics_daily.sql` (dbt) |
-| `17_Value_Stream.py` | `dws_flow_metrics_weekly.sql` (dbt) |
+| `1_Gitprime.py` | `Gitprime.sql` |
+| `2_DORA_Metrics.py` | `dws_project_metrics_daily.sql / fct_dora_metrics.sql` (dbt) |
+| `16_Michael_Feathers_Code_Hotspots.py` | `Michael_Feathers_Code_Hotspots.sql` |
+| `17_SPACE_Framework.py` | `dws_space_metrics_daily.sql` (dbt) |
+| `18_Value_Stream.py` | `dws_flow_metrics_weekly.sql` (dbt) |
