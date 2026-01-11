@@ -27,12 +27,36 @@ Raises:
     with col3:
         st.metric('元数据健康得分', '98', 'Excellent')
     st.markdown('### 🔭 DataHub 治理视图')
-    st.info('提示: 下方为 DataHub 管理控制台。您可以在此搜索表、查看字段描述以及 dbt 管道血缘。')
+    
     datahub_url = 'http://localhost:9002'
-    st.components.v1.iframe(datahub_url, height=800, scrolling=True)
+    
+    # Check if DataHub is actually running to avoid "Connection Refused" error in iframe
+    import socket
+    def is_port_open(host, port):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(1)
+            try:
+                s.connect((host, port))
+                return True
+            except:
+                return False
+
+    if is_port_open('localhost', 9002):
+        st.info('提示: 下方为 DataHub 管理控制台。您可以在此搜索表、查看字段描述以及 dbt 管道血缘。')
+        st.components.v1.iframe(datahub_url, height=800, scrolling=True)
+    else:
+        st.error('🔌 **DataHub 服务未连接**')
+        st.warning('当前检测到 DataHub 治理服务 (Port 9002) 尚未启动。元数据采集与血缘分析功能暂时不可用。')
+        st.markdown("""
+        **如何启动服务?**
+        1. 确保已在本地或服务器部署 DataHub 技术栈。
+        2. 运行 `docker-compose -f docker-compose-datahub.yml up -d` (如果适用)。
+        3. 刷新此页面。
+        """)
+        
     st.markdown('### 🛠️ 运维操作')
     if st.button('🚀 立即触发全量元数据扫描 (Batch Ingestion)'):
         st.code('make datahub-ingest')
-        st.warning('请确保 DataHub Ingestion CLI 已安装且本地 Docker 服务已启动。')
+        st.info('该操作将调用 DataHub CLI 将本地元数据推送到中心服务器。')
 if __name__ == '__main__':
     run()

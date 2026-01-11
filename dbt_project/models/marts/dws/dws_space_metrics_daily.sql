@@ -59,7 +59,18 @@ select
     coalesce(d.review_count, 0) as c_collaboration,
     
     -- E: Efficiency
-    round(coalesce(e.avg_lead_time_hours, 0)::numeric, 2) as e_efficiency_hours
+    round(coalesce(e.avg_lead_time_hours, 0)::numeric, 2) as e_efficiency_hours,
+
+    -- Total Score (Average of 5 dimensions)
+    round(
+        (
+            coalesce(s.avg_satisfaction_score, 0) +
+            coalesce(d.performance_count, 0) +
+            coalesce(d.activity_score, 0) +
+            coalesce(d.review_count, 0) +
+            round(coalesce(e.avg_lead_time_hours, 0)::numeric, 2)
+        ) / 5.0, 
+    2) as total_space_score
 
 from dev_dws d
 left join satisfaction s on d.user_id = s.user_id and d.metric_date = s.metric_date
