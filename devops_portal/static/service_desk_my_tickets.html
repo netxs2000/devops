@@ -309,7 +309,11 @@
 
             try {
                 const user = await Auth.getCurrentUser();
-                document.getElementById('welcome-text').innerText = `Welcome back, ${user.full_name || user.username}. Viewing your latest updates.`;
+                if (!user) {
+                    console.error("User not found after successful login check");
+                    return;
+                }
+                document.getElementById('welcome-text').innerText = `Welcome back, ${user.full_name || user.username || 'User'}. Viewing your latest updates.`;
 
                 const result = await Api.get('/service-desk/my-tickets');
 

@@ -73,6 +73,11 @@ class User(Base, TimestampMixin, SCDMixin):
     eloc_rank = Column(Integer, default=0)
 
     @property
+    def email(self) -> str:
+        """返回用户主邮箱（用于模式匹配）。"""
+        return self.primary_email
+
+    @property
     def external_usernames(self) -> List[str]:
         """返回用户关联的所有外部系统用户名。"""
         return [i.external_username for i in self.identities]

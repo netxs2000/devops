@@ -49,6 +49,4 @@ class UserResponse(BaseModel):
     department: Optional[DepartmentInfo] = None
     gitlab_connected: bool = False
 
-    class Config:
-        '''"""TODO: Add class description."""'''
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
