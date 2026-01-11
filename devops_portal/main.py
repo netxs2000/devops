@@ -38,6 +38,8 @@ from devops_portal.dependencies import get_current_user
 # from devops_portal.routers import test_management as test_management_router
 from devops_portal.routers import iteration as iteration_router
 from devops_portal.routers import admin as admin_router
+from devops_portal.routers import devex_pulse as devex_pulse_router
+
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
@@ -64,6 +66,7 @@ app.include_router(auth_router.router)
 # app.include_router(test_management_router.router)
 app.include_router(iteration_router.router)
 app.include_router(admin_router.router)
+app.include_router(devex_pulse_router.router)
 
 
 # Mount static files to root to serve index.html, css, js and other html pages directly

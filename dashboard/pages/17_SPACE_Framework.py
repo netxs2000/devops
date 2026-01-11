@@ -8,8 +8,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 from utils import set_page_config, run_query
-from dashboard.common.pulse_widget import render_pulse_widget
-
 # --- Configuration & Styling ---
 set_page_config()
 st.title("🌌 SPACE Framework Intelligence")
@@ -44,8 +42,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Enable Pulse Widget
-render_pulse_widget(user_email="demo_user@example.com") 
+ 
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
