@@ -91,3 +91,21 @@ alembic/versions/*.pyc
 
 # Coverage reports
 htmlcov/
+
+# DBT Artifacts & Dependencies
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+dbt_project/Data/
+dbt_project/Persistence_Data/
+
+# Local Test Reports & Logs
+test_results*.txt
+test_db_results.log
+*.log
+
+# Docker/Local Data Persistence
+persistence_data/
+postgres-data/
+data/
+
