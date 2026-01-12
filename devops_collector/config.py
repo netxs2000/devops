@@ -188,6 +188,29 @@ class SLASettings(BaseSettings):
     p4: int = 240
     default: int = 48
 
+class AuthSettings(BaseSettings):
+    """认证相关配置。
+
+    Attributes:
+        allowed_domains (List[str]): 允许注册的邮箱域名后缀。
+    """
+    allowed_domains: List[str] = ['tjhq.com', 'mofit.com.cn', 'szlongtu.com']
+
+    @field_validator('allowed_domains', mode='before')
+    @classmethod
+    def split_str(cls, v):
+        """Splits comma-separated strings into lists.
+
+        Args:
+            v (Union[str, List[str]]): The input value.
+
+        Returns:
+            List[str]: The list of strings.
+        """
+        if isinstance(v, str):
+            return [i.strip() for i in v.split(',') if i.strip()]
+        return v
+
 class StorageSettings(BaseSettings):
     """Local storage configuration.
 
@@ -243,6 +266,7 @@ class Settings(BaseSettings):
     ai: AISettings = AISettings()
     storage: StorageSettings = StorageSettings()
     sla: SLASettings = SLASettings()
+    auth: AuthSettings = AuthSettings()
     model_config = SettingsConfigDict(env_file='.env', env_nested_delimiter='__', extra='ignore')
 settings = Settings()
 
@@ -256,6 +280,7 @@ class Config:
     GITLAB_CLIENT_ID = settings.gitlab.client_id
     GITLAB_CLIENT_SECRET = settings.gitlab.client_secret
     GITLAB_REDIRECT_URI = settings.gitlab.redirect_uri
+    AUTH_ALLOWED_DOMAINS = settings.auth.allowed_domains
     DB_URI = settings.database.uri
     RAW_DATA_RETENTION_DAYS = settings.database.raw_data_retention_days
     RABBITMQ_HOST = settings.rabbitmq.host

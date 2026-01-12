@@ -20,9 +20,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
 from devops_collector.config import Config
-from devops_collector.auth import router as auth_router
-from devops_collector.auth import services as auth_services
-from devops_collector.auth.database import SessionLocal
+from devops_collector.auth import auth_router
+from devops_collector.auth import auth_service
+from devops_collector.auth.auth_database import AuthSessionLocal
 from devops_collector.models import User
 from devops_collector.core import security
 # from devops_collector.gitlab_sync.services.testing_service import TestingService
@@ -33,9 +33,9 @@ from devops_portal import schemas
 from devops_portal.state import NOTIFICATION_QUEUES, PIPELINE_STATUS
 from devops_portal.events import push_notification
 from devops_portal.dependencies import get_current_user
-# from devops_portal.routers import quality as quality_router
-# from devops_portal.routers import service_desk as service_desk_router
-# from devops_portal.routers import test_management as test_management_router
+from devops_portal.routers import quality_router as quality_router
+from devops_portal.routers import service_desk_router as service_desk_router
+from devops_portal.routers import test_management_router as test_management_router
 from devops_portal.routers import \
     iteration_plan_router as iteration_plan_router
 from devops_portal.routers import admin as admin_router
@@ -61,10 +61,10 @@ Raises:
     await Config.http_client.aclose()
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_credentials=True, allow_methods=['*'], allow_headers=['*'])
-app.include_router(auth_router.router)
-# app.include_router(quality_router.router)
-# app.include_router(service_desk_router.router)
-# app.include_router(test_management_router.router)
+app.include_router(auth_router.auth_router)
+app.include_router(quality_router.router)
+app.include_router(service_desk_router.router)
+app.include_router(test_management_router.router)
 app.include_router(iteration_plan_router.router)
 app.include_router(admin_router.router)
 app.include_router(devex_pulse_router.router)
@@ -197,7 +197,7 @@ async def gitlab_webhook(request: Request):
                     if user_email:
                         db = SessionLocal()
                         try:
-                            target_user = auth_services.get_user_by_email(db, user_email)
+                            target_user = auth_service.auth_get_user_by_email(db, user_email)
                             notify_uids = []
                             if target_user:
                                 notify_uids.append(str(target_user.global_user_id))
@@ -214,7 +214,7 @@ async def gitlab_webhook(request: Request):
         return {'status': 'error', 'message': str(e)}
 
 @app.get('/jenkins/jobs', response_model=List[schemas.JenkinsJobSummary])
-async def list_jenkins_jobs(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def list_jenkins_jobs(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_auth_db)):
     """[P5] 获取 Jenkins 任务列表（支持无限级组织树隔离）。"""
     from devops_collector.plugins.jenkins.models import JenkinsJob
     query = db.query(JenkinsJob)
@@ -222,7 +222,7 @@ async def list_jenkins_jobs(current_user: User=Depends(get_current_user), db: Se
     return query.all()
 
 @app.get('/jenkins/jobs/{job_id}/builds', response_model=List[schemas.JenkinsBuildSummary])
-async def list_jenkins_builds(job_id: int, current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def list_jenkins_builds(job_id: int, current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_auth_db)):
     """获取特定任务的构建历史（含权限校验）。"""
     from devops_collector.plugins.jenkins.models import JenkinsJob, JenkinsBuild
     job = db.query(JenkinsJob).filter(JenkinsJob.id == job_id).first()
@@ -235,7 +235,7 @@ async def list_jenkins_builds(job_id: int, current_user: User=Depends(get_curren
     return db.query(JenkinsBuild).filter(JenkinsBuild.job_id == job_id).order_by(JenkinsBuild.number.desc()).limit(100).all()
 
 @app.get('/artifacts/jfrog', response_model=List[Any])
-async def list_jfrog_artifacts(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def list_jfrog_artifacts(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_auth_db)):
     """[P5] 获取 JFrog 制品列表（支持组织隔离）。"""
     from devops_collector.plugins.jfrog.models import JFrogArtifact
     query = db.query(JFrogArtifact)
@@ -243,7 +243,7 @@ async def list_jfrog_artifacts(current_user: User=Depends(get_current_user), db:
     return query.all()
 
 @app.get('/artifacts/nexus', response_model=List[Any])
-async def list_nexus_components(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def list_nexus_components(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_auth_db)):
     """[P5] 获取 Nexus 组件列表（支持组织隔离）。"""
     from devops_collector.plugins.nexus.models import NexusComponent
     query = db.query(NexusComponent)
@@ -251,14 +251,14 @@ async def list_nexus_components(current_user: User=Depends(get_current_user), db
     return query.all()
 
 @app.get('/security/dependency-scans', response_model=List[Any])
-async def list_dependency_scans(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def list_dependency_scans(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_auth_db)):
     """[P5] 获取 Dependency Check 扫描结果（支持组织隔离）。"""
     from devops_collector.models.dependency import DependencyScan
-    from devops_collector.plugins.gitlab.models import Project
-    query = db.query(DependencyScan).join(Project)
+    from devops_collector.plugins.gitlab.models import GitLabProject
+    query = db.query(DependencyScan).join(GitLabProject)
     if current_user.role != 'admin':
         scope_ids = security.get_user_org_scope_ids(db, current_user)
-        query = query.filter(Project.organization_id.in_(scope_ids))
+        query = query.filter(GitLabProject.organization_id.in_(scope_ids))
     return query.all()
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)

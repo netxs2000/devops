@@ -74,8 +74,8 @@ def init_okrs():
     
     # 强制清理并重建 OKR 相关表，以应用新的字段定义
     logger.info('正在刷新 OKR 表结构...')
-    OKRObjective.__table__.drop(engine, checkfirst=True)
     OKRKeyResult.__table__.drop(engine, checkfirst=True)
+    OKRObjective.__table__.drop(engine, checkfirst=True)
     Base.metadata.create_all(engine)
     
     SessionLocal = sessionmaker(bind=engine)

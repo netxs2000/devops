@@ -334,6 +334,14 @@
             const employeeId = document.getElementById('employeeId').value.trim();
             const departmentCode = document.getElementById('departmentCode').value.trim();
 
+            // 邮箱后缀校验
+            const allowedDomains = ['tjhq.com', 'mofit.com.cn', 'szlongtu.com'];
+            const emailDomain = email.split('@')[1]?.toLowerCase();
+            if (!allowedDomains.includes(emailDomain)) {
+                showAlert(`仅支持以下域名的公司邮箱注册: ${allowedDomains.join(', ')}`, 'error');
+                return;
+            }
+
             registerBtn.disabled = true;
             registerBtn.textContent = '注册中...';
 
