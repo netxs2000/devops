@@ -3,7 +3,7 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "DevOps Data Application Platform"
+name = "devops-platform"
 version = "3.4.0"
 description = "DevOps Data Application Platform"
 readme = "README.md"

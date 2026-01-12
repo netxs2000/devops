@@ -42,9 +42,6 @@ init: ## [初始化] 在容器内安装依赖并初始化数据库数据
 install: ## [内用] 安装生产环境或开发环境依赖
 	@echo "$(GREEN)Installing dependencies...$(RESET)"
 	$(EXEC_CMD) pip install -i https://pypi.tuna.tsinghua.edu.cn/simple .
-	@if [ -f requirements-dev.txt ]; then \
-		$(EXEC_CMD) pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -e ".[dev]"; \
-	fi
 
 lock: ## [工具] 将 pyproject.toml 的依赖锁定到 requirements.txt
 	@echo "$(GREEN)Locking dependencies to requirements.txt (Inside Container)...$(RESET)"
@@ -64,12 +61,12 @@ package: ## [本地构建] 构建并打包镜像为 tar 文件 (devops-platform.
 	@echo "Upload this file to your server and run 'make deploy-offline'"
 
 deploy-offline: check-env ## [服务器专用] 加载本地镜像并部署 (无需构建/网络)
-	@if [ ! -f devops-platform.tar ]; then \
-		echo "$(YELLOW)devops-platform.tar not found. Checking if image exists...$(RESET)"; \
-	else \
-		echo "$(GREEN)Loading Docker image from tar...$(RESET)"; \
-		docker load -i devops-platform.tar; \
-	fi
+ifeq ($(wildcard devops-platform.tar),)
+	@echo "$(YELLOW)devops-platform.tar not found. Checking if image exists...$(RESET)"
+else
+	@echo "$(GREEN)Loading Docker image from tar...$(RESET)"
+	docker load -i devops-platform.tar
+endif
 	@echo "$(GREEN)Starting Offline Deployment...$(RESET)"
 	$(PROD_CMD) down --remove-orphans
 	@echo "$(GREEN)Starting services...$(RESET)"
@@ -91,12 +88,12 @@ PROD_COMPOSE := -f docker-compose.prod.yml
 PROD_CMD := docker-compose $(PROD_COMPOSE)
 
 check-env:
-	@if [ ! -f .env ]; then \
-		echo "$(YELLOW).env file not found! Copying from .env.example...$(RESET)"; \
-		cp .env.example .env; \
-		echo "$(RED)Please edit .env file with your production credentials before running deploy!$(RESET)"; \
-		exit 1; \
-	fi
+ifeq ($(wildcard .env),)
+	@echo "$(YELLOW).env file not found! Copying from .env.example...$(RESET)"
+	@powershell -Command "Copy-Item .env.example .env"
+	@echo "$(RED)Please edit .env file with your production credentials before running deploy!$(RESET)"
+	@exit 1
+endif
 
 deploy-prod: check-env ## [服务器专用] 生产环境一键部署 (安全/稳定)
 	@echo "$(GREEN)Starting Production Deployment...$(RESET)"
