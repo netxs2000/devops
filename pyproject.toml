@@ -55,6 +55,7 @@ dependencies = [
     "plotly>=5.24.0,<6.0.0",
     "watchdog>=6.0.0,<7.0.0",
     "great_expectations>=1.10.0,<2.0.0",
+    "pypinyin>=0.50.0,<1.0.0",
 ]
 
 [project.optional-dependencies]

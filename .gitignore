@@ -83,6 +83,7 @@ Thumbs.db
 raw_data_staging/
 *.docx
 *.xlsx
+*.pdf
 
 # Alembic
 alembic/versions/*.pyc

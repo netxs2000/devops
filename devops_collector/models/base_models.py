@@ -37,6 +37,7 @@ class Organization(Base, TimestampMixin, SCDMixin):
     parent_org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True)
     manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
     is_active = Column(Boolean, default=True)
+    cost_center = Column(String(100), nullable=True)
     parent = relationship('Organization', remote_side=[org_id], primaryjoin='Organization.parent_org_id == Organization.org_id', backref=backref('children', cascade='all'))
     manager = relationship('User', foreign_keys=[manager_user_id], back_populates='managed_organizations')
     users = relationship('User', foreign_keys='User.department_id', primaryjoin='and_(User.department_id==Organization.org_id, User.is_current==True)', back_populates='department')
@@ -359,15 +360,38 @@ class RawDataStaging(Base):
     schema_version = Column(String(20))
     collected_at = Column(DateTime(timezone=True))
 
-class OKRObjective(Base):
+class OKRObjective(Base, TimestampMixin):
     """OKR 目标定义表。"""
     __tablename__ = 'mdm_okr_objectives'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    objective_id = Column(String(50), unique=True, index=True)
+    title = Column(String(255), nullable=False)
+    description = Column(Text)
+    period = Column(String(20), index=True) # e.g., '2024-Q1'
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'))
+    status = Column(String(20), default='ACTIVE') # ACTIVE, COMPLETED, ABANDONED
+    progress = Column(Float, default=0.0)
+    
+    owner = relationship('User')
+    organization = relationship('Organization')
+    key_results = relationship('OKRKeyResult', back_populates='objective', cascade='all, delete-orphan')
 
-class OKRKeyResult(Base):
+class OKRKeyResult(Base, TimestampMixin):
     """OKR 关键结果 (KR) 定义表。"""
     __tablename__ = 'mdm_okr_key_results'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    objective_id = Column(Integer, ForeignKey('mdm_okr_objectives.id'), nullable=False)
+    title = Column(String(255), nullable=False)
+    target_value = Column(Float, nullable=False)
+    current_value = Column(Float, default=0.0)
+    unit = Column(String(20)) # %, days, etc.
+    weight = Column(Float, default=1.0)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    progress = Column(Float, default=0.0)
+    
+    objective = relationship('OKRObjective', back_populates='key_results')
+    owner = relationship('User')
 
 class TraceabilityLink(Base):
     """跨系统追溯链路表，连接需求与代码、测试与发布。"""
