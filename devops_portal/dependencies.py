@@ -4,15 +4,15 @@ from typing import List, Dict, Any, Optional, Union
 from fastapi import Depends, HTTPException, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from devops_collector.auth import services as auth_services
-from devops_collector.auth import router as auth_router
+from devops_collector.auth import auth_service
+from devops_collector.auth import auth_router
 from devops_collector.core import security
-from devops_collector.auth.database import SessionLocal
+from devops_collector.auth.auth_database import AuthSessionLocal
 from devops_collector.models.base_models import Location, User
 logger = logging.getLogger(__name__)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
 
-async def get_current_user(token: Optional[str]=Query(None), auth_header: str=Depends(oauth2_scheme), db: Session=Depends(auth_router.get_db)):
+async def get_current_user(token: Optional[str]=Query(None), auth_header: str=Depends(auth_service.auth_oauth2_scheme), db: Session=Depends(auth_router.get_auth_db)):
     """获取并校验当前 MDM 认证用户。
 
     支持通过请求头 (Authorization) 或 URL 查询参数 (token) 进行身份校验。
@@ -32,13 +32,13 @@ async def get_current_user(token: Optional[str]=Query(None), auth_header: str=De
     if not final_token:
         raise HTTPException(status_code=401, detail='Not authenticated')
     try:
-        payload = auth_services.jwt.decode(final_token, auth_services.SECRET_KEY, algorithms=[auth_services.ALGORITHM])
+        payload = auth_service.jwt.decode(final_token, auth_service.SECRET_KEY, algorithms=[auth_service.ALGORITHM])
         email: str = payload.get('sub')
         if email is None:
             raise HTTPException(status_code=401, detail='Invalid token')
-    except auth_services.JWTError:
+    except auth_service.JWTError:
         raise HTTPException(status_code=401, detail='Invalid token')
-    user = auth_services.get_user_by_email(db, email=email)
+    user = auth_service.auth_get_user_by_email(db, email=email)
     if user is None:
         raise HTTPException(status_code=401, detail='User not found')
     return user
@@ -101,7 +101,7 @@ Raises:
 
 def get_user_org_scope_ids(current_user) -> List[str]:
     """获取用户组织权限范围内的所有部门 ID (支持无限级向下递归)。"""
-    db = SessionLocal()
+    db = AuthSessionLocal()
     try:
         return security.get_user_org_scope_ids(db, current_user)
     finally:
@@ -117,7 +117,7 @@ def filter_issues_by_province(issues: List[Dict[str, Any]], current_user) -> Lis
     if not user_location:
         return issues
     scope_loc_ids = get_user_data_scope_ids(current_user)
-    db = SessionLocal()
+    db = AuthSessionLocal()
     try:
         scope_short_names = [loc.short_name for loc in db.query(Location.short_name).filter(Location.location_id.in_(scope_loc_ids)).all()]
     finally:
