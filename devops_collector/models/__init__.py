@@ -15,7 +15,7 @@ from .base_models import (
     ContractPaymentNode, RevenueContract, PurchaseContract, UserCredential, UserOAuthToken, 
     MetricDefinition, SystemRegistry, EntityTopology, Company, Vendor, EpicMaster, 
     ComplianceIssue, CommitMetrics, DailyDevStats, Team, TeamMember, Permission, 
-    RolePermission, UserRole, LaborRateConfig, CostCode
+    RolePermission, UserRole, LaborRateConfig, CostCode, ProjectProductRelation
 )
 from .dependency import DependencyScan, LicenseRiskRule, Dependency, DependencyCVE
 from .test_management import GTMTestCase, GTMTestCaseIssueLink, GTMRequirement, GTMTestExecutionRecord
@@ -44,7 +44,7 @@ __all__ = [
     'ContractPaymentNode', 'RevenueContract', 'PurchaseContract', 'UserCredential', 'UserOAuthToken', 
     'MetricDefinition', 'SystemRegistry', 'EntityTopology', 'Company', 'Vendor', 'EpicMaster', 
     'ComplianceIssue', 'CommitMetrics', 'DailyDevStats', 'Team', 'TeamMember', 'Permission', 
-    'RolePermission', 'UserRole', 'LaborRateConfig', 'CostCode',
+    'RolePermission', 'UserRole', 'LaborRateConfig', 'CostCode', 'ProjectProductRelation',
     'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE',
     'GTMTestCase', 'GTMTestCaseIssueLink', 'GTMRequirement', 'GTMTestExecutionRecord'
 ]

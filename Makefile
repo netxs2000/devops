@@ -31,6 +31,11 @@ init: ## [初始化] 在容器内安装依赖并初始化数据库数据
 	$(EXEC_CMD) python scripts/init_discovery.py
 	$(EXEC_CMD) python scripts/init_rbac.py
 	$(EXEC_CMD) python scripts/init_organizations.py
+	$(EXEC_CMD) python scripts/init_products_projects.py
+	$(EXEC_CMD) python scripts/import_employees.py
+	$(EXEC_CMD) python scripts/init_gitlab_mappings.py
+	$(EXEC_CMD) python scripts/link_users_to_entities.py
+	$(EXEC_CMD) python scripts/init_okrs.py
 	$(EXEC_CMD) python scripts/init_calendar.py
 	$(EXEC_CMD) python scripts/init_mdm_location.py
 	$(EXEC_CMD) python scripts/init_service_catalog.py
@@ -73,7 +78,12 @@ endif
 	# 注意：这里不执行 build，直接启动，依赖已加载的镜像
 	$(PROD_CMD) up -d --wait --no-build
 	@echo "$(GREEN)Initializing system data...$(RESET)"
-	$(PROD_CMD) exec -T api python scripts/init_discovery.py
+	$(PROD_CMD) exec -T api python scripts/init_organizations.py
+	$(PROD_CMD) exec -T api python scripts/init_products_projects.py
+	$(PROD_CMD) exec -T api python scripts/import_employees.py
+	$(PROD_CMD) exec -T api python scripts/init_gitlab_mappings.py
+	$(PROD_CMD) exec -T api python scripts/link_users_to_entities.py
+	$(PROD_CMD) exec -T api python scripts/init_okrs.py
 	$(PROD_CMD) exec -T api python scripts/init_cost_codes.py
 	$(PROD_CMD) exec -T api python scripts/init_labor_rates.py
 	$(PROD_CMD) exec -T api python scripts/init_purchase_contracts.py
@@ -103,7 +113,12 @@ deploy-prod: check-env ## [服务器专用] 生产环境一键部署 (安全/稳
 	@echo "$(GREEN)Starting services...$(RESET)"
 	$(PROD_CMD) up -d --wait
 	@echo "$(GREEN)Initializing system data...$(RESET)"
-	$(PROD_CMD) exec -T api python scripts/init_discovery.py
+	$(PROD_CMD) exec -T api python scripts/init_organizations.py
+	$(PROD_CMD) exec -T api python scripts/init_products_projects.py
+	$(PROD_CMD) exec -T api python scripts/import_employees.py
+	$(PROD_CMD) exec -T api python scripts/init_gitlab_mappings.py
+	$(PROD_CMD) exec -T api python scripts/link_users_to_entities.py
+	$(PROD_CMD) exec -T api python scripts/init_okrs.py
 	$(PROD_CMD) exec -T api python scripts/init_cost_codes.py
 	$(PROD_CMD) exec -T api python scripts/init_labor_rates.py
 	$(PROD_CMD) exec -T api python scripts/init_purchase_contracts.py
