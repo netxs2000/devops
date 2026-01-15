@@ -2,8 +2,8 @@
 from dagster import asset, AssetExecutionContext
 from sqlalchemy.orm import Session
 from devops_collector.plugins.gitlab.worker import GitLabWorker
-from devops_collector.plugins.gitlab.client import GitLabClient
-from devops_collector.auth.database import SessionLocal
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+from devops_collector.auth.auth_database import AuthSessionLocal as SessionLocal
 from devops_collector.config import settings
 
 @asset(group_name='gitlab_raw', compute_kind='python')

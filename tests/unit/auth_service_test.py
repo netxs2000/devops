@@ -8,7 +8,7 @@ import pytest
 from jose import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.auth import services
+from devops_collector.auth import auth_service as services
 from devops_collector.models.base_models import Base, User, UserCredential
 
 # 使用内存数据库进行单元测试
@@ -30,15 +30,15 @@ def fixture_db_session():
 def test_password_hashing():
     """测试密码哈希生成与校验。"""
     password = "test_password_123"
-    hashed = services.get_password_hash(password)
+    hashed = services.auth_get_password_hash(password)
     assert hashed != password
-    assert services.verify_password(password, hashed) is True
-    assert services.verify_password("wrong_password", hashed) is False
+    assert services.auth_verify_password(password, hashed) is True
+    assert services.auth_verify_password("wrong_password", hashed) is False
 
 def test_create_access_token():
     """测试 JWT 访问令牌生成。"""
     data = {"sub": "test@example.com", "user_id": str(uuid.uuid4())}
-    token = services.create_access_token(data, expires_delta=timedelta(minutes=15))
+    token = services.auth_create_access_token(data, expires_delta=timedelta(minutes=15))
     
     # 验证令牌内容
     payload = jwt.decode(token, services.SECRET_KEY, algorithms=[services.ALGORITHM])
@@ -66,13 +66,13 @@ def test_authenticate_user_success(db_session):
     
     cred = UserCredential(
         user_id=user_id,
-        password_hash=services.get_password_hash(password)
+        password_hash=services.auth_get_password_hash(password)
     )
     db_session.add(cred)
     db_session.commit()
     
     # 执行认证测试
-    authenticated_user = services.authenticate_user(db_session, email, password)
+    authenticated_user = services.auth_authenticate_user(db_session, email, password)
     assert authenticated_user is not False
     assert authenticated_user.primary_email == email
 
@@ -82,7 +82,7 @@ def test_authenticate_user_failure(db_session):
     password = "correct_password"
     
     # 场景 1: 用户不存在
-    assert services.authenticate_user(db_session, "none@example.com", password) is False
+    assert services.auth_authenticate_user(db_session, "none@example.com", password) is False
     
     # 注册用户
     user_id = uuid.uuid4()
@@ -99,9 +99,9 @@ def test_authenticate_user_failure(db_session):
     # 场景 2: 密码错误
     cred = UserCredential(
         user_id=user_id,
-        password_hash=services.get_password_hash(password)
+        password_hash=services.auth_get_password_hash(password)
     )
     db_session.add(cred)
     db_session.commit()
     
-    assert services.authenticate_user(db_session, email, "wrong_password") is False
+    assert services.auth_authenticate_user(db_session, email, "wrong_password") is False

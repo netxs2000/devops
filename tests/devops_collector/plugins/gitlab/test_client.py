@@ -2,7 +2,7 @@
 import unittest
 from unittest.mock import MagicMock, patch, Mock
 import requests
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 
 class TestGitLabClient(unittest.TestCase):
     '''"""TODO: Add class description."""'''

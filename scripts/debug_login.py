@@ -2,8 +2,8 @@
 import sys
 sys.path.insert(0, 'c:\\Users\\netxs\\devops\\devops')
 
-from devops_collector.auth.database import SessionLocal
-from devops_collector.auth.services import get_user_by_email, verify_password
+from devops_collector.auth.auth_database import AuthSessionLocal as SessionLocal
+from devops_collector.auth.auth_service import auth_get_user_by_email as get_user_by_email, auth_verify_password as verify_password
 from devops_collector.models.base_models import User, UserCredential
 
 def debug_login():

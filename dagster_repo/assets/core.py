@@ -5,7 +5,7 @@
 from dagster import asset, AssetExecutionContext, Config
 from devops_collector.plugins.gitlab.worker import GitLabWorker
 from devops_collector.plugins.sonarqube.worker import SonarQubeWorker
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.sonarqube.client import SonarQubeClient
 from devops_collector.plugins.gitlab.models import Project as GitLabProject
 from devops_collector.plugins.sonarqube.models import SonarProject
