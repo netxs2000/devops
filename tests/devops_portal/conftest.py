@@ -17,7 +17,7 @@ from devops_collector.models.base_models import Base
 from devops_portal.main import app
 from devops_portal.dependencies import get_current_user
 from devops_collector.models.base_models import User
-from devops_collector.auth.router import get_db
+from devops_collector.auth.auth_database import get_auth_db
 
 # Setup in-memory SQLite database
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -45,13 +45,13 @@ def db_session():
 @pytest.fixture(scope="function")
 def client(db_session):
     """Create a TestClient with a database session."""
-    def override_get_db():
+    def override_get_auth_db():
         try:
             yield db_session
         finally:
             pass
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_auth_db] = override_get_auth_db
     
     with TestClient(app) as c:
         yield c

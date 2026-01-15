@@ -12,34 +12,72 @@ from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from devops_collector.models.base_models import User, UserCredential
-from devops_collector.config import Config
+from devops_collector.config import settings, Config
 from uuid import UUID
+from devops_collector.auth.auth_database import get_auth_db
 
 # 配置日志
 logger = logging.getLogger(__name__)
 
-# 安全配置
-SECRET_KEY = getattr(Config, 'SECRET_KEY', 'your-secret-key-keep-it-secret')
+# 安全配置使用 settings 统一管理
+SECRET_KEY = settings.auth.secret_key
 ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 auth_pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 auth_oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
 
+def auth_decode_access_token(token: str) -> Optional[dict]:
+    """解码并验证 JWT 访问令牌。
+    
+    Args:
+        token: JWT 令牌字符串。
+        
+    Returns:
+        Optional[dict]: 令牌载荷，验证失败则返回 None。
+    """
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        return None
+
 def auth_verify_password(plain_password: str, hashed_password: str) -> bool:
-    """验证明文密码是否与哈希密码匹配。"""
+    """验证明文密码是否与哈希密码匹配。
+    
+    Args:
+        plain_password: 明文密码。
+        hashed_password: 哈希后的密码。
+        
+    Returns:
+        bool: 是否匹配。
+    """
     return auth_pwd_context.verify(plain_password, hashed_password)
 
 def auth_get_password_hash(password: str) -> str:
-    """生成密码的 BCRPYT 哈希。"""
+    """生成密码的 BCRPYT 哈希。
+    
+    Args:
+        password: 明文密码。
+        
+    Returns:
+        str: 哈希后的密码。
+    """
     return auth_pwd_context.hash(password)
 
 def auth_create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """生成 JWT 访问令牌。"""
+    """生成 JWT 访问令牌。
+    
+    Args:
+        data: 需要加密到令牌中的数据。
+        expires_delta: 令牌有效期。
+        
+    Returns:
+        str: 编码后的 JWT 字符串。
+    """
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire})
     for k, v in to_encode.items():
@@ -49,18 +87,41 @@ def auth_create_access_token(data: dict, expires_delta: Optional[timedelta] = No
     return encoded_jwt
 
 def auth_get_user_by_email(db: Session, email: str) -> Optional[User]:
-    """根据主邮箱获取当前有效用户。"""
+    """根据主邮箱获取当前有效用户。
+    
+    Args:
+        db: 数据库会话。
+        email: 用户邮箱。
+        
+    Returns:
+        Optional[User]: 用户对象，如果不存在则返回 None。
+    """
     return db.query(User).filter(User.primary_email == email, User.is_current == True).first()
 
 def auth_validate_email_domain(email: str) -> bool:
-    """验证邮箱域名是否在允许的列表中。"""
+    """验证邮箱域名是否在允许的列表中。
+    
+    Args:
+        email: 待验证的邮箱地址。
+        
+    Returns:
+        bool: 验证通过返回 True，否则返回 False。
+    """
     if not email or '@' not in email:
         return False
     domain = email.split('@')[-1].lower()
-    return domain in Config.AUTH_ALLOWED_DOMAINS
+    return domain in settings.auth.allowed_domains
 
 def auth_create_user(db: Session, user_data: Any) -> User:
-    """创建新用户及其认证凭据。"""
+    """创建新用户及其认证凭据。
+    
+    Args:
+        db: 数据库会话。
+        user_data: 包含用户注册信息的对象。
+        
+    Returns:
+        User: 创建后的用户对象。
+    """
     hashed_password = auth_get_password_hash(user_data.password)
     db_user = User(
         global_user_id=uuid.uuid4(), 
@@ -82,7 +143,16 @@ def auth_create_user(db: Session, user_data: Any) -> User:
     return db_user
 
 def auth_authenticate_user(db: Session, email: str, password: str) -> Union[User, bool]:
-    """验证用户凭据并返回用户对象。"""
+    """验证用户凭据并返回用户对象。
+    
+    Args:
+        db: 数据库会话。
+        email: 用户邮箱。
+        password: 密码。
+        
+    Returns:
+        Union[User, bool]: 验证成功返回 User 对象，失败返回 False。
+    """
     user = auth_get_user_by_email(db, email)
     if not user:
         return False
@@ -92,27 +162,99 @@ def auth_authenticate_user(db: Session, email: str, password: str) -> Union[User
         return False
     return user
 
-def auth_get_current_user(token: str = Depends(auth_oauth2_scheme)) -> User:
-    """FastAPI 依赖项：从令牌中获取当前认证用户。"""
-    from devops_collector.auth.auth_database import AuthSessionLocal
-    auth_db = AuthSessionLocal()
-    try:
-        try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            email: str = payload.get('sub')
-            if email is None:
-                raise HTTPException(status_code=401, detail='Could not validate credentials')
-        except JWTError:
-            raise HTTPException(status_code=401, detail='Could not validate credentials')
-        user = auth_get_user_by_email(auth_db, email=email)
-        if user is None:
-            raise HTTPException(status_code=401, detail='User not found')
-        return user
-    finally:
-        auth_db.close()
+def auth_get_gitlab_token(db: Session, user_id: Any) -> Optional[Any]:
+    """获取用户的 GitLab OAuth 令牌。
+    
+    Args:
+        db: 数据库会话。
+        user_id: 全局用户 ID。
+        
+    Returns:
+        Optional[UserOAuthToken]: 令牌对象。
+    """
+    from devops_collector.models.base_models import UserOAuthToken
+    return db.query(UserOAuthToken).filter_by(user_id=str(user_id), provider='gitlab').first()
 
-def auth_get_current_active_user(current_user: User = Depends(auth_get_current_user)) -> User:
-    """FastAPI 依赖项：验证当前用户是否处于激活状态。"""
+def auth_upsert_gitlab_token(db: Session, user_id: Any, token_data: dict) -> Any:
+    """更新或创建用户的 GitLab OAuth 令牌。
+    
+    Args:
+        db: 数据库会话。
+        user_id: 全局用户 ID。
+        token_data: 包含 access_token 和 token_type 的字典。
+        
+    Returns:
+        UserOAuthToken: 更新或创建后的令牌对象。
+    """
+    from devops_collector.models.base_models import UserOAuthToken
+    token_rec = auth_get_gitlab_token(db, user_id)
+    if not token_rec:
+        token_rec = UserOAuthToken(
+            user_id=str(user_id),
+            provider='gitlab',
+            access_token=token_data['access_token'],
+            token_type=token_data.get('token_type', 'Bearer')
+        )
+        db.add(token_rec)
+    else:
+        token_rec.access_token = token_data['access_token']
+        token_rec.updated_at = datetime.now()
+    db.commit()
+    return token_rec
+
+def auth_get_current_user(db: Session, token: str) -> User:
+    """获取并校验当前认证用户。
+    
+    Args:
+        db: 数据库会话。
+        token: JWT 令牌字符串。
+        
+    Returns:
+        User: 当前认证的用户对象。
+        
+    Raises:
+        HTTPException: 身份验证失败。
+    """
+    payload = auth_decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail='Invalid token or expired')
+    
+    email: str = payload.get('sub')
+    if email is None:
+        raise HTTPException(status_code=401, detail='Invalid token')
+        
+    user = auth_get_user_by_email(db, email=email)
+    if user is None:
+        raise HTTPException(status_code=401, detail='User not found')
+    return user
+
+def get_current_user_obj(
+    token: str = Depends(auth_oauth2_scheme), 
+    db: Session = Depends(get_auth_db)
+) -> User:
+    """FastAPI 依赖项：获取并校验当前已登录用户。
+    
+    Args:
+        token: JWT 令牌。
+        db: 数据库会话。
+        
+    Returns:
+        User: 用户对象。
+    """
+    return auth_get_current_user(db, token)
+
+def auth_get_current_active_user(current_user: User = Depends(get_current_user_obj)) -> User:
+    """FastAPI 依赖项：验证当前用户是否处于激活状态。
+    
+    Args:
+        current_user: 当前用户对象。
+        
+    Returns:
+        User: 激活状态的用户对象。
+        
+    Raises:
+        HTTPException: 用户已禁用。
+    """
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail='Inactive user')
     return current_user

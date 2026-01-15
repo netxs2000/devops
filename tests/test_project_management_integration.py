@@ -7,8 +7,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from devops_portal.main import app
-from devops_collector.models import Base, ProjectMaster, Organization, User, Project, Role
-from devops_collector.auth.router import get_db
+from devops_collector.models import Base, ProjectMaster, Organization, User, GitLabProject as Project, Role
+from devops_collector.auth.auth_database import get_auth_db as get_db
 from devops_portal.dependencies import get_current_user
 from unittest.mock import MagicMock, patch
 SQLALCHEMY_DATABASE_URL = 'sqlite:///:memory:'
@@ -137,7 +137,7 @@ def test_service_desk_list_projects():
     db.commit()
     user = db.query(User).filter(User.primary_email == 'user@example.com').first()
     mock_context.user = user
-    with patch('devops_portal.routers.service_desk.apply_plugin_privacy_filter') as mock_filter:
+    with patch('devops_portal.routers.service_desk_router.apply_plugin_privacy_filter') as mock_filter:
         mock_filter.side_effect = lambda db, query, model, user: query.filter(model.org_id == user.department_id)
         response = client.get('/service-desk/business-projects')
         assert response.status_code == 200
@@ -145,7 +145,7 @@ def test_service_desk_list_projects():
         assert len(data) == 1
         assert data[0]['id'] == 'PM_SD_001'
 
-@patch('devops_portal.routers.service_desk.ServiceDeskService')
+@patch('devops_portal.routers.service_desk_router.ServiceDeskService')
 def test_submit_bug_via_mdm_id(MockServiceDeskService):
     """测试通过 MDM ID 提交 Bug 时的路由逻辑。"""
     db = TestingSessionLocal()

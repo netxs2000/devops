@@ -5,17 +5,17 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Body
 from sqlalchemy.orm import Session
 from devops_collector.models.base_models import User, ProjectMaster
 from devops_portal import schemas
-from devops_collector.auth import router as auth_router
+from devops_collector.auth.auth_database import get_auth_db
 from devops_portal.dependencies import get_current_user
-from devops_collector.plugins.gitlab.servicedesk_service import ServiceDeskService
+from devops_collector.plugins.gitlab.service_desk_service import ServiceDeskService
 from devops_collector.plugins.gitlab.test_management_service import TestManagementService as TestingService
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.core.security import apply_plugin_privacy_filter
 router = APIRouter(prefix='/service-desk', tags=['service-desk'])
 logger = logging.getLogger(__name__)
 
 @router.get('/business-projects')
-async def list_business_projects(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def list_business_projects(current_user: User=Depends(get_current_user), db: Session=Depends(get_auth_db)):
     """获取业务侧可选的主项目列表（经组织隔离，且已配置受理仓库）。"""
     query = db.query(ProjectMaster).filter(ProjectMaster.is_current == True, ProjectMaster.lead_repo_id != None)
     query = apply_plugin_privacy_filter(db, query, ProjectMaster, current_user)
@@ -23,7 +23,7 @@ async def list_business_projects(current_user: User=Depends(get_current_user), d
     return [{'id': p.project_id, 'name': p.project_name, 'description': p.description} for p in projects]
 
 @router.post('/upload')
-async def upload_service_desk_attachment(mdm_id: str, file: UploadFile=File(...), db: Session=Depends(auth_router.get_db)):
+async def upload_service_desk_attachment(mdm_id: str, file: UploadFile=File(...), db: Session=Depends(get_auth_db)):
     """基于 MDM 项目 ID 的附件上传路由。"""
     try:
         mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == mdm_id).first()
@@ -41,7 +41,7 @@ async def upload_service_desk_attachment(mdm_id: str, file: UploadFile=File(...)
         raise HTTPException(status_code=500, detail='附件上传失败，请重试')
 
 @router.post('/submit-bug')
-async def submit_bug_via_service_desk(mdm_id: str, data: schemas.ServiceDeskBugSubmit, current_user=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def submit_bug_via_service_desk(mdm_id: str, data: schemas.ServiceDeskBugSubmit, current_user=Depends(get_current_user), db: Session=Depends(get_auth_db)):
     """【两层架构】通过业务主项目的受理仓库提交 Bug。"""
     try:
         mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == mdm_id).first()
@@ -59,7 +59,7 @@ async def submit_bug_via_service_desk(mdm_id: str, data: schemas.ServiceDeskBugS
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post('/submit-requirement')
-async def submit_requirement_via_service_desk(mdm_id: str, data: schemas.ServiceDeskRequirementSubmit, current_user=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def submit_requirement_via_service_desk(mdm_id: str, data: schemas.ServiceDeskRequirementSubmit, current_user=Depends(get_current_user), db: Session=Depends(get_auth_db)):
     """【两层架构】通过业务主项目的受理仓库提交需求。"""
     try:
         mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == mdm_id).first()
@@ -89,14 +89,14 @@ async def reject_ticket(iid: int, project_id: int=Body(..., embed=True), reason:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get('/tickets')
-async def list_service_desk_tickets(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def list_service_desk_tickets(current_user: User=Depends(get_current_user), db: Session=Depends(get_auth_db)):
     """基于数据库查询 Service Desk 工单列表 (已实现部门隔离)。"""
     service = ServiceDeskService()
     tickets = service.get_user_tickets(db, current_user)
     return [{'id': t.id, 'title': t.title, 'status': t.status, 'issue_type': t.issue_type, 'origin_dept_name': t.origin_dept_name, 'target_dept_name': t.target_dept_name, 'created_at': t.created_at.isoformat()} for t in tickets]
 
 @router.get('/track/{ticket_id}')
-async def track_service_desk_ticket(ticket_id: int, db: Session=Depends(auth_router.get_db)):
+async def track_service_desk_ticket(ticket_id: int, db: Session=Depends(get_auth_db)):
     """通过数据库 ID 查询工单状态 (已重构)。"""
     service = ServiceDeskService()
     ticket = service.get_ticket_by_id(db, ticket_id)
@@ -105,7 +105,7 @@ async def track_service_desk_ticket(ticket_id: int, db: Session=Depends(auth_rou
     return ticket
 
 @router.patch('/tickets/{ticket_id}/status')
-async def update_service_desk_ticket_status(ticket_id: int, new_status: str, current_user=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def update_service_desk_ticket_status(ticket_id: int, new_status: str, current_user=Depends(get_current_user), db: Session=Depends(get_auth_db)):
     """更新工单状态 (已解耦重构)。"""
     service = ServiceDeskService()
     success = await service.update_ticket_status(db=db, ticket_id=ticket_id, new_status=new_status, operator_name=current_user.full_name)
@@ -114,7 +114,7 @@ async def update_service_desk_ticket_status(ticket_id: int, new_status: str, cur
     return {'status': 'success', 'new_status': new_status}
 
 @router.get('/my-tickets')
-async def get_my_tickets(current_user=Depends(get_current_user), db: Session=Depends(auth_router.get_db)):
+async def get_my_tickets(current_user=Depends(get_current_user), db: Session=Depends(get_auth_db)):
     """获取当前用户创建的所有 Service Desk 工单。"""
     service = ServiceDeskService()
     tickets = service.get_user_tickets(db, current_user)

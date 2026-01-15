@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.gitlab.models import GitLabProject, GitLabIssue
 from devops_collector.models.test_management import GTMTestCase
 from devops_collector.plugins.gitlab.parser import GitLabTestParser

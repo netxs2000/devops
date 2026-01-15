@@ -14,18 +14,18 @@ from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
 from devops_portal import schemas
-from devops_collector.auth.router import get_db
-from devops_collector.auth.user_dependencies import get_user_gitlab_client
+from devops_collector.auth.auth_database import get_auth_db
+from devops_collector.auth.auth_dependency import get_user_gitlab_client
 from devops_portal.dependencies import get_current_user, check_permission
 from devops_collector.plugins.gitlab.test_management_service import TestManagementService
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_portal.state import GLOBAL_QUALITY_ALERTS, EXECUTION_HISTORY
 
 router = APIRouter(prefix='/test-management', tags=['test-management'])
 logger = logging.getLogger(__name__)
 
 def get_test_management_service(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client)
 ) -> TestManagementService:
     """获取测试管理服务实例。"""
@@ -35,7 +35,7 @@ def get_test_management_service(
 async def list_test_cases(
     project_id: int, 
     current_user=Depends(get_current_user), 
-    db: Session=Depends(get_db),
+    db: Session=Depends(get_auth_db),
     service: TestManagementService = Depends(get_test_management_service)
 ):
     """获取并解析 GitLab 项目中的所有测试用例。"""
@@ -146,7 +146,7 @@ async def generate_steps_from_ac(
 async def list_requirements(
     project_id: int, 
     current_user=Depends(get_current_user), 
-    db: Session=Depends(get_db),
+    db: Session=Depends(get_auth_db),
     service: TestManagementService = Depends(get_test_management_service)
 ):
     """获取项目中的所有需求。"""
@@ -276,7 +276,7 @@ async def execute_test_case(
 async def get_test_summary(
     project_id: int, 
     current_user=Depends(get_current_user), 
-    db: Session=Depends(get_db),
+    db: Session=Depends(get_auth_db),
     service: TestManagementService = Depends(get_test_management_service)
 ):
     """获取测试用例执行状态的统计摘要。"""

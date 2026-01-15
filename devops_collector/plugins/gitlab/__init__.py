@@ -13,7 +13,7 @@ from .config import get_config
 if os.getenv('USE_PYAIRBYTE', 'false').lower() == 'true':
     from .airbyte_client import AirbyteGitLabClient as Client
 else:
-    from .client import GitLabClient as Client
+    from .gitlab_client import GitLabClient as Client
 
 # 自注册: 客户端、Worker 和配置
 PluginRegistry.register_client('gitlab', Client)
