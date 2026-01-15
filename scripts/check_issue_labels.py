@@ -9,9 +9,12 @@ import csv
 from typing import List, Dict
 
 from devops_collector.config import Config
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.gitlab.labels import LABEL_DEFINITIONS
-from devops_collector.core.logger import logger if 'logger' in locals() else None
+try:
+    from devops_collector.core.logger import logger
+except ImportError:
+    logger = None
 
 if not logger:
     import logging
