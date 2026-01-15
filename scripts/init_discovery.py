@@ -16,7 +16,7 @@ from devops_collector.config import settings
 from devops_collector.models import Base
 from devops_collector.plugins.gitlab.models import GitLabProject as Project
 from devops_collector.plugins.sonarqube.models import SonarProject
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.sonarqube.client import SonarQubeClient
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('Discovery')
