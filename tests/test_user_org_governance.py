@@ -11,7 +11,7 @@ import uuid
 import os
 
 # 导入所有相关模型以确保 Base.metadata 完整
-from devops_collector.models.base_models import Base, User, Organization, IdentityMapping, Team, TeamMember, Role, user_roles
+from devops_collector.models.base_models import Base, User, Organization, IdentityMapping, Team, TeamMember, Role, UserRole, ProjectMaster
 import devops_collector.plugins.gitlab.models
 import devops_collector.plugins.nexus.models
 import devops_collector.plugins.jfrog.models
@@ -19,7 +19,7 @@ import devops_collector.plugins.zentao.models
 import devops_collector.plugins.jenkins.models
 
 from devops_portal.main import app
-from devops_collector.auth.router import get_db
+from devops_collector.auth.auth_database import get_auth_db as get_db
 from scripts.run_identity_resolver import IdentityResolver
 
 # --- 数据库配置 ---
@@ -182,7 +182,7 @@ def test_api_create_team_and_add_member(db_session):
     db_session.add_all([admin_user, admin_role])
     db_session.commit()
     
-    db_session.execute(user_roles.insert().values(user_id=u_id, role_id=admin_role.id))
+    db_session.add(UserRole(user_id=u_id, role_id=admin_role.id))
     db_session.commit()
 
     # 由于 TestClient 与 db_session 共享物理库但不是同一个 Session，我们需要重新加载

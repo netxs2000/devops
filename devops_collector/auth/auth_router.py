@@ -11,55 +11,77 @@ import httpx
 from sqlalchemy.orm import Session
 from devops_collector.auth import auth_service, auth_schema
 from devops_collector.models.base_models import User, UserOAuthToken
-from devops_collector.auth.auth_database import AuthSessionLocal
-from devops_collector.config import Config
+from devops_collector.auth.auth_database import get_auth_db
+from devops_collector.config import settings
 
 # 初始化认证模块路由
 auth_router = APIRouter(prefix='/auth', tags=['Authentication'])
 
-def get_auth_db():
-    """获取认证模块数据库会话的依赖项。"""
-    db = AuthSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @auth_router.get('/gitlab/bind')
-async def auth_bind_gitlab(request: Request, token: str = Depends(auth_service.auth_oauth2_scheme), db: Session = Depends(get_auth_db)):
-    """发起 GitLab OAuth 绑定。"""
-    if not Config.GITLAB_CLIENT_ID or not Config.GITLAB_REDIRECT_URI:
+async def auth_bind_gitlab(
+    request: Request, 
+    token: str = Depends(auth_service.auth_oauth2_scheme), 
+    db: Session = Depends(get_auth_db)
+):
+    """发起 GitLab OAuth 绑定。
+    
+    Args:
+        request: FastAPI 请求对象。
+        token: 用户的 JWT 令牌。
+        db: 数据库会话。
+        
+    Returns:
+        RedirectResponse: 重定向到 GitLab 授权页面。
+        
+    Raises:
+        HTTPException: 配置错误或令牌无效。
+    """
+    if not settings.gitlab.client_id or not settings.gitlab.redirect_uri:
         raise HTTPException(500, 'GitLab OAuth not configured')
-    try:
-        payload = auth_service.jwt.decode(token, auth_service.SECRET_KEY, algorithms=[auth_service.ALGORITHM])
-        email: str = payload.get('sub')
-        current_user = auth_service.auth_get_user_by_email(db, email=email)
-        if not current_user:
-            raise HTTPException(401, 'User not found')
-    except Exception:
-        raise HTTPException(401, 'Invalid token')
+        
+    payload = auth_service.auth_decode_access_token(token)
+    if not payload:
+        raise HTTPException(401, 'Invalid or expired token')
+    
+    email: str = payload.get('sub')
+    current_user = auth_service.auth_get_user_by_email(db, email=email)
+    if not current_user:
+        raise HTTPException(401, 'User not found')
     
     state = str(current_user.global_user_id)
     auth_url = (
-        f'{Config.GITLAB_URL}/oauth/authorize?'
-        f'client_id={Config.GITLAB_CLIENT_ID}&'
-        f'redirect_uri={Config.GITLAB_REDIRECT_URI}&'
+        f'{settings.gitlab.url}/oauth/authorize?'
+        f'client_id={settings.gitlab.client_id}&'
+        f'redirect_uri={settings.gitlab.redirect_uri}&'
         f'response_type=code&scope=api&state={state}'
     )
     return RedirectResponse(auth_url)
 
 @auth_router.get('/gitlab/callback')
 async def auth_gitlab_callback(code: str, state: str = None, db: Session = Depends(get_auth_db)):
-    """GitLab OAuth 回调处理。"""
+    """GitLab OAuth 回调处理。
+    
+    Args:
+        code: GitLab 返回的授权码。
+        state: 传递的 global_user_id。
+        db: 数据库会话。
+        
+    Returns:
+        RedirectResponse: 绑定成功后的重定向。
+        
+    Raises:
+        HTTPException: GitLab 认证失败或状态异常。
+    """
     async with httpx.AsyncClient() as client:
         resp = await client.post(
-            f'{Config.GITLAB_URL}/oauth/token', 
+            f'{settings.gitlab.url}/oauth/token', 
             data={
-                'client_id': Config.GITLAB_CLIENT_ID, 
-                'client_secret': Config.GITLAB_CLIENT_SECRET, 
+                'client_id': settings.gitlab.client_id, 
+                'client_secret': settings.gitlab.client_secret, 
                 'code': code, 
                 'grant_type': 'authorization_code', 
-                'redirect_uri': Config.GITLAB_REDIRECT_URI
+                'redirect_uri': settings.gitlab.redirect_uri
             }
         )
         if resp.status_code != 200:
@@ -70,27 +92,26 @@ async def auth_gitlab_callback(code: str, state: str = None, db: Session = Depen
     if not user_id:
         raise HTTPException(400, 'Invalid State')
     
-    token_rec = db.query(UserOAuthToken).filter_by(user_id=user_id, provider='gitlab').first()
-    if not token_rec:
-        token_rec = UserOAuthToken(
-            user_id=user_id, 
-            provider='gitlab', 
-            access_token=token_data['access_token'], 
-            token_type=token_data.get('token_type', 'Bearer')
-        )
-        db.add(token_rec)
-    else:
-        token_rec.access_token = token_data['access_token']
-        token_rec.updated_at = datetime.now()
-    db.commit()
-    return RedirectResponse(url='/static/iteration.html?bind_success=true')
+    auth_service.auth_upsert_gitlab_token(db, user_id, token_data)
+    return RedirectResponse(url='/iteration_plan.html?bind_success=true')
 
 @auth_router.post('/register', response_model=auth_schema.AuthUserResponse)
 def auth_register(user: auth_schema.AuthRegisterRequest, db: Session = Depends(get_auth_db)):
-    """注册新用户。"""
+    """注册新用户。
+    
+    Args:
+        user: 注册请求数据模型。
+        db: 数据库会话。
+        
+    Returns:
+        AuthUserResponse: 注册成功后的用户信息。
+        
+    Raises:
+        HTTPException: 域名不支持或用户已存在。
+    """
     # 验证邮箱域名
     if not auth_service.auth_validate_email_domain(user.email):
-        allowed = ", ".join(Config.AUTH_ALLOWED_DOMAINS)
+        allowed = ", ".join(settings.auth.allowed_domains)
         raise HTTPException(
             status_code=400, 
             detail=f'仅支持以下域名的公司邮箱注册: {allowed}'
@@ -103,7 +124,18 @@ def auth_register(user: auth_schema.AuthRegisterRequest, db: Session = Depends(g
 
 @auth_router.post('/login', response_model=auth_schema.AuthToken)
 def auth_login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_auth_db)):
-    """登录获取访问令牌。"""
+    """登录获取访问令牌。
+    
+    Args:
+        form_data: 表单数据。
+        db: 数据库会话。
+        
+    Returns:
+        AuthToken: 包含访问令牌的响应。
+        
+    Raises:
+        HTTPException: 用户名或密码错误。
+    """
     user = auth_service.auth_authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -120,20 +152,21 @@ def auth_login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()
 
 @auth_router.get('/me', response_model=auth_schema.AuthUserResponse)
 def auth_read_users_me(token: str = Depends(auth_service.auth_oauth2_scheme), db: Session = Depends(get_auth_db)):
-    """获取当前登录用户信息。"""
-    try:
-        payload = auth_service.jwt.decode(token, auth_service.SECRET_KEY, algorithms=[auth_service.ALGORITHM])
-        email: str = payload.get('sub')
-        if email is None:
-            raise HTTPException(status_code=401, detail='Invalid token')
-    except Exception:
-        raise HTTPException(status_code=401, detail='Invalid token')
+    """获取当前登录用户信息。
     
-    user = auth_service.auth_get_user_by_email(db, email=email)
-    if user is None:
-        raise HTTPException(status_code=401, detail='User not found')
+    Args:
+        token: JWT 令牌。
+        db: 数据库会话。
+        
+    Returns:
+        AuthUserResponse: 包含 GitLab 连接状态的用户信息。
+        
+    Raises:
+        HTTPException: 令牌无效或用户未找到。
+    """
+    user = auth_service.auth_get_current_user(db, token)
+    token_obj = auth_service.auth_get_gitlab_token(db, user.global_user_id)
     
-    token_obj = db.query(UserOAuthToken).filter_by(user_id=user.global_user_id, provider='gitlab').first()
     resp = auth_schema.AuthUserResponse.model_validate(user)
     resp.gitlab_connected = True if token_obj else False
     return resp

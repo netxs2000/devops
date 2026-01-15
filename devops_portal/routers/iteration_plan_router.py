@@ -8,14 +8,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from devops_collector.auth.router import get_db
-from devops_collector.auth.user_dependencies import get_user_gitlab_client
+from devops_collector.auth.auth_database import get_auth_db
+from devops_collector.auth.auth_dependency import get_user_gitlab_client
 from devops_collector.config import Config
 from devops_collector.core import security
 from devops_collector.models import User
 from devops_collector.plugins.gitlab.iteration_plan_service import \
     IterationPlanService
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.gitlab.models import (GitLabMilestone,
                                                     GitLabProject)
 from devops_portal.dependencies import get_current_user
@@ -56,7 +56,7 @@ class CreateMilestoneRequest(BaseModel):
 
 
 def get_iteration_plan_service(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client)
 ) -> IterationPlanService:
     """获取迭代计划服务实例。
@@ -72,7 +72,7 @@ def get_iteration_plan_service(
 
 
 @router.get('/projects')
-async def list_projects(db: Session = Depends(get_db),
+async def list_projects(db: Session = Depends(get_auth_db),
                         current_user: User = Depends(get_current_user)):
     """获取所有可用项目列表。"""
     query = db.query(GitLabProject)
@@ -88,7 +88,7 @@ async def list_projects(db: Session = Depends(get_db),
 
 @router.get('/projects/{project_id}/milestones')
 async def list_milestones(project_id: int,
-                          db: Session = Depends(get_db),
+                          db: Session = Depends(get_auth_db),
                           current_user: User = Depends(get_current_user)):
     """获取指定项目的里程碑列表。"""
     milestones = db.query(GitLabMilestone).filter(

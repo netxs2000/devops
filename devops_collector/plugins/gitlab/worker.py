@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from .models import GitLabProject, GitLabGroup, SyncLog
-from .identity import IdentityMatcher, UserResolver
+from .identity_service import IdentityMatcher, UserResolver
 from .mixins.base_mixin import BaseMixin
 from .mixins.traceability_mixin import TraceabilityMixin
 from .mixins.commit_mixin import CommitMixin

@@ -12,7 +12,7 @@ from typing import List, Dict, Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, desc
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.gitlab.models import GitLabProject, GitLabIssue, GitLabMilestone, GitLabRelease, ReleaseMilestoneLink
 from devops_collector.models.base_models import User
 logger = logging.getLogger(__name__)

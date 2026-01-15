@@ -19,9 +19,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
-from devops_collector.config import Config
-from devops_collector.auth import auth_router
-from devops_collector.auth import auth_service
+from devops_collector.config import settings, Config
+from devops_collector.auth import auth_router, auth_service
 from devops_collector.auth.auth_database import AuthSessionLocal
 from devops_collector.models import User
 from devops_collector.core import security
@@ -36,27 +35,16 @@ from devops_portal.dependencies import get_current_user
 from devops_portal.routers import quality_router as quality_router
 from devops_portal.routers import service_desk_router as service_desk_router
 from devops_portal.routers import test_management_router as test_management_router
-from devops_portal.routers import \
-    iteration_plan_router as iteration_plan_router
-from devops_portal.routers import admin as admin_router
-from devops_portal.routers import devex_pulse as devex_pulse_router
+from devops_portal.routers import iteration_plan_router as iteration_plan_router
+from devops_portal.routers import admin_router as admin_router
+from devops_portal.routers import devex_pulse_router as devex_pulse_router
 
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    '''"""TODO: Add description.
-
-Args:
-    app: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
-    Config.http_client = httpx.AsyncClient(timeout=Config.CLIENT_TIMEOUT)
+    """管理应用程序生命周期。"""
+    Config.http_client = httpx.AsyncClient(timeout=settings.client.timeout)
     yield
     await Config.http_client.aclose()
 app = FastAPI(lifespan=lifespan)
@@ -109,18 +97,8 @@ Raises:
     return StreamingResponse(event_generator(), media_type='text/event-stream')
 
 def get_project_stakeholders_helper(project_id: int) -> List[str]:
-    '''"""TODO: Add description.
-
-Args:
-    project_id: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
-    db = SessionLocal()
+    """获取项目干系人 ID 列表。"""
+    db = AuthSessionLocal()
     try:
         client = GitLabClient()
         return client.get_project_stakeholders(db, project_id)
@@ -128,19 +106,8 @@ Raises:
         db.close()
 
 async def get_requirement_author(project_id: int, issue_iid: int) -> Optional[str]:
-    '''"""TODO: Add description.
-
-Args:
-    project_id: TODO
-    issue_iid: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
-    db = SessionLocal()
+    """获取需求发起人 ID。"""
+    db = AuthSessionLocal()
     try:
         client = GitLabClient()
         return client.get_issue_author_id(db, project_id, issue_iid)
@@ -195,7 +162,7 @@ async def gitlab_webhook(request: Request):
                 if obj.get('status') == 'failed':
                     user_email = payload.get('user_email')
                     if user_email:
-                        db = SessionLocal()
+                        db = AuthSessionLocal()
                         try:
                             target_user = auth_service.auth_get_user_by_email(db, user_email)
                             notify_uids = []

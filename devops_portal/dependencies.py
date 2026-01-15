@@ -5,25 +5,28 @@ from fastapi import Depends, HTTPException, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from devops_collector.auth import auth_service
-from devops_collector.auth import auth_router
 from devops_collector.core import security
-from devops_collector.auth.auth_database import AuthSessionLocal
+from devops_collector.auth.auth_database import AuthSessionLocal, get_auth_db
 from devops_collector.models.base_models import Location, User
 logger = logging.getLogger(__name__)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
 
-async def get_current_user(token: Optional[str]=Query(None), auth_header: str=Depends(auth_service.auth_oauth2_scheme), db: Session=Depends(auth_router.get_auth_db)):
-    """获取并校验当前 MDM 认证用户。
+async def get_current_user(
+    token: Optional[str] = Query(None), 
+    auth_header: str = Depends(auth_service.auth_oauth2_scheme), 
+    db: Session = Depends(get_auth_db)
+):
+    """获取并校验当前已登录用户。
 
-    支持通过请求头 (Authorization) 或 URL 查询参数 (token) 进行身份校验。
+    支持通过请求头 (Authorization) 或 URL 查询参数 (token) 进行身份检查。
 
     Args:
-        token: URL 中的 JWT 令牌（SSE 流支持）。
-        auth_header: 标准 OAuth2 Bearer 令牌头。
+        token: URL 中的 JWT 令牌（主要用于 SSE/WebSocket 流）。
+        auth_header: 标准 OAuth2 Bearer 令牌。
         db: 数据库会话。
 
     Returns:
-        User: 已认证的用户数据库对象。
+        User: 已认证的用户对象。
 
     Raises:
         HTTPException: 令牌无效、过期或用户不存在。
@@ -31,17 +34,8 @@ async def get_current_user(token: Optional[str]=Query(None), auth_header: str=De
     final_token = token or auth_header
     if not final_token:
         raise HTTPException(status_code=401, detail='Not authenticated')
-    try:
-        payload = auth_service.jwt.decode(final_token, auth_service.SECRET_KEY, algorithms=[auth_service.ALGORITHM])
-        email: str = payload.get('sub')
-        if email is None:
-            raise HTTPException(status_code=401, detail='Invalid token')
-    except auth_service.JWTError:
-        raise HTTPException(status_code=401, detail='Invalid token')
-    user = auth_service.auth_get_user_by_email(db, email=email)
-    if user is None:
-        raise HTTPException(status_code=401, detail='User not found')
-    return user
+    
+    return auth_service.auth_get_current_user(db, final_token)
 
 def check_permission(required_roles: List[str]):
     """[P5] RBAC 权限校验依赖项构造器。
@@ -52,18 +46,18 @@ def check_permission(required_roles: List[str]):
     3. 否则，用户所属的角色编码 (Role.code) 必须在 required_roles 列表中。
     """
 
-    async def permission_checker(current_user: User=Depends(get_current_user)):
-        '''"""TODO: Add description.
+    async def permission_checker(current_user: User = Depends(get_current_user)):
+        """校验当前用户是否具有所需权限。
 
-Args:
-    current_user: TODO
+        Args:
+            current_user: 当前已登录用户。
 
-Returns:
-    TODO
+        Returns:
+            User: 校验通过的用户对象。
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            HTTPException: 权限不足。
+        """
         user_role_codes = [r.code for r in current_user.roles]
         if 'SYSTEM_ADMIN' in user_role_codes:
             return current_user
@@ -82,17 +76,11 @@ def get_user_data_scope_ids(user) -> List[str]:
     scope_ids = [user_location.location_id]
 
     def collect_children(loc):
-        '''"""TODO: Add description.
+        """递归收集所有子级地点的 ID。
 
-Args:
-    loc: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        Args:
+            loc: 当前地点对象。
+        """
         for child in loc.children:
             scope_ids.append(child.location_id)
             collect_children(child)

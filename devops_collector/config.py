@@ -193,8 +193,10 @@ class AuthSettings(BaseSettings):
 
     Attributes:
         allowed_domains (List[str]): 允许注册的邮箱域名后缀。
+        secret_key (str): JWT 签名密钥。
     """
     allowed_domains: List[str] = ['tjhq.com', 'mofit.com.cn', 'szlongtu.com']
+    secret_key: str = 'your-secret-key-keep-it-secret'
 
     @field_validator('allowed_domains', mode='before')
     @classmethod
@@ -308,6 +310,7 @@ class Config:
     AI_BASE_URL = settings.ai.base_url
     AI_MODEL = settings.ai.model
     DATA_DIR = settings.storage.data_dir
+    SECRET_KEY = settings.auth.secret_key
     SLA_P0 = settings.sla.p0
     SLA_P1 = settings.sla.p1
     SLA_P2 = settings.sla.p2
