@@ -3,7 +3,7 @@ DevOps Collector Security Core
 Implementation of unified RBAC and Privacy Filtering (P5).
 """
 import logging
-from typing import List, Any, Optional
+from typing import List, Any
 from sqlalchemy.orm import Session, Query
 from devops_collector.models.base_models import Organization, User, Product
 logger = logging.getLogger(__name__)
@@ -24,18 +24,12 @@ def get_user_org_scope_ids(db: Session, user: User) -> List[str]:
     scope_ids = [user_dept_id]
 
     def collect_children_orgs(parent_id, db_session):
-        '''"""TODO: Add description.
+        """递归收集所有子级组织的 ID。
 
-Args:
-    parent_id: TODO
-    db_session: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        Args:
+            parent_id (str): 父级组织 ID。
+            db_session (Session): 数据库会话。
+        """
         children = db_session.query(Organization.org_id).filter(Organization.parent_org_id == parent_id, Organization.is_current == True).all()
         for child_row in children:
             child_id = child_row[0]
@@ -49,8 +43,11 @@ def apply_plugin_privacy_filter(db: Session, query: Query, model_class: Any, cur
     
     自动根据模型中存在的关联字段（organization_id, product_id, gitlab_project_id）应用组织树递归隔离。
     """
-    if current_user.role == 'admin':
+    # 统一使用 'SYSTEM_ADMIN' 进行权限校验
+    user_role_codes = [r.code for r in current_user.roles] if hasattr(current_user, 'roles') else []
+    if 'SYSTEM_ADMIN' in user_role_codes or current_user.role == 'admin':
         return query
+        
     scope_ids = get_user_org_scope_ids(db, current_user)
     if hasattr(model_class, 'organization_id'):
         return query.filter(model_class.organization_id.in_(scope_ids))
@@ -73,17 +70,11 @@ def get_user_data_scope_ids(user: User) -> List[str]:
     scope_ids = [user_location.location_id]
 
     def collect_children(loc):
-        '''"""TODO: Add description.
+        """递归收集所有子级地点的 ID。
 
-Args:
-    loc: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
+        Args:
+            loc (Location): 当前地点对象。
+        """
         for child in loc.children:
             scope_ids.append(child.location_id)
             collect_children(child)

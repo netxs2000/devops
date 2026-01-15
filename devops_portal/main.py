@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 import uvicorn
 import httpx
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,7 +25,7 @@ from devops_collector.auth.auth_database import AuthSessionLocal
 from devops_collector.models import User
 from devops_collector.core import security
 # from devops_collector.gitlab_sync.services.testing_service import TestingService
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_portal import schemas
 
 
@@ -135,6 +135,7 @@ async def gitlab_webhook(request: Request):
                     logger.warning(f'Requirement Governance: #{issue_iid} changed. Cascading to linked tests...')
                     # service = TestingService()
                     # asyncio.create_task(service.mark_associated_tests_as_stale(p_id, issue_iid))
+                    pass
             if 'type::requirement' in labels:
                 review_state = next((l.replace('review-state::', '') for l in labels if l.startswith('review-state::')), 'draft')
                 old_review_state = next((l.replace('review-state::', '') for l in old_labels if l.startswith('review-state::')), None)

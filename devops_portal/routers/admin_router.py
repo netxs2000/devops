@@ -4,9 +4,11 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from devops_collector.auth.auth_database import get_auth_db
-from devops_collector.models.base_models import Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember
+from devops_collector.models.base_models import (
+    Organization, User, ProjectMaster, IdentityMapping, Team
+)
+from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_collector.core.admin_service import AdminService
-from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_portal.dependencies import get_current_user
 from devops_portal.schemas import (
     IdentityMappingCreate, IdentityMappingView, IdentityMappingUpdateStatus,

@@ -88,6 +88,13 @@ class User(Base, TimestampMixin, SCDMixin):
         """返回用户参与的所有 GitLab 项目。"""
         return [pm.project for pm in self.project_memberships]
 
+    @property
+    def role(self) -> str:
+        """返回用户的第一个主要角色代码，默认为 'user'。"""
+        if self.roles:
+            return self.roles[0].code
+        return 'user'
+
     def __repr__(self) -> str:
         """返回用户的字符串表示。"""
         return f"<User(name='{self.full_name}', email='{self.primary_email}', version={self.sync_version})>"

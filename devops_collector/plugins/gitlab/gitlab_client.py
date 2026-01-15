@@ -625,6 +625,20 @@ class GitLabClient(BaseClient):
             data['due_date'] = due_date
         if description:
             data['description'] = description
+        return self._post(f'projects/{project_id}/milestones', data=data).json()
+
+    def create_issue(self, project_id: int, data: Dict) -> dict:
+        """创建 Issue。
+
+        Args:
+            project_id (int): 项目 ID。
+            data (Dict): Issue 数据 (title, description, labels 等)。
+
+        Returns:
+            dict: 创建后的 Issue 详情。
+        """
+        return self._post(f'projects/{project_id}/issues', data=data).json()
+
     def get_file_last_commit(self, project_id: int, file_path: str, ref: str) -> Optional[dict]:
         """获取指定文件在特定 ref 之前的最后一次提交信息。
 
