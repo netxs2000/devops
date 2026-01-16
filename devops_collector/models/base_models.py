@@ -253,24 +253,62 @@ class ProjectProductRelation(Base, TimestampMixin):
     project = relationship('ProjectMaster', back_populates='product_relations')
     product = relationship('Product', back_populates='project_relations')
 
+class BusinessSystem(Base, TimestampMixin):
+    """业务系统模型 (Backstage System Concept).
+    
+    代表一组协作提供业务能力的组件集合 (e.g. 交易系统, 用户中心)。
+    """
+    __tablename__ = 'mdm_business_systems'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    code = Column(String(50), unique=True, nullable=False, index=True) # metadata.name
+    name = Column(String(100), nullable=False)
+    description = Column(Text)
+    domain = Column(String(50)) # e.g. 电商域, 供应链域
+    
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    
+    # Relationships
+    services = relationship('Service', back_populates='system')
+    owner = relationship('User')
+
 class Service(Base, TimestampMixin):
-    """服务目录表。"""
+    """服务/组件目录表 (Extended with Backstage Component Model)."""
     __tablename__ = 'mdm_services'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(200), nullable=False)
     tier = Column(String(20))
     org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True)
     description = Column(Text)
+    
+    # --- Backstage 扩展字段 ---
+    system_id = Column(Integer, ForeignKey('mdm_business_systems.id'), nullable=True)
+    
+    # spec.lifecycle (experimental, production, deprecated)
+    lifecycle = Column(String(20), default='production')
+    
+    # spec.type (service, library, website, tool)
+    component_type = Column(String(20), default='service')
+    
+    # metadata.tags & links
+    tags = Column(JSON)
+    links = Column(JSON)
+    
+    # --- 现有关系 ---
+    system = relationship('BusinessSystem', back_populates='services')
     organization = relationship('Organization')
     costs = relationship('ResourceCost', back_populates='service')
     slos = relationship('SLO', back_populates='service', cascade='all, delete-orphan')
     project_mappings = relationship('ServiceProjectMapping', back_populates='service', cascade='all, delete-orphan')
+    
+    # 新增资源映射关系
+    resources = relationship('EntityTopology', back_populates='service', cascade='all, delete-orphan')
 
     @property
     def total_cost(self) -> float:
         """计算服务的总资源成本。"""
         return sum((c.amount for c in self.costs))
-
+    
     @property
     def investment_roi(self) -> float:
         """计算服务的投资回报率 (ROI)。"""
@@ -296,25 +334,106 @@ class ResourceCost(Base, TimestampMixin):
     purchase_contract = relationship('PurchaseContract')
 
 class MetricDefinition(Base, TimestampMixin):
-    """指标定义表，定义系统中支持的所有效能指标。"""
+    """指标语义定义表 (mdm_metric_definitions)。
+    这是 "指标字典" 的核心，确保全集团计算逻辑一致 (Single Source of Truth)。
+    """
     __tablename__ = 'mdm_metric_definitions'
-    metric_code = Column(String(100), primary_key=True)
-    metric_name = Column(String(200), nullable=False)
-    domain = Column(String(50), nullable=False)
+
+    # 1. 基础信息
+    metric_code = Column(String(100), primary_key=True)  # e.g., DORA_MTTR_PROD
+    metric_name = Column(String(200), nullable=False)    # e.g., 生产环境平均修复时间
+    domain = Column(String(50), nullable=False)          # DEVOPS, FINANCE, OPERATION
+    metric_type = Column(String(50))                     # ATOMIC(原子), DERIVED(派生), COMPOSITE(复合)
+    
+    # 2. 计算逻辑
+    calculation_logic = Column(Text)       # 计算公式或 dbt 模型路径
+    unit = Column(String(50))              # %, ms, Hours, Count
+    aggregate_type = Column(String(20))    # SUM, AVG, COUNT, MAX, MIN
+    source_model = Column(String(200))     # 来源模型名称 (关联 dbt 模型或表)
+    
+    # 3. 维度与约束
+    dimension_scope = Column(JSON)         # 允许挂载的维度列表 (JSON List) ["dept", "app", "priority"]
+    is_standard = Column(Boolean, default=True) # 是否集团标准指标 (涉及口径锁定)
+    
+    # 4. 治理与归属
+    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    
+    # 5. 时效性
+    time_grain = Column(String(50))   # Daily, Weekly, Monthly
+    update_cycle = Column(String(50)) # Realtime, T+1, Hourly
+    
+    # 6. 生命周期
+    status = Column(String(50), default='RELEASED') # DRAFT, RELEASED, DEPRECATED
+    is_active = Column(Boolean, default=True)       # 逻辑删除标志
+
+    # Relationships
+    business_owner = relationship('User', foreign_keys=[business_owner_id])
+    
+    def __repr__(self):
+        return f"<MetricDefinition(code='{self.metric_code}', name='{self.metric_name}')>"
 
 class SystemRegistry(Base, TimestampMixin):
-    """三方系统注册表，记录对接的所有外部系统 (GitLab, Jira, Sonar 等)。"""
+    """三方系统注册表，记录对接的所有外部系统 (GitLab, Jira, Sonar 等)。
+    
+    作为数据源治理注册中心，定义了连接方式、同步策略及数据治理属性。
+    """
     __tablename__ = 'mdm_systems_registry'
     system_code = Column(String(50), primary_key=True)
     system_name = Column(String(100), nullable=False)
+    system_type = Column(String(50))  # VCS, TICKET, CI, SONAR
+    
+    # 接口与连接配置
+    base_url = Column(String(255))
+    api_version = Column(String(20))  # e.g., v4
+    auth_type = Column(String(50))    # OAuth2, Token, User_Pass
+    
+    # 数据同步策略
+    sync_method = Column(String(50))  # CDC, API Polling, Webhook
+    update_cycle = Column(String(50)) # Realtime, Hourly, Daily
+    
+    # 数据治理与安全
+    data_sensitivity = Column(String(20)) # L3 (机密), L2, L1
+    sla_level = Column(String(20))        # P1 (核心系统)
+    technical_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    
+    # 状态监控
+    is_active = Column(Boolean, default=True)
+    last_heartbeat = Column(DateTime(timezone=True))
+    remarks = Column(Text)
 
-class EntityTopology(Base):
-    """实体拓扑关系表，记录不同系统实体间的映射关系。"""
-    __tablename__ = 'mdm_entities_topology'
-    id = Column(Integer, primary_key=True)
-    entity_id = Column(String(100), index=True)
-    target_id = Column(String(100))
-    internal_id = Column(String(100))
+    technical_owner = relationship('User', foreign_keys=[technical_owner_id])
+    projects = relationship('ProjectMaster', back_populates='source_system')
+
+class EntityTopology(Base, TimestampMixin):
+    """实体-资源映射表 (Infrastructure Mapping).
+    
+    将逻辑上的业务服务 (Service) 绑定到物理上的基础设施资源 (GitLab Repo, Sonar Project, Jenkins Job)。
+    它是连接 "业务架构" (Service) 与 "工具设施" (SystemRegistry) 的胶水层。
+    """
+    __tablename__ = 'mdm_entity_topology'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # 1. 逻辑侧 (Who) - 指向业务服务
+    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False, index=True)
+    
+    # 2. 物理侧 (Where) - 指向外部工具资源
+    # 明确指出是哪个系统实例 (e.g. gitlab-corp) 下的哪个资源 ID (e.g. project-1024)
+    system_code = Column(String(50), ForeignKey('mdm_systems_registry.system_code'), nullable=False)
+    external_resource_id = Column(String(100), nullable=False) # 原 target_id
+    
+    # 3. 关系定义 (What)
+    # 资源类型: source-code, ci-pipeline, quality-gate, deployment-target, database
+    element_type = Column(String(50), default='source-code')
+    
+    # 4. 状态与元数据
+    is_active = Column(Boolean, default=True)
+    last_verified_at = Column(DateTime(timezone=True)) # 采集器上次确认连接有效的时间
+    meta_info = Column(JSON) # 存储额外的连接信息 (如 webhook_id, bind_key)
+
+    # Relationships
+    service = relationship('Service', back_populates='resources')
+    target_system = relationship('SystemRegistry')
     is_current = Column(Boolean, default=True)
     sync_version = Column(Integer, default=1)
 
@@ -476,7 +595,7 @@ class ProjectMaster(Base, TimestampMixin, SCDMixin):
     description = Column(Text)
     organization = relationship('Organization', foreign_keys=[org_id])
     project_manager = relationship('User', foreign_keys=[pm_user_id])
-    source_system = relationship('SystemRegistry')
+    source_system = relationship('SystemRegistry', back_populates='projects')
     gitlab_repos = relationship('GitLabProject', back_populates='mdm_project')
     product_relations = relationship('ProjectProductRelation', back_populates='project')
 
