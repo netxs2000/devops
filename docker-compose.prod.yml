@@ -92,7 +92,7 @@ services:
     ports:
       - "5672:5672"
       # 生产环境通常不需要暴露管理端口到公网，但这里保留供内部使用，或建议通过 ssh tunnel 访问
-      - "127.0.0.1:15672:15672"
+      - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - /etc/localtime:/etc/localtime:ro
