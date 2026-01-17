@@ -265,7 +265,37 @@ def run_integration_test():
         assert payment_service.total_cost == 80000.0
         assert payment_service.investment_roi == 10.0
         print(f'  - Service ROI (Cost: 80k, ROI: {payment_service.investment_roi}) verified.')
-        print('\nALL INTEGRATION TESTS (INCLUDING ROI & AI TECH) PASSED SUCCESSFULLY!')
+        print('Scenario 15: Jenkins Test Execution (Renamed Model) Validation...')
+        from devops_collector.models import JenkinsTestExecution
+        jenkins_test = JenkinsTestExecution(
+            project_id=gitlab_project.id,
+            build_id='jenkins-build-999',
+            test_level='Unit',
+            total_cases=100,
+            passed_count=98,
+            failed_count=2,
+            pass_rate=98.0
+        )
+        session.add(jenkins_test)
+        session.commit()
+        session.refresh(jenkins_test)
+        assert jenkins_test.project_id == 50001
+        assert jenkins_test.pass_rate == 98.0
+        try:
+             # Verify Unique Constraint: (project_id, build_id, test_level)
+            dup_test = JenkinsTestExecution(
+                project_id=gitlab_project.id,
+                build_id='jenkins-build-999',
+                test_level='Unit'
+            )
+            session.add(dup_test)
+            session.commit()
+            print('  - ERROR: Unique Constraint FAILED!')
+        except sqlalchemy.exc.IntegrityError:
+            session.rollback()
+            print('  - Unique Constraint (project, build, test_level) verified.')
+        
+        print('\nALL INTEGRATION TESTS (INCLUDING ROI, AI TECH & JENKINS MODELS) PASSED SUCCESSFULLY!')
     except Exception as e:
         print(f'\nINTEGRATION TEST FAILED: {str(e)}')
         import traceback

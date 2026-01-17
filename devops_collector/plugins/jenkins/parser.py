@@ -1,18 +1,18 @@
 """Jenkins 测试报告解析器
 
-负责将 Jenkins API 返回的 testReport JSON 解析为系统的 TestExecutionSummary 模型。
+负责将 Jenkins API 返回的 testReport JSON 解析为系统的 JenkinsTestExecution 模型。
 """
 import logging
 from typing import Dict, Any, Optional
-from devops_collector.models.base_models import TestExecutionSummary
+from devops_collector.models.base_models import JenkinsTestExecution
 logger = logging.getLogger(__name__)
 
 class ReportParser:
     """Jenkins 测试报告解析器。"""
 
     @staticmethod
-    def parse_jenkins_test_report(project_id: Optional[int], build_id: str, report_data: Dict[str, Any], job_name: str='') -> Optional[TestExecutionSummary]:
-        """将 Jenkins testReport 转换为 TestExecutionSummary。
+    def parse_jenkins_test_report(project_id: Optional[int], build_id: str, report_data: Dict[str, Any], job_name: str='') -> Optional[JenkinsTestExecution]:
+        """将 Jenkins testReport 转换为 JenkinsTestExecution。
         
         Args:
             project_id: 关联的 GitLab 项目 ID。
@@ -21,7 +21,7 @@ class ReportParser:
             job_name: 任务名称，用于辅助判断测试层级。
             
         Returns:
-            TestExecutionSummary 对象或 None。
+            JenkinsTestExecution 对象或 None。
         """
         if not report_data:
             return None
@@ -45,7 +45,7 @@ class ReportParser:
             pass_rate = 0.0
             if total > 0:
                 pass_rate = passed / total * 100
-            summary = TestExecutionSummary(project_id=project_id, build_id=build_id, test_level=test_level, test_tool='Jenkins/JUnit', total_cases=total, passed_count=passed, failed_count=failed, skipped_count=skipped, pass_rate=pass_rate, duration_ms=duration_ms, raw_data=report_data)
+            summary = JenkinsTestExecution(project_id=project_id, build_id=build_id, test_level=test_level, test_tool='Jenkins/JUnit', total_cases=total, passed_count=passed, failed_count=failed, skipped_count=skipped, pass_rate=pass_rate, duration_ms=duration_ms, raw_data=report_data)
             return summary
         except Exception as e:
             logger.error(f'Failed to parse Jenkins test report: {e}')

@@ -133,12 +133,12 @@ class DailyDevStats(Base, TimestampMixin):
 class SatisfactionRecord(Base, TimestampMixin):
     """开发人员体验/满意度调查记录 (SPACE 框架中的 Satisfaction)。"""
     __tablename__ = 'satisfaction_records'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_email = Column(String(255), index=True)
-    score = Column(Integer)
-    date = Column(Date, index=True)
-    tags = Column(String(255), nullable=True)
-    comment = Column(String(500), nullable=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    user_email = Column(String(255), index=True, comment='受访用户邮箱')
+    score = Column(Integer, comment='满意度评分 (1-5, 5为最高)')
+    date = Column(Date, index=True, comment='调查日期')
+    tags = Column(String(255), nullable=True, comment='标签 (如 工具/流程/协作)')
+    comment = Column(String(500), nullable=True, comment='开放式反馈评语')
 
 class Role(Base):
     """系统角色参考表 (rbac_roles)。"""
@@ -159,14 +159,14 @@ class Permission(Base):
 class RolePermission(Base):
     """角色与权限映射表。"""
     __tablename__ = 'sys_role_permissions'
-    role_id = Column(Integer, ForeignKey('rbac_roles.id'), primary_key=True)
-    permission_code = Column(String(100), ForeignKey('rbac_permissions.code'), primary_key=True)
+    role_id = Column(Integer, ForeignKey('rbac_roles.id'), primary_key=True, comment='角色ID')
+    permission_code = Column(String(100), ForeignKey('rbac_permissions.code'), primary_key=True, comment='权限代码')
 
 class UserRole(Base):
     """用户与角色映射表。"""
     __tablename__ = 'sys_user_roles'
-    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), primary_key=True)
-    role_id = Column(Integer, ForeignKey('rbac_roles.id'), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), primary_key=True, comment='用户ID')
+    role_id = Column(Integer, ForeignKey('rbac_roles.id'), primary_key=True, comment='角色ID')
 
 class IdentityMapping(Base, TimestampMixin):
     """外部身份映射表，连接 MDM 用户与第三方系统账号。"""
@@ -182,8 +182,12 @@ class IdentityMapping(Base, TimestampMixin):
     last_active_at = Column(DateTime(timezone=True), comment='最后活跃时间')
     user = relationship('User', back_populates='identities')
 
-class Team(Base, TimestampMixin):
-    """虚拟业务团队/项目组表。"""
+class Team(Base, TimestampMixin, SCDMixin):
+    """虚拟业务团队/项目组表。
+    
+    支持 SCD Type 2，用于精确追踪团队名称、负责人及组织归属的历史变更，
+    确保 DORA 等效能指标能准确归因到"当时的团队"。
+    """
     __tablename__ = 'sys_teams'
     id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
     name = Column(String(100), nullable=False, comment='团队名称')
@@ -198,7 +202,7 @@ class Team(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         """返回团队的字符串表示。"""
-        return f"<Team(name='{self.name}', code='{self.team_code}')>"
+        return f"<Team(name='{self.name}', code='{self.team_code}', version={self.sync_version})>"
 
 class TeamMember(Base, TimestampMixin):
     """团队成员关联表。"""
@@ -215,8 +219,11 @@ class TeamMember(Base, TimestampMixin):
         """返回成员关联的字符串表示。"""
         return f"<TeamMember(team_id={self.team_id}, user_id={self.user_id}, role={self.role_code})>"
 
-class Product(Base, TimestampMixin):
-    """产品主数据表 (mdm_product)。"""
+class Product(Base, TimestampMixin, SCDMixin):
+    """产品主数据表 (mdm_product)。
+    
+    支持 SCD Type 2，记录产品生命周期状态、负责人变更及规格调整的历史轨迹。
+    """
     __tablename__ = 'mdm_product'
     product_id = Column(String(100), primary_key=True, comment='产品唯一标识')
     product_code = Column(String(25), nullable=False, index=True, comment='产品编码')
@@ -235,10 +242,10 @@ class Product(Base, TimestampMixin):
     owner_team = relationship('Organization', back_populates='products')
     product_manager = relationship('User', back_populates='managed_products_as_pm')
     project_relations = relationship('ProjectProductRelation', back_populates='product')
-
+    
     def __repr__(self) -> str:
         """返回产品的字符串表示。"""
-        return f"<Product(code='{self.product_code}', name='{self.product_name}')>"
+        return f"<Product(code='{self.product_code}', name='{self.product_name}', version={self.sync_version})>"
 
 class ProjectProductRelation(Base, TimestampMixin):
     """项目与产品的关联权重表。"""
@@ -256,24 +263,40 @@ class ProjectProductRelation(Base, TimestampMixin):
 class BusinessSystem(Base, TimestampMixin):
     """业务系统模型 (Backstage System Concept).
     
-    代表一组协作提供业务能力的组件集合 (e.g. 交易系统, 用户中心)。
+    代表一组协作提供业务能力的组件集合 (如: 交易系统, 用户中心)。
+    它是微服务(Service)的聚合层级，用于界定架构边界和治理粒度。
     """
     __tablename__ = 'mdm_business_systems'
     
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    code = Column(String(50), unique=True, nullable=False, index=True) # metadata.name
-    name = Column(String(100), nullable=False)
-    description = Column(Text)
-    domain = Column(String(50)) # e.g. 电商域, 供应链域
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    code = Column(String(50), unique=True, nullable=False, index=True, comment='系统标准代号 (如 trade-center)')
+    name = Column(String(100), nullable=False, comment='系统中文名称')
+    description = Column(Text, comment='系统业务描述与边界定义')
     
-    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    # 1. 治理维度
+    domain = Column(String(50), index=True, comment='所属业务域 (如 电商/供应链/财务)')
+    status = Column(String(20), default='PRODUCTION', comment='生命周期状态 (PLANNING/DEV/PRODUCTION/DEPRECATED)')
+    rank = Column(String(10), default='T1', comment='重要性分级 (T0/T1/T2/T3)')
+    
+    # 2. 技术维度
+    architecture_type = Column(String(50), comment='架构类型 (Microservices/Monolith/Serverless)')
+    primary_tech_stack = Column(String(100), comment='主要技术栈 (如 Java/SpringCloud)')
+    dr_level = Column(String(50), comment='容灾等级要求 (双活/冷备/单点)')
+    
+    # 3. 人员维度
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='技术负责人 (Architect)')
+    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='业务负责人 (PDM)')
     
     # Relationships
     services = relationship('Service', back_populates='system')
-    owner = relationship('User')
+    owner = relationship('User', foreign_keys=[owner_id])
+    business_owner = relationship('User', foreign_keys=[business_owner_id])
 
-class Service(Base, TimestampMixin):
-    """服务/组件目录表 (Extended with Backstage Component Model)."""
+class Service(Base, TimestampMixin, SCDMixin):
+    """服务/组件目录表 (Extended with Backstage Component Model).
+    
+    支持 SCD Type 2，记录服务定级 (Tier)、生命周期 (Lifecycle) 及归属权的历史演进。
+    """
     __tablename__ = 'mdm_services'
     id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
     name = Column(String(200), nullable=False, comment='服务名称')
@@ -340,31 +363,31 @@ class MetricDefinition(Base, TimestampMixin):
     __tablename__ = 'mdm_metric_definitions'
 
     # 1. 基础信息
-    metric_code = Column(String(100), primary_key=True)  # e.g., DORA_MTTR_PROD
-    metric_name = Column(String(200), nullable=False)    # e.g., 生产环境平均修复时间
-    domain = Column(String(50), nullable=False)          # DEVOPS, FINANCE, OPERATION
-    metric_type = Column(String(50))                     # ATOMIC(原子), DERIVED(派生), COMPOSITE(复合)
+    metric_code = Column(String(100), primary_key=True, comment='指标唯一编码 (如 DORA_MTTR_PROD)')
+    metric_name = Column(String(200), nullable=False, comment='指标展示名称 (如 生产环境平均修复时间)')
+    domain = Column(String(50), nullable=False, comment='所属业务域 (DEVOPS/FINANCE/OPERATION)')
+    metric_type = Column(String(50), comment='指标类型 (ATOMIC:原子指标 / DERIVED:派生指标 / COMPOSITE:复合指标)')
     
     # 2. 计算逻辑
-    calculation_logic = Column(Text)       # 计算公式或 dbt 模型路径
-    unit = Column(String(50))              # %, ms, Hours, Count
-    aggregate_type = Column(String(20))    # SUM, AVG, COUNT, MAX, MIN
-    source_model = Column(String(200))     # 来源模型名称 (关联 dbt 模型或表)
+    calculation_logic = Column(Text, comment='计算逻辑说明 (SQL公式或自然语言描述)')
+    unit = Column(String(50), comment='度量单位 (%, ms, Hours, Count, CNY)')
+    aggregate_type = Column(String(20), comment='聚合方式 (SUM, AVG, COUNT, MAX, MIN)')
+    source_model = Column(String(200), comment='来源数据模型 (关联 dbt 模型或数据库表名)')
     
     # 3. 维度与约束
-    dimension_scope = Column(JSON)         # 允许挂载的维度列表 (JSON List) ["dept", "app", "priority"]
-    is_standard = Column(Boolean, default=True) # 是否集团标准指标 (涉及口径锁定)
+    dimension_scope = Column(JSON, comment='允许下钻的维度列表 (JSON List, 如 ["dept", "application", "priority"])')
+    is_standard = Column(Boolean, default=True, comment='是否集团标准指标 (True: 锁定口径, 不允许随意修改)')
     
     # 4. 治理与归属
-    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='指标业务负责人ID (PDM/Data Owner)')
     
     # 5. 时效性
-    time_grain = Column(String(50))   # Daily, Weekly, Monthly
-    update_cycle = Column(String(50)) # Realtime, T+1, Hourly
+    time_grain = Column(String(50), comment='统计时间粒度 (Daily, Weekly, Monthly)')
+    update_cycle = Column(String(50), comment='数据刷新周期 (Realtime, T+1, Hourly)')
     
     # 6. 生命周期
-    status = Column(String(50), default='RELEASED') # DRAFT, RELEASED, DEPRECATED
-    is_active = Column(Boolean, default=True)       # 逻辑删除标志
+    status = Column(String(50), default='RELEASED', comment='生命周期状态 (DRAFT:草稿 / RELEASED:已发布 / DEPRECATED:已废弃)')
+    is_active = Column(Boolean, default=True, comment='是否启用 (逻辑删除标志)')
 
     # Relationships
     business_owner = relationship('User', foreign_keys=[business_owner_id])
@@ -372,39 +395,49 @@ class MetricDefinition(Base, TimestampMixin):
     def __repr__(self):
         return f"<MetricDefinition(code='{self.metric_code}', name='{self.metric_name}')>"
 
-class SystemRegistry(Base, TimestampMixin):
+class SystemRegistry(Base, TimestampMixin, SCDMixin):
     """三方系统注册表，记录对接的所有外部系统 (GitLab, Jira, Sonar 等)。
     
     作为数据源治理注册中心，定义了连接方式、同步策略及数据治理属性。
+     - 用于管理 Collector 采集目标
+     - 用于 Issue Tracking 集成配置
+    支持 SCD Type 2 以审计连接配置的变更记录。
     """
     __tablename__ = 'mdm_systems_registry'
-    system_code = Column(String(50), primary_key=True)
-    system_name = Column(String(100), nullable=False)
-    system_type = Column(String(50))  # VCS, TICKET, CI, SONAR
+    
+    # 基础信息
+    system_code = Column(String(50), primary_key=True, comment='系统唯一标准代号 (如 gitlab-corp)')
+    system_name = Column(String(100), nullable=False, comment='系统显示名称')
+    system_type = Column(String(50), comment='工具类型 (VCS/TICKET/CI/SONAR/K8S)')
+    env_tag = Column(String(20), default='PROD', comment='环境标签 (PROD/Stage/Test)')
     
     # 接口与连接配置
-    base_url = Column(String(255))
-    api_version = Column(String(20))  # e.g., v4
-    auth_type = Column(String(50))    # OAuth2, Token, User_Pass
+    base_url = Column(String(255), comment='API 基础地址 (Base URL)')
+    api_version = Column(String(20), comment='API 接口版本 (如 v4, api/v2)')
+    auth_type = Column(String(50), comment='认证方式 (OAuth2/Token/Basic)')
+    credential_key = Column(String(100), comment='凭证引用Key (指向Vault或Env Var)')
+    plugin_config = Column(JSON, comment='插件特定配置 (JSON, 如过滤规则、超时设置)')
     
     # 数据同步策略
-    sync_method = Column(String(50))  # CDC, API Polling, Webhook
-    update_cycle = Column(String(50)) # Realtime, Hourly, Daily
+    sync_method = Column(String(50), comment='同步方式 (CDC/Polling/Webhook)')
+    update_cycle = Column(String(50), comment='更新频率 (Realtime/Hourly/Daily)')
+    enabled_plugins = Column(String(255), comment='启用的采集插件列表 (逗号分隔)')
     
     # 数据治理与安全
-    data_sensitivity = Column(String(20)) # L3 (机密), L2, L1
-    sla_level = Column(String(20))        # P1 (核心系统)
-    technical_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    data_sensitivity = Column(String(20), comment='数据敏感级 (L1-L4)')
+    sla_level = Column(String(20), comment='服务等级 (P0-Critical / P1-High)')
+    technical_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='技术负责人ID')
     
     # 状态监控
-    is_active = Column(Boolean, default=True)
-    last_heartbeat = Column(DateTime(timezone=True))
-    remarks = Column(Text)
+    is_active = Column(Boolean, default=True, comment='是否启用采集')
+    last_heartbeat = Column(DateTime(timezone=True), comment='最后连通性检查时间')
+    last_sync_at = Column(DateTime(timezone=True), comment='最后一次数据同步时间')
+    remarks = Column(Text, comment='备注说明')
 
     technical_owner = relationship('User', foreign_keys=[technical_owner_id])
     projects = relationship('ProjectMaster', back_populates='source_system')
 
-class EntityTopology(Base, TimestampMixin):
+class EntityTopology(Base, TimestampMixin, SCDMixin):
     """实体-资源映射表 (Infrastructure Mapping).
     
     将逻辑上的业务服务 (Service) 绑定到物理上的基础设施资源 (GitLab Repo, Sonar Project, Jenkins Job)。
@@ -412,30 +445,30 @@ class EntityTopology(Base, TimestampMixin):
     """
     __tablename__ = 'mdm_entity_topology'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
     
     # 1. 逻辑侧 (Who) - 指向业务服务
-    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False, index=True)
+    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False, index=True, comment='所属业务服务ID')
     
     # 2. 物理侧 (Where) - 指向外部工具资源
     # 明确指出是哪个系统实例 (e.g. gitlab-corp) 下的哪个资源 ID (e.g. project-1024)
-    system_code = Column(String(50), ForeignKey('mdm_systems_registry.system_code'), nullable=False)
-    external_resource_id = Column(String(100), nullable=False) # 原 target_id
+    system_code = Column(String(50), ForeignKey('mdm_systems_registry.system_code'), nullable=False, comment='来源系统代码 (如 gitlab-corp)')
+    external_resource_id = Column(String(100), nullable=False, comment='外部资源唯一标识 (如 Project ID, Repo URL)')
+    resource_name = Column(String(200), comment='资源显示名称快照 (如 backend/payment-service)')
+    env_tag = Column(String(20), default='PROD', comment='环境标签 (PROD/UAT/TEST/DEV)')
     
     # 3. 关系定义 (What)
     # 资源类型: source-code, ci-pipeline, quality-gate, deployment-target, database
-    element_type = Column(String(50), default='source-code')
+    element_type = Column(String(50), default='source-code', comment='资源类型 (source-code/ci-pipeline/k8s-deployment/db-instance)')
     
     # 4. 状态与元数据
-    is_active = Column(Boolean, default=True)
-    last_verified_at = Column(DateTime(timezone=True)) # 采集器上次确认连接有效的时间
-    meta_info = Column(JSON) # 存储额外的连接信息 (如 webhook_id, bind_key)
+    is_active = Column(Boolean, default=True, comment='关联是否有效')
+    last_verified_at = Column(DateTime(timezone=True), comment='最后一次验证连接有效的时间')
+    meta_info = Column(JSON, comment='额外元数据连接信息 (JSON, 如 webhook_id, bind_key)')
 
     # Relationships
     service = relationship('Service', back_populates='resources')
     target_system = relationship('SystemRegistry')
-    is_current = Column(Boolean, default=True)
-    sync_version = Column(Integer, default=1)
 
 class SyncLog(Base, TimestampMixin):
     """插件数据同步日志记录表。"""
@@ -449,10 +482,11 @@ class Location(Base, TimestampMixin):
     """地理位置或机房位置参考表。"""
     __tablename__ = 'mdm_locations'
     id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
-    location_id = Column(String(50), unique=True, index=True, comment='位置唯一标识')
-    location_name = Column(String(200), nullable=False, comment='位置名称')
-    short_name = Column(String(50), comment='简称')
-    location_type = Column(String(50), comment='位置类型 (country/province/city/datacenter)')
+    location_id = Column(String(50), unique=True, index=True, comment='位置唯一标识 (如 UUID)')
+    code = Column(String(20), unique=True, index=True, comment='行政区划或业务编码 (如 CN-GD, 440000)')
+    location_name = Column(String(200), nullable=False, comment='位置名称 (如 广东省)')
+    short_name = Column(String(50), comment='简称 (如 广东)')
+    location_type = Column(String(50), comment='位置类型 (country/province/city/site/datacenter)')
     parent_id = Column(String(50), comment='上级位置ID')
     region = Column(String(50), comment='区域 (华北/华东/华南)')
     is_active = Column(Boolean, default=True, comment='是否启用')
@@ -475,16 +509,16 @@ class Calendar(Base, TimestampMixin):
     week_of_year = Column(Integer, comment='年内周数')
     season_tag = Column(String(20), comment='季节标签 (春/夏/秋/冬)')
 
-class RawDataStaging(Base):
+class RawDataStaging(Base, TimestampMixin):
     """原始数据暂存表 (Staging 层)，用于存放未经处理的 API Payload。"""
     __tablename__ = 'stg_raw_data'
-    id = Column(Integer, primary_key=True)
-    source = Column(String(50))
-    entity_type = Column(String(50))
-    external_id = Column(String(100))
-    payload = Column(JSON)
-    schema_version = Column(String(20))
-    collected_at = Column(DateTime(timezone=True))
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    source = Column(String(50), comment='数据来源系统 (gitlab/jira/sonar)')
+    entity_type = Column(String(50), comment='实体类型 (project/issue/pipeline)')
+    external_id = Column(String(100), index=True, comment='外部系统记录ID')
+    payload = Column(JSON, comment='原始 JSON 数据负载')
+    schema_version = Column(String(20), comment='Payload 结构版本')
+    collected_at = Column(DateTime(timezone=True), comment='采集时间')
 
 class OKRObjective(Base, TimestampMixin):
     """OKR 目标定义表。"""
@@ -519,58 +553,114 @@ class OKRKeyResult(Base, TimestampMixin):
     objective = relationship('OKRObjective', back_populates='key_results')
     owner = relationship('User')
 
-class TraceabilityLink(Base):
+class TraceabilityLink(Base, TimestampMixin):
     """跨系统追溯链路表，连接需求与代码、测试与发布。"""
     __tablename__ = 'mdm_traceability_links'
-    id = Column(Integer, primary_key=True)
-    source_system = Column(String(50))
-    source_type = Column(String(50))
-    source_id = Column(String(100))
-    target_system = Column(String(50))
-    target_type = Column(String(50))
-    target_id = Column(String(100))
-    link_type = Column(String(50))
-    raw_data = Column(JSON)
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    source_system = Column(String(50), comment='源系统 (jira/gitlab)')
+    source_type = Column(String(50), comment='源实体类型 (requirement/story)')
+    source_id = Column(String(100), index=True, comment='源实体ID')
+    target_system = Column(String(50), comment='目标系统 (gitlab/jenkins)')
+    target_type = Column(String(50), comment='目标实体类型 (commit/merge_request/build)')
+    target_id = Column(String(100), index=True, comment='目标实体ID')
+    link_type = Column(String(50), comment='链路类型 (implements/tests/deploys)')
+    raw_data = Column(JSON, comment='原始关联数据 (JSON)')
 
-class TestExecutionSummary(Base):
-    """测试执行汇总记录表。"""
-    __tablename__ = 'fct_test_execution_summary'
-    id = Column(Integer, primary_key=True)
+class JenkinsTestExecution(Base, TimestampMixin):
+    """Jenkins 测试执行汇总记录表。
+    
+    存储来自 Jenkins 持续集成工具的测试报告汇总数据。
+    """
+    __tablename__ = 'jenkins_test_executions'
+    
+    # 基础标识
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    project_id = Column(Integer, nullable=True, index=True, comment='关联 GitLab 项目 ID')
+    build_id = Column(String(100), nullable=False, index=True, comment='构建 ID (Jenkins Build Number)')
+    
+    # 测试分类
+    test_level = Column(String(50), comment='测试层级 (Unit/API/UI/Performance/Automation)')
+    test_tool = Column(String(100), comment='测试工具 (Jenkins/JUnit/Pytest)')
+    
+    # 统计数据
+    total_cases = Column(Integer, default=0, comment='用例总数')
+    passed_count = Column(Integer, default=0, comment='通过用例数')
+    failed_count = Column(Integer, default=0, comment='失败用例数')
+    skipped_count = Column(Integer, default=0, comment='跳过用例数')
+    pass_rate = Column(Float, default=0.0, comment='通过率 (%)')
+    duration_ms = Column(Integer, default=0, comment='执行时长 (毫秒)')
+    
+    # 原始数据
+    raw_data = Column(JSON, comment='原始测试报告 JSON')
+    
+    # 唯一约束: 同一项目、同一构建、同一测试层级只能有一条记录
+    __table_args__ = (
+        UniqueConstraint('project_id', 'build_id', 'test_level', name='uq_jenkins_test_execution'),
+    )
 
-class PerformanceRecord(Base):
-    """效能/性能表现评估记录表。"""
-    __tablename__ = 'fct_performance_records'
-    id = Column(Integer, primary_key=True)
-
-class Incident(Base):
+class Incident(Base, TimestampMixin):
     """线上事故/线上问题记录表。"""
     __tablename__ = 'mdm_incidents'
-    id = Column(Integer, primary_key=True)
+    
+    # 基础信息
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    title = Column(String(200), nullable=False, comment='事故标题')
+    description = Column(Text, comment='事故详细描述')
+    severity = Column(String(20), comment='严重等级 (P0/P1/P2/P3)')
+    status = Column(String(20), default='OPEN', comment='状态 (OPEN:处理中 / RESOLVED:已恢复 / CLOSED:已结单 / MONITORING:观察中)')
+    
+    # 时空信息 (SRE Metrics)
+    occurred_at = Column(DateTime(timezone=True), comment='故障发生时间 (用于计算 TTI: Time to Impact)')
+    detected_at = Column(DateTime(timezone=True), comment='故障发现时间 (用于计算 MTTD: Time to Detect)')
+    resolved_at = Column(DateTime(timezone=True), comment='业务恢复时间 (用于计算 MTTR: Time to Restore)')
+    location_id = Column(String(50), ForeignKey('mdm_locations.location_id'), nullable=True, comment='故障发生地点ID')
+    
+    # 根因与复盘 (Post-mortem)
+    root_cause_category = Column(String(50), comment='根因分类 (Code Change/Config Change/Capacity/Infrastructure/Exteanl)')
+    post_mortem_url = Column(String(255), comment='复盘报告链接 (Confluence/Doc URL)')
+    
+    # 影响范围 (Impact)
+    affected_users = Column(Integer, comment='受影响用户数量预估')
+    financial_loss = Column(Float, default=0.0, comment='预估经济损失金额 (CNY)')
+    
+    # 责任归属
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='主责任人ID (On-call)')
+    project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True, comment='关联项目ID')
+    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=True, comment='故障服务ID')
 
-class UserActivityProfile(Base):
-    """用户活跃度画像快照表。"""
-    __tablename__ = 'fct_user_activity_profiles'
-    id = Column(BigInteger, primary_key=True)
+    location = relationship('Location')
+    owner = relationship('User')
+    project = relationship('ProjectMaster')
+    service = relationship('Service')
+
+    @property
+    def mttr_minutes(self) -> float:
+        """计算故障恢复时长 (分钟)。"""
+        if self.resolved_at and self.occurred_at:
+            delta = self.resolved_at - self.occurred_at
+            return delta.total_seconds() / 60.0
+        return 0.0
+
 
 class ServiceProjectMapping(Base, TimestampMixin):
     """服务与工程项目的多对多关联映射表。"""
     __tablename__ = 'mdm_service_project_mapping'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False)
-    source = Column(String(50)) # gitlab, jira, etc.
-    project_id = Column(Integer) # or UUID depending on system
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False, comment='服务ID')
+    source = Column(String(50), comment='项目来源系统 (gitlab/jira)')
+    project_id = Column(Integer, comment='外部项目ID')
     service = relationship('Service', back_populates='project_mappings')
 
 class SLO(Base, TimestampMixin):
     """SLO (服务水平目标) 定义表。"""
     __tablename__ = 'mdm_slo_definitions'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False)
-    name = Column(String(100), nullable=False)
-    indicator_type = Column(String(50)) # Availability, Latency, etc.
-    target_value = Column(Float)
-    metric_unit = Column(String(20)) # %, ms, etc.
-    time_window = Column(String(20)) # 28d, 7d
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False, comment='关联服务ID')
+    name = Column(String(100), nullable=False, comment='SLO 名称')
+    indicator_type = Column(String(50), comment='指标类型 (Availability/Latency/Throughput)')
+    target_value = Column(Float, comment='目标值')
+    metric_unit = Column(String(20), comment='度量单位 (%/ms)')
+    time_window = Column(String(20), comment='统计窗口期 (28d/7d)')
     service = relationship('Service', back_populates='slos')
 
 class ProjectMaster(Base, TimestampMixin, SCDMixin):
@@ -583,6 +673,7 @@ class ProjectMaster(Base, TimestampMixin, SCDMixin):
     is_active = Column(Boolean, default=True, comment='是否启用')
     pm_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='项目经理ID')
     org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment='负责部门ID')
+    location_id = Column(String(50), ForeignKey('mdm_locations.location_id'), nullable=True, comment='项目所属/实施地点ID')
     plan_start_date = Column(Date, comment='计划开始日期')
     plan_end_date = Column(Date, comment='计划结束日期')
     actual_start_at = Column(DateTime(timezone=True), comment='实际开始时间')
@@ -683,39 +774,133 @@ class UserCredential(Base, TimestampMixin):
 class UserOAuthToken(Base, TimestampMixin):
     """用户 OAuth 令牌存储表。"""
     __tablename__ = 'sys_user_oauth_tokens'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(String(100), index=True)
-    provider = Column(String(50), index=True)
-    access_token = Column(String(1024), nullable=False)
-    refresh_token = Column(String(1024))
-    token_type = Column(String(50))
-    expires_at = Column(DateTime(timezone=True))
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    user_id = Column(String(100), index=True, comment='用户标识')
+    provider = Column(String(50), index=True, comment='OAuth 提供商 (gitlab/github/azure)')
+    access_token = Column(String(1024), nullable=False, comment='访问令牌 (加密存储)')
+    refresh_token = Column(String(1024), comment='刷新令牌')
+    token_type = Column(String(50), comment='令牌类型 (Bearer)')
+    expires_at = Column(DateTime(timezone=True), comment='过期时间')
 
-class Company(Base):
-    """公司实体参考表。"""
+class Company(Base, TimestampMixin):
+    """公司实体参考表 (Legal Entity)。
+    
+    用于定义集团内的法律实体/纳税主体，支持财务核算和合同签署主体的管理。
+    """
     __tablename__ = 'mdm_company'
-    company_id = Column(String(50), primary_key=True)
+    
+    # 基础信息
+    company_id = Column(String(50), primary_key=True, comment='公司唯一标识 (如 COM-BJ-01)')
+    name = Column(String(200), nullable=False, comment='公司注册全称')
+    short_name = Column(String(100), comment='公司简称')
+    tax_id = Column(String(50), unique=True, index=True, comment='统一社会信用代码/税号')
+    
+    # 财务与运营
+    currency = Column(String(10), default='CNY', comment='本位币种 (CNY/USD)')
+    fiscal_year_start = Column(String(10), default='01-01', comment='财年开始日期 (MM-DD)')
+    
+    # 地址与关联
+    registered_address = Column(String(255), comment='注册地址')
+    location_id = Column(String(50), ForeignKey('mdm_locations.location_id'), nullable=True, comment='主要办公地点ID')
+    
+    # 状态
+    is_active = Column(Boolean, default=True, comment='是否存续经营')
+    
+    # Relationships
+    location = relationship('Location')
 
-class Vendor(Base):
-    """外部供应商参考表。"""
+class Vendor(Base, TimestampMixin):
+    """外部供应商主数据表。"""
     __tablename__ = 'mdm_vendor'
-    vendor_code = Column(String(50), primary_key=True)
+    
+    # 基础信息
+    vendor_code = Column(String(50), primary_key=True, comment='供应商唯一编码')
+    name = Column(String(200), nullable=False, comment='供应商全称')
+    short_name = Column(String(100), comment='供应商简称')
+    
+    # 分类与状态
+    category = Column(String(50), comment='供应商类别 (人力外包/软件许可/云服务/硬件)')
+    status = Column(String(20), default='ACTIVE', comment='合作状态 (ACTIVE/BLACKLIST/INACTIVE)')
+    
+    # 商务信息
+    tax_id = Column(String(50), comment='统一社会信用代码/税号')
+    payment_terms = Column(String(100), comment='默认账期 (e.g. Net 30, Net 60)')
+    currency = Column(String(10), default='CNY', comment='默认结算币种')
+    
+    # 联系人
+    contact_person = Column(String(100), comment='主要联系人')
+    contact_email = Column(String(100), comment='联系邮箱')
+    contact_phone = Column(String(50), comment='联系电话')
+    
+    # 评价
+    rating = Column(Float, default=0.0, comment='供应商绩效评分 (0-5)')
+    
+    # 关联
+    # 注意：PurchaseContract 和 ResourceCost 已有 vendor_name 等冗余字段，这里建立对象关联以便未来重构
+    # contracts = relationship('PurchaseContract', backref='vendor_ref')
 
-class EpicMaster(Base):
-    """跨团队/长期史诗需求 (Epic) 主数据。"""
+class EpicMaster(Base, TimestampMixin):
+    """跨团队/长期史诗需求 (Epic) 主数据。
+    
+    用于管理跨越多个迭代、涉及多个团队的战略级需求组件 (Initiatives/Epics)。
+    """
     __tablename__ = 'mdm_epic'
-    id = Column(Integer, primary_key=True)
+    
+    # 基础信息
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    parent_id = Column(Integer, ForeignKey('mdm_epic.id'), nullable=True, comment='父级 Epic ID (支持多层级)')
+    epic_code = Column(String(50), unique=True, index=True, nullable=False, comment='史诗唯一编码 (如 EPIC-24Q1-001)')
+    title = Column(String(200), nullable=False, comment='史诗标题')
+    description = Column(Text, comment='价值陈述与详细描述')
+    status = Column(String(50), default='ANALYSIS', comment='状态 (ANALYSIS/BACKLOG/IN_PROGRESS/DONE/CANCELLED)')
+    priority = Column(String(20), default='P1', comment='优先级 (P0-Strategic / P1-High)')
+    
+    # 战略对齐
+    okr_objective_id = Column(Integer, ForeignKey('mdm_okr_objectives.id'), nullable=True, comment='关联战略目标ID')
+    investment_theme = Column(String(100), comment='投资主题 (如 技术债/新业务/合规/客户体验)')
+    budget_cap = Column(Float, comment='预算上限 (人天或金额)')
+    
+    # 规划与进度
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='史诗负责人ID (Epic Owner)')
+    group_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment='所属群组/组织ID (GitLab Group)')
+    
+    # 时间规划 (对齐 GitLab Date Inheritance)
+    start_date_is_fixed = Column(Boolean, default=False, comment='是否固定开始时间 (False则自动继承子任务)')
+    due_date_is_fixed = Column(Boolean, default=False, comment='是否固定结束时间')
+    planned_start_date = Column(Date, comment='计划开始日期')
+    planned_end_date = Column(Date, comment='计划完成日期')
+    actual_start_date = Column(Date, comment='实际开始日期')
+    actual_end_date = Column(Date, comment='实际完成日期')
+    
+    progress = Column(Float, default=0.0, comment='总体进度 (0.0-1.0, 基于子任务聚合)')
+    
+    # 可视化与隐私
+    color = Column(String(20), comment='Roadmap展示颜色 (Hex Code)')
+    is_confidential = Column(Boolean, default=False, comment='是否机密 Epic')
+    web_url = Column(String(255), comment='GitLab 原始链接')
+    external_id = Column(String(50), comment='外部系统ID (如 GitLab Epic IID)')
 
-class ComplianceIssue(Base):
+    # 协作信息
+    involved_teams = Column(JSON, comment='涉及团队列表 (JSON List)')
+    tags = Column(JSON, comment='标签 (JSON List)')
+    
+    # Relationships
+    owner = relationship('User', foreign_keys=[owner_id])
+    group = relationship('Organization', foreign_keys=[group_id])
+    okr_objective = relationship('OKRObjective')
+    parent = relationship('EpicMaster', remote_side=[id], backref='children')
+    # child_features = relationship('Feature', back_populates='epic') # 预留给未来Feature模型
+
+class ComplianceIssue(Base, TimestampMixin):
     """合规风险与审计问题记录表。"""
     __tablename__ = 'mdm_compliance_issues'
-    id = Column(Integer, primary_key=True)
-    issue_type = Column(String(50))
-    severity = Column(String(20))
-    entity_id = Column(String(100))
-    status = Column(String(20))
-    description = Column(Text)
-    metadata_payload = Column(JSON)
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
+    issue_type = Column(String(50), comment='问题类型 (安全漏洞/许可证违规/合规缺失)')
+    severity = Column(String(20), comment='严重等级 (Critical/High/Medium/Low)')
+    entity_id = Column(String(100), index=True, comment='关联实体ID (项目/服务)')
+    status = Column(String(20), default='OPEN', comment='状态 (OPEN/IN_REVIEW/RESOLVED/ACCEPTED)')
+    description = Column(Text, comment='问题详情')
+    metadata_payload = Column(JSON, comment='额外元数据 (JSON)')
 
 class RawDataMixin:
     """原始数据支持混入类。"""
