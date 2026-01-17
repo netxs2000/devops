@@ -27,6 +27,20 @@ class SCDMixin:
     is_current = Column(Boolean, default=True, index=True)
     is_deleted = Column(Boolean, default=False)
 
+class OwnableMixin:
+    """所有权混入类，用于 RLS 自动推断数据归属。"""
+    
+    @classmethod
+    def get_owner_column(cls):
+        """返回用于 '仅本人' (Scope 5) 权限校验的所有者字段对象。
+        
+        默认为 create_by (如果存在)。子类应重写此方法以返回正确的字段，
+        例如 ProjectMaster.pm_user_id 或 Incident.owner_id。
+        """
+        if hasattr(cls, 'create_by'):
+            return cls.create_by
+        return None
+
 class Organization(Base, TimestampMixin, SCDMixin):
     """组织架构表，支持 SCD Type 2 生命周期管理。"""
     __tablename__ = 'mdm_organizations'
@@ -63,7 +77,8 @@ class User(Base, TimestampMixin, SCDMixin):
     department = relationship('Organization', foreign_keys=[department_id], back_populates='users')
     managed_organizations = relationship('Organization', foreign_keys='Organization.manager_user_id', back_populates='manager')
     identities = relationship('IdentityMapping', back_populates='user')
-    roles = relationship('Role', secondary='sys_user_roles', backref='users')
+    # 指向新版 SysRole
+    roles = relationship('SysRole', secondary='sys_user_roles', backref='users')
     test_cases = relationship('GTMTestCase', back_populates='author')
     requirements = relationship('GTMRequirement', back_populates='author')
     managed_products_as_pm = relationship('Product', back_populates='product_manager')
@@ -92,7 +107,7 @@ class User(Base, TimestampMixin, SCDMixin):
     def role(self) -> str:
         """返回用户的第一个主要角色代码，默认为 'user'。"""
         if self.roles:
-            return self.roles[0].code
+            return self.roles[0].role_key
         return 'user'
 
     def __repr__(self) -> str:
@@ -140,33 +155,76 @@ class SatisfactionRecord(Base, TimestampMixin):
     tags = Column(String(255), nullable=True, comment='标签 (如 工具/流程/协作)')
     comment = Column(String(500), nullable=True, comment='开放式反馈评语')
 
-class Role(Base):
-    """系统角色参考表 (rbac_roles)。"""
-    __tablename__ = 'rbac_roles'
-    id = Column(Integer, primary_key=True, comment='角色ID')
-    code = Column(String(50), unique=True, nullable=False, comment='角色代码 (admin/pm/dev/viewer)')
-    name = Column(String(100), unique=True, nullable=False, comment='角色显示名称')
-    description = Column(String(255), comment='角色描述')
-    permissions = relationship('Permission', secondary='sys_role_permissions', backref='roles')
+class SysMenu(Base, TimestampMixin):
+    """系统菜单/权限表 (sys_menu)。
+    
+    统一管理系统菜单结构和功能权限标识。
+    """
+    __tablename__ = 'sys_menu'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='菜单ID')
+    menu_name = Column(String(50), nullable=False, comment='菜单名称')
+    parent_id = Column(Integer, ForeignKey('sys_menu.id'), nullable=True, comment='父菜单ID (0或NULL表示顶级)')
+    order_num = Column(Integer, default=0, comment='显示顺序')
+    path = Column(String(200), default='', comment='路由地址')
+    component = Column(String(255), comment='组件路径')
+    query = Column(String(255), comment='路由参数')
+    is_frame = Column(Boolean, default=False, comment='是否为外链')
+    is_cache = Column(Boolean, default=True, comment='是否缓存')
+    menu_type = Column(String(1), default='', comment='菜单类型 (M目录 C菜单 F按钮)')
+    visible = Column(Boolean, default=True, comment='菜单状态 (True显示 False隐藏)')
+    status = Column(Boolean, default=True, comment='菜单状态 (True正常 False停用)')
+    perms = Column(String(100), comment='权限标识 (e.g. system:user:list)')
+    icon = Column(String(100), default='#', comment='菜单图标')
+    remark = Column(String(500), default='', comment='备注')
 
-class Permission(Base):
-    """原子权限定义表 (rbac_permissions)。"""
-    __tablename__ = 'rbac_permissions'
-    code = Column(String(100), primary_key=True, comment='权限代码 (如 ticket:create)')
-    category = Column(String(50), comment='权限分类 (ticket/project/admin)')
-    description = Column(String(255), comment='权限描述')
+    # 自引用关系：父子菜单
+    children = relationship('SysMenu', backref=backref('parent', remote_side=[id]))
 
-class RolePermission(Base):
-    """角色与权限映射表。"""
-    __tablename__ = 'sys_role_permissions'
-    role_id = Column(Integer, ForeignKey('rbac_roles.id'), primary_key=True, comment='角色ID')
-    permission_code = Column(String(100), ForeignKey('rbac_permissions.code'), primary_key=True, comment='权限代码')
+class SysRole(Base, TimestampMixin):
+    """系统角色表 (sys_role)。
+    
+    扩展支持数据范围权限及角色继承。
+    """
+    __tablename__ = 'sys_role'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True, comment='角色ID')
+    role_name = Column(String(30), nullable=False, comment='角色名称')
+    role_key = Column(String(100), nullable=False, unique=True, comment='角色权限字符串')
+    role_sort = Column(Integer, nullable=False, default=0, comment='显示顺序')
+    
+    # 数据范围（1：全部数据权限 2：自定数据权限 3：本部门数据权限 4：本部门及以下数据权限 5：仅本人数据权限）
+    data_scope = Column(Integer, default=1, comment='数据范围')
+    
+    parent_id = Column(Integer, default=0, comment='父角色ID (RBAC1)')
+    status = Column(Boolean, default=True, comment='角色状态')
+    del_flag = Column(Boolean, default=False, comment='删除标志')
+    remark = Column(String(500), comment='备注')
+
+    # Relationships
+    menus = relationship('SysMenu', secondary='sys_role_menu', backref='roles')
+    depts = relationship('Organization', secondary='sys_role_dept', backref='roles')
+
+class SysRoleMenu(Base):
+    """角色和菜单关联表 (sys_role_menu)。"""
+    __tablename__ = 'sys_role_menu'
+    role_id = Column(Integer, ForeignKey('sys_role.id'), primary_key=True)
+    menu_id = Column(Integer, ForeignKey('sys_menu.id'), primary_key=True)
+
+class SysRoleDept(Base):
+    """角色和部门关联表 (sys_role_dept)，用于自定义数据权限。"""
+    __tablename__ = 'sys_role_dept'
+    role_id = Column(Integer, ForeignKey('sys_role.id'), primary_key=True)
+    dept_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), primary_key=True)
+
+
 
 class UserRole(Base):
-    """用户与角色映射表。"""
+    """用户与角色关联表 (sys_user_role)。"""
     __tablename__ = 'sys_user_roles'
     user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), primary_key=True, comment='用户ID')
-    role_id = Column(Integer, ForeignKey('rbac_roles.id'), primary_key=True, comment='角色ID')
+    # 指向新的 sys_role 表
+    role_id = Column(Integer, ForeignKey('sys_role.id'), primary_key=True, comment='角色ID')
 
 class IdentityMapping(Base, TimestampMixin):
     """外部身份映射表，连接 MDM 用户与第三方系统账号。"""
@@ -598,9 +656,14 @@ class JenkinsTestExecution(Base, TimestampMixin):
         UniqueConstraint('project_id', 'build_id', 'test_level', name='uq_jenkins_test_execution'),
     )
 
-class Incident(Base, TimestampMixin):
+class Incident(Base, TimestampMixin, OwnableMixin):
     """线上事故/线上问题记录表。"""
     __tablename__ = 'mdm_incidents'
+
+    @classmethod
+    def get_owner_column(cls):
+        return cls.owner_id
+
     
     # 基础信息
     id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
@@ -663,10 +726,15 @@ class SLO(Base, TimestampMixin):
     time_window = Column(String(20), comment='统计窗口期 (28d/7d)')
     service = relationship('Service', back_populates='slos')
 
-class ProjectMaster(Base, TimestampMixin, SCDMixin):
+class ProjectMaster(Base, TimestampMixin, SCDMixin, OwnableMixin):
     """项目全生命周期主数据 (mdm_projects)。"""
     __tablename__ = 'mdm_projects'
     project_id = Column(String(100), primary_key=True, comment='项目唯一标识')
+
+    @classmethod
+    def get_owner_column(cls):
+        return cls.pm_user_id
+
     project_name = Column(String(200), nullable=False, comment='项目名称')
     project_type = Column(String(50), comment='项目类型 (研发项目/运维项目/POC)')
     status = Column(String(50), default='PLAN', comment='项目状态 (PLAN/ACTIVE/SUSPENDED/CLOSED)')

@@ -4,14 +4,15 @@
 使用 SQLite 物理文件数据库进行测试以保证多连接数据同步。
 """
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 import uuid
 import os
+from unittest.mock import patch
 
 # 导入所有相关模型以确保 Base.metadata 完整
-from devops_collector.models.base_models import Base, User, Organization, IdentityMapping, Team, TeamMember, Role, UserRole, ProjectMaster
+from devops_collector.models.base_models import Base, User, Organization, IdentityMapping, Team, TeamMember, SysRole, UserRole, ProjectMaster
 import devops_collector.plugins.gitlab.models
 import devops_collector.plugins.nexus.models
 import devops_collector.plugins.jfrog.models
@@ -20,13 +21,24 @@ import devops_collector.plugins.jenkins.models
 
 from devops_portal.main import app
 from devops_collector.auth.auth_database import get_auth_db as get_db
+from devops_collector.auth import auth_service
 from scripts.run_identity_resolver import IdentityResolver
 
 # --- 数据库配置 ---
-DB_FILE = "./test_user_org.db"
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_FILE}"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+from sqlalchemy.pool import StaticPool
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=OFF")
+    cursor.close()
 
 # 覆盖 FastAPI 的 get_db 依赖
 def override_get_db():
@@ -42,18 +54,18 @@ client = TestClient(app)
 @pytest.fixture(scope="function")
 def db_session():
     """每个测试函数创建一个干净的数据库环境。"""
-    # 物理删除旧文件确保 100% 干净
-    if os.path.exists(DB_FILE):
-        try:
-            os.remove(DB_FILE)
-        except:
-            pass
-            
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
-    yield db
-    db.close()
-    # 结束时不 drop，由下次运行前的 remove 处理，规避 SQLite 锁死 drop_all 的警告
+    try:
+        yield db
+    finally:
+        db.close()
+        # Disable foreign keys for cleanup to avoid IntegrityError with circular dependencies
+        with engine.begin() as conn:
+            conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        Base.metadata.drop_all(bind=engine)
+        with engine.begin() as conn:
+            conn.exec_driver_sql("PRAGMA foreign_keys=ON")
 
 # --- 1. 模型逻辑测试 ---
 
@@ -146,8 +158,10 @@ def test_api_user_full_profile(db_session):
     # 1. 构造测试数据
     u_id = uuid.uuid4()
     org = Organization(org_id="ORG_TEST", org_name="测试部", is_current=True)
+    db_session.add(org)
+    db_session.flush()
     user = User(global_user_id=u_id, full_name="赵六", employee_id="R666", primary_email="zhao@ex.com", department_id=org.org_id, is_current=True)
-    db_session.add_all([org, user])
+    db_session.add(user)
     db_session.commit() # 物理库必须提交
     
     mapping = IdentityMapping(global_user_id=u_id, source_system="gitlab", external_user_id="git_666", external_email="zhao@ex.com", mapping_status="VERIFIED")
@@ -178,7 +192,7 @@ def test_api_create_team_and_add_member(db_session):
     # 1. 创建用户并赋予管理员角色
     u_id = uuid.uuid4()
     admin_user = User(global_user_id=u_id, full_name="系统管理员", primary_email="admin@ex.com", employee_id="ADMIN1", is_current=True)
-    admin_role = Role(code="SYSTEM_ADMIN", name="管理员")
+    admin_role = SysRole(role_key="SYSTEM_ADMIN", role_name="管理员")
     db_session.add_all([admin_user, admin_role])
     db_session.commit()
     
@@ -188,34 +202,40 @@ def test_api_create_team_and_add_member(db_session):
     # 由于 TestClient 与 db_session 共享物理库但不是同一个 Session，我们需要重新加载
     db_admin = db_session.query(User).filter_by(global_user_id=u_id).first()
 
-    # 强行设置当前用户为 Admin (模拟 Depends(get_current_user))
-    from devops_portal.dependencies import get_current_user
-    app.dependency_overrides[get_current_user] = lambda: db_admin
-
-    # 2. 创建团队
-    payload = {
-        "name": "API 团队",
-        "team_code": "API_TEAM",
-        "description": "通过 API 创建"
+    # 模拟经过认证的管理员 Token
+    token_data = {
+        'sub': admin_user.primary_email,
+        'user_id': str(admin_user.global_user_id),
+        'roles': ['SYSTEM_ADMIN'],
+        'permissions': ['*']
     }
-    resp = client.post("/admin/teams", json=payload)
-    assert resp.status_code == 200
-    team_id = resp.json()["id"]
+    token = auth_service.auth_create_access_token(token_data)
+    headers = {"Authorization": f"Bearer {token}"}
 
-    # 3. 添加成员
-    member_payload = {
-        "user_id": str(u_id),
-        "role_code": "LEADER",
-        "allocation_ratio": 1.0
-    }
-    resp = client.post(f"/admin/teams/{team_id}/members", json=member_payload)
-    assert resp.status_code == 200
+    # 由于 TestClient 与 db_session 共享物理库但不是同一个 Session，我们需要保证 auth_service 能读到用户
+    # 最简单办法是直接 Mock auth_get_current_user
+    with patch('devops_collector.auth.auth_service.auth_get_current_user', return_value=db_admin):
+        # 2. 创建团队
+        payload = {
+            "name": "API 团队",
+            "team_code": "API_TEAM",
+            "description": "通过 API 创建"
+        }
+        resp = client.post("/admin/teams", json=payload, headers=headers)
+        assert resp.status_code == 200
+        team_id = resp.json()["id"]
+
+        # 3. 添加成员
+        member_payload = {
+            "user_id": str(u_id),
+            "role_code": "LEADER",
+            "allocation_ratio": 1.0
+        }
+        resp = client.post(f"/admin/teams/{team_id}/members", json=member_payload, headers=headers)
+        assert resp.status_code == 200
 
     # 4. 验证数据库
     # 物理库共享，直接查
     db_team = db_session.query(Team).filter_by(id=team_id).first()
     assert len(db_team.members) == 1
     assert db_team.members[0].role_code == "LEADER"
-
-    # 清理覆盖
-    app.dependency_overrides.pop(get_current_user)

@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from devops_collector.auth import auth_service
-from devops_collector.models.base_models import User, Role, Permission, UserRole, RolePermission
+from devops_collector.models.base_models import User, SysRole, SysMenu, UserRole, SysRoleMenu
 import uuid
 
 def create_test_token(email, user_id, roles=None, permissions=None):
@@ -58,7 +58,7 @@ def test_rbac_authorized_access_by_permission(client, db_session):
     db_session.commit()
     
     # 模拟拥有 USER:VIEW 权限
-    token = create_test_token(user.primary_email, user.global_user_id, permissions=["USER:VIEW"])
+    token = create_test_token(user.primary_email, user.global_user_id, permissions=["system:user:list"])
     headers = {"Authorization": f"Bearer {token}"}
     
     # 访问响应

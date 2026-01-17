@@ -1,6 +1,6 @@
 # DevOps Data Application Platform (研发效能数据应用平台)
 
-![Version](https://img.shields.io/badge/version-4.1.1-blue)
+![Version](https://img.shields.io/badge/version-4.2.0-blue)
 ![Python](https://img.shields.io/badge/python-3.9+-green)
 ![PostgreSQL](https://img.shields.io/badge/postgres-13+-blue)
 
@@ -11,6 +11,7 @@
 系统的核心目标是为企业提供：
 
 * **标准化数据模型**: 采用 Google Style 规范重构的高质量数据模型层，全面接入 **dbt (data build tool)** 驱动的现代数据仓库架构，支持深度的 ODS/DW 转换与血缘追溯。
+* **企业级 RBAC 2.0 🌟**: 应用新一代基于菜单树的权限模型，支持分布式数据范围 (Data Scope) 过滤与 RLS (行级安全)，保障敏感数据的多租户/多部门隔离。
 * **数据校验哨兵 (Data Quality Sentinel)**: 内置基于 dbt 的 Schema 测试、单元测试和业务规则测试，确保核心指标（如 DORA, SPACE）的 100% 准确性。
 * **研发效能度量**: 自动计算 DORA 指标（部署频率、变更前置时间等）、SPACE 框架指标及 流动效能 (Flow Efficiency)。
 * **测试管理中台 (Test Management Hub)**: 专为 GitLab 社区版设计的轻量级测试管理工具，支持测试用例库、执行追踪、缺陷看板及质量报告。
@@ -23,6 +24,10 @@
 ## ✨ 核心特性 (Key Features)
 
 * **统一身份认证 (Unified Identity)**: 自动关联 GitLab 账号与 SonarQube 账号，识别离职员工和外部贡献者。
+* **权限与安全管理 🌟**:
+  * **RBAC 2.0 架构**: 经典的五表体系（用户、角色、菜单、角色-菜单、用户-角色），支持细粒度按钮级权限。
+  * **行级数据隔离 (RLS)**: 基于 `data_scope` 的自动化 SQL 注入过滤，支持“全部、自定义部门、本部门、本部门及以下、仅本人”五大范围控制。
+  * **角色继承**: 支持父子角色权限自动聚合，简化大规模组织下的权限管理。
 * **测试管理 🌟**:
   * **结构化用例**: 支持预置条件、测试步骤、优先级等结构化数据存储。
   * **执行审计**: 每次执行自动在 GitLab Issue 记录评论，确保持续集成反馈环闭合。
@@ -208,6 +213,7 @@ dbt_project/          # 现代数仓建模层 (dbt)
 * [API 接口参考 (API_REFERENCE.md)](./docs/api/API_REFERENCE.md): RESTful API 接口文档。
 * [部署与运维 (DEPLOYMENT.md)](./docs/guides/DEPLOYMENT.md): 环境配置与部署指南。
 * [故障排查 (TROUBLESHOOTING.md)](./docs/guides/TROUBLESHOOTING.md): 常见问题解决方案。
+* **[RBAC 2.0 权限设计 (RBAC_DESIGN_PROPOSAL.md)](./docs/design/RBAC_DESIGN_PROPOSAL.md)**: 🛡️ **SECURITY** 详解新一代基于“角色-菜单-数据范围”的权限控制体系。
 * [安全政策 (SECURITY.md)](./docs/SECURITY.md): 漏洞报告与安全最佳实践。
 
 ## 📂 看板与视图 (Analytics Mapping)

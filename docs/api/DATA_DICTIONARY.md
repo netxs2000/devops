@@ -1,6 +1,6 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-01-17 12:04:59  
+> **生成时间**: 2026-01-17 20:56:32  
 > **版本**: v2.2 (企业级标准版)  
 > **状态**: 有效 (Active)
 
@@ -26,7 +26,7 @@
 
 ## 数据表清单
 
-本系统共包含 **73 个数据表**，分为以下几个业务域：
+本系统共包含 **72 个数据表**，分为以下几个业务域：
 
 
 ### 核心主数据域
@@ -60,11 +60,11 @@
 - `stg_mdm_resource_costs` - ResourceCost
 
 ### 测试管理域
-- `fct_test_execution_summary` - TestExecutionSummary
 - `gtm_requirements` - GTMRequirement
 - `gtm_test_case_issue_links` - GTMTestCaseIssueLink
 - `gtm_test_cases` - GTMTestCase
 - `gtm_test_execution_records` - GTMTestExecutionRecord
+- `jenkins_test_executions` - JenkinsTestExecution
 
 ### GitLab 集成域
 - `gitlab_branches` - GitLabBranch
@@ -88,10 +88,6 @@
 - `sys_user_oauth_tokens` - UserOAuthToken
 - `sys_user_roles` - UserRole
 
-### 分析与洞察域
-- `fct_performance_records` - PerformanceRecord
-- `fct_user_activity_profiles` - UserActivityProfile
-
 ### 其他辅助域
 - `commit_metrics` - CommitMetrics
 - `daily_dev_stats` - DailyDevStats
@@ -103,13 +99,14 @@
 - `jira_projects` - JiraProject
 - `jira_sprints` - JiraSprint
 - `license_risk_rules` - LicenseRiskRule
-- `rbac_permissions` - Permission
-- `rbac_roles` - Role
 - `sonar_issues` - SonarIssue
 - `sonar_measures` - SonarMeasure
 - `sonar_projects` - SonarProject
 - `stg_raw_data` - RawDataStaging
-- `sys_role_permissions` - RolePermission
+- `sys_menu` - SysMenu
+- `sys_role` - SysRole
+- `sys_role_dept` - SysRoleDept
+- `sys_role_menu` - SysRoleMenu
 - `sys_sync_logs` - SyncLog
 - `sys_team_members` - TeamMember
 - `sys_teams` - Team
@@ -146,13 +143,27 @@
 
 ### Company (`mdm_company`)
 
-**业务描述**: 公司实体参考表。
+**业务描述**: 公司实体参考表 (Legal Entity)。 用于定义集团内的法律实体/纳税主体，支持财务核算和合同签署主体的管理。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `company_id` | String(50) | PK | 否 | - | - |
+| `company_id` | String(50) | PK | 否 | - | 公司唯一标识 (如 COM-BJ-01) |
+| `name` | String(200) | - | 否 | - | 公司注册全称 |
+| `short_name` | String(100) | - | 是 | - | 公司简称 |
+| `tax_id` | String(50) | UNIQUE, INDEX | 是 | - | 统一社会信用代码/税号 |
+| `currency` | String(10) | - | 是 | CNY | 本位币种 (CNY/USD) |
+| `fiscal_year_start` | String(10) | - | 是 | 01-01 | 财年开始日期 (MM-DD) |
+| `registered_address` | String(255) | - | 是 | - | 注册地址 |
+| `location_id` | String(50) | FK | 是 | - | 主要办公地点ID |
+| `is_active` | Boolean | - | 是 | True | 是否存续经营 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
+
+#### 关系映射
+
+- **location**: many-to-one -> `Location`
 
 ---
 
@@ -164,13 +175,15 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `issue_type` | String(50) | - | 是 | - | - |
-| `severity` | String(20) | - | 是 | - | - |
-| `entity_id` | String(100) | - | 是 | - | - |
-| `status` | String(20) | - | 是 | - | - |
-| `description` | Text | - | 是 | - | - |
-| `metadata_payload` | JSON | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `issue_type` | String(50) | - | 是 | - | 问题类型 (安全漏洞/许可证违规/合规缺失) |
+| `severity` | String(20) | - | 是 | - | 严重等级 (Critical/High/Medium/Low) |
+| `entity_id` | String(100) | INDEX | 是 | - | 关联实体ID (项目/服务) |
+| `status` | String(20) | - | 是 | OPEN | 状态 (OPEN/IN_REVIEW/RESOLVED/ACCEPTED) |
+| `description` | Text | - | 是 | - | 问题详情 |
+| `metadata_payload` | JSON | - | 是 | - | 额外元数据 (JSON) |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
 
 ---
 
@@ -234,18 +247,23 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `service_id` | Integer | FK, INDEX | 否 | - | - |
-| `system_code` | String(50) | FK | 否 | - | - |
-| `external_resource_id` | String(100) | - | 否 | - | - |
-| `element_type` | String(50) | - | 是 | source-code | - |
-| `is_active` | Boolean | - | 是 | True | - |
-| `last_verified_at` | DateTime | - | 是 | - | - |
-| `meta_info` | JSON | - | 是 | - | - |
-| `is_current` | Boolean | - | 是 | True | - |
-| `sync_version` | Integer | - | 是 | 1 | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `service_id` | Integer | FK, INDEX | 否 | - | 所属业务服务ID |
+| `system_code` | String(50) | FK | 否 | - | 来源系统代码 (如 gitlab-corp) |
+| `external_resource_id` | String(100) | - | 否 | - | 外部资源唯一标识 (如 Project ID, Repo URL) |
+| `resource_name` | String(200) | - | 是 | - | 资源显示名称快照 (如 backend/payment-service) |
+| `env_tag` | String(20) | - | 是 | PROD | 环境标签 (PROD/UAT/TEST/DEV) |
+| `element_type` | String(50) | - | 是 | source-code | 资源类型 (source-code/ci-pipeline/k8s-deployment/db-instance) |
+| `is_active` | Boolean | - | 是 | True | 关联是否有效 |
+| `last_verified_at` | DateTime | - | 是 | - | 最后一次验证连接有效的时间 |
+| `meta_info` | JSON | - | 是 | - | 额外元数据连接信息 (JSON, 如 webhook_id, bind_key) |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
@@ -256,13 +274,47 @@
 
 ### EpicMaster (`mdm_epic`)
 
-**业务描述**: 跨团队/长期史诗需求 (Epic) 主数据。
+**业务描述**: 跨团队/长期史诗需求 (Epic) 主数据。 用于管理跨越多个迭代、涉及多个团队的战略级需求组件 (Initiatives/Epics)。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `parent_id` | Integer | FK | 是 | - | 父级 Epic ID (支持多层级) |
+| `epic_code` | String(50) | UNIQUE, INDEX | 否 | - | 史诗唯一编码 (如 EPIC-24Q1-001) |
+| `title` | String(200) | - | 否 | - | 史诗标题 |
+| `description` | Text | - | 是 | - | 价值陈述与详细描述 |
+| `status` | String(50) | - | 是 | ANALYSIS | 状态 (ANALYSIS/BACKLOG/IN_PROGRESS/DONE/CANCELLED) |
+| `priority` | String(20) | - | 是 | P1 | 优先级 (P0-Strategic / P1-High) |
+| `okr_objective_id` | Integer | FK | 是 | - | 关联战略目标ID |
+| `investment_theme` | String(100) | - | 是 | - | 投资主题 (如 技术债/新业务/合规/客户体验) |
+| `budget_cap` | Numeric | - | 是 | - | 预算上限 (人天或金额) |
+| `owner_id` | UUID | FK | 是 | - | 史诗负责人ID (Epic Owner) |
+| `group_id` | String(100) | FK | 是 | - | 所属群组/组织ID (GitLab Group) |
+| `start_date_is_fixed` | Boolean | - | 是 | False | 是否固定开始时间 (False则自动继承子任务) |
+| `due_date_is_fixed` | Boolean | - | 是 | False | 是否固定结束时间 |
+| `planned_start_date` | Date | - | 是 | - | 计划开始日期 |
+| `planned_end_date` | Date | - | 是 | - | 计划完成日期 |
+| `actual_start_date` | Date | - | 是 | - | 实际开始日期 |
+| `actual_end_date` | Date | - | 是 | - | 实际完成日期 |
+| `progress` | Numeric | - | 是 | 0.0 | 总体进度 (0.0-1.0, 基于子任务聚合) |
+| `color` | String(20) | - | 是 | - | Roadmap展示颜色 (Hex Code) |
+| `is_confidential` | Boolean | - | 是 | False | 是否机密 Epic |
+| `web_url` | String(255) | - | 是 | - | GitLab 原始链接 |
+| `external_id` | String(50) | - | 是 | - | 外部系统ID (如 GitLab Epic IID) |
+| `involved_teams` | JSON | - | 是 | - | 涉及团队列表 (JSON List) |
+| `tags` | JSON | - | 是 | - | 标签 (JSON List) |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
+
+#### 关系映射
+
+- **owner**: many-to-one -> `User`
+- **group**: many-to-one -> `Organization`
+- **okr_objective**: many-to-one -> `OKRObjective`
+- **parent**: many-to-one -> `EpicMaster`
+- **children**: one-to-many -> `EpicMaster`
 
 ---
 
@@ -297,7 +349,7 @@
 - **department**: many-to-one -> `Organization`
 - **managed_organizations**: one-to-many -> `Organization`
 - **identities**: one-to-many -> `IdentityMapping`
-- **roles**: one-to-many -> `Role`
+- **roles**: one-to-many -> `SysRole`
 - **test_cases**: one-to-many -> `GTMTestCase`
 - **requirements**: one-to-many -> `GTMRequirement`
 - **managed_products_as_pm**: one-to-many -> `Product`
@@ -341,7 +393,31 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `title` | String(200) | - | 否 | - | 事故标题 |
+| `description` | Text | - | 是 | - | 事故详细描述 |
+| `severity` | String(20) | - | 是 | - | 严重等级 (P0/P1/P2/P3) |
+| `status` | String(20) | - | 是 | OPEN | 状态 (OPEN:处理中 / RESOLVED:已恢复 / CLOSED:已结单 / MONITORING:观察中) |
+| `occurred_at` | DateTime | - | 是 | - | 故障发生时间 (用于计算 TTI: Time to Impact) |
+| `detected_at` | DateTime | - | 是 | - | 故障发现时间 (用于计算 MTTD: Time to Detect) |
+| `resolved_at` | DateTime | - | 是 | - | 业务恢复时间 (用于计算 MTTR: Time to Restore) |
+| `location_id` | String(50) | FK | 是 | - | 故障发生地点ID |
+| `root_cause_category` | String(50) | - | 是 | - | 根因分类 (Code Change/Config Change/Capacity/Infrastructure/Exteanl) |
+| `post_mortem_url` | String(255) | - | 是 | - | 复盘报告链接 (Confluence/Doc URL) |
+| `affected_users` | Integer | - | 是 | - | 受影响用户数量预估 |
+| `financial_loss` | Numeric | - | 是 | 0.0 | 预估经济损失金额 (CNY) |
+| `owner_id` | UUID | FK | 是 | - | 主责任人ID (On-call) |
+| `project_id` | String(100) | FK | 是 | - | 关联项目ID |
+| `service_id` | Integer | FK | 是 | - | 故障服务ID |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
+
+#### 关系映射
+
+- **location**: many-to-one -> `Location`
+- **owner**: many-to-one -> `User`
+- **project**: many-to-one -> `ProjectMaster`
+- **service**: many-to-one -> `Service`
 
 ---
 
@@ -374,10 +450,11 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `location_id` | String(50) | UNIQUE, INDEX | 是 | - | 位置唯一标识 |
-| `location_name` | String(200) | - | 否 | - | 位置名称 |
-| `short_name` | String(50) | - | 是 | - | 简称 |
-| `location_type` | String(50) | - | 是 | - | 位置类型 (country/province/city/datacenter) |
+| `location_id` | String(50) | UNIQUE, INDEX | 是 | - | 位置唯一标识 (如 UUID) |
+| `code` | String(20) | UNIQUE, INDEX | 是 | - | 行政区划或业务编码 (如 CN-GD, 440000) |
+| `location_name` | String(200) | - | 否 | - | 位置名称 (如 广东省) |
+| `short_name` | String(50) | - | 是 | - | 简称 (如 广东) |
+| `location_type` | String(50) | - | 是 | - | 位置类型 (country/province/city/site/datacenter) |
 | `parent_id` | String(50) | - | 是 | - | 上级位置ID |
 | `region` | String(50) | - | 是 | - | 区域 (华北/华东/华南) |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
@@ -395,21 +472,21 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `metric_code` | String(100) | PK | 否 | - | - |
-| `metric_name` | String(200) | - | 否 | - | - |
-| `domain` | String(50) | - | 否 | - | - |
-| `metric_type` | String(50) | - | 是 | - | - |
-| `calculation_logic` | Text | - | 是 | - | - |
-| `unit` | String(50) | - | 是 | - | - |
-| `aggregate_type` | String(20) | - | 是 | - | - |
-| `source_model` | String(200) | - | 是 | - | - |
-| `dimension_scope` | JSON | - | 是 | - | - |
-| `is_standard` | Boolean | - | 是 | True | - |
-| `business_owner_id` | UUID | FK | 是 | - | - |
-| `time_grain` | String(50) | - | 是 | - | - |
-| `update_cycle` | String(50) | - | 是 | - | - |
-| `status` | String(50) | - | 是 | RELEASED | - |
-| `is_active` | Boolean | - | 是 | True | - |
+| `metric_code` | String(100) | PK | 否 | - | 指标唯一编码 (如 DORA_MTTR_PROD) |
+| `metric_name` | String(200) | - | 否 | - | 指标展示名称 (如 生产环境平均修复时间) |
+| `domain` | String(50) | - | 否 | - | 所属业务域 (DEVOPS/FINANCE/OPERATION) |
+| `metric_type` | String(50) | - | 是 | - | 指标类型 (ATOMIC:原子指标 / DERIVED:派生指标 / COMPOSITE:复合指标) |
+| `calculation_logic` | Text | - | 是 | - | 计算逻辑说明 (SQL公式或自然语言描述) |
+| `unit` | String(50) | - | 是 | - | 度量单位 (%, ms, Hours, Count, CNY) |
+| `aggregate_type` | String(20) | - | 是 | - | 聚合方式 (SUM, AVG, COUNT, MAX, MIN) |
+| `source_model` | String(200) | - | 是 | - | 来源数据模型 (关联 dbt 模型或数据库表名) |
+| `dimension_scope` | JSON | - | 是 | - | 允许下钻的维度列表 (JSON List, 如 ["dept", "application", "priority"]) |
+| `is_standard` | Boolean | - | 是 | True | 是否集团标准指标 (True: 锁定口径, 不允许随意修改) |
+| `business_owner_id` | UUID | FK | 是 | - | 指标业务负责人ID (PDM/Data Owner) |
+| `time_grain` | String(50) | - | 是 | - | 统计时间粒度 (Daily, Weekly, Monthly) |
+| `update_cycle` | String(50) | - | 是 | - | 数据刷新周期 (Realtime, T+1, Hourly) |
+| `status` | String(50) | - | 是 | RELEASED | 生命周期状态 (DRAFT:草稿 / RELEASED:已发布 / DEPRECATED:已废弃) |
+| `is_active` | Boolean | - | 是 | True | 是否启用 (逻辑删除标志) |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
@@ -506,12 +583,13 @@
 - **products**: one-to-many -> `Product`
 - **gitlab_projects**: one-to-many -> `GitLabProject`
 - **children**: one-to-many -> `Organization`
+- **roles**: one-to-many -> `SysRole`
 
 ---
 
 ### Product (`mdm_product`)
 
-**业务描述**: 产品主数据表 (mdm_product)。
+**业务描述**: 产品主数据表 (mdm_product)。 支持 SCD Type 2，记录产品生命周期状态、负责人变更及规格调整的历史轨迹。
 
 #### 字段定义
 
@@ -533,6 +611,11 @@
 | `product_manager_id` | UUID | FK | 是 | - | 产品经理ID |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
@@ -557,6 +640,7 @@
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
 | `pm_user_id` | UUID | FK | 是 | - | 项目经理ID |
 | `org_id` | String(100) | FK | 是 | - | 负责部门ID |
+| `location_id` | String(50) | FK | 是 | - | 项目所属/实施地点ID |
 | `plan_start_date` | Date | - | 是 | - | 计划开始日期 |
 | `plan_end_date` | Date | - | 是 | - | 计划结束日期 |
 | `actual_start_at` | DateTime | - | 是 | - | 实际开始时间 |
@@ -671,10 +755,10 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `service_id` | Integer | FK | 否 | - | - |
-| `source` | String(50) | - | 是 | - | - |
-| `project_id` | Integer | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `service_id` | Integer | FK | 否 | - | 服务ID |
+| `source` | String(50) | - | 是 | - | 项目来源系统 (gitlab/jira) |
+| `project_id` | Integer | - | 是 | - | 外部项目ID |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
@@ -686,7 +770,7 @@
 
 ### Service (`mdm_services`)
 
-**业务描述**: 服务/组件目录表 (Extended with Backstage Component Model).
+**业务描述**: 服务/组件目录表 (Extended with Backstage Component Model). 支持 SCD Type 2，记录服务定级 (Tier)、生命周期 (Lifecycle) 及归属权的历史演进。
 
 #### 字段定义
 
@@ -704,6 +788,11 @@
 | `links` | JSON | - | 是 | - | 相关链接 (JSON) |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
@@ -724,13 +813,13 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `service_id` | Integer | FK | 否 | - | - |
-| `name` | String(100) | - | 否 | - | - |
-| `indicator_type` | String(50) | - | 是 | - | - |
-| `target_value` | Numeric | - | 是 | - | - |
-| `metric_unit` | String(20) | - | 是 | - | - |
-| `time_window` | String(20) | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `service_id` | Integer | FK | 否 | - | 关联服务ID |
+| `name` | String(100) | - | 否 | - | SLO 名称 |
+| `indicator_type` | String(50) | - | 是 | - | 指标类型 (Availability/Latency/Throughput) |
+| `target_value` | Numeric | - | 是 | - | 目标值 |
+| `metric_unit` | String(20) | - | 是 | - | 度量单位 (%/ms) |
+| `time_window` | String(20) | - | 是 | - | 统计窗口期 (28d/7d) |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
@@ -742,28 +831,38 @@
 
 ### SystemRegistry (`mdm_systems_registry`)
 
-**业务描述**: 三方系统注册表，记录对接的所有外部系统 (GitLab, Jira, Sonar 等)。 作为数据源治理注册中心，定义了连接方式、同步策略及数据治理属性。
+**业务描述**: 三方系统注册表，记录对接的所有外部系统 (GitLab, Jira, Sonar 等)。 作为数据源治理注册中心，定义了连接方式、同步策略及数据治理属性。 - 用于管理 Collector 采集目标 - 用于 Issue Tracking 集成配置 支持 SCD Type 2 以审计连接配置的变更记录。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `system_code` | String(50) | PK | 否 | - | - |
-| `system_name` | String(100) | - | 否 | - | - |
-| `system_type` | String(50) | - | 是 | - | - |
-| `base_url` | String(255) | - | 是 | - | - |
-| `api_version` | String(20) | - | 是 | - | - |
-| `auth_type` | String(50) | - | 是 | - | - |
-| `sync_method` | String(50) | - | 是 | - | - |
-| `update_cycle` | String(50) | - | 是 | - | - |
-| `data_sensitivity` | String(20) | - | 是 | - | - |
-| `sla_level` | String(20) | - | 是 | - | - |
-| `technical_owner_id` | UUID | FK | 是 | - | - |
-| `is_active` | Boolean | - | 是 | True | - |
-| `last_heartbeat` | DateTime | - | 是 | - | - |
-| `remarks` | Text | - | 是 | - | - |
+| `system_code` | String(50) | PK | 否 | - | 系统唯一标准代号 (如 gitlab-corp) |
+| `system_name` | String(100) | - | 否 | - | 系统显示名称 |
+| `system_type` | String(50) | - | 是 | - | 工具类型 (VCS/TICKET/CI/SONAR/K8S) |
+| `env_tag` | String(20) | - | 是 | PROD | 环境标签 (PROD/Stage/Test) |
+| `base_url` | String(255) | - | 是 | - | API 基础地址 (Base URL) |
+| `api_version` | String(20) | - | 是 | - | API 接口版本 (如 v4, api/v2) |
+| `auth_type` | String(50) | - | 是 | - | 认证方式 (OAuth2/Token/Basic) |
+| `credential_key` | String(100) | - | 是 | - | 凭证引用Key (指向Vault或Env Var) |
+| `plugin_config` | JSON | - | 是 | - | 插件特定配置 (JSON, 如过滤规则、超时设置) |
+| `sync_method` | String(50) | - | 是 | - | 同步方式 (CDC/Polling/Webhook) |
+| `update_cycle` | String(50) | - | 是 | - | 更新频率 (Realtime/Hourly/Daily) |
+| `enabled_plugins` | String(255) | - | 是 | - | 启用的采集插件列表 (逗号分隔) |
+| `data_sensitivity` | String(20) | - | 是 | - | 数据敏感级 (L1-L4) |
+| `sla_level` | String(20) | - | 是 | - | 服务等级 (P0-Critical / P1-High) |
+| `technical_owner_id` | UUID | FK | 是 | - | 技术负责人ID |
+| `is_active` | Boolean | - | 是 | True | 是否启用采集 |
+| `last_heartbeat` | DateTime | - | 是 | - | 最后连通性检查时间 |
+| `last_sync_at` | DateTime | - | 是 | - | 最后一次数据同步时间 |
+| `remarks` | Text | - | 是 | - | 备注说明 |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
@@ -780,27 +879,42 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `source_system` | String(50) | - | 是 | - | - |
-| `source_type` | String(50) | - | 是 | - | - |
-| `source_id` | String(100) | - | 是 | - | - |
-| `target_system` | String(50) | - | 是 | - | - |
-| `target_type` | String(50) | - | 是 | - | - |
-| `target_id` | String(100) | - | 是 | - | - |
-| `link_type` | String(50) | - | 是 | - | - |
-| `raw_data` | JSON | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `source_system` | String(50) | - | 是 | - | 源系统 (jira/gitlab) |
+| `source_type` | String(50) | - | 是 | - | 源实体类型 (requirement/story) |
+| `source_id` | String(100) | INDEX | 是 | - | 源实体ID |
+| `target_system` | String(50) | - | 是 | - | 目标系统 (gitlab/jenkins) |
+| `target_type` | String(50) | - | 是 | - | 目标实体类型 (commit/merge_request/build) |
+| `target_id` | String(100) | INDEX | 是 | - | 目标实体ID |
+| `link_type` | String(50) | - | 是 | - | 链路类型 (implements/tests/deploys) |
+| `raw_data` | JSON | - | 是 | - | 原始关联数据 (JSON) |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
 
 ---
 
 ### Vendor (`mdm_vendor`)
 
-**业务描述**: 外部供应商参考表。
+**业务描述**: 外部供应商主数据表。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `vendor_code` | String(50) | PK | 否 | - | - |
+| `vendor_code` | String(50) | PK | 否 | - | 供应商唯一编码 |
+| `name` | String(200) | - | 否 | - | 供应商全称 |
+| `short_name` | String(100) | - | 是 | - | 供应商简称 |
+| `category` | String(50) | - | 是 | - | 供应商类别 (人力外包/软件许可/云服务/硬件) |
+| `status` | String(20) | - | 是 | ACTIVE | 合作状态 (ACTIVE/BLACKLIST/INACTIVE) |
+| `tax_id` | String(50) | - | 是 | - | 统一社会信用代码/税号 |
+| `payment_terms` | String(100) | - | 是 | - | 默认账期 (e.g. Net 30, Net 60) |
+| `currency` | String(10) | - | 是 | CNY | 默认结算币种 |
+| `contact_person` | String(100) | - | 是 | - | 主要联系人 |
+| `contact_email` | String(100) | - | 是 | - | 联系邮箱 |
+| `contact_phone` | String(50) | - | 是 | - | 联系电话 |
+| `rating` | Numeric | - | 是 | 0.0 | 供应商绩效评分 (0-5) |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
 
 ---
 
@@ -836,18 +950,6 @@
 ---
 
 ## 测试管理域
-
-### TestExecutionSummary (`fct_test_execution_summary`)
-
-**业务描述**: 测试执行汇总记录表。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-
----
 
 ### GTMRequirement (`gtm_requirements`)
 
@@ -947,6 +1049,31 @@
 #### 关系映射
 
 - **project**: many-to-one -> `GitLabProject`
+
+---
+
+### JenkinsTestExecution (`jenkins_test_executions`)
+
+**业务描述**: Jenkins 测试执行汇总记录表。 存储来自 Jenkins 持续集成工具的测试报告汇总数据。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `project_id` | Integer | INDEX | 是 | - | 关联 GitLab 项目 ID |
+| `build_id` | String(100) | INDEX | 否 | - | 构建 ID (Jenkins Build Number) |
+| `test_level` | String(50) | - | 是 | - | 测试层级 (Unit/API/UI/Performance/Automation) |
+| `test_tool` | String(100) | - | 是 | - | 测试工具 (Jenkins/JUnit/Pytest) |
+| `total_cases` | Integer | - | 是 | 0 | 用例总数 |
+| `passed_count` | Integer | - | 是 | 0 | 通过用例数 |
+| `failed_count` | Integer | - | 是 | 0 | 失败用例数 |
+| `skipped_count` | Integer | - | 是 | 0 | 跳过用例数 |
+| `pass_rate` | Numeric | - | 是 | 0.0 | 通过率 (%) |
+| `duration_ms` | Integer | - | 是 | 0 | 执行时长 (毫秒) |
+| `raw_data` | JSON | - | 是 | - | 原始测试报告 JSON |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
 
 ---
 
@@ -1303,7 +1430,7 @@
 
 #### 关系映射
 
-- **role**: many-to-one -> `Role`
+- **role**: many-to-one -> `SysRole`
 - **project**: many-to-one -> `GitLabProject`
 - **user**: many-to-one -> `User`
 
@@ -1439,13 +1566,13 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `user_id` | String(100) | INDEX | 是 | - | - |
-| `provider` | String(50) | INDEX | 是 | - | - |
-| `access_token` | String(1024) | - | 否 | - | - |
-| `refresh_token` | String(1024) | - | 是 | - | - |
-| `token_type` | String(50) | - | 是 | - | - |
-| `expires_at` | DateTime | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `user_id` | String(100) | INDEX | 是 | - | 用户标识 |
+| `provider` | String(50) | INDEX | 是 | - | OAuth 提供商 (gitlab/github/azure) |
+| `access_token` | String(1024) | - | 否 | - | 访问令牌 (加密存储) |
+| `refresh_token` | String(1024) | - | 是 | - | 刷新令牌 |
+| `token_type` | String(50) | - | 是 | - | 令牌类型 (Bearer) |
+| `expires_at` | DateTime | - | 是 | - | 过期时间 |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
@@ -1453,40 +1580,14 @@
 
 ### UserRole (`sys_user_roles`)
 
-**业务描述**: 用户与角色映射表。
+**业务描述**: 用户与角色关联表 (sys_user_role)。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `user_id` | UUID | PK, FK | 否 | - | - |
-| `role_id` | Integer | PK, FK | 否 | - | - |
-
----
-
-## 分析与洞察域
-
-### PerformanceRecord (`fct_performance_records`)
-
-**业务描述**: 效能/性能表现评估记录表。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-
----
-
-### UserActivityProfile (`fct_user_activity_profiles`)
-
-**业务描述**: 用户活跃度画像快照表。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | BigInteger | PK | 否 | - | - |
+| `user_id` | UUID | PK, FK | 否 | - | 用户ID |
+| `role_id` | Integer | PK, FK | 否 | - | 角色ID |
 
 ---
 
@@ -1782,44 +1883,6 @@
 
 ---
 
-### Permission (`rbac_permissions`)
-
-**业务描述**: 原子权限定义表 (rbac_permissions)。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `code` | String(100) | PK | 否 | - | 权限代码 (如 ticket:create) |
-| `category` | String(50) | - | 是 | - | 权限分类 (ticket/project/admin) |
-| `description` | String(255) | - | 是 | - | 权限描述 |
-
-#### 关系映射
-
-- **roles**: one-to-many -> `Role`
-
----
-
-### Role (`rbac_roles`)
-
-**业务描述**: 系统角色参考表 (rbac_roles)。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | 角色ID |
-| `code` | String(50) | UNIQUE | 否 | - | 角色代码 (admin/pm/dev/viewer) |
-| `name` | String(100) | UNIQUE | 否 | - | 角色显示名称 |
-| `description` | String(255) | - | 是 | - | 角色描述 |
-
-#### 关系映射
-
-- **permissions**: one-to-many -> `Permission`
-- **users**: one-to-many -> `User`
-
----
-
 ### SonarIssue (`sonar_issues`)
 
 **业务描述**: SonarQube 问题详情模型 (sonar_issues)。
@@ -1945,26 +2008,103 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `source` | String(50) | - | 是 | - | - |
-| `entity_type` | String(50) | - | 是 | - | - |
-| `external_id` | String(100) | - | 是 | - | - |
-| `payload` | JSON | - | 是 | - | - |
-| `schema_version` | String(20) | - | 是 | - | - |
-| `collected_at` | DateTime | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `source` | String(50) | - | 是 | - | 数据来源系统 (gitlab/jira/sonar) |
+| `entity_type` | String(50) | - | 是 | - | 实体类型 (project/issue/pipeline) |
+| `external_id` | String(100) | INDEX | 是 | - | 外部系统记录ID |
+| `payload` | JSON | - | 是 | - | 原始 JSON 数据负载 |
+| `schema_version` | String(20) | - | 是 | - | Payload 结构版本 |
+| `collected_at` | DateTime | - | 是 | - | 采集时间 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
 
 ---
 
-### RolePermission (`sys_role_permissions`)
+### SysMenu (`sys_menu`)
 
-**业务描述**: 角色与权限映射表。
+**业务描述**: 系统菜单/权限表 (sys_menu)。 统一管理系统菜单结构和功能权限标识。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `id` | Integer | PK | 否 | - | 菜单ID |
+| `menu_name` | String(50) | - | 否 | - | 菜单名称 |
+| `parent_id` | Integer | FK | 是 | - | 父菜单ID (0或NULL表示顶级) |
+| `order_num` | Integer | - | 是 | 0 | 显示顺序 |
+| `path` | String(200) | - | 是 |  | 路由地址 |
+| `component` | String(255) | - | 是 | - | 组件路径 |
+| `query` | String(255) | - | 是 | - | 路由参数 |
+| `is_frame` | Boolean | - | 是 | False | 是否为外链 |
+| `is_cache` | Boolean | - | 是 | True | 是否缓存 |
+| `menu_type` | String(1) | - | 是 |  | 菜单类型 (M目录 C菜单 F按钮) |
+| `visible` | Boolean | - | 是 | True | 菜单状态 (True显示 False隐藏) |
+| `status` | Boolean | - | 是 | True | 菜单状态 (True正常 False停用) |
+| `perms` | String(100) | - | 是 | - | 权限标识 (e.g. system:user:list) |
+| `icon` | String(100) | - | 是 | # | 菜单图标 |
+| `remark` | String(500) | - | 是 |  | 备注 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
+
+#### 关系映射
+
+- **children**: one-to-many -> `SysMenu`
+- **parent**: many-to-one -> `SysMenu`
+- **roles**: one-to-many -> `SysRole`
+
+---
+
+### SysRole (`sys_role`)
+
+**业务描述**: 系统角色表 (sys_role)。 扩展支持数据范围权限及角色继承。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `id` | Integer | PK | 否 | - | 角色ID |
+| `role_name` | String(30) | - | 否 | - | 角色名称 |
+| `role_key` | String(100) | UNIQUE | 否 | - | 角色权限字符串 |
+| `role_sort` | Integer | - | 否 | 0 | 显示顺序 |
+| `data_scope` | Integer | - | 是 | 1 | 数据范围 |
+| `parent_id` | Integer | - | 是 | 0 | 父角色ID (RBAC1) |
+| `status` | Boolean | - | 是 | True | 角色状态 |
+| `del_flag` | Boolean | - | 是 | False | 删除标志 |
+| `remark` | String(500) | - | 是 | - | 备注 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
+
+#### 关系映射
+
+- **menus**: one-to-many -> `SysMenu`
+- **depts**: one-to-many -> `Organization`
+- **users**: one-to-many -> `User`
+
+---
+
+### SysRoleDept (`sys_role_dept`)
+
+**业务描述**: 角色和部门关联表 (sys_role_dept)，用于自定义数据权限。
 
 #### 字段定义
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `role_id` | Integer | PK, FK | 否 | - | - |
-| `permission_code` | String(100) | PK, FK | 否 | - | - |
+| `dept_id` | String(100) | PK, FK | 否 | - | - |
+
+---
+
+### SysRoleMenu (`sys_role_menu`)
+
+**业务描述**: 角色和菜单关联表 (sys_role_menu)。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `role_id` | Integer | PK, FK | 否 | - | - |
+| `menu_id` | Integer | PK, FK | 否 | - | - |
 
 ---
 
@@ -2010,7 +2150,7 @@
 
 ### Team (`sys_teams`)
 
-**业务描述**: 虚拟业务团队/项目组表。
+**业务描述**: 虚拟业务团队/项目组表。 支持 SCD Type 2，用于精确追踪团队名称、负责人及组织归属的历史变更， 确保 DORA 等效能指标能准确归因到"当时的团队"。
 
 #### 字段定义
 
@@ -2025,6 +2165,11 @@
 | `leader_id` | UUID | FK | 是 | - | 团队负责人ID |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
