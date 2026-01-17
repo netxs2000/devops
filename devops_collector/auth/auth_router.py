@@ -126,6 +126,8 @@ def auth_register(user: auth_schema.AuthRegisterRequest, db: Session = Depends(g
 def auth_login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_auth_db)):
     """登录获取访问令牌。
     
+    RBAC 2.0: 从 SysRole + SysMenu 聚合权限，支持角色继承。
+    
     Args:
         form_data: 表单数据。
         db: 数据库会话。
@@ -136,6 +138,8 @@ def auth_login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()
     Raises:
         HTTPException: 用户名或密码错误。
     """
+    from devops_collector.core import security
+    
     user = auth_service.auth_authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -145,18 +149,24 @@ def auth_login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()
         )
     access_token_expires = timedelta(minutes=auth_service.ACCESS_TOKEN_EXPIRE_MINUTES)
     
-    # 获取用户角色和权限清单，用于注入 JWT 实现无状态校验
-    user_roles = [r.code for r in user.roles]
-    user_permissions = set()
-    for r in user.roles:
-        for p in r.permissions:
-            user_permissions.add(p.code)
+    # RBAC 2.0: 获取用户角色标识列表
+    user_roles = [r.role_key for r in user.roles] if user.roles else []
+    
+    # RBAC 2.0: 聚合用户所有角色的权限标识 (含角色继承)
+    user_permissions = security.get_user_permissions(db, user)
+    
+    # RBAC 2.0: 获取用户有效的数据范围
+    data_scope = security.get_user_effective_data_scope(db, user)
     
     token_data = {
         'sub': user.primary_email,
         'user_id': str(user.global_user_id),
+        'username': user.username,
+        'full_name': user.full_name,
+        'department_id': user.department_id,
         'roles': user_roles,
-        'permissions': list(user_permissions)
+        'permissions': user_permissions,
+        'data_scope': data_scope
     }
     
     access_token = auth_service.auth_create_access_token(

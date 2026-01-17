@@ -113,13 +113,34 @@ const Auth = {
 
     /**
      * 检查是否拥有特定权限点
+     * RBAC 2.0: 支持通配符 * 代表所有权限
      */
     hasPermission(permissionCode) {
         const payload = this.getPayload();
         if (!payload) return false;
+        // 超管角色直接放行
         if (payload.roles && payload.roles.includes('SYSTEM_ADMIN')) return true;
         if (!payload.permissions) return false;
+        // 通配符权限放行
+        if (payload.permissions.includes('*')) return true;
         return payload.permissions.includes(permissionCode);
+    },
+
+    /**
+     * 获取用户的数据范围
+     * @returns {number} data_scope (1-5)
+     */
+    getDataScope() {
+        const payload = this.getPayload();
+        return payload ? (payload.data_scope || 5) : 5;
+    },
+
+    /**
+     * 获取用户的部门ID
+     */
+    getDepartmentId() {
+        const payload = this.getPayload();
+        return payload ? payload.department_id : null;
     },
 
     /**

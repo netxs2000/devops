@@ -38,7 +38,12 @@ def fixture_db_session():
         yield db
     finally:
         db.close()
+        # Disable foreign keys for cleanup to avoid IntegrityError with circular dependencies
+        with engine.begin() as conn:
+            conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
         Base.metadata.drop_all(bind=engine)
+        with engine.begin() as conn:
+            conn.exec_driver_sql("PRAGMA foreign_keys=ON")
 
 @pytest.fixture(name="client")
 def fixture_client(db_session):

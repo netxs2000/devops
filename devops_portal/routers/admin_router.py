@@ -6,11 +6,11 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.models.base_models import (
     Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember,
-    Product, ProjectProductRelation
+    Product, ProjectProductRelation, SysRole
 )
 from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_collector.core.admin_service import AdminService
-from devops_portal.dependencies import get_current_user, RoleRequired, PermissionRequired
+from devops_portal.dependencies import get_current_user, RoleRequired, PermissionRequired, DataScopeFilter
 from devops_portal.schemas import (
     TeamCreate, TeamView, TeamMemberCreate, UserFullProfile,
     ProductView, ProductCreate, ProjectProductRelationView, ProjectProductRelationCreate,
@@ -26,11 +26,16 @@ def get_admin_service(db: Session = Depends(get_auth_db)) -> AdminService:
 
 @router.get('/users', response_model=List[dict])
 async def list_users(
+    filter: DataScopeFilter = Depends(),
     db: Session=Depends(get_auth_db),
-    admin_user: User=Depends(PermissionRequired(['USER:VIEW']))
+    current_user: User=Depends(PermissionRequired(['system:user:list']))
 ):
     """获取所有全局用户简要列表。"""
-    users = db.query(User).filter(User.is_current == True).all()
+    query = db.query(User).filter(User.is_current == True)
+    # User 表通常不需要 RLS 过滤（基础数据），或者仅过滤非本部门? 
+    # 此处假设用户管理列表需要遵循 RLS，比如部门经理只能看本部门员工
+    query = filter.apply(db, query, User, current_user, dept_field='department_id')
+    users = query.all()
     return [{'user_id': str(u.global_user_id), 'full_name': u.full_name, 'email': u.primary_email} for u in users]
 
 @router.get('/users/{user_id}', response_model=UserFullProfile)
@@ -181,13 +186,25 @@ class RepoLinkRequest(BaseModel):
     is_lead: Optional[bool] = False
 
 @router.get('/mdm-projects')
-async def list_mdm_projects(db: Session=Depends(get_auth_db)):
+async def list_mdm_projects(
+    filter: DataScopeFilter = Depends(),
+    db: Session=Depends(get_auth_db),
+    current_user: User=Depends(PermissionRequired(['system:project:mapping']))
+):
     """获取所有业务主项目。"""
-    projects = db.query(ProjectMaster).options(
+    query = db.query(ProjectMaster).options(
         joinedload(ProjectMaster.organization),
         selectinload(ProjectMaster.gitlab_repos),
         selectinload(ProjectMaster.product_relations).joinedload(ProjectProductRelation.product)
-    ).filter(ProjectMaster.is_current == True).all()
+    ).filter(ProjectMaster.is_current == True)
+    
+    # 应用 RLS: 
+    # - 部门权限基于 org_id
+    # - 个人权限自动推断 (OwnableMixin.get_owner_column -> pm_user_id)
+    query = filter.apply(db, query, ProjectMaster, current_user, dept_field='org_id')
+    
+    projects = query.all()
+    
     return [{
         'project_id': p.project_id, 
         'project_name': p.project_name, 

@@ -8,14 +8,15 @@
     - 第2层: 核心功能模块 (dependency, test_management)
 """
 from .base_models import (
-    Base, Organization, User, Role, Location, Calendar, SyncLog, RawDataStaging, 
+    Base, Organization, User, Location, Calendar, SyncLog, RawDataStaging, 
     IdentityMapping, Product, OKRObjective, OKRKeyResult, TraceabilityLink, 
     JenkinsTestExecution, Incident, ResourceCost, 
     Service, ServiceProjectMapping, SLO, TimestampMixin, RawDataMixin, ProjectMaster, 
     ContractPaymentNode, RevenueContract, PurchaseContract, UserCredential, UserOAuthToken, 
     MetricDefinition, SystemRegistry, EntityTopology, Company, Vendor, EpicMaster, 
-    ComplianceIssue, CommitMetrics, DailyDevStats, Team, TeamMember, Permission, 
-    RolePermission, UserRole, LaborRateConfig, CostCode, ProjectProductRelation
+    ComplianceIssue, CommitMetrics, DailyDevStats, Team, TeamMember, 
+    SysRole, SysMenu, SysRoleMenu, SysRoleDept, OwnableMixin,
+    UserRole, LaborRateConfig, CostCode, ProjectProductRelation
 )
 from .dependency import DependencyScan, LicenseRiskRule, Dependency, DependencyCVE
 from .test_management import GTMTestCase, GTMTestCaseIssueLink, GTMRequirement, GTMTestExecutionRecord
@@ -37,14 +38,15 @@ except ImportError:
     pass
 
 __all__ = [
-    'Base', 'Organization', 'User', 'Role', 'Location', 'Calendar', 'SyncLog', 'RawDataStaging', 
+    'Base', 'Organization', 'User', 'Location', 'Calendar', 'SyncLog', 'RawDataStaging', 
     'IdentityMapping', 'Product', 'OKRObjective', 'OKRKeyResult', 'TraceabilityLink', 
     'JenkinsTestExecution', 'Incident', 'ResourceCost', 
     'Service', 'ServiceProjectMapping', 'SLO', 'TimestampMixin', 'RawDataMixin', 'ProjectMaster', 
     'ContractPaymentNode', 'RevenueContract', 'PurchaseContract', 'UserCredential', 'UserOAuthToken', 
     'MetricDefinition', 'SystemRegistry', 'EntityTopology', 'Company', 'Vendor', 'EpicMaster', 
-    'ComplianceIssue', 'CommitMetrics', 'DailyDevStats', 'Team', 'TeamMember', 'Permission', 
-    'RolePermission', 'UserRole', 'LaborRateConfig', 'CostCode', 'ProjectProductRelation',
+    'ComplianceIssue', 'CommitMetrics', 'DailyDevStats', 'Team', 'TeamMember', 
+    'SysRole', 'SysMenu', 'SysRoleMenu', 'SysRoleDept', 'OwnableMixin',
+    'UserRole', 'LaborRateConfig', 'CostCode', 'ProjectProductRelation',
     'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE',
     'GTMTestCase', 'GTMTestCaseIssueLink', 'GTMRequirement', 'GTMTestExecutionRecord'
 ]

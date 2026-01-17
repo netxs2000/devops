@@ -1,7 +1,7 @@
 # 部署与运维手册 (Deployment & Operations Guide)
 
-**版本**: 4.1.0
-**日期**: 2026-01-11
+**版本**: 4.2.0
+**日期**: 2026-01-18
 
 ## 1. 部署环境要求 (Prerequisites)
 
@@ -47,19 +47,23 @@ pip install -r requirements.txt
 # 1. 登录 PostgreSQL 创建数据库
 psql -U postgres -c "CREATE DATABASE devops_db;"
 
-# 2. 运行初始化脚本 (自动建表)
-python scripts/init_discovery.py
+# 2. 运行 Alembic 迁移 (数据库 Schema 初始化与升级)
+python -m alembic upgrade head
 
-# 3. 初始化财务基础数据 (科目、费率、合约示例) (New)
+# 3. 初始化 RBAC 2.0 权限数据 (New)
+python scripts/init_rbac.py
+
+# 4. 初始化主数据与财务基础数据 (科目、费率、合约示例)
+python scripts/init_discovery.py
 python scripts/init_cost_codes.py
 python scripts/init_labor_rates.py
 python scripts/init_purchase_contracts.py
 python scripts/init_revenue_contracts.py
 
-### 2.5 服务台门户部署 (Service Desk Web Portal)
-*   **资源部署**: 将 `devops_portal/static/` 目录下的所有 HTML/CSS/JS 文件部署至 Nginx 静态服务目录，或确保 FastAPI 应用已挂载静态目录。
-*   **认证配置**: 确保环境变量中已配置 `SECURITY__SECRET_KEY` (用于 JWT 签名) 和有效期。
-*   **通知服务**: 确保 RabbitMQ 服务运行正常，该组件负责支撑 SSE 实时推送功能。
+### 2.5 安全与权限配置 (RBAC 2.0)
+*   **认证密钥**: 确保环境变量 `SECURITY__SECRET_KEY` 已设置，用于 JWT 签名。
+*   **权限初始化**: 必须运行 `python scripts/init_rbac.py` 以创建默认的 `SYSTEM_ADMIN` 角色及菜单权限树。
+*   **行级隔离**: 默认启用基于 `data_scope` 的数据隔离，管理员可通过“角色管理”界面调整各角色的可视范围。
 ```
 
 ## 3. 配置详解 (Configuration)
@@ -139,5 +143,6 @@ pg_dump -U username devops_db > backup_$(date +%Y%m%d).sql
 ```bash
 git pull
 pip install -r requirements.txt  # 依赖可能变更
-# 如果有 Schema 变更，目前需手动执行 SQL（后续版本引入 Alembic）
+python -m alembic upgrade head   # 执行数据库 Schema 迁移升级
+python scripts/init_rbac.py       # 更新菜单权限定义 (幂等操作)
 ```
