@@ -1,0 +1,240 @@
+version: 2
+
+models:
+  # =============================================================================
+  # Staging 层 - 原始数据清洗
+  # =============================================================================
+
+  # --- GitLab 相关 ---
+  - name: stg_gitlab_projects
+    description: "GitLab 项目清洗层，1:1 映射源表 gitlab_projects"
+    columns:
+      - name: project_id
+        description: "GitLab 项目唯一标识"
+        tests:
+          - not_null
+          - unique
+      - name: name
+        description: "项目名称"
+      - name: path_with_namespace
+        description: "项目完整路径 (含命名空间)"
+      - name: namespace_id
+        description: "所属命名空间 ID"
+      - name: created_at
+        description: "项目创建时间"
+      - name: last_activity_at
+        description: "最后活动时间"
+      - name: visibility
+        description: "可见性级别 (private/internal/public)"
+
+  - name: stg_gitlab_commits
+    description: "GitLab 提交记录清洗层"
+    columns:
+      - name: commit_id
+        description: "提交 SHA 哈希值"
+        tests:
+          - not_null
+      - name: project_id
+        description: "所属项目 ID"
+      - name: author_email
+        description: "提交者邮箱"
+      - name: committed_at
+        description: "提交时间"
+      - name: message
+        description: "提交信息"
+
+  - name: stg_gitlab_merge_requests
+    description: "GitLab 合并请求清洗层"
+    columns:
+      - name: mr_id
+        description: "合并请求唯一标识"
+        tests:
+          - not_null
+      - name: project_id
+        description: "所属项目 ID"
+      - name: state
+        description: "状态 (opened/merged/closed)"
+      - name: author_id
+        description: "创建者用户 ID"
+      - name: created_at
+        description: "创建时间"
+      - name: merged_at
+        description: "合并时间"
+
+  - name: stg_gitlab_pipelines
+    description: "GitLab 流水线清洗层"
+    columns:
+      - name: pipeline_id
+        description: "流水线唯一标识"
+        tests:
+          - not_null
+      - name: project_id
+        description: "所属项目 ID"
+      - name: status
+        description: "状态 (success/failed/running/pending)"
+      - name: ref
+        description: "触发分支/标签"
+      - name: created_at
+        description: "创建时间"
+      - name: finished_at
+        description: "完成时间"
+      - name: duration
+        description: "执行时长 (秒)"
+
+  - name: stg_gitlab_deployments
+    description: "GitLab 部署记录清洗层"
+    columns:
+      - name: deployment_id
+        description: "部署唯一标识"
+        tests:
+          - not_null
+      - name: project_id
+        description: "所属项目 ID"
+      - name: environment
+        description: "部署环境 (development/staging/production)"
+      - name: status
+        description: "部署状态"
+      - name: deployed_at
+        description: "部署时间"
+
+  - name: stg_gitlab_issues
+    description: "GitLab 议题清洗层"
+    columns:
+      - name: issue_id
+        description: "议题唯一标识"
+        tests:
+          - not_null
+      - name: project_id
+        description: "所属项目 ID"
+      - name: state
+        description: "状态 (opened/closed)"
+      - name: author_id
+        description: "创建者用户 ID"
+      - name: created_at
+        description: "创建时间"
+      - name: closed_at
+        description: "关闭时间"
+
+  - name: stg_gitlab_notes
+    description: "GitLab 评论记录清洗层"
+    columns:
+      - name: note_id
+        description: "评论唯一标识"
+      - name: noteable_type
+        description: "评论对象类型 (Issue/MergeRequest)"
+      - name: author_id
+        description: "评论者用户 ID"
+      - name: created_at
+        description: "评论时间"
+
+  # --- MDM 相关 ---
+  - name: stg_mdm_organizations
+    description: "组织架构清洗层"
+    columns:
+      - name: org_id
+        description: "组织唯一标识"
+        tests:
+          - not_null
+          - unique
+      - name: org_name
+        description: "组织名称"
+      - name: parent_org_id
+        description: "上级组织 ID"
+      - name: org_level
+        description: "组织层级"
+      - name: is_active
+        description: "是否启用"
+
+  - name: stg_mdm_identities
+    description: "全局用户身份清洗层"
+    columns:
+      - name: global_user_id
+        description: "全局用户唯一标识 (UUID)"
+        tests:
+          - not_null
+          - unique
+      - name: employee_id
+        description: "HR 系统工号"
+      - name: full_name
+        description: "用户姓名"
+      - name: primary_email
+        description: "主邮箱地址"
+      - name: department_id
+        description: "所属部门 ID"
+      - name: is_active
+        description: "是否在职"
+
+  - name: stg_mdm_projects
+    description: "业务项目主数据清洗层"
+    columns:
+      - name: project_id
+        description: "业务项目唯一标识"
+        tests:
+          - not_null
+          - unique
+      - name: project_name
+        description: "项目名称"
+      - name: project_type
+        description: "项目类型"
+      - name: status
+        description: "项目状态 (PLAN/ACTIVE/CLOSED)"
+      - name: org_id
+        description: "负责部门 ID"
+      - name: pm_user_id
+        description: "项目经理用户 ID"
+
+  - name: stg_mdm_identity_mappings
+    description: "外部身份映射关系清洗层"
+    columns:
+      - name: id
+        description: "映射记录 ID"
+      - name: global_user_id
+        description: "全局用户 ID"
+      - name: source_system
+        description: "来源系统 (gitlab/jira/sonar)"
+      - name: external_user_id
+        description: "外部系统用户 ID"
+      - name: external_username
+        description: "外部系统用户名"
+
+  - name: stg_mdm_resource_costs
+    description: "资源成本记录清洗层"
+    columns:
+      - name: id
+        description: "成本记录 ID"
+      - name: service_id
+        description: "关联服务 ID"
+      - name: period
+        description: "费用周期 (YYYY-MM)"
+      - name: amount
+        description: "费用金额"
+      - name: cost_type
+        description: "成本类型 (云资源/人力/软件)"
+
+  # --- SonarQube 相关 ---
+  - name: stg_sonar_projects
+    description: "SonarQube 项目清洗层"
+    columns:
+      - name: project_key
+        description: "SonarQube 项目唯一键"
+        tests:
+          - not_null
+          - unique
+      - name: name
+        description: "项目名称"
+      - name: qualifier
+        description: "项目类型 (TRK/APP)"
+
+  - name: stg_sonar_measures
+    description: "SonarQube 质量指标清洗层"
+    columns:
+      - name: id
+        description: "指标记录 ID"
+      - name: project_key
+        description: "所属项目键"
+      - name: metric_key
+        description: "指标代码 (bugs/vulnerabilities/code_smells)"
+      - name: value
+        description: "指标值"
+      - name: collected_at
+        description: "采集时间"

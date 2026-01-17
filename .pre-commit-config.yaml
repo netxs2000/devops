@@ -1,0 +1,55 @@
+# Pre-commit configuration for DevOps Platform
+# See https://pre-commit.com for more information
+
+repos:
+  # 代码格式化
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        language_version: python3
+        args: ['--line-length=100']
+
+  # 代码质量检查
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        args: ['--max-line-length=100', '--ignore=E501,W503']
+
+  # 本地自定义检查
+  - repo: local
+    hooks:
+      # 数据字典新鲜度检查
+      - id: check-data-dict
+        name: Check Data Dictionary Freshness
+        entry: python scripts/check_data_dict_freshness.py
+        language: python
+        files: 'devops_collector/models/.*\.py$|devops_collector/plugins/.*/models\.py$'
+        pass_filenames: false
+        always_run: false
+
+      # 禁止提交包含表情符号的文件
+      - id: check-no-emoji
+        name: Check No Emoji in Code
+        entry: python -c "import sys; sys.exit(1 if any(ord(c) > 127 and ord(c) in range(0x1F600, 0x1F64F) for c in open(sys.argv[1]).read()) else 0)"
+        language: python
+        types: [python, markdown, html, css, javascript]
+        exclude: '^(tests/|archived/)'
+
+      # 检查中文注释规范
+      - id: check-docstrings
+        name: Check Docstrings Exist
+        entry: python -c "
+import sys
+import ast
+with open(sys.argv[1]) as f:
+    tree = ast.parse(f.read())
+for node in ast.walk(tree):
+    if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+        if not ast.get_docstring(node):
+            print(f'Missing docstring: {node.name} in {sys.argv[1]}')
+"
+        language: python
+        types: [python]
+        exclude: '^(tests/|archived/|scripts/)'

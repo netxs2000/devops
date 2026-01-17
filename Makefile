@@ -4,7 +4,7 @@
 #  所有操作均在容器内部执行，确保环境一致性
 # -----------------------------------------------------------
 
-.PHONY: help deploy init test build up down logs sync-all shell clean lock install init-dev
+.PHONY: help deploy init test build up down logs sync-all shell clean lock install init-dev docs
 
 # 颜色定义
 YELLOW := \033[1;33m
@@ -22,7 +22,7 @@ help: ## 显示帮助信息
 # 核心部署流程 (One-Click Deployment)
 # =============================================================================
 
-deploy: down build up init ## [一键部署] 重建镜像 -> 启动服务 -> 初始化数据
+deploy: down build up init docs ## [一键部署] 重建镜像 -> 启动服务 -> 初始化数据 -> 更新文档
 	@echo "$(CYAN)DevOps Platform deployed successfully!$(RESET)"
 
 init: ## [初始化] 在容器内安装依赖并初始化数据库数据
@@ -208,3 +208,13 @@ clean: ## 清理临时文件
 	find . -type f -name "*.pyc" -delete
 	find . -type f -name "*.pyo" -delete
 	find . -type f -name "*.log" -delete
+
+# =============================================================================
+# 文档生成工具
+# =============================================================================
+
+docs: ## [工具] 自动生成/更新数据字典文档
+	@echo "$(GREEN)Generating Data Dictionary...$(RESET)"
+	$(EXEC_CMD) python scripts/generate_data_dictionary.py
+	@echo "$(CYAN)Data Dictionary updated: docs/api/DATA_DICTIONARY.md$(RESET)"
+
