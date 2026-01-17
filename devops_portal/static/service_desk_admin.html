@@ -7,6 +7,21 @@
     <title>后台管理 - Service Desk</title>
     <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="auth_utils.js"></script>
+    <script>
+        // 权限准入校验
+        if (!Auth.isLoggedIn() || !Auth.hasPermission('USER:MANAGE')) {
+            document.body.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:var(--bg-main); color:var(--text-main);">
+                    <div style="font-size:60px; margin-bottom:20px;">🚫</div>
+                    <h2>权限不足</h2>
+                    <p style="color:var(--text-dim); margin-top:10px;">您没有访问管理后台的权限，请联系管理员分配 USER:MANAGE 权限。</p>
+                    <button onclick="window.parent.location.reload()" class="btn-token" style="margin-top:20px; padding:10px 20px;">返回首页</button>
+                </div>
+            `;
+            throw new Error("Unauthorized access");
+        }
+    </script>
     <style>
         * {
             margin: 0;
@@ -340,15 +355,7 @@
         </div>
     </header>
 
-    <div id="tokenGate" class="token-modal">
-        <div class="modal-content">
-            <h2>管理后台登录</h2>
-            <p>请输入管理员访问令牌以继续</p>
-            <input type="password" id="adminTokenInput" placeholder="请输入令牌...">
-            <button class="btn-approve" style="width: 100%" onclick="setToken()">验证并进入</button>
-            <p style="font-size: 0.75rem; margin-top: 1rem; text-align: center;">演示令牌：admin_secret_token_2025</p>
-        </div>
-    </div>
+    <!-- 移除了 TokenGate，现在由全局 JWT 认证 -->
 
     <div id="rejectModal" class="reject-modal">
         <div class="reject-content">
@@ -366,7 +373,7 @@
     <main id="adminMain" style="display: none;">
         <div class="page-title">
             <h1>用户管理</h1>
-            <button class="btn-token" onclick="logoutAdmin()">退出管理</button>
+            <!-- 移除了退出按钮，由父容器统一管理 -->
         </div>
 
         <div class="stats-row" id="statsRow">
@@ -411,44 +418,21 @@
 
     <script>
         let currentTab = 'pending';
-        let adminToken = '';
-
-        function setToken() {
-            const input = document.getElementById('adminTokenInput');
-            if (!input.value) return;
-            adminToken = input.value;
-            localStorage.setItem('admin_token', adminToken);
-            document.getElementById('tokenGate').style.display = 'none';
-            document.getElementById('adminMain').style.display = 'block';
-            loadData();
-        }
-
-        function logoutAdmin() {
-            localStorage.removeItem('admin_token');
-            location.reload();
-        }
 
         async function loadData() {
             const container = document.getElementById('userTableBody');
             container.innerHTML = '<tr><td colspan="5" class="loading">正在加载数据...</td></tr>';
 
             try {
-                let url = `/service-desk/admin/all-users?admin_token=${adminToken}`;
+                let url = `/service-desk/admin/all-users`;
+                const queryParams = new URLSearchParams();
                 if (currentTab !== 'all') {
-                    url += `&status=${currentTab}`;
+                    queryParams.append('status', currentTab);
                 }
 
-                const response = await fetch(url);
-                if (!response.ok) {
-                    if (response.status === 403) {
-                        alert('管理令牌无效，请重新输入');
-                        logoutAdmin();
-                        return;
-                    }
-                    throw new Error('加载失败');
-                }
+                const path = queryParams.toString() ? `${url}?${queryParams.toString()}` : url;
+                const result = await Api.get(path);
 
-                const result = await response.json();
                 updateStats(result.stats);
                 displayUsers(result.users);
 
@@ -541,26 +525,19 @@
 
         async function actionUser(email, approved, reason = '', gitlabId = '') {
             try {
-                const params = new URLSearchParams({
+                const params = {
                     email: email,
-                    approved: approved,
-                    admin_token: adminToken
-                });
-                if (reason) params.append('reject_reason', reason);
-                if (gitlabId) params.append('gitlab_user_id', gitlabId);
+                    approved: approved
+                };
+                if (reason) params.reject_reason = reason;
+                if (gitlabId) params.gitlab_user_id = gitlabId;
 
-                const response = await fetch(`/service-desk/admin/approve-user?${params.toString()}`, {
-                    method: 'POST'
-                });
+                const queryStr = new URLSearchParams(params).toString();
+                await Api.post(`/service-desk/admin/approve-user?${queryStr}`, {});
 
-                if (response.ok) {
-                    loadData();
-                } else {
-                    const error = await response.json();
-                    alert(`操作失败: ${error.detail}`);
-                }
+                loadData();
             } catch (err) {
-                alert(`网络错误: ${err.message}`);
+                alert(`操作失败: ${err.message}`);
             }
         }
 
@@ -586,13 +563,8 @@
 
         // Initialize
         window.onload = () => {
-            const storedToken = localStorage.getItem('admin_token');
-            if (storedToken) {
-                adminToken = storedToken;
-                document.getElementById('tokenGate').style.display = 'none';
-                document.getElementById('adminMain').style.display = 'block';
-                loadData();
-            }
+            document.getElementById('adminMain').style.display = 'block';
+            loadData();
         };
     </script>
 </body>

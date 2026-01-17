@@ -94,6 +94,7 @@ class AuthUserResponse(BaseModel):
     is_active: bool
     location: Optional[AuthLocationInfo] = None
     department: Optional[AuthDepartmentInfo] = None
+    roles: List[dict] = []
     gitlab_connected: bool = False
 
     model_config = ConfigDict(from_attributes=True)

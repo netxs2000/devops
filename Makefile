@@ -4,7 +4,7 @@
 #  所有操作均在容器内部执行，确保环境一致性
 # -----------------------------------------------------------
 
-.PHONY: help deploy init test build up down logs sync-all shell clean lock install
+.PHONY: help deploy init test build up down logs sync-all shell clean lock install init-dev
 
 # 颜色定义
 YELLOW := \033[1;33m
@@ -47,7 +47,13 @@ init: ## [初始化] 在容器内安装依赖并初始化数据库数据
 
 install: ## [内用] 安装生产环境或开发环境依赖
 	@echo "$(GREEN)Installing dependencies...$(RESET)"
-	$(EXEC_CMD) pip install -i https://pypi.tuna.tsinghua.edu.cn/simple .
+	$(EXEC_CMD) pip install --default-timeout=100 .
+
+init-dev: ## [本地] 初始化开发环境依赖 (使用官方 PyPI, 需 VPN)
+	@echo "$(GREEN)Initializing local development environment via official PyPI...$(RESET)"
+	python -m pip install --upgrade pip
+	pip install -e .[dev]
+	@echo "$(CYAN)Local environment initialized successfully!$(RESET)"
 
 lock: ## [工具] 将 pyproject.toml 的依赖锁定到 requirements.txt
 	@echo "$(GREEN)Locking dependencies to requirements.txt (Inside Container)...$(RESET)"

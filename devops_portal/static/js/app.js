@@ -10,13 +10,14 @@
 function switchView(view) {
     const navItems = [
         'nav-dashboard', 'nav-tests', 'nav-test-execution', 'nav-defects', 'nav-reqs',
-        'nav-matrix', 'nav-reports', 'nav-governance', 'nav-pulse', 'nav-support', 'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-projects', 'nav-admin-users'
+        'nav-matrix', 'nav-reports', 'nav-governance', 'nav-pulse', 'nav-support', 'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-approvals', 'nav-admin-products', 'nav-admin-projects', 'nav-admin-users'
     ];
 
     const viewItems = [
         'results', 'statsGrid', 'testExecutionView', 'bugView', 'matrixView',
         'requirementsView', 'reportsView', 'view-servicedesk',
-        'sdSubmitView', 'sdMyView', 'decisionHubView', 'governanceView', 'pulseView', 'adminProjectsView', 'adminUsersView'
+        'sdSubmitView', 'sdMyView', 'decisionHubView', 'governanceView', 'pulseView',
+        'adminApprovalsView', 'adminProductsView', 'adminProjectsView', 'adminUsersView'
     ];
 
     // Reset all nav and views
@@ -116,6 +117,11 @@ function switchView(view) {
     } else if (view === 'pulse') {
         document.getElementById('pulseView').style.display = 'block';
         document.getElementById('pulseFrame').src = 'devex_pulse.html';
+    } else if (view === 'admin_approvals') {
+        document.getElementById('adminApprovalsView').style.display = 'block';
+    } else if (view === 'admin_products') {
+        document.getElementById('adminProductsView').style.display = 'block';
+        loadAdminProducts();
     } else if (view === 'admin_projects') {
         document.getElementById('adminProjectsView').style.display = 'block';
         loadAdminProjects();
@@ -233,11 +239,15 @@ function initUserProfile(user) {
         badgeV2.style.display = 'inline-flex';
     }
 
-    // 管理员菜单显示逻辑
-    const roles = user.roles || [];
-    const isAdmin = roles.some(r => r.code === 'SYSTEM_ADMIN' || r.code === 'ADMIN');
-    if (isAdmin) {
+    // 管理员及权限菜单显示逻辑
+    if (Auth.isAdmin() || Auth.hasPermission('USER:MANAGE')) {
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+    }
+
+    // 细粒度控制 (如果后续需要)
+    if (!Auth.hasPermission('USER:MANAGE')) {
+        const approvalLink = document.getElementById('nav-admin-approvals');
+        if (approvalLink) approvalLink.style.display = 'none';
     }
 
     window.currentUser = user;
@@ -506,4 +516,96 @@ async function deleteMapping(id) {
     } catch (e) {
         UI.showToast('删除失败: ' + e.message, 'error');
     }
+}
+
+// --- Admin: Product Architecture Management ---
+
+async function loadAdminProducts() {
+    try {
+        const productTbody = document.getElementById('productsTableBody');
+        const relationTbody = document.getElementById('productProjectTableBody');
+        const productSelect = document.getElementById('linkProductSelect');
+        const projectSelect = document.getElementById('linkProjectSelect');
+
+        productTbody.innerHTML = '<tr><td colspan="5">加载中...</td></tr>';
+
+        // 1. 并行获取产品、项目和所有关联
+        const [products, projects] = await Promise.all([
+            Api.request('/admin/products'),
+            Api.request('/admin/mdm-projects')
+        ]);
+
+        // 2. 渲染产品列表
+        productTbody.innerHTML = '';
+        productSelect.innerHTML = '<option value="">-- 选择产品 --</option>';
+        products.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <div style="font-weight:bold;">${p.product_name}</div>
+                    <code style="font-size:10px; opacity:0.7;">${p.product_code}</code>
+                </td>
+                <td><span class="badge">${p.category || '通用'}</span></td>
+                <td><span class="badge badge-passed">${p.lifecycle_status}</span></td>
+                <td>${p.owner_team_id || '-'}</td>
+                <td>
+                    <button class="btn btn-sm" onclick="alert('编辑功能开发中')">编辑</button>
+                </td>
+            `;
+            productTbody.appendChild(tr);
+
+            const opt = document.createElement('option');
+            opt.value = p.product_id;
+            opt.textContent = p.product_name;
+            productSelect.appendChild(opt);
+        });
+
+        // 3. 填充项目下拉框
+        projectSelect.innerHTML = '<option value="">-- 选择关联项目 --</option>';
+        projects.forEach(proj => {
+            const opt = document.createElement('option');
+            opt.value = proj.project_id;
+            opt.textContent = proj.project_name;
+            projectSelect.appendChild(opt);
+        });
+
+        // 4. 加载关联关系 (此处假设关联信息需要额外逻辑或已通过项目信息带回)
+        // 实际开发中可以通过专门接口：/admin/product-project-relations
+        // 这里暂时通过已加载的项目数据解析（如果后端支持的话），或者简单留空。
+        relationTbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-dim);">请建立新的产品-项目关联</td></tr>';
+
+    } catch (e) {
+        UI.showToast('产品数据加载失败: ' + e.message, 'error');
+    }
+}
+
+async function submitProductProjectLink() {
+    const productId = document.getElementById('linkProductSelect').value;
+    const projectId = document.getElementById('linkProjectSelect').value;
+
+    if (!productId || !projectId) {
+        UI.showToast('请选择产品和项目', 'warning');
+        return;
+    }
+
+    try {
+        await Api.request('/admin/link-product', {
+            method: 'POST',
+            body: JSON.stringify({
+                product_id: productId,
+                project_id: projectId,
+                relation_type: 'PRIMARY',
+                allocation_ratio: 1.0
+            })
+        });
+        UI.showToast('产品与项目关联成功', 'success');
+        loadAdminProducts();
+    } catch (e) {
+        UI.showToast('关联失败: ' + e.message, 'error');
+    }
+}
+
+function openCreateProductModal() {
+    // 简单实现：使用 prompt 或在 index.html 增加 Modal
+    UI.showToast('产品新增请通过 SQL 导入或后续 Modal 开发', 'info');
 }
