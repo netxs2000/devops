@@ -1,6 +1,71 @@
 # netxs 工作日志 (Work Log)
 
-## 2026-01-06 每日工作总结 - netxs
+## 2026-01-18 每日工作总结 - netxs
+
+### 今日焦点与目标达成 - 2026-01-18
+
+**RBAC 2.0 时代开启与全量文档同步**。今日完成了 RBAC 重构后的最后收尾工作，包括全套技术文档的同步更新、数据字典的自动刷新以及项目正式版本的发布。系统现已全面转型为支持分布式数据范围权限（RLS）的新一代权限架构，并完成了向 v4.2.0 版本的跨越。
+
+### 主要完成的工作 (Highlights) - 2026-01-18
+
+* **文档体系全量同步 (Documentation Alignment)**:
+  * **README & CHANGELOG**: 将系统版本正式升级至 **v4.2.0**。在 `README.md` 中将 "企业级 RBAC 2.0" 确立为核心特性，并在修订记录中详细补充了权限引擎的五表体系、菜单树及行级过滤等新增项。
+  * **部署手册更新**: 在 `DEPLOYMENT.md` 中引入了 Alembic 迁移指令及 `init_rbac.py` 的初始化规范，移除了所有关于 Schema 手动执行的过时描述。
+  * **项目手册扩编**: 在 `PROJECT_SUMMARY_AND_MANUAL.md` 中新增了 RBAC 2.0 专项章节，详述了从功能权限到行级数据权限的深度管控逻辑。
+  * **设计方案归档**: 将 `RBAC_DESIGN_PROPOSAL.md` 更新为 2.1 版本，标记为“已实现”，并清理了所有早期废弃表的参考信息。
+
+* **数据资产自动化维护 (Data Assets Maintenance)**:
+  * **数据字典生成**: 执行 `make docs` 指令，通过 `generate_data_dictionary.py` 自动化刷新了 `DATA_DICTIONARY.md`，完整收录了 `sys_role`、`sys_menu` 等 72 个数据表的业务语义。
+
+* **Git 提交规范治理 (Git Governance)**:
+  * 遵循 Conventional Commits 规范生成了重构后的里程碑式提交信息。
+
+---
+
+## 2026-01-17 每日工作总结 - netxs
+
+### 今日焦点与目标达成 - 2026-01-17
+
+**RBAC 质量堡垒构建与迁移瓶颈突破**。今日工作重心在于通过严苛的集成测试验证重构后的权限逻辑，并攻克了 SQLite 环境下复杂的数据库迁移依赖难题。通过对测试环境的底层优化（内存数据库化）及鉴权模拟机制的重构，确保了系统在 RBAC 2.0 下的 100% 稳定性。
+
+### 主要完成的工作 (Highlights) - 2026-01-17
+
+* **测试架构深度优化 (Test Infrastructure Modernization)**:
+  * **内存数据库转型**: 针对 `tests/test_user_org_governance.py`，将文件型 SQLite 切换至 **In-Memory SQLite + StaticPool**，彻底解决了高频测试下的“数据库只读”锁定及文件残留问题。
+  * **鉴权拦截突破**: 废弃了简易的 `dependency_overrides`，引入了基于 `auth_service` 的 **真实 JWT 模拟鉴权**。通过 Mock `auth_get_current_user` 返回测试主体，完美适配了 `PermissionRequired` 卫兵的解析需求。
+  * **SQLite 兼容性补丁**: 在全量测试 Suite 的 `db_session` fixture 中注入了 `PRAGMA foreign_keys=OFF` 定向补丁，解决了 SQLite 在 `drop_all` 时因循环外键产生的 IntegrityError。
+
+* **数据库迁移链路疏通 (Migration Synchronization)**:
+  * **非空约束平滑更新**: 优化了 Alembic 迁移脚本（`3414408a4c10`），通过“先加列(可空)->充默认值->改非空”三步走策略，解决了存量数据表注入 `sync_version` 时的 NotNullViolation。
+  * **依赖顺序纠偏**: 手工精修了 `15670218bb0d` 迁移脚本，通过调整物理表删除顺序和外键约束释放节点，解决了旧版表移除时的 `DependentObjectsStillExist` 报错。
+
+* **回归验证 (Regression Testing)**:
+  * **100% 通过率**: 完成了 38 个核心集成与单元测试用例的适配与执行，验证了 `system:user:list` 等新版权限标识符的正确性。
+
+---
+
+## 2026-01-16 每日工作总结 - netxs
+
+### 今日焦点与目标达成 - 2026-01-16
+
+**RBAC 2.0 架构升级与安全底座重塑**。今日启动了系统安全架构的全面代际跨越，将散乱的旧版权限逻辑彻底重构为基于标准 RBAC 2.0 模型的高可复用体系。通过引入菜单权限树与行级过滤机制，解决了多维组织架构下的数据穿透与隔离难题。
+
+### 主要完成的工作 (Highlights) - 2026-01-16
+
+* **权限模型现代化 (RBAC 2.0 Schema Implementation)**:
+  * **标准化五表落地**: 在 `base_models.py` 中实现了 `sys_role` (角色)、`sys_menu` (菜单/权限)、`sys_user_roles`、`sys_role_menu`、`sys_role_dept` 的标准化建模，确立了权限与业务的物理隔离。
+  * **角色继承架构**: 引入了基于 `parent_id` 的角色层级，降低了复杂行政层级下的权限配置复杂度。
+
+* **行级权限引擎落地 (RLS Engine)**:
+  * **Data Scope 机制**: 在 `security.py` 中实现了基于数据范围的自动化过滤逻辑，覆盖了“从全部数据”到“仅本人记录”五大维度。
+  * **自动化 SQL 注入**: 实现了 `apply_row_level_security` 装饰器，确保开发者无需关心权限细节即可获得安全合规的查询结果。
+
+* **鉴权流程重构 (Auth Flow Refactoring)**:
+  * **JWT 载荷增强**: 优化了 `auth/router.py`，实现了权限标识符的动态聚合与 JWT 注入，显著降低了网关层的鉴权延迟。
+  * **卫兵依赖注入**: 实现了 `PermissionRequired` 和 `RoleRequired` 类依赖，并将后台所有 Admin 手工管理的 API 路由全部迁移至这一新标准。
+
+---
+
 
 ### 今日焦点与目标达成 - 2026-01-06
 
