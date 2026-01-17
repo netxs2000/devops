@@ -1,16 +1,18 @@
 """Service Desk Router: Handles business user tickets and interactions."""
 import logging
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Body
 from sqlalchemy.orm import Session
-from devops_collector.models.base_models import User, ProjectMaster
+from devops_collector.models.base_models import User, ProjectMaster, IdentityMapping
 from devops_portal import schemas
 from devops_collector.auth.auth_database import get_auth_db
-from devops_portal.dependencies import get_current_user
+from devops_portal.dependencies import get_current_user, PermissionRequired
 from devops_collector.plugins.gitlab.service_desk_service import ServiceDeskService
 from devops_collector.plugins.gitlab.test_management_service import TestManagementService as TestingService
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.auth.auth_dependency import get_user_gitlab_client
 from devops_collector.core.security import apply_plugin_privacy_filter
+from devops_collector.config import settings
 
 router = APIRouter(prefix='/service-desk', tags=['service-desk'])
 logger = logging.getLogger(__name__)
@@ -245,3 +247,99 @@ async def get_my_tickets(
             'created_at': t.created_at.isoformat()
         } for t in my_tickets
     ]
+
+# --- Admin: User Approval & Mapping Confirmation ---
+
+@router.get('/admin/all-users')
+async def list_all_users_for_admin(
+    status: Optional[str] = None,
+    admin_user: User = Depends(PermissionRequired(['USER:MANAGE'])),
+    db: Session = Depends(get_auth_db)
+):
+    """[管理后台] 获取所有用户申请记录及统计信息。"""
+    # 已通过 PermissionRequired 校验权限
+    
+    query = db.query(User).filter(User.is_current == True)
+    if status == 'pending':
+        query = query.filter(User.is_active == False, User.is_survivor == True) # survivor and inactive means pending
+    elif status == 'approved':
+        query = query.filter(User.is_active == True)
+    elif status == 'rejected':
+        query = query.filter(User.is_active == False, User.is_survivor == False) # not active and not survivor means rejected
+
+    users = query.all()
+    
+    # 获取统计信息
+    total = db.query(User).filter(User.is_current == True).count()
+    pending = db.query(User).filter(User.is_current == True, User.is_active == False, User.is_survivor == True).count()
+    approved = db.query(User).filter(User.is_current == True, User.is_active == True).count()
+    rejected = db.query(User).filter(User.is_current == True, User.is_active == False, User.is_survivor == False).count()
+
+    results = []
+    for u in users:
+        u_status = 'approved' if u.is_active else ('pending' if u.is_survivor else 'rejected')
+        # 获取关联的 GitLab ID
+        gitlab_mapping = db.query(IdentityMapping).filter(IdentityMapping.global_user_id == u.global_user_id, IdentityMapping.source_system == 'gitlab').first()
+        
+        results.append({
+            'name': u.full_name,
+            'email': u.primary_email,
+            'company': u.department.org_name if u.department else '未知',
+            'created_at': u.created_at.isoformat(),
+            'status': u_status,
+            'gitlab_user_id': gitlab_mapping.external_user_id if gitlab_mapping else None
+        })
+
+    return {
+        'stats': {
+            'total': total,
+            'pending': pending,
+            'approved': approved,
+            'rejected': rejected
+        },
+        'users': results
+    }
+
+@router.post('/admin/approve-user')
+async def approve_user_application(
+    email: str, 
+    approved: bool, 
+    admin_user: User = Depends(PermissionRequired(['USER:MANAGE'])),
+    reject_reason: Optional[str] = None,
+    gitlab_user_id: Optional[str] = None,
+    db: Session = Depends(get_auth_db)
+):
+    """[管理后台] 审批用户申请并绑定身份标识。"""
+    # 已通过 PermissionRequired 校验权限
+    
+    user = db.query(User).filter(User.primary_email == email, User.is_current == True).first()
+    if not user:
+        raise HTTPException(status_code=404, detail='User not found')
+    
+    if approved:
+        user.is_active = True
+        user.is_survivor = True
+        # 如果提供了 GitLab ID，则创建或更新身份映射
+        if gitlab_user_id:
+            mapping = db.query(IdentityMapping).filter(
+                IdentityMapping.global_user_id == user.global_user_id, 
+                IdentityMapping.source_system == 'gitlab'
+            ).first()
+            if mapping:
+                mapping.external_user_id = gitlab_user_id
+                mapping.mapping_status = 'VERIFIED'
+            else:
+                mapping = IdentityMapping(
+                    global_user_id=user.global_user_id,
+                    source_system='gitlab',
+                    external_user_id=gitlab_user_id,
+                    mapping_status='VERIFIED'
+                )
+                db.add(mapping)
+    else:
+        user.is_active = False
+        user.is_survivor = False # 记录为拒绝状态
+        # 实际可以在 User 模型记录 reject_reason，这里简单处理
+    
+    db.commit()
+    return {'status': 'success'}

@@ -1,0 +1,111 @@
+/* Admin Specific Styles */
+.adm-panel {
+    padding: 2rem !important;
+}
+
+.adm-grid {
+    display: grid;
+    gap: 2rem;
+}
+
+.adm-grid-2-cols {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 2rem;
+}
+
+.adm-grid-equal-2-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.adm-grid-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.adm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.adm-title-desc {
+    color: var(--text-dim);
+    margin: 5px 0 0;
+}
+
+.adm-table-container {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.adm-section-title {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.adm-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.adm-badge-active {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--passed);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.adm-badge-warning {
+    background: rgba(217, 119, 6, 0.1);
+    color: var(--warning);
+    border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+.adm-badge-passed {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.adm-form-group {
+    margin-bottom: 1rem;
+}
+
+.adm-form-group-compact {
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.adm-form-label-small {
+    font-size: 12px;
+    margin-bottom: 8px;
+    color: var(--text-dim);
+    display: block;
+}
+
+.adm-select-group {
+    display: flex;
+    gap: 10px;
+}
+
+.adm-flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

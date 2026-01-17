@@ -144,8 +144,23 @@ def auth_login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()
             headers={'WWW-Authenticate': 'Bearer'}
         )
     access_token_expires = timedelta(minutes=auth_service.ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    # 获取用户角色和权限清单，用于注入 JWT 实现无状态校验
+    user_roles = [r.code for r in user.roles]
+    user_permissions = set()
+    for r in user.roles:
+        for p in r.permissions:
+            user_permissions.add(p.code)
+    
+    token_data = {
+        'sub': user.primary_email,
+        'user_id': str(user.global_user_id),
+        'roles': user_roles,
+        'permissions': list(user_permissions)
+    }
+    
     access_token = auth_service.auth_create_access_token(
-        data={'sub': user.primary_email, 'user_id': str(user.global_user_id)}, 
+        data=token_data, 
         expires_delta=access_token_expires
     )
     return {'access_token': access_token, 'token_type': 'bearer'}

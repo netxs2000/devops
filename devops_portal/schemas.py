@@ -292,3 +292,41 @@ class UserFullProfile(BaseModel):
     is_active: bool
     identities: List[IdentityMappingView] = []
     teams: List[Dict[str, Any]] = []
+
+class ProductView(BaseModel):
+    """产品视图模型"""
+    model_config = ConfigDict(from_attributes=True)
+    product_id: str
+    product_code: str
+    product_name: str
+    product_description: str
+    category: Optional[str] = None
+    lifecycle_status: str
+
+class ProductCreate(BaseModel):
+    """创建产品的请求模型"""
+    product_id: str
+    product_code: str
+    product_name: str
+    product_description: str
+    category: Optional[str] = None
+    owner_team_id: Optional[str] = None
+    product_manager_id: Optional[uuid.UUID] = None
+    version_schema: str = 'semver'
+
+class ProjectProductRelationView(BaseModel):
+    """项目与产品关联视图模型"""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    project_id: str
+    product_id: str
+    relation_type: str
+    allocation_ratio: float
+    product_name: Optional[str] = None
+
+class ProjectProductRelationCreate(BaseModel):
+    """创建项目产品关联的请求模型"""
+    project_id: str
+    product_id: str
+    relation_type: str = 'PRIMARY'
+    allocation_ratio: float = 1.0

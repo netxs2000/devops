@@ -192,11 +192,12 @@ class AuthSettings(BaseSettings):
     """认证相关配置。
 
     Attributes:
-        allowed_domains (List[str]): 允许注册的邮箱域名后缀。
         secret_key (str): JWT 签名密钥。
+        admin_api_token (str): 管理后台专用 API 令牌。
     """
     allowed_domains: List[str] = ['tjhq.com', 'mofit.com.cn', 'szlongtu.com']
     secret_key: str = 'your-secret-key-keep-it-secret'
+    admin_api_token: str = 'admin_secret_token_2025'
 
     @field_validator('allowed_domains', mode='before')
     @classmethod
@@ -317,3 +318,4 @@ class Config:
     SLA_P3 = settings.sla.p3
     SLA_P4 = settings.sla.p4
     SLA_DEFAULT = settings.sla.default
+    ADMIN_API_TOKEN = settings.auth.admin_api_token

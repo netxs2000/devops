@@ -9,7 +9,7 @@ import logging
 import uuid
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
-from devops_collector.models.base_models import Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember, UserRole
+from devops_collector.models.base_models import Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember, UserRole, Product, ProjectProductRelation
 from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_portal import schemas
 
@@ -108,3 +108,63 @@ class AdminService:
             mdm_p.lead_repo_id = repo.id
         self.session.commit()
         return True
+
+    def list_products(self) -> List[Product]:
+        """列出所有产品。"""
+        return self.session.query(Product).all()
+
+    def create_product(self, data: schemas.ProductCreate) -> Product:
+        """创建新产品。"""
+        new_product = Product(
+            product_id=data.product_id,
+            product_code=data.product_code,
+            product_name=data.product_name,
+            product_description=data.product_description,
+            category=data.category,
+            version_schema=data.version_schema,
+            owner_team_id=data.owner_team_id,
+            product_manager_id=data.product_manager_id
+        )
+        self.session.add(new_product)
+        self.session.commit()
+        self.session.refresh(new_product)
+        return new_product
+
+    def link_product_to_project(self, data: schemas.ProjectProductRelationCreate) -> ProjectProductRelation:
+        """建立产品与项目的关联。"""
+        # Fetch project to get org_id
+        project = self.session.query(ProjectMaster).filter(ProjectMaster.project_id == data.project_id).first()
+        if not project:
+            raise ValueError(f"Project {data.project_id} not found")
+        
+        # Ensure org_id is available (required by relation model)
+        # Assuming project.org_id is mandatory for this relation to exist
+        org_id = project.org_id
+        if not org_id:
+            # Fallback or raise? Since DB requires it non-null, we must have it.
+            # If project has NULL org_id, we can't create relation.
+            # For now, let's assume we can use a placeholder if testing, but logical is raise.
+            raise ValueError(f"Project {data.project_id} does not belong to any organization")
+
+        relation = self.session.query(ProjectProductRelation).filter(
+            ProjectProductRelation.project_id == data.project_id,
+            ProjectProductRelation.product_id == data.product_id
+        ).first()
+        
+        if relation:
+            relation.relation_type = data.relation_type
+            relation.allocation_ratio = data.allocation_ratio
+            relation.org_id = org_id # Ensure Sync
+        else:
+            relation = ProjectProductRelation(
+                project_id=data.project_id,
+                product_id=data.product_id,
+                relation_type=data.relation_type,
+                allocation_ratio=data.allocation_ratio,
+                org_id=org_id
+            )
+            self.session.add(relation)
+        
+        self.session.commit()
+        self.session.refresh(relation)
+        return relation

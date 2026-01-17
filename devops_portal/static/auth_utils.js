@@ -30,6 +30,8 @@ const Auth = {
     logout() {
         localStorage.removeItem(AUTH_CONFIG.TOKEN_KEY);
         localStorage.removeItem(AUTH_CONFIG.USER_KEY);
+        this._payloadCache = null;
+        this._lastToken = null;
         window.location.href = AUTH_CONFIG.LOGIN_PAGE;
     },
 
@@ -65,6 +67,66 @@ const Auth = {
             }
             return null;
         }
+    },
+
+    /**
+     * 解析 JWT Token 中的载荷 (Payload) 并缓存
+     */
+    getPayload() {
+        const token = this.getToken();
+        if (!token) {
+            this._payloadCache = null;
+            return null;
+        }
+
+        // 如果缓存的 token 没变且已经有解析好的 payload，直接返回
+        if (this._lastToken === token && this._payloadCache) {
+            return this._payloadCache;
+        }
+
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+
+            const payload = JSON.parse(jsonPayload);
+            this._payloadCache = payload;
+            this._lastToken = token;
+            return payload;
+        } catch (e) {
+            console.error("JWT 解析失败", e);
+            this._payloadCache = null;
+            return null;
+        }
+    },
+
+    /**
+     * 检查是否拥有特定角色
+     */
+    hasRole(roleCode) {
+        const payload = this.getPayload();
+        if (!payload || !payload.roles) return false;
+        return payload.roles.includes('SYSTEM_ADMIN') || payload.roles.includes(roleCode);
+    },
+
+    /**
+     * 检查是否拥有特定权限点
+     */
+    hasPermission(permissionCode) {
+        const payload = this.getPayload();
+        if (!payload) return false;
+        if (payload.roles && payload.roles.includes('SYSTEM_ADMIN')) return true;
+        if (!payload.permissions) return false;
+        return payload.permissions.includes(permissionCode);
+    },
+
+    /**
+     * 是否是平台管理员
+     */
+    isAdmin() {
+        return this.hasRole('SYSTEM_ADMIN');
     }
 };
 

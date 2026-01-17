@@ -2,17 +2,19 @@
 from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.models.base_models import (
-    Organization, User, ProjectMaster, IdentityMapping, Team
+    Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember,
+    Product, ProjectProductRelation
 )
 from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_collector.core.admin_service import AdminService
-from devops_portal.dependencies import get_current_user
+from devops_portal.dependencies import get_current_user, RoleRequired, PermissionRequired
 from devops_portal.schemas import (
-    IdentityMappingCreate, IdentityMappingView, IdentityMappingUpdateStatus,
-    TeamCreate, TeamView, TeamMemberCreate, UserFullProfile
+    TeamCreate, TeamView, TeamMemberCreate, UserFullProfile,
+    ProductView, ProductCreate, ProjectProductRelationView, ProjectProductRelationCreate,
+    IdentityMappingView, IdentityMappingCreate, IdentityMappingUpdateStatus
 )
 from pydantic import BaseModel
 import uuid
@@ -23,7 +25,10 @@ def get_admin_service(db: Session = Depends(get_auth_db)) -> AdminService:
     return AdminService(db)
 
 @router.get('/users', response_model=List[dict])
-async def list_users(db: Session=Depends(get_auth_db)):
+async def list_users(
+    db: Session=Depends(get_auth_db),
+    admin_user: User=Depends(PermissionRequired(['USER:VIEW']))
+):
     """获取所有全局用户简要列表。"""
     users = db.query(User).filter(User.is_current == True).all()
     return [{'user_id': str(u.global_user_id), 'full_name': u.full_name, 'email': u.primary_email} for u in users]
@@ -39,7 +44,7 @@ async def get_user_profile(user_id: uuid.UUID, service: AdminService = Depends(g
 @router.get('/identity-mappings', response_model=List[IdentityMappingView])
 async def list_identity_mappings(db: Session=Depends(get_auth_db)):
     """获取所有外部身份映射。"""
-    mappings = db.query(IdentityMapping).all()
+    mappings = db.query(IdentityMapping).options(joinedload(IdentityMapping.user)).all()
     results = []
     for m in mappings:
         view = IdentityMappingView.from_orm(m)
@@ -48,12 +53,13 @@ async def list_identity_mappings(db: Session=Depends(get_auth_db)):
     return results
 
 @router.post('/identity-mappings')
-async def create_identity_mapping(payload: IdentityMappingCreate, db: Session=Depends(get_auth_db), current_user: User=Depends(get_current_user)):
+async def create_identity_mapping(
+    payload: IdentityMappingCreate,
+    db: Session=Depends(get_auth_db),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
     """创建新的外部身份映射。"""
-    user_role_codes = [r.code for r in current_user.roles]
-    if 'SYSTEM_ADMIN' not in user_role_codes:
-        raise HTTPException(status_code=403, detail='Admin only')
-    
+    # 已通过 RoleRequired 校验权限
     new_mapping = IdentityMapping(
         global_user_id=payload.global_user_id,
         source_system=payload.source_system,
@@ -66,12 +72,13 @@ async def create_identity_mapping(payload: IdentityMappingCreate, db: Session=De
     return {'status': 'success', 'id': new_mapping.id}
 
 @router.delete('/identity-mappings/{mapping_id}')
-async def delete_identity_mapping(mapping_id: int, db: Session=Depends(get_auth_db), current_user: User=Depends(get_current_user)):
+async def delete_identity_mapping(
+    mapping_id: int,
+    db: Session=Depends(get_auth_db),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
     """删除指定的身份映射。"""
-    user_role_codes = [r.code for r in current_user.roles]
-    if 'SYSTEM_ADMIN' not in user_role_codes:
-        raise HTTPException(status_code=403, detail='Admin only')
-    
+    # 已通过 RoleRequired 校验权限
     mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
     if not mapping:
         raise HTTPException(status_code=404, detail='Mapping not found')
@@ -85,13 +92,10 @@ async def update_identity_mapping_status(
     mapping_id: int, 
     payload: IdentityMappingUpdateStatus, 
     db: Session=Depends(get_auth_db), 
-    current_user: User=Depends(get_current_user)
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
 ):
     """更新身份映射的状态（治理操作）。"""
-    user_role_codes = [r.code for r in current_user.roles]
-    if 'SYSTEM_ADMIN' not in user_role_codes:
-        raise HTTPException(status_code=403, detail='Admin only')
-        
+    # 已通过 RoleRequired 校验权限
     mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
     if not mapping:
         raise HTTPException(status_code=404, detail='Mapping not found')
@@ -105,7 +109,10 @@ async def update_identity_mapping_status(
 @router.get('/teams', response_model=List[TeamView])
 async def list_teams(db: Session=Depends(get_auth_db)):
     """列出所有虚拟业务团队。"""
-    teams = db.query(Team).all()
+    teams = db.query(Team).options(
+        selectinload(Team.members).joinedload(TeamMember.user),
+        joinedload(Team.leader)
+    ).all()
     results = []
     for t in teams:
         members = [
@@ -130,21 +137,25 @@ async def list_teams(db: Session=Depends(get_auth_db)):
     return results
 
 @router.post('/teams', response_model=TeamView)
-async def create_team(payload: TeamCreate, service: AdminService = Depends(get_admin_service), current_user: User=Depends(get_current_user)):
+async def create_team(
+    payload: TeamCreate,
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
     """创建新的虚拟团队。"""
-    user_role_codes = [r.code for r in current_user.roles]
-    if 'SYSTEM_ADMIN' not in user_role_codes:
-        raise HTTPException(status_code=403, detail='Admin only')
-        
+    # 已通过 RoleRequired 校验权限
     new_team = service.create_team(payload)
     return TeamView(id=new_team.id, name=new_team.name, team_code=new_team.team_code, members=[])
 
 @router.post('/teams/{team_id}/members')
-async def add_team_member(team_id: int, payload: TeamMemberCreate, service: AdminService = Depends(get_admin_service), current_user: User=Depends(get_current_user)):
+async def add_team_member(
+    team_id: int,
+    payload: TeamMemberCreate,
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
     """向虚拟团队添加成员。"""
-    user_role_codes = [r.code for r in current_user.roles]
-    if 'SYSTEM_ADMIN' not in user_role_codes:
-        raise HTTPException(status_code=403, detail='Admin only')
+    # 已通过 RoleRequired 校验权限
         
     service.add_team_member(team_id, payload)
     return {'status': 'success'}
@@ -172,16 +183,49 @@ class RepoLinkRequest(BaseModel):
 @router.get('/mdm-projects')
 async def list_mdm_projects(db: Session=Depends(get_auth_db)):
     """获取所有业务主项目。"""
-    projects = db.query(ProjectMaster).filter(ProjectMaster.is_current == True).all()
-    return [{'project_id': p.project_id, 'project_name': p.project_name, 'project_type': p.project_type, 'status': p.status, 'org_name': p.organization.org_name if p.organization else '未指派', 'repo_count': len(p.gitlab_repos), 'lead_repo_id': p.lead_repo_id} for p in projects]
+    projects = db.query(ProjectMaster).options(
+        joinedload(ProjectMaster.organization),
+        selectinload(ProjectMaster.gitlab_repos),
+        selectinload(ProjectMaster.product_relations).joinedload(ProjectProductRelation.product)
+    ).filter(ProjectMaster.is_current == True).all()
+    return [{
+        'project_id': p.project_id, 
+        'project_name': p.project_name, 
+        'project_type': p.project_type, 
+        'status': p.status, 
+        'org_name': p.organization.org_name if p.organization else '未指派', 
+        'repo_count': len(p.gitlab_repos), 
+        'lead_repo_id': p.lead_repo_id,
+        'products': [
+            {
+                'product_id': r.product.product_id, 
+                'product_name': r.product.product_name,
+                'relation_type': r.relation_type
+            } for r in p.product_relations if r.product
+        ]
+    } for p in projects]
 
 @router.post('/mdm-projects')
-async def create_mdm_project(payload: MDMProjectCreate, db: Session=Depends(get_auth_db), current_user: User=Depends(get_current_user)):
+async def create_mdm_project(
+    payload: MDMProjectCreate,
+    db: Session=Depends(get_auth_db),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
     """创建新的业务主项目。"""
-    user_role_codes = [r.code for r in current_user.roles]
-    if 'SYSTEM_ADMIN' not in user_role_codes:
-        raise HTTPException(status_code=403, detail='Admin only')
-    new_p = ProjectMaster(project_id=payload.project_id, project_name=payload.project_name, org_id=payload.org_id, project_type=payload.project_type, status=payload.status, pm_user_id=payload.pm_user_id, plan_start_date=payload.plan_start_date, plan_end_date=payload.plan_end_date, budget_code=payload.budget_code, budget_type=payload.budget_type, description=payload.description)
+    # 已通过 RoleRequired 校验权限
+    new_p = ProjectMaster(
+        project_id=payload.project_id,
+        project_name=payload.project_name,
+        org_id=payload.org_id,
+        project_type=payload.project_type,
+        status=payload.status,
+        pm_user_id=payload.pm_user_id,
+        plan_start_date=payload.plan_start_date,
+        plan_end_date=payload.plan_end_date,
+        budget_code=payload.budget_code,
+        budget_type=payload.budget_type,
+        description=payload.description
+    )
     db.add(new_p)
     db.commit()
     return {'status': 'success', 'project_id': new_p.project_id}
@@ -193,29 +237,58 @@ async def list_unlinked_repos(db: Session=Depends(get_auth_db)):
     return [{'id': r.id, 'name': r.name, 'path': r.path_with_namespace} for r in repos]
 
 @router.post('/link-repo')
-async def link_repo_to_project(payload: RepoLinkRequest, service: AdminService = Depends(get_admin_service), current_user: User=Depends(get_current_user)):
+async def link_repo_to_project(
+    payload: RepoLinkRequest,
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
     """将 GitLab 仓库关联到业务主项目。"""
-    user_role_codes = [r.code for r in current_user.roles]
-    if 'SYSTEM_ADMIN' not in user_role_codes:
-        raise HTTPException(status_code=403, detail='Admin only')
-    
+    # 已通过 RoleRequired 校验权限
     success = service.link_repo_to_mdm_project(payload.mdm_project_id, payload.gitlab_project_id, payload.is_lead)
     if not success:
         raise HTTPException(status_code=404, detail='Entity not found')
     return {'status': 'success'}
 
 @router.post('/mdm-projects/{project_id}/set-lead')
-async def set_lead_repo(project_id: str, gitlab_project_id: int=Body(..., embed=True), db: Session=Depends(get_auth_db), current_user: User=Depends(get_current_user)):
+async def set_lead_repo(
+    project_id: str,
+    gitlab_project_id: int=Body(..., embed=True),
+    db: Session=Depends(get_auth_db),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
     """设置主项目的受理中心仓库。"""
-    user_role_codes = [r.code for r in current_user.roles]
-    if 'SYSTEM_ADMIN' not in user_role_codes:
-        raise HTTPException(status_code=403, detail='Admin only')
+    # 已通过 RoleRequired 校验权限
     mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == project_id).first()
     if not mdm_p:
         raise HTTPException(status_code=404, detail='MDM Project not found')
     mdm_p.lead_repo_id = gitlab_project_id
     db.commit()
     return {'status': 'success'}
+
+@router.get('/products', response_model=List[ProductView])
+async def list_products(service: AdminService = Depends(get_admin_service)):
+    """获取所有产品列表。"""
+    return service.list_products()
+
+@router.post('/products', response_model=ProductView)
+async def create_product(
+    payload: ProductCreate,
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """创建新产品。"""
+    # 已通过 RoleRequired 校验权限
+    return service.create_product(payload)
+
+@router.post('/link-product', response_model=ProjectProductRelationView)
+async def link_product_to_project(
+    payload: ProjectProductRelationCreate,
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """建立产品与项目的关联。"""
+    # 已通过 RoleRequired 校验权限
+    return service.link_product_to_project(payload)
 
 @router.get('/organizations')
 async def list_organizations(db: Session=Depends(get_auth_db)):

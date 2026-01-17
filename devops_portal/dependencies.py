@@ -37,36 +37,61 @@ async def get_current_user(
     
     return auth_service.auth_get_current_user(db, final_token)
 
-def check_permission(required_roles: List[str]):
-    """[P5] RBAC 权限校验依赖项构造器。
+def RoleRequired(allowed_roles: List[str]):
+    """基于角色的 RBAC 校验卫兵。
     
-    校验逻辑：
-    1. 必须是已登录用户。
-    2. 如果用户具备 'SYSTEM_ADMIN' 角色，则拥有全量权限。
-    3. 否则，用户所属的角色编码 (Role.code) 必须在 required_roles 列表中。
+    直接从令牌载荷中提取角色信息，减少数据库查询。
+    支持 SYSTEM_ADMIN 超级权限。
     """
+    async def role_checker(
+        auth_header: str = Depends(auth_service.auth_oauth2_scheme),
+        db: Session = Depends(get_auth_db)
+    ):
+        payload = auth_service.auth_decode_access_token(auth_header)
+        if not payload:
+            raise HTTPException(status_code=401, detail='Invalid or expired token')
+        
+        user_roles = payload.get('roles', [])
+        if 'SYSTEM_ADMIN' in user_roles:
+            return auth_service.auth_get_current_user(db, auth_header)
+            
+        if not any(role in allowed_roles for role in user_roles):
+            logger.warning(f"Role Denied: User {payload.get('sub')} lacks required roles {allowed_roles}")
+            raise HTTPException(status_code=403, detail=f'Permission Denied: Required roles: {allowed_roles}')
+            
+        return auth_service.auth_get_current_user(db, auth_header)
+    return role_checker
 
-    async def permission_checker(current_user: User = Depends(get_current_user)):
-        """校验当前用户是否具有所需权限。
-
-        Args:
-            current_user: 当前已登录用户。
-
-        Returns:
-            User: 校验通过的用户对象。
-
-        Raises:
-            HTTPException: 权限不足。
-        """
-        user_role_codes = [r.code for r in current_user.roles]
-        if 'SYSTEM_ADMIN' in user_role_codes:
-            return current_user
-        has_permission = any((role_code in required_roles for role_code in user_role_codes))
-        if not has_permission:
-            logger.warning(f'Access Denied: User {current_user.primary_email} (Roles: {user_role_codes}) attempted restricted action. Required roles: {required_roles}')
-            raise HTTPException(status_code=403, detail=f'Permission Denied: Required roles: {required_roles}')
-        return current_user
+def PermissionRequired(required_perms: List[str]):
+    """基于原子权限点的 RBAC 校验卫兵。
+    
+    校验用户是否拥有指定的权限点（权限点已在登录时注入 JWT 载荷）。
+    """
+    async def permission_checker(
+        auth_header: str = Depends(auth_service.auth_oauth2_scheme),
+        db: Session = Depends(get_auth_db)
+    ):
+        payload = auth_service.auth_decode_access_token(auth_header)
+        if not payload:
+            raise HTTPException(status_code=401, detail='Invalid or expired token')
+        
+        user_roles = payload.get('roles', [])
+        user_perms = payload.get('permissions', [])
+        
+        # 超级管理员跳过权限点检查
+        if 'SYSTEM_ADMIN' in user_roles:
+            return auth_service.auth_get_current_user(db, auth_header)
+            
+        if not any(perm in user_perms for perm in required_perms):
+            logger.warning(f"Permission Denied: User {payload.get('sub')} lacks permissions {required_perms}")
+            raise HTTPException(status_code=403, detail=f'Permission Denied: Missing permissions {required_perms}')
+            
+        return auth_service.auth_get_current_user(db, auth_header)
     return permission_checker
+
+def check_permission(required_roles: List[str]):
+    """[向下兼容] 旧版权限校验。"""
+    return RoleRequired(required_roles)
 
 def get_user_data_scope_ids(user) -> List[str]:
     """[P4] 获取用户数据权限范围内的所有地点 ID (含子级)。"""

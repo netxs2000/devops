@@ -128,7 +128,7 @@ def auth_create_user(db: Session, user_data: Any) -> User:
         primary_email=user_data.email, 
         full_name=user_data.full_name, 
         employee_id=user_data.employee_id, 
-        is_active=True, 
+        is_active=False, 
         is_survivor=True, 
         sync_version=1, 
         is_current=True, 

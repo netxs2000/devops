@@ -14,9 +14,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件并安装 (使用清华 PyPI 镜像)
+# 复制依赖文件并安装 (默认使用官方源, 稳定起见增加超时)
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install --default-timeout=100 -r requirements.txt
 
 # 第二阶段：运行时环境
 FROM python:3.11-slim-bookworm
