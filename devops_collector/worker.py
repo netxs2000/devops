@@ -79,6 +79,6 @@ def main():
     engine = create_engine(Config.DB_URI)
     Base.metadata.create_all(engine)
     mq = MessageQueue()
-    mq.consume(process_task)
+    mq.consume_tasks(process_task)
 if __name__ == '__main__':
     main()
