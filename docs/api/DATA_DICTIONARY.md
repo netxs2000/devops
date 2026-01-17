@@ -1,7 +1,7 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-01-17 00:13:44  
-> **版本**: v2.1 (企业级标准版)  
+> **生成时间**: 2026-01-17 12:04:59  
+> **版本**: v2.2 (企业级标准版)  
 > **状态**: 有效 (Active)
 
 ---
@@ -17,6 +17,11 @@
 - **字段定义**: 包含字段名、类型、约束、可空性、默认值和业务说明
 - **关系映射**: 表间的 ORM 关系（一对多、多对一等）
 
+### 字段注释规范
+- 所有新增字段必须在模型定义中使用 `comment` 参数添加业务说明
+- 枚举类型字段需列出所有可选值
+- 外键字段需说明关联的业务实体
+
 ---
 
 ## 数据表清单
@@ -24,7 +29,7 @@
 本系统共包含 **73 个数据表**，分为以下几个业务域：
 
 
-### 核心主数据域 (Core Master Data)
+### 核心主数据域
 - `mdm_calendar` - Calendar
 - `mdm_company` - Company
 - `mdm_compliance_issues` - ComplianceIssue
@@ -54,14 +59,14 @@
 - `mdm_vendor` - Vendor
 - `stg_mdm_resource_costs` - ResourceCost
 
-### 测试管理域 (Test Management)
+### 测试管理域
 - `fct_test_execution_summary` - TestExecutionSummary
 - `gtm_requirements` - GTMRequirement
 - `gtm_test_case_issue_links` - GTMTestCaseIssueLink
 - `gtm_test_cases` - GTMTestCase
 - `gtm_test_execution_records` - GTMTestExecutionRecord
 
-### GitLab 集成域 (GitLab Integration)
+### GitLab 集成域
 - `gitlab_branches` - GitLabBranch
 - `gitlab_commits` - GitLabCommit
 - `gitlab_deployments` - GitLabDeployment
@@ -78,18 +83,21 @@
 - `gitlab_releases` - GitLabRelease
 - `gitlab_tags` - GitLabTag
 
-### 认证与授权域 (Authentication & Authorization)
+### 认证与授权域
 - `sys_user_credentials` - UserCredential
 - `sys_user_oauth_tokens` - UserOAuthToken
+- `sys_user_roles` - UserRole
 
-### 其他辅助域 (Other Supporting Tables)
+### 分析与洞察域
+- `fct_performance_records` - PerformanceRecord
+- `fct_user_activity_profiles` - UserActivityProfile
+
+### 其他辅助域
 - `commit_metrics` - CommitMetrics
 - `daily_dev_stats` - DailyDevStats
 - `dependencies` - Dependency
 - `dependency_cves` - DependencyCVE
 - `dependency_scans` - DependencyScan
-- `fct_performance_records` - PerformanceRecord
-- `fct_user_activity_profiles` - UserActivityProfile
 - `jira_boards` - JiraBoard
 - `jira_issues` - JiraIssue
 - `jira_projects` - JiraProject
@@ -105,7 +113,6 @@
 - `sys_sync_logs` - SyncLog
 - `sys_team_members` - TeamMember
 - `sys_teams` - Team
-- `sys_user_roles` - UserRole
 
 ---
 
@@ -119,20 +126,20 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `date_day` | DATE | UNIQUE, INDEX | 否 | - | - |
-| `year_number` | Integer | INDEX | 是 | - | - |
-| `month_number` | Integer | - | 是 | - | - |
-| `quarter_number` | Integer | - | 是 | - | - |
-| `day_of_week` | Integer | - | 是 | - | - |
-| `is_workday` | Boolean | - | 是 | True | - |
-| `is_holiday` | Boolean | - | 是 | False | - |
-| `holiday_name` | String(100) | - | 是 | - | - |
-| `fiscal_year` | String(20) | - | 是 | - | - |
-| `fiscal_quarter` | String(20) | - | 是 | - | - |
-| `week_of_year` | Integer | - | 是 | - | - |
-| `season_tag` | String(20) | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `date_day` | Date | UNIQUE, INDEX | 否 | - | 日期 |
+| `year_number` | Integer | INDEX | 是 | - | 年份 |
+| `month_number` | Integer | - | 是 | - | 月份 (1-12) |
+| `quarter_number` | Integer | - | 是 | - | 季度 (1-4) |
+| `day_of_week` | Integer | - | 是 | - | 星期几 (1=周一, 7=周日) |
+| `is_workday` | Boolean | - | 是 | True | 是否工作日 |
+| `is_holiday` | Boolean | - | 是 | False | 是否节假日 |
+| `holiday_name` | String(100) | - | 是 | - | 节假日名称 |
+| `fiscal_year` | String(20) | - | 是 | - | 财年 |
+| `fiscal_quarter` | String(20) | - | 是 | - | 财务季度 |
+| `week_of_year` | Integer | - | 是 | - | 年内周数 |
+| `season_tag` | String(20) | - | 是 | - | 季节标签 (春/夏/秋/冬) |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 ---
@@ -175,21 +182,21 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `contract_id` | Integer | FK | 否 | - | - |
-| `node_name` | String(200) | - | 否 | - | - |
-| `billing_percentage` | Numeric | - | 是 | - | - |
-| `billing_amount` | Numeric | - | 是 | - | - |
-| `linked_system` | String(50) | - | 是 | - | - |
-| `linked_milestone_id` | Integer | - | 是 | - | - |
-| `is_achieved` | Boolean | - | 是 | False | - |
-| `achieved_at` | DateTime | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `contract_id` | Integer | FK | 否 | - | 关联合同ID |
+| `node_name` | String(200) | - | 否 | - | 节点名称 |
+| `billing_percentage` | Numeric | - | 是 | - | 收款比例 (%) |
+| `billing_amount` | Numeric | - | 是 | - | 收款金额 |
+| `linked_system` | String(50) | - | 是 | - | 关联系统 (gitlab/jira/manual) |
+| `linked_milestone_id` | Integer | - | 是 | - | 关联里程碑ID |
+| `is_achieved` | Boolean | - | 是 | False | 是否已达成 |
+| `achieved_at` | DateTime | - | 是 | - | 达成时间 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **contract**: many-to-one → `RevenueContract`
+- **contract**: many-to-one -> `RevenueContract`
 
 ---
 
@@ -201,21 +208,21 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `code` | String(50) | UNIQUE, INDEX | 否 | - | - |
-| `name` | String(200) | - | 否 | - | - |
-| `category` | String(50) | - | 是 | - | - |
-| `description` | Text | - | 是 | - | - |
-| `parent_id` | Integer | FK | 是 | - | - |
-| `default_capex_opex` | String(10) | - | 是 | - | - |
-| `is_active` | Boolean | - | 是 | True | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `code` | String(50) | UNIQUE, INDEX | 否 | - | 科目编码 |
+| `name` | String(200) | - | 否 | - | 科目名称 |
+| `category` | String(50) | - | 是 | - | 科目分类 (人力/硬件/软件/服务) |
+| `description` | Text | - | 是 | - | 科目描述 |
+| `parent_id` | Integer | FK | 是 | - | 上级科目ID |
+| `default_capex_opex` | String(10) | - | 是 | - | 默认CAPEX/OPEX属性 |
+| `is_active` | Boolean | - | 是 | True | 是否启用 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **parent**: many-to-one → `CostCode`
-- **children**: one-to-many → `CostCode`
+- **parent**: many-to-one -> `CostCode`
+- **children**: one-to-many -> `CostCode`
 
 ---
 
@@ -237,13 +244,13 @@
 | `meta_info` | JSON | - | 是 | - | - |
 | `is_current` | Boolean | - | 是 | True | - |
 | `sync_version` | Integer | - | 是 | 1 | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **service**: many-to-one → `Service`
-- **target_system**: many-to-one → `SystemRegistry`
+- **service**: many-to-one -> `Service`
+- **target_system**: many-to-one -> `SystemRegistry`
 
 ---
 
@@ -267,36 +274,36 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `global_user_id` | UUID | PK | 否 | <function uuid4 at 0x00000235BE80D8A0> | - |
-| `employee_id` | String(50) | UNIQUE, INDEX | 是 | - | - |
-| `username` | String(100) | - | 是 | - | - |
-| `full_name` | String(200) | - | 是 | - | - |
-| `primary_email` | String(255) | UNIQUE, INDEX | 是 | - | - |
-| `department_id` | String(100) | FK | 是 | - | - |
-| `is_active` | Boolean | - | 是 | True | - |
-| `is_survivor` | Boolean | - | 是 | False | - |
-| `total_eloc` | Numeric | - | 是 | 0.0 | - |
-| `eloc_rank` | Integer | - | 是 | 0 | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `global_user_id` | UUID | PK | 否 | (auto) | 全局唯一用户标识 |
+| `employee_id` | String(50) | UNIQUE, INDEX | 是 | - | HR系统工号 |
+| `username` | String(100) | - | 是 | - | 登录用户名 |
+| `full_name` | String(200) | - | 是 | - | 用户姓名 |
+| `primary_email` | String(255) | UNIQUE, INDEX | 是 | - | 主邮箱地址 |
+| `department_id` | String(100) | FK | 是 | - | 所属部门ID |
+| `is_active` | Boolean | - | 是 | True | 是否在职 |
+| `is_survivor` | Boolean | - | 是 | False | 是否通过合并保留的账号 |
+| `total_eloc` | Numeric | - | 是 | 0.0 | 累计有效代码行数 |
+| `eloc_rank` | Integer | - | 是 | 0 | ELOC排名 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `sync_version` | Integer | - | 否 | 1 | - |
-| `effective_from` | DateTime | - | 是 | <function SCDMixin.<lambda> at 0x00000235BE8327A0> | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
 | `is_current` | Boolean | INDEX | 是 | True | - |
 | `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
-- **department**: many-to-one → `Organization`
-- **managed_organizations**: one-to-many → `Organization`
-- **identities**: one-to-many → `IdentityMapping`
-- **roles**: one-to-many → `Role`
-- **test_cases**: one-to-many → `GTMTestCase`
-- **requirements**: one-to-many → `GTMRequirement`
-- **managed_products_as_pm**: one-to-many → `Product`
-- **project_memberships**: one-to-many → `GitLabProjectMember`
-- **team_memberships**: one-to-many → `TeamMember`
-- **credential**: many-to-one → `UserCredential`
+- **department**: many-to-one -> `Organization`
+- **managed_organizations**: one-to-many -> `Organization`
+- **identities**: one-to-many -> `IdentityMapping`
+- **roles**: one-to-many -> `Role`
+- **test_cases**: one-to-many -> `GTMTestCase`
+- **requirements**: one-to-many -> `GTMRequirement`
+- **managed_products_as_pm**: one-to-many -> `Product`
+- **project_memberships**: one-to-many -> `GitLabProjectMember`
+- **team_memberships**: one-to-many -> `TeamMember`
+- **credential**: many-to-one -> `UserCredential`
 
 ---
 
@@ -308,21 +315,21 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `global_user_id` | UUID | FK, INDEX | 是 | - | - |
-| `source_system` | String(50) | INDEX | 否 | - | - |
-| `external_user_id` | String(100) | - | 否 | - | - |
-| `external_username` | String(100) | - | 是 | - | - |
-| `external_email` | String(100) | - | 是 | - | - |
-| `mapping_status` | String(20) | - | 是 | VERIFIED | - |
-| `confidence_score` | Numeric | - | 是 | 1.0 | - |
-| `last_active_at` | DateTime | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `global_user_id` | UUID | FK, INDEX | 是 | - | 全局用户ID |
+| `source_system` | String(50) | INDEX | 否 | - | 来源系统 (gitlab/jira/sonar) |
+| `external_user_id` | String(100) | - | 否 | - | 外部系统用户ID |
+| `external_username` | String(100) | - | 是 | - | 外部系统用户名 |
+| `external_email` | String(100) | - | 是 | - | 外部系统邮箱 |
+| `mapping_status` | String(20) | - | 是 | VERIFIED | 映射状态 (VERIFIED/PENDING/REJECTED) |
+| `confidence_score` | Numeric | - | 是 | 1.0 | 匹配置信度 (0.0-1.0) |
+| `last_active_at` | DateTime | - | 是 | - | 最后活跃时间 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **user**: many-to-one → `User`
+- **user**: many-to-one -> `User`
 
 ---
 
@@ -346,14 +353,14 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `job_title_level` | String(50) | - | 否 | - | - |
-| `daily_rate` | Numeric | - | 否 | - | - |
-| `hourly_rate` | Numeric | - | 是 | - | - |
-| `currency` | String(10) | - | 是 | CNY | - |
-| `effective_date` | DateTime | - | 是 | - | - |
-| `is_active` | Boolean | - | 是 | True | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `job_title_level` | String(50) | - | 否 | - | 职级 (P5/P6/P7/M1/M2) |
+| `daily_rate` | Numeric | - | 否 | - | 日费率 (元) |
+| `hourly_rate` | Numeric | - | 是 | - | 时费率 (元) |
+| `currency` | String(10) | - | 是 | CNY | 币种 |
+| `effective_date` | DateTime | - | 是 | - | 生效日期 |
+| `is_active` | Boolean | - | 是 | True | 是否启用 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 ---
@@ -366,16 +373,16 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `location_id` | String(50) | UNIQUE, INDEX | 是 | - | - |
-| `location_name` | String(200) | - | 否 | - | - |
-| `short_name` | String(50) | - | 是 | - | - |
-| `location_type` | String(50) | - | 是 | - | - |
-| `parent_id` | String(50) | - | 是 | - | - |
-| `region` | String(50) | - | 是 | - | - |
-| `is_active` | Boolean | - | 是 | True | - |
-| `manager_user_id` | UUID | FK | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `location_id` | String(50) | UNIQUE, INDEX | 是 | - | 位置唯一标识 |
+| `location_name` | String(200) | - | 否 | - | 位置名称 |
+| `short_name` | String(50) | - | 是 | - | 简称 |
+| `location_type` | String(50) | - | 是 | - | 位置类型 (country/province/city/datacenter) |
+| `parent_id` | String(50) | - | 是 | - | 上级位置ID |
+| `region` | String(50) | - | 是 | - | 区域 (华北/华东/华南) |
+| `is_active` | Boolean | - | 是 | True | 是否启用 |
+| `manager_user_id` | UUID | FK | 是 | - | 负责人ID |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 ---
@@ -403,12 +410,12 @@
 | `update_cycle` | String(50) | - | 是 | - | - |
 | `status` | String(50) | - | 是 | RELEASED | - |
 | `is_active` | Boolean | - | 是 | True | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **business_owner**: many-to-one → `User`
+- **business_owner**: many-to-one -> `User`
 
 ---
 
@@ -420,22 +427,22 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `objective_id` | Integer | FK | 否 | - | - |
-| `title` | String(255) | - | 否 | - | - |
-| `target_value` | Numeric | - | 否 | - | - |
-| `current_value` | Numeric | - | 是 | 0.0 | - |
-| `unit` | String(20) | - | 是 | - | - |
-| `weight` | Numeric | - | 是 | 1.0 | - |
-| `owner_id` | UUID | FK | 是 | - | - |
-| `progress` | Numeric | - | 是 | 0.0 | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `objective_id` | Integer | FK | 否 | - | 关联目标ID |
+| `title` | String(255) | - | 否 | - | KR标题 |
+| `target_value` | Numeric | - | 否 | - | 目标值 |
+| `current_value` | Numeric | - | 是 | 0.0 | 当前值 |
+| `unit` | String(20) | - | 是 | - | 单位 (%/天/个) |
+| `weight` | Numeric | - | 是 | 1.0 | 权重 |
+| `owner_id` | UUID | FK | 是 | - | 负责人ID |
+| `progress` | Numeric | - | 是 | 0.0 | 进度 (0.0-1.0) |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **objective**: many-to-one → `OKRObjective`
-- **owner**: many-to-one → `User`
+- **objective**: many-to-one -> `OKRObjective`
+- **owner**: many-to-one -> `User`
 
 ---
 
@@ -447,23 +454,23 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `objective_id` | String(50) | UNIQUE, INDEX | 是 | - | - |
-| `title` | String(255) | - | 否 | - | - |
-| `description` | Text | - | 是 | - | - |
-| `period` | String(20) | INDEX | 是 | - | - |
-| `owner_id` | UUID | FK | 是 | - | - |
-| `org_id` | String(100) | FK | 是 | - | - |
-| `status` | String(20) | - | 是 | ACTIVE | - |
-| `progress` | Numeric | - | 是 | 0.0 | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `objective_id` | String(50) | UNIQUE, INDEX | 是 | - | 目标唯一标识 |
+| `title` | String(255) | - | 否 | - | 目标标题 |
+| `description` | Text | - | 是 | - | 目标描述 |
+| `period` | String(20) | INDEX | 是 | - | 周期 (2024-Q1/2024-H1) |
+| `owner_id` | UUID | FK | 是 | - | 负责人ID |
+| `org_id` | String(100) | FK | 是 | - | 所属组织ID |
+| `status` | String(20) | - | 是 | ACTIVE | 状态 (ACTIVE/COMPLETED/ABANDONED) |
+| `progress` | Numeric | - | 是 | 0.0 | 进度 (0.0-1.0) |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **owner**: many-to-one → `User`
-- **organization**: many-to-one → `Organization`
-- **key_results**: one-to-many → `OKRKeyResult`
+- **owner**: many-to-one -> `User`
+- **organization**: many-to-one -> `Organization`
+- **key_results**: one-to-many -> `OKRKeyResult`
 
 ---
 
@@ -475,30 +482,30 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `org_id` | String(100) | UNIQUE, INDEX | 否 | - | - |
-| `org_name` | String(200) | - | 否 | - | - |
-| `org_level` | Integer | - | 是 | 1 | - |
-| `parent_org_id` | String(100) | FK | 是 | - | - |
-| `manager_user_id` | UUID | FK | 是 | - | - |
-| `is_active` | Boolean | - | 是 | True | - |
-| `cost_center` | String(100) | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `org_id` | String(100) | UNIQUE, INDEX | 否 | - | 组织唯一标识 (HR系统同步) |
+| `org_name` | String(200) | - | 否 | - | 组织名称 |
+| `org_level` | Integer | - | 是 | 1 | 组织层级 (1=公司, 2=部门, 3=团队) |
+| `parent_org_id` | String(100) | FK | 是 | - | 上级组织ID |
+| `manager_user_id` | UUID | FK | 是 | - | 部门负责人用户ID |
+| `is_active` | Boolean | - | 是 | True | 是否启用 |
+| `cost_center` | String(100) | - | 是 | - | 成本中心编码 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `sync_version` | Integer | - | 否 | 1 | - |
-| `effective_from` | DateTime | - | 是 | <function SCDMixin.<lambda> at 0x00000235BE8327A0> | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
 | `is_current` | Boolean | INDEX | 是 | True | - |
 | `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
-- **parent**: many-to-one → `Organization`
-- **manager**: many-to-one → `User`
-- **users**: one-to-many → `User`
-- **products**: one-to-many → `Product`
-- **gitlab_projects**: one-to-many → `GitLabProject`
-- **children**: one-to-many → `Organization`
+- **parent**: many-to-one -> `Organization`
+- **manager**: many-to-one -> `User`
+- **users**: one-to-many -> `User`
+- **products**: one-to-many -> `Product`
+- **gitlab_projects**: one-to-many -> `GitLabProject`
+- **children**: one-to-many -> `Organization`
 
 ---
 
@@ -510,28 +517,28 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `product_id` | String(100) | PK | 否 | - | - |
-| `product_code` | String(25) | INDEX | 否 | - | - |
-| `product_name` | String(255) | - | 否 | - | - |
-| `product_description` | Text | - | 否 | - | - |
-| `category` | String(100) | - | 是 | - | - |
-| `version_schema` | String(50) | - | 否 | - | - |
-| `specification` | JSON | - | 是 | - | - |
-| `runtime_env` | JSON | - | 是 | - | - |
-| `checksum` | String(255) | - | 是 | - | - |
-| `lifecycle_status` | String(50) | - | 是 | Active | - |
-| `repo_url` | String(255) | - | 是 | - | - |
-| `artifact_path` | String(255) | - | 是 | - | - |
-| `owner_team_id` | String(100) | FK | 是 | - | - |
-| `product_manager_id` | UUID | FK | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `product_id` | String(100) | PK | 否 | - | 产品唯一标识 |
+| `product_code` | String(25) | INDEX | 否 | - | 产品编码 |
+| `product_name` | String(255) | - | 否 | - | 产品名称 |
+| `product_description` | Text | - | 否 | - | 产品描述 |
+| `category` | String(100) | - | 是 | - | 产品分类 (平台/应用/组件) |
+| `version_schema` | String(50) | - | 否 | - | 版本命名规则 (SemVer/CalVer) |
+| `specification` | JSON | - | 是 | - | 产品规格配置 (JSON) |
+| `runtime_env` | JSON | - | 是 | - | 运行环境配置 (JSON) |
+| `checksum` | String(255) | - | 是 | - | 最新版本校验码 |
+| `lifecycle_status` | String(50) | - | 是 | Active | 生命周期状态 (Active/Deprecated/EOL) |
+| `repo_url` | String(255) | - | 是 | - | 主代码仓库URL |
+| `artifact_path` | String(255) | - | 是 | - | 制品存储路径 |
+| `owner_team_id` | String(100) | FK | 是 | - | 负责团队ID |
+| `product_manager_id` | UUID | FK | 是 | - | 产品经理ID |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **owner_team**: many-to-one → `Organization`
-- **product_manager**: many-to-one → `User`
-- **project_relations**: one-to-many → `ProjectProductRelation`
+- **owner_team**: many-to-one -> `Organization`
+- **product_manager**: many-to-one -> `User`
+- **project_relations**: one-to-many -> `ProjectProductRelation`
 
 ---
 
@@ -543,38 +550,38 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `project_id` | String(100) | PK | 否 | - | - |
-| `project_name` | String(200) | - | 否 | - | - |
-| `project_type` | String(50) | - | 是 | - | - |
-| `status` | String(50) | - | 是 | PLAN | - |
-| `is_active` | Boolean | - | 是 | True | - |
-| `pm_user_id` | UUID | FK | 是 | - | - |
-| `org_id` | String(100) | FK | 是 | - | - |
-| `plan_start_date` | DATE | - | 是 | - | - |
-| `plan_end_date` | DATE | - | 是 | - | - |
-| `actual_start_at` | DateTime | - | 是 | - | - |
-| `actual_end_at` | DateTime | - | 是 | - | - |
-| `external_id` | String(100) | UNIQUE | 是 | - | - |
-| `system_code` | String(50) | FK | 是 | - | - |
-| `budget_code` | String(100) | - | 是 | - | - |
-| `budget_type` | String(50) | - | 是 | - | - |
-| `lead_repo_id` | Integer | - | 是 | - | - |
-| `description` | Text | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `project_id` | String(100) | PK | 否 | - | 项目唯一标识 |
+| `project_name` | String(200) | - | 否 | - | 项目名称 |
+| `project_type` | String(50) | - | 是 | - | 项目类型 (研发项目/运维项目/POC) |
+| `status` | String(50) | - | 是 | PLAN | 项目状态 (PLAN/ACTIVE/SUSPENDED/CLOSED) |
+| `is_active` | Boolean | - | 是 | True | 是否启用 |
+| `pm_user_id` | UUID | FK | 是 | - | 项目经理ID |
+| `org_id` | String(100) | FK | 是 | - | 负责部门ID |
+| `plan_start_date` | Date | - | 是 | - | 计划开始日期 |
+| `plan_end_date` | Date | - | 是 | - | 计划结束日期 |
+| `actual_start_at` | DateTime | - | 是 | - | 实际开始时间 |
+| `actual_end_at` | DateTime | - | 是 | - | 实际结束时间 |
+| `external_id` | String(100) | UNIQUE | 是 | - | 外部系统项目ID |
+| `system_code` | String(50) | FK | 是 | - | 数据来源系统 |
+| `budget_code` | String(100) | - | 是 | - | 预算编码 |
+| `budget_type` | String(50) | - | 是 | - | 预算类型 (CAPEX/OPEX) |
+| `lead_repo_id` | Integer | - | 是 | - | 主代码仓库ID |
+| `description` | Text | - | 是 | - | 项目描述 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `sync_version` | Integer | - | 否 | 1 | - |
-| `effective_from` | DateTime | - | 是 | <function SCDMixin.<lambda> at 0x00000235BE8327A0> | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
 | `is_current` | Boolean | INDEX | 是 | True | - |
 | `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
-- **organization**: many-to-one → `Organization`
-- **project_manager**: many-to-one → `User`
-- **source_system**: many-to-one → `SystemRegistry`
-- **gitlab_repos**: one-to-many → `GitLabProject`
-- **product_relations**: one-to-many → `ProjectProductRelation`
+- **organization**: many-to-one -> `Organization`
+- **project_manager**: many-to-one -> `User`
+- **source_system**: many-to-one -> `SystemRegistry`
+- **gitlab_repos**: one-to-many -> `GitLabProject`
+- **product_relations**: one-to-many -> `ProjectProductRelation`
 
 ---
 
@@ -586,23 +593,23 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `contract_no` | String(100) | UNIQUE, INDEX | 否 | - | - |
-| `title` | String(255) | - | 是 | - | - |
-| `vendor_name` | String(255) | - | 是 | - | - |
-| `vendor_id` | String(100) | - | 是 | - | - |
-| `total_amount` | Numeric | - | 是 | 0.0 | - |
-| `currency` | String(10) | - | 是 | CNY | - |
-| `start_date` | DATE | - | 是 | - | - |
-| `end_date` | DATE | - | 是 | - | - |
-| `cost_code_id` | Integer | FK | 是 | - | - |
-| `capex_opex_flag` | String(10) | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `contract_no` | String(100) | UNIQUE, INDEX | 否 | - | 合同编号 |
+| `title` | String(255) | - | 是 | - | 合同标题 |
+| `vendor_name` | String(255) | - | 是 | - | 供应商名称 |
+| `vendor_id` | String(100) | - | 是 | - | 供应商ID |
+| `total_amount` | Numeric | - | 是 | 0.0 | 合同总额 |
+| `currency` | String(10) | - | 是 | CNY | 币种 |
+| `start_date` | Date | - | 是 | - | 合同开始日期 |
+| `end_date` | Date | - | 是 | - | 合同结束日期 |
+| `cost_code_id` | Integer | FK | 是 | - | 成本科目ID |
+| `capex_opex_flag` | String(10) | - | 是 | - | CAPEX/OPEX标志 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **cost_code**: many-to-one → `CostCode`
+- **cost_code**: many-to-one -> `CostCode`
 
 ---
 
@@ -614,19 +621,19 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `project_id` | String(100) | FK, INDEX | 否 | - | - |
-| `org_id` | String(100) | INDEX | 否 | - | - |
-| `product_id` | String(100) | FK, INDEX | 否 | - | - |
-| `relation_type` | String(50) | - | 是 | PRIMARY | - |
-| `allocation_ratio` | Numeric | - | 是 | 1.0 | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `project_id` | String(100) | FK, INDEX | 否 | - | 项目ID |
+| `org_id` | String(100) | INDEX | 否 | - | 所属组织ID |
+| `product_id` | String(100) | FK, INDEX | 否 | - | 产品ID |
+| `relation_type` | String(50) | - | 是 | PRIMARY | 关联类型 (PRIMARY/SECONDARY) |
+| `allocation_ratio` | Numeric | - | 是 | 1.0 | 工作量分配比例 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **project**: many-to-one → `ProjectMaster`
-- **product**: many-to-one → `Product`
+- **project**: many-to-one -> `ProjectMaster`
+- **product**: many-to-one -> `Product`
 
 ---
 
@@ -638,21 +645,21 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `contract_no` | String(100) | UNIQUE, INDEX | 否 | - | - |
-| `title` | String(255) | - | 是 | - | - |
-| `client_name` | String(255) | - | 是 | - | - |
-| `total_value` | Numeric | - | 是 | 0.0 | - |
-| `currency` | String(10) | - | 是 | CNY | - |
-| `sign_date` | DATE | - | 是 | - | - |
-| `product_id` | String(100) | FK | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `contract_no` | String(100) | UNIQUE, INDEX | 否 | - | 合同编号 |
+| `title` | String(255) | - | 是 | - | 合同标题 |
+| `client_name` | String(255) | - | 是 | - | 客户名称 |
+| `total_value` | Numeric | - | 是 | 0.0 | 合同总额 |
+| `currency` | String(10) | - | 是 | CNY | 币种 |
+| `sign_date` | Date | - | 是 | - | 签约日期 |
+| `product_id` | String(100) | FK | 是 | - | 关联产品ID |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **product**: many-to-one → `Product`
-- **payment_nodes**: one-to-many → `ContractPaymentNode`
+- **product**: many-to-one -> `Product`
+- **payment_nodes**: one-to-many -> `ContractPaymentNode`
 
 ---
 
@@ -668,12 +675,12 @@
 | `service_id` | Integer | FK | 否 | - | - |
 | `source` | String(50) | - | 是 | - | - |
 | `project_id` | Integer | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **service**: many-to-one → `Service`
+- **service**: many-to-one -> `Service`
 
 ---
 
@@ -685,27 +692,27 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `name` | String(200) | - | 否 | - | - |
-| `tier` | String(20) | - | 是 | - | - |
-| `org_id` | String(100) | FK | 是 | - | - |
-| `description` | Text | - | 是 | - | - |
-| `system_id` | Integer | FK | 是 | - | - |
-| `lifecycle` | String(20) | - | 是 | production | - |
-| `component_type` | String(20) | - | 是 | service | - |
-| `tags` | JSON | - | 是 | - | - |
-| `links` | JSON | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `name` | String(200) | - | 否 | - | 服务名称 |
+| `tier` | String(20) | - | 是 | - | 服务级别 (T0/T1/T2/T3) |
+| `org_id` | String(100) | FK | 是 | - | 负责组织ID |
+| `description` | Text | - | 是 | - | 服务描述 |
+| `system_id` | Integer | FK | 是 | - | 所属业务系统ID |
+| `lifecycle` | String(20) | - | 是 | production | 生命周期 (experimental/production/deprecated) |
+| `component_type` | String(20) | - | 是 | service | 组件类型 (service/library/website/tool) |
+| `tags` | JSON | - | 是 | - | 标签列表 (JSON) |
+| `links` | JSON | - | 是 | - | 相关链接 (JSON) |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **system**: many-to-one → `BusinessSystem`
-- **organization**: many-to-one → `Organization`
-- **costs**: one-to-many → `ResourceCost`
-- **slos**: one-to-many → `SLO`
-- **project_mappings**: one-to-many → `ServiceProjectMapping`
-- **resources**: one-to-many → `EntityTopology`
+- **system**: many-to-one -> `BusinessSystem`
+- **organization**: many-to-one -> `Organization`
+- **costs**: one-to-many -> `ResourceCost`
+- **slos**: one-to-many -> `SLO`
+- **project_mappings**: one-to-many -> `ServiceProjectMapping`
+- **resources**: one-to-many -> `EntityTopology`
 
 ---
 
@@ -724,12 +731,12 @@
 | `target_value` | Numeric | - | 是 | - | - |
 | `metric_unit` | String(20) | - | 是 | - | - |
 | `time_window` | String(20) | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **service**: many-to-one → `Service`
+- **service**: many-to-one -> `Service`
 
 ---
 
@@ -755,13 +762,13 @@
 | `is_active` | Boolean | - | 是 | True | - |
 | `last_heartbeat` | DateTime | - | 是 | - | - |
 | `remarks` | Text | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **technical_owner**: many-to-one → `User`
-- **projects**: one-to-many → `ProjectMaster`
+- **technical_owner**: many-to-one -> `User`
+- **projects**: one-to-many -> `ProjectMaster`
 
 ---
 
@@ -805,26 +812,26 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `service_id` | Integer | FK | 是 | - | - |
-| `cost_code_id` | Integer | FK | 是 | - | - |
-| `purchase_contract_id` | Integer | FK | 是 | - | - |
-| `period` | String(20) | INDEX | 是 | - | - |
-| `amount` | Numeric | - | 是 | 0.0 | - |
-| `currency` | String(10) | - | 是 | CNY | - |
-| `cost_type` | String(50) | - | 是 | - | - |
-| `cost_item` | String(200) | - | 是 | - | - |
-| `vendor_name` | String(200) | - | 是 | - | - |
-| `capex_opex_flag` | String(10) | - | 是 | - | - |
-| `source_system` | String(100) | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `service_id` | Integer | FK | 是 | - | 关联服务ID |
+| `cost_code_id` | Integer | FK | 是 | - | 成本科目ID |
+| `purchase_contract_id` | Integer | FK | 是 | - | 采购合同ID |
+| `period` | String(20) | INDEX | 是 | - | 费用周期 (YYYY-MM) |
+| `amount` | Numeric | - | 是 | 0.0 | 费用金额 |
+| `currency` | String(10) | - | 是 | CNY | 币种 |
+| `cost_type` | String(50) | - | 是 | - | 成本类型 (云资源/人力/软件) |
+| `cost_item` | String(200) | - | 是 | - | 成本项目名称 |
+| `vendor_name` | String(200) | - | 是 | - | 供应商名称 |
+| `capex_opex_flag` | String(10) | - | 是 | - | CAPEX/OPEX标志 |
+| `source_system` | String(100) | - | 是 | - | 数据来源系统 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **service**: many-to-one → `Service`
-- **cost_code**: many-to-one → `CostCode`
-- **purchase_contract**: many-to-one → `PurchaseContract`
+- **service**: many-to-one -> `Service`
+- **cost_code**: many-to-one -> `CostCode`
+- **purchase_contract**: many-to-one -> `PurchaseContract`
 
 ---
 
@@ -857,14 +864,14 @@
 | `title` | String(255) | - | 否 | - | - |
 | `description` | Text | - | 是 | - | - |
 | `state` | String(20) | - | 是 | opened | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **author**: many-to-one → `User`
-- **project**: many-to-one → `GitLabProject`
-- **test_cases**: one-to-many → `GTMTestCase`
+- **author**: many-to-one -> `User`
+- **project**: many-to-one -> `GitLabProject`
+- **test_cases**: one-to-many -> `GTMTestCase`
 
 ---
 
@@ -879,7 +886,7 @@
 | `id` | Integer | PK | 否 | - | - |
 | `test_case_id` | Integer | FK | 否 | - | - |
 | `issue_id` | Integer | FK | 否 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 ---
@@ -902,16 +909,16 @@
 | `pre_conditions` | Text | - | 是 | - | - |
 | `description` | Text | - | 是 | - | - |
 | `test_steps` | JSON | - | 是 | [] | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **author**: many-to-one → `User`
-- **project**: many-to-one → `GitLabProject`
-- **linked_issues**: one-to-many → `GitLabIssue`
-- **associated_requirements**: one-to-many → `GTMRequirement`
-- **execution_records**: one-to-many → `GTMTestExecutionRecord`
+- **author**: many-to-one -> `User`
+- **project**: many-to-one -> `GitLabProject`
+- **linked_issues**: one-to-many -> `GitLabIssue`
+- **associated_requirements**: one-to-many -> `GTMRequirement`
+- **execution_records**: one-to-many -> `GTMTestExecutionRecord`
 
 ---
 
@@ -934,12 +941,12 @@
 | `pipeline_id` | Integer | - | 是 | - | - |
 | `environment` | String(50) | - | 是 | Default | - |
 | `title` | String(255) | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
+- **project**: many-to-one -> `GitLabProject`
 
 ---
 
@@ -966,7 +973,7 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
+- **project**: many-to-one -> `GitLabProject`
 
 ---
 
@@ -998,8 +1005,8 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
-- **author**: many-to-one → `User`
+- **project**: many-to-one -> `GitLabProject`
+- **author**: many-to-one -> `User`
 
 ---
 
@@ -1024,7 +1031,7 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
+- **project**: many-to-one -> `GitLabProject`
 
 ---
 
@@ -1047,8 +1054,8 @@
 
 #### 关系映射
 
-- **group**: many-to-one → `GitLabGroup`
-- **user**: many-to-one → `User`
+- **group**: many-to-one -> `GitLabGroup`
+- **user**: many-to-one -> `User`
 
 ---
 
@@ -1075,10 +1082,10 @@
 
 #### 关系映射
 
-- **children**: one-to-many → `GitLabGroup`
-- **projects**: one-to-many → `GitLabProject`
-- **members**: one-to-many → `GitLabGroupMember`
-- **parent**: many-to-one → `GitLabGroup`
+- **children**: one-to-many -> `GitLabGroup`
+- **projects**: one-to-many -> `GitLabProject`
+- **members**: one-to-many -> `GitLabGroupMember`
+- **parent**: many-to-one -> `GitLabGroup`
 
 ---
 
@@ -1114,14 +1121,14 @@
 
 #### 关系映射
 
-- **author**: many-to-one → `User`
-- **project**: many-to-one → `GitLabProject`
-- **events**: one-to-many → `GitLabIssueEvent`
-- **transitions**: one-to-many → `GitLabIssueStateTransition`
-- **blockages**: one-to-many → `GitLabBlockage`
-- **milestone**: many-to-one → `GitLabMilestone`
-- **merge_requests**: one-to-many → `GitLabMergeRequest`
-- **associated_test_cases**: one-to-many → `GTMTestCase`
+- **author**: many-to-one -> `User`
+- **project**: many-to-one -> `GitLabProject`
+- **events**: one-to-many -> `GitLabIssueEvent`
+- **transitions**: one-to-many -> `GitLabIssueStateTransition`
+- **blockages**: one-to-many -> `GitLabBlockage`
+- **milestone**: many-to-one -> `GitLabMilestone`
+- **merge_requests**: one-to-many -> `GitLabMergeRequest`
+- **associated_test_cases**: one-to-many -> `GTMTestCase`
 
 ---
 
@@ -1164,9 +1171,9 @@
 
 #### 关系映射
 
-- **deployments**: one-to-many → `GitLabDeployment`
-- **author**: many-to-one → `User`
-- **project**: many-to-one → `GitLabProject`
+- **deployments**: one-to-many -> `GitLabDeployment`
+- **author**: many-to-one -> `User`
+- **project**: many-to-one -> `GitLabProject`
 
 ---
 
@@ -1192,9 +1199,9 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
-- **releases**: one-to-many → `GitLabRelease`
-- **issues**: one-to-many → `GitLabIssue`
+- **project**: many-to-one -> `GitLabProject`
+- **releases**: one-to-many -> `GitLabRelease`
+- **issues**: one-to-many -> `GitLabIssue`
 
 ---
 
@@ -1220,7 +1227,7 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
+- **project**: many-to-one -> `GitLabProject`
 
 ---
 
@@ -1244,8 +1251,8 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
-- **files**: one-to-many → `GitLabPackageFile`
+- **project**: many-to-one -> `GitLabProject`
+- **files**: one-to-many -> `GitLabPackageFile`
 
 ---
 
@@ -1272,7 +1279,7 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
+- **project**: many-to-one -> `GitLabProject`
 
 ---
 
@@ -1296,9 +1303,9 @@
 
 #### 关系映射
 
-- **role**: many-to-one → `Role`
-- **project**: many-to-one → `GitLabProject`
-- **user**: many-to-one → `User`
+- **role**: many-to-one -> `Role`
+- **project**: many-to-one -> `GitLabProject`
+- **user**: many-to-one -> `User`
 
 ---
 
@@ -1335,23 +1342,23 @@
 
 #### 关系映射
 
-- **group**: many-to-one → `GitLabGroup`
-- **organization**: many-to-one → `Organization`
-- **mdm_project**: many-to-one → `ProjectMaster`
-- **dependency_scans**: one-to-many → `DependencyScan`
-- **dependencies**: one-to-many → `Dependency`
-- **milestones**: one-to-many → `GitLabMilestone`
-- **members**: one-to-many → `GitLabProjectMember`
-- **commits**: one-to-many → `GitLabCommit`
-- **merge_requests**: one-to-many → `GitLabMergeRequest`
-- **issues**: one-to-many → `GitLabIssue`
-- **pipelines**: one-to-many → `GitLabPipeline`
-- **deployments**: one-to-many → `GitLabDeployment`
-- **test_cases**: one-to-many → `GTMTestCase`
-- **requirements**: one-to-many → `GTMRequirement`
-- **test_execution_records**: one-to-many → `GTMTestExecutionRecord`
-- **sonar_projects**: one-to-many → `SonarProject`
-- **jira_projects**: one-to-many → `JiraProject`
+- **group**: many-to-one -> `GitLabGroup`
+- **organization**: many-to-one -> `Organization`
+- **mdm_project**: many-to-one -> `ProjectMaster`
+- **dependency_scans**: one-to-many -> `DependencyScan`
+- **dependencies**: one-to-many -> `Dependency`
+- **milestones**: one-to-many -> `GitLabMilestone`
+- **members**: one-to-many -> `GitLabProjectMember`
+- **commits**: one-to-many -> `GitLabCommit`
+- **merge_requests**: one-to-many -> `GitLabMergeRequest`
+- **issues**: one-to-many -> `GitLabIssue`
+- **pipelines**: one-to-many -> `GitLabPipeline`
+- **deployments**: one-to-many -> `GitLabDeployment`
+- **test_cases**: one-to-many -> `GTMTestCase`
+- **requirements**: one-to-many -> `GTMRequirement`
+- **test_execution_records**: one-to-many -> `GTMTestExecutionRecord`
+- **sonar_projects**: one-to-many -> `SonarProject`
+- **jira_projects**: one-to-many -> `JiraProject`
 
 ---
 
@@ -1375,8 +1382,8 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
-- **milestones**: one-to-many → `GitLabMilestone`
+- **project**: many-to-one -> `GitLabProject`
+- **milestones**: one-to-many -> `GitLabMilestone`
 
 ---
 
@@ -1397,7 +1404,7 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
+- **project**: many-to-one -> `GitLabProject`
 
 ---
 
@@ -1411,16 +1418,16 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `user_id` | UUID | FK, UNIQUE | 是 | - | - |
-| `password_hash` | String(255) | - | 否 | - | - |
-| `last_login_at` | DateTime | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `user_id` | UUID | FK, UNIQUE | 是 | - | 用户ID |
+| `password_hash` | String(255) | - | 否 | - | 密码哈希值 |
+| `last_login_at` | DateTime | - | 是 | - | 最后登录时间 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **user**: many-to-one → `User`
+- **user**: many-to-one -> `User`
 
 ---
 
@@ -1439,8 +1446,47 @@
 | `refresh_token` | String(1024) | - | 是 | - | - |
 | `token_type` | String(50) | - | 是 | - | - |
 | `expires_at` | DateTime | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
+
+---
+
+### UserRole (`sys_user_roles`)
+
+**业务描述**: 用户与角色映射表。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `user_id` | UUID | PK, FK | 否 | - | - |
+| `role_id` | Integer | PK, FK | 否 | - | - |
+
+---
+
+## 分析与洞察域
+
+### PerformanceRecord (`fct_performance_records`)
+
+**业务描述**: 效能/性能表现评估记录表。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `id` | Integer | PK | 否 | - | - |
+
+---
+
+### UserActivityProfile (`fct_user_activity_profiles`)
+
+**业务描述**: 用户活跃度画像快照表。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `id` | BigInteger | PK | 否 | - | - |
 
 ---
 
@@ -1454,22 +1500,22 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `commit_id` | String(100) | PK | 否 | - | - |
-| `project_id` | String(100) | FK | 是 | - | - |
-| `author_email` | String(255) | INDEX | 是 | - | - |
-| `committed_at` | DateTime | - | 是 | - | - |
-| `raw_additions` | Integer | - | 是 | 0 | - |
-| `raw_deletions` | Integer | - | 是 | 0 | - |
-| `eloc_score` | Numeric | - | 是 | 0.0 | - |
-| `impact_score` | Numeric | - | 是 | 0.0 | - |
-| `churn_lines` | Integer | - | 是 | 0 | - |
-| `comment_lines` | Integer | - | 是 | 0 | - |
-| `test_lines` | Integer | - | 是 | 0 | - |
-| `file_count` | Integer | - | 是 | 0 | - |
-| `is_merge` | Boolean | - | 是 | False | - |
-| `is_legacy_refactor` | Boolean | - | 是 | False | - |
-| `refactor_ratio` | Numeric | - | 是 | 0.0 | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `commit_id` | String(100) | PK | 否 | - | 提交SHA哈希值 |
+| `project_id` | String(100) | FK | 是 | - | 所属业务项目ID |
+| `author_email` | String(255) | INDEX | 是 | - | 提交者邮箱 |
+| `committed_at` | DateTime | - | 是 | - | 提交时间 |
+| `raw_additions` | Integer | - | 是 | 0 | 原始新增行数 |
+| `raw_deletions` | Integer | - | 是 | 0 | 原始删除行数 |
+| `eloc_score` | Numeric | - | 是 | 0.0 | 有效代码行数得分 |
+| `impact_score` | Numeric | - | 是 | 0.0 | 代码影响力得分 |
+| `churn_lines` | Integer | - | 是 | 0 | 代码翻动行数 |
+| `comment_lines` | Integer | - | 是 | 0 | 注释行数 |
+| `test_lines` | Integer | - | 是 | 0 | 测试代码行数 |
+| `file_count` | Integer | - | 是 | 0 | 涉及文件数 |
+| `is_merge` | Boolean | - | 是 | False | 是否为合并提交 |
+| `is_legacy_refactor` | Boolean | - | 是 | False | 是否为遗留代码重构 |
+| `refactor_ratio` | Numeric | - | 是 | 0.0 | 重构代码占比 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 ---
@@ -1482,15 +1528,15 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `user_id` | UUID | FK, INDEX | 是 | - | - |
-| `date` | DATE | INDEX | 是 | - | - |
-| `first_commit_time` | DateTime | - | 是 | - | - |
-| `last_commit_time` | DateTime | - | 是 | - | - |
-| `commit_count` | Integer | - | 是 | 0 | - |
-| `total_impact` | Numeric | - | 是 | 0.0 | - |
-| `total_churn` | Integer | - | 是 | 0 | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `user_id` | UUID | FK, INDEX | 是 | - | 用户ID |
+| `date` | Date | INDEX | 是 | - | 统计日期 |
+| `first_commit_time` | DateTime | - | 是 | - | 当日首次提交时间 |
+| `last_commit_time` | DateTime | - | 是 | - | 当日最后提交时间 |
+| `commit_count` | Integer | - | 是 | 0 | 当日提交次数 |
+| `total_impact` | Numeric | - | 是 | 0.0 | 当日总影响力得分 |
+| `total_churn` | Integer | - | 是 | 0 | 当日总代码翻动行数 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 ---
@@ -1529,9 +1575,9 @@
 
 #### 关系映射
 
-- **scan**: many-to-one → `DependencyScan`
-- **project**: many-to-one → `GitLabProject`
-- **cves**: one-to-many → `DependencyCVE`
+- **scan**: many-to-one -> `DependencyScan`
+- **project**: many-to-one -> `GitLabProject`
+- **cves**: one-to-many -> `DependencyCVE`
 
 ---
 
@@ -1559,7 +1605,7 @@
 
 #### 关系映射
 
-- **dependency**: many-to-one → `Dependency`
+- **dependency**: many-to-one -> `Dependency`
 
 ---
 
@@ -1587,32 +1633,8 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `GitLabProject`
-- **dependencies**: one-to-many → `Dependency`
-
----
-
-### PerformanceRecord (`fct_performance_records`)
-
-**业务描述**: 效能/性能表现评估记录表。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-
----
-
-### UserActivityProfile (`fct_user_activity_profiles`)
-
-**业务描述**: 用户活跃度画像快照表。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | BigInteger | PK | 否 | - | - |
+- **project**: many-to-one -> `GitLabProject`
+- **dependencies**: one-to-many -> `Dependency`
 
 ---
 
@@ -1632,8 +1654,8 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `JiraProject`
-- **sprints**: one-to-many → `JiraSprint`
+- **project**: many-to-one -> `JiraProject`
+- **sprints**: one-to-many -> `JiraSprint`
 
 ---
 
@@ -1677,9 +1699,9 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `JiraProject`
-- **history**: one-to-many → `JiraIssueHistory`
-- **sprint**: many-to-one → `JiraSprint`
+- **project**: many-to-one -> `JiraProject`
+- **history**: one-to-many -> `JiraIssueHistory`
+- **sprint**: many-to-one -> `JiraSprint`
 
 ---
 
@@ -1699,15 +1721,15 @@
 | `gitlab_project_id` | Integer | FK | 是 | - | - |
 | `last_synced_at` | DateTime | - | 是 | - | - |
 | `sync_status` | String(20) | - | 是 | PENDING | - |
-| `created_at` | DateTime | - | 是 | <function JiraProject.<lambda> at 0x00000235C02CE840> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `raw_data` | JSON | - | 是 | - | - |
 
 #### 关系映射
 
-- **gitlab_project**: many-to-one → `GitLabProject`
-- **boards**: one-to-many → `JiraBoard`
-- **issues**: one-to-many → `JiraIssue`
+- **gitlab_project**: many-to-one -> `GitLabProject`
+- **boards**: one-to-many -> `JiraBoard`
+- **issues**: one-to-many -> `JiraIssue`
 
 ---
 
@@ -1730,8 +1752,8 @@
 
 #### 关系映射
 
-- **board**: many-to-one → `JiraBoard`
-- **issues**: one-to-many → `JiraIssue`
+- **board**: many-to-one -> `JiraBoard`
+- **issues**: one-to-many -> `JiraIssue`
 
 ---
 
@@ -1768,13 +1790,13 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `code` | String(100) | PK | 否 | - | - |
-| `category` | String(50) | - | 是 | - | - |
-| `description` | String(255) | - | 是 | - | - |
+| `code` | String(100) | PK | 否 | - | 权限代码 (如 ticket:create) |
+| `category` | String(50) | - | 是 | - | 权限分类 (ticket/project/admin) |
+| `description` | String(255) | - | 是 | - | 权限描述 |
 
 #### 关系映射
 
-- **roles**: one-to-many → `Role`
+- **roles**: one-to-many -> `Role`
 
 ---
 
@@ -1786,15 +1808,15 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `code` | String(50) | UNIQUE | 否 | - | - |
-| `name` | String(100) | UNIQUE | 否 | - | - |
-| `description` | String(255) | - | 是 | - | - |
+| `id` | Integer | PK | 否 | - | 角色ID |
+| `code` | String(50) | UNIQUE | 否 | - | 角色代码 (admin/pm/dev/viewer) |
+| `name` | String(100) | UNIQUE | 否 | - | 角色显示名称 |
+| `description` | String(255) | - | 是 | - | 角色描述 |
 
 #### 关系映射
 
-- **permissions**: one-to-many → `Permission`
-- **users**: one-to-many → `User`
+- **permissions**: one-to-many -> `Permission`
+- **users**: one-to-many -> `User`
 
 ---
 
@@ -1830,7 +1852,7 @@
 
 #### 关系映射
 
-- **project**: many-to-one → `SonarProject`
+- **project**: many-to-one -> `SonarProject`
 
 ---
 
@@ -1879,11 +1901,11 @@
 | `security_rating` | String(1) | - | 是 | - | - |
 | `sqale_rating` | String(1) | - | 是 | - | - |
 | `quality_gate_status` | String(10) | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function SonarMeasure.<lambda> at 0x00000235C029CEA0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 
 #### 关系映射
 
-- **project**: many-to-one → `SonarProject`
+- **project**: many-to-one -> `SonarProject`
 
 ---
 
@@ -1903,15 +1925,15 @@
 | `last_analysis_date` | DateTime | - | 是 | - | - |
 | `last_synced_at` | DateTime | - | 是 | - | - |
 | `sync_status` | String(20) | - | 是 | PENDING | - |
-| `created_at` | DateTime | - | 是 | <function SonarProject.<lambda> at 0x00000235C027B2E0> | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **gitlab_project**: many-to-one → `GitLabProject`
-- **measures**: one-to-many → `SonarMeasure`
-- **issues**: one-to-many → `SonarIssue`
-- **latest_measure**: many-to-one → `SonarMeasure`
+- **gitlab_project**: many-to-one -> `GitLabProject`
+- **measures**: one-to-many -> `SonarMeasure`
+- **issues**: one-to-many -> `SonarIssue`
+- **latest_measure**: many-to-one -> `SonarMeasure`
 
 ---
 
@@ -1954,11 +1976,11 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `project_id` | String(100) | INDEX | 是 | - | - |
-| `status` | String(50) | - | 是 | - | - |
-| `message` | Text | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `project_id` | String(100) | INDEX | 是 | - | 关联项目ID |
+| `status` | String(50) | - | 是 | - | 同步状态 (SUCCESS/FAILED/RUNNING) |
+| `message` | Text | - | 是 | - | 同步结果信息 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 ---
@@ -1971,18 +1993,18 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `team_id` | Integer | FK | 否 | - | - |
-| `user_id` | UUID | FK | 否 | - | - |
-| `role_code` | String(50) | - | 是 | MEMBER | - |
-| `allocation_ratio` | Numeric | - | 是 | 1.0 | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `team_id` | Integer | FK | 否 | - | 团队ID |
+| `user_id` | UUID | FK | 否 | - | 成员用户ID |
+| `role_code` | String(50) | - | 是 | MEMBER | 团队角色 (LEADER/MEMBER/CONSULTANT) |
+| `allocation_ratio` | Numeric | - | 是 | 1.0 | 工作量分配比例 (0.0-1.0) |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **team**: many-to-one → `Team`
-- **user**: many-to-one → `User`
+- **team**: many-to-one -> `Team`
+- **user**: many-to-one -> `User`
 
 ---
 
@@ -1994,47 +2016,35 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | - |
-| `name` | String(100) | - | 否 | - | - |
-| `team_code` | String(50) | UNIQUE, INDEX | 是 | - | - |
-| `description` | Text | - | 是 | - | - |
-| `parent_id` | Integer | FK | 是 | - | - |
-| `org_id` | String(100) | FK | 是 | - | - |
-| `leader_id` | UUID | FK | 是 | - | - |
-| `created_at` | DateTime | - | 是 | <function TimestampMixin.<lambda> at 0x00000235BE8320C0> | - |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `name` | String(100) | - | 否 | - | 团队名称 |
+| `team_code` | String(50) | UNIQUE, INDEX | 是 | - | 团队代码 |
+| `description` | Text | - | 是 | - | 团队描述 |
+| `parent_id` | Integer | FK | 是 | - | 上级团队ID |
+| `org_id` | String(100) | FK | 是 | - | 所属组织ID |
+| `leader_id` | UUID | FK | 是 | - | 团队负责人ID |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
-- **parent**: many-to-one → `Team`
-- **leader**: many-to-one → `User`
-- **members**: one-to-many → `TeamMember`
-- **children**: one-to-many → `Team`
-
----
-
-### UserRole (`sys_user_roles`)
-
-**业务描述**: 用户与角色映射表。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `user_id` | UUID | PK, FK | 否 | - | - |
-| `role_id` | Integer | PK, FK | 否 | - | - |
+- **parent**: many-to-one -> `Team`
+- **leader**: many-to-one -> `User`
+- **members**: one-to-many -> `TeamMember`
+- **children**: one-to-many -> `Team`
 
 ---
 
 
 ## 变更日志
 
-### v2.1 (2025-01-16)
+### v2.2 (自动生成)
 - 基于最新 SQLAlchemy 模型自动生成
-- 移除所有表情符号以符合规范
-- 新增企业级分域架构组织
-- 完善字段约束和关系映射说明
+- 支持变更检测和 Diff 对比
+- 增强字段注释提取
+- 优化默认值显示
 
 ---
 
-**维护说明**: 本文档由 `scripts/generate_data_dictionary.py` 自动生成，请勿手动编辑！如需更新，请修改模型定义并重新运行生成脚本。
+**维护说明**: 本文档由 `scripts/generate_data_dictionary.py` 自动生成。
+如需更新，请修改模型定义并运行 `make docs` 命令。
