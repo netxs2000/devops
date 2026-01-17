@@ -11,7 +11,7 @@ from devops_collector.core.registry import PluginRegistry
 # from .client import JenkinsClient
 from .models import JenkinsJob, JenkinsBuild
 from .parser import ReportParser
-from devops_collector.models import User, Organization, SyncLog, TestExecutionSummary
+from devops_collector.models import User, Organization, SyncLog, JenkinsTestExecution
 from devops_collector.core.identity_manager import IdentityManager
 try:
     from devops_collector.plugins.gitlab.models import GitLabProject
@@ -161,7 +161,7 @@ class JenkinsWorker(BaseWorker):
                 return
             summary = ReportParser.parse_jenkins_test_report(project_id=job.gitlab_project_id, build_id=str(build.number), report_data=report_data, job_name=job.name or '')
             if summary:
-                existing = self.session.query(TestExecutionSummary).filter_by(project_id=job.gitlab_project_id, build_id=str(build.number), test_level=summary.test_level).first()
+                existing = self.session.query(JenkinsTestExecution).filter_by(project_id=job.gitlab_project_id, build_id=str(build.number), test_level=summary.test_level).first()
                 if not existing:
                     self.session.add(summary)
                     logger.info(f'Saved test summary for build {build.number} ({summary.test_level})')

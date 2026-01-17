@@ -10,7 +10,7 @@
 from .base_models import (
     Base, Organization, User, Role, Location, Calendar, SyncLog, RawDataStaging, 
     IdentityMapping, Product, OKRObjective, OKRKeyResult, TraceabilityLink, 
-    TestExecutionSummary, PerformanceRecord, Incident, ResourceCost, UserActivityProfile, 
+    JenkinsTestExecution, Incident, ResourceCost, 
     Service, ServiceProjectMapping, SLO, TimestampMixin, RawDataMixin, ProjectMaster, 
     ContractPaymentNode, RevenueContract, PurchaseContract, UserCredential, UserOAuthToken, 
     MetricDefinition, SystemRegistry, EntityTopology, Company, Vendor, EpicMaster, 
@@ -39,7 +39,7 @@ except ImportError:
 __all__ = [
     'Base', 'Organization', 'User', 'Role', 'Location', 'Calendar', 'SyncLog', 'RawDataStaging', 
     'IdentityMapping', 'Product', 'OKRObjective', 'OKRKeyResult', 'TraceabilityLink', 
-    'TestExecutionSummary', 'PerformanceRecord', 'Incident', 'ResourceCost', 'UserActivityProfile', 
+    'JenkinsTestExecution', 'Incident', 'ResourceCost', 
     'Service', 'ServiceProjectMapping', 'SLO', 'TimestampMixin', 'RawDataMixin', 'ProjectMaster', 
     'ContractPaymentNode', 'RevenueContract', 'PurchaseContract', 'UserCredential', 'UserOAuthToken', 
     'MetricDefinition', 'SystemRegistry', 'EntityTopology', 'Company', 'Vendor', 'EpicMaster', 
