@@ -24,14 +24,15 @@ sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
 from devops_collector.models import (
-    Base, User, Role, Organization, Product, ProjectMaster, UserRole
+    Base, User, SysRole, Organization, Product, ProjectMaster, UserRole
 )
 
 # 日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('LinkUsers')
 
-CSV_FILE = 'docs/employees.csv'
+from pathlib import Path
+CSV_FILE = Path(__file__).parent.parent / 'docs' / 'employees.csv'
 
 # 职位 -> 角色代码 映射规则
 POSITION_ROLE_MAP = {
@@ -78,7 +79,7 @@ def link_users_to_entities():
     session = SessionLocal()
 
     # 预加载角色
-    all_roles = {r.code: r for r in session.query(Role).all()}
+    all_roles = {r.role_key: r for r in session.query(SysRole).all()}
     
     try:
         if not os.path.exists(CSV_FILE):

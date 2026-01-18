@@ -8,7 +8,7 @@ import os
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
-from devops_collector.models import User, Role, UserRole, UserCredential
+from devops_collector.models import User, SysRole, UserRole, UserCredential, SysMenu
 
 def check_admin():
     # Try localhost instead of 'db' host
@@ -34,21 +34,20 @@ def check_admin():
 
         print(f"User found: {user.full_name}, global_user_id: {user.global_user_id}")
         
-        # Fixed query to join Role and UserRole
-        roles = session.query(Role).join(UserRole, UserRole.role_id == Role.id).filter(UserRole.user_id == user.global_user_id).all()
+        # Fixed query to join SysRole and UserRole
+        roles = session.query(SysRole).join(UserRole, UserRole.role_id == SysRole.id).filter(UserRole.user_id == user.global_user_id).all()
         print(f"Roles for {admin_email}:")
         for role in roles:
-            print(f" - {role.code} ({role.name})")
+            print(f" - {role.role_key} ({role.role_name})")
 
         if not roles:
             print("No roles assigned to this user.")
             
         # Check permissions through roles
         for role in roles:
-            from devops_collector.models import RolePermission
-            rp_list = session.query(RolePermission).filter_by(role_id=role.id).all()
-            perms = [p.permission_code for p in rp_list]
-            print(f" Permissions for role {role.code}: {perms}")
+            menus = session.query(SysMenu).join(SysRole.menus).filter(SysRole.id == role.id).all()
+            perms = [m.perms for m in menus if m.perms]
+            print(f" Permissions for role {role.role_key}: {perms}")
 
     except Exception as e:
         print(f"Error: {e}")

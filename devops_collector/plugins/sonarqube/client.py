@@ -38,10 +38,13 @@ class SonarQubeClient(BaseClient):
         super().__init__(base_url=f"{url.rstrip('/')}/api", auth_headers={'Authorization': f'Basic {auth_string}'}, rate_limit=rate_limit)
 
     def test_connection(self) -> bool:
-        """测试 SonarQube 连接。"""
+        """测试 SonarQube 连接 (快速探测，不进行重试)。"""
         try:
-            response = self._get('system/status')
-            return response.json().get('status') == 'UP'
+            url = f"{self.base_url}/system/status"
+            import requests
+            response = requests.get(url, headers=self.headers, timeout=5)
+            # SonarQube response is handled correctly here
+            return response.status_code == 200 and response.json().get('status') == 'UP'
         except Exception:
             return False
 

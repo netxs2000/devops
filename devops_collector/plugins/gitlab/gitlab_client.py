@@ -19,13 +19,12 @@ class GitLabClient(BaseClient):
         super().__init__(base_url=f"{url.rstrip('/')}/api/v4", auth_headers={'PRIVATE-TOKEN': token}, rate_limit=rate_limit)
 
     def test_connection(self) -> bool:
-        """测试与 GitLab 的连接状态。
-        
-        Returns:
-            bool: 如果连接成功且版本接口返回 200，则返回 True，否则返回 False。
-        """
+        """测试与 GitLab 的连接状态 (快速探测，不进行重试)。"""
         try:
-            self._get('version')
+            url = f"{self.base_url}/version"
+            import requests
+            response = requests.get(url, headers=self.headers, timeout=5)
+            response.raise_for_status()
             return True
         except Exception:
             return False

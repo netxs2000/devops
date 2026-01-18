@@ -27,7 +27,7 @@ from devops_collector.models import Base, User, Organization
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-CSV_FILE = 'docs/employees.csv'
+CSV_FILE = Path(__file__).parent.parent / 'docs' / 'employees.csv'
 
 def to_pinyin(name):
     """将中文姓名转换为拼音（全拼，无空格）。"""
@@ -50,7 +50,7 @@ def import_employees():
         logger.error(f"CSV 文件未找到: {csv_path}")
         return
 
-    with Session(engine) as session, open(csv_path, mode='r', encoding='utf-8') as f:
+    with Session(engine) as session, open(csv_path, mode='r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         logger.info('开始从 CSV 导入员工数据...')
         
@@ -60,13 +60,19 @@ def import_employees():
             employee_id = row.get('工号', '').strip()
             center = row.get('中心', '').strip()
             dept = row.get('部门', '').strip()
+            position = row.get('职位', '').strip()
+            csv_email = row.get('邮箱', '').strip()
             
             if not name or not employee_id:
                 continue
             
-            # 1. 自动生成邮箱和用户名
-            username = to_pinyin(name)
-            email = f"{username}@tjhq.com"
+            # 1. 确定邮箱和用户名 (优先使用 CSV)
+            if csv_email:
+                email = csv_email
+                username = csv_email.split('@')[0]
+            else:
+                username = to_pinyin(name)
+                email = f"{username}@tjhq.com"
             
             # 2. 查找所属组织
             org_id = get_org_id(center, dept)
@@ -93,6 +99,7 @@ def import_employees():
                     full_name=name,
                     primary_email=email,
                     department_id=final_org_id,
+                    position=position,
                     is_active=True,
                     is_survivor=True,
                     sync_version=1,
@@ -104,11 +111,13 @@ def import_employees():
                 user.full_name = name
                 user.primary_email = email
                 user.department_id = final_org_id
+                user.position = position
                 logger.debug(f"已排队更新用户: {name}")
             
             count += 1
-            if count % 50 == 0:
+            if count % 100 == 0:
                 session.flush() # 定期刷新
+                logger.info(f"已处理 {count} 条记录...")
         
         session.commit()
         logger.info(f"✅ 员工导入已完成！共处理 {count} 条记录。")
