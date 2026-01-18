@@ -1,6 +1,6 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-01-17 20:56:32  
+> **生成时间**: 2026-01-18 05:48:27  
 > **版本**: v2.2 (企业级标准版)  
 > **状态**: 有效 (Active)
 
@@ -332,6 +332,7 @@
 | `full_name` | String(200) | - | 是 | - | 用户姓名 |
 | `primary_email` | String(255) | UNIQUE, INDEX | 是 | - | 主邮箱地址 |
 | `department_id` | String(100) | FK | 是 | - | 所属部门ID |
+| `position` | String(100) | - | 是 | - | 职位/岗位名称 |
 | `is_active` | Boolean | - | 是 | True | 是否在职 |
 | `is_survivor` | Boolean | - | 是 | False | 是否通过合并保留的账号 |
 | `total_eloc` | Numeric | - | 是 | 0.0 | 累计有效代码行数 |
@@ -353,6 +354,9 @@
 - **test_cases**: one-to-many -> `GTMTestCase`
 - **requirements**: one-to-many -> `GTMRequirement`
 - **managed_products_as_pm**: one-to-many -> `Product`
+- **managed_products_as_dev**: one-to-many -> `Product`
+- **managed_products_as_qa**: one-to-many -> `Product`
+- **managed_products_as_release**: one-to-many -> `Product`
 - **project_memberships**: one-to-many -> `GitLabProjectMember`
 - **team_memberships**: one-to-many -> `TeamMember`
 - **credential**: many-to-one -> `UserCredential`
@@ -609,6 +613,9 @@
 | `artifact_path` | String(255) | - | 是 | - | 制品存储路径 |
 | `owner_team_id` | String(100) | FK | 是 | - | 负责团队ID |
 | `product_manager_id` | UUID | FK | 是 | - | 产品经理ID |
+| `dev_lead_id` | UUID | FK | 是 | - | 开发负责人ID |
+| `qa_lead_id` | UUID | FK | 是 | - | 测试负责人ID |
+| `release_lead_id` | UUID | FK | 是 | - | 发布负责人ID |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `sync_version` | Integer | - | 否 | 1 | - |
@@ -621,6 +628,9 @@
 
 - **owner_team**: many-to-one -> `Organization`
 - **product_manager**: many-to-one -> `User`
+- **dev_lead**: many-to-one -> `User`
+- **qa_lead**: many-to-one -> `User`
+- **release_lead**: many-to-one -> `User`
 - **project_relations**: one-to-many -> `ProjectProductRelation`
 
 ---
@@ -639,6 +649,10 @@
 | `status` | String(50) | - | 是 | PLAN | 项目状态 (PLAN/ACTIVE/SUSPENDED/CLOSED) |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
 | `pm_user_id` | UUID | FK | 是 | - | 项目经理ID |
+| `product_owner_id` | UUID | FK | 是 | - | 产品负责人ID |
+| `dev_lead_id` | UUID | FK | 是 | - | 开发负责人ID |
+| `qa_lead_id` | UUID | FK | 是 | - | 测试负责人ID |
+| `release_lead_id` | UUID | FK | 是 | - | 发布负责人ID |
 | `org_id` | String(100) | FK | 是 | - | 负责部门ID |
 | `location_id` | String(50) | FK | 是 | - | 项目所属/实施地点ID |
 | `plan_start_date` | Date | - | 是 | - | 计划开始日期 |
@@ -663,6 +677,10 @@
 
 - **organization**: many-to-one -> `Organization`
 - **project_manager**: many-to-one -> `User`
+- **product_owner**: many-to-one -> `User`
+- **dev_lead**: many-to-one -> `User`
+- **qa_lead**: many-to-one -> `User`
+- **release_lead**: many-to-one -> `User`
 - **source_system**: many-to-one -> `SystemRegistry`
 - **gitlab_repos**: one-to-many -> `GitLabProject`
 - **product_relations**: one-to-many -> `ProjectProductRelation`

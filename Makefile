@@ -46,18 +46,18 @@ init: ## [初始化] 在容器内安装依赖并初始化数据库数据
 	$(EXEC_CMD) python scripts/init_gitlab_mappings.py
 
 install: ## [内用] 安装生产环境或开发环境依赖
-	@echo "$(GREEN)Installing dependencies...$(RESET)"
-	$(EXEC_CMD) pip install --default-timeout=100 .
+	@echo "$(GREEN)Installing dependencies (using Aliyun mirror)...$(RESET)"
+	$(EXEC_CMD) pip install --default-timeout=100 -i https://mirrors.aliyun.com/pypi/simple/ .
 
-init-dev: ## [本地] 初始化开发环境依赖 (使用官方 PyPI, 需 VPN)
-	@echo "$(GREEN)Initializing local development environment via official PyPI...$(RESET)"
-	python -m pip install --upgrade pip
-	pip install -e .[dev]
+init-dev: ## [本地] 初始化开发环境依赖 (使用国内镜像源)
+	@echo "$(GREEN)Initializing local development environment via Aliyun mirror...$(RESET)"
+	python -m pip install --upgrade pip -i https://mirrors.aliyun.com/pypi/simple/
+	pip install -e .[dev] -i https://mirrors.aliyun.com/pypi/simple/
 	@echo "$(CYAN)Local environment initialized successfully!$(RESET)"
 
 lock: ## [工具] 将 pyproject.toml 的依赖锁定到 requirements.txt
 	@echo "$(GREEN)Locking dependencies to requirements.txt (Inside Container)...$(RESET)"
-	$(EXEC_CMD) pip-compile pyproject.toml -o requirements.txt --resolver=backtracking --no-header
+	$(EXEC_CMD) pip-compile pyproject.toml -o requirements.txt --resolver=backtracking --no-header -i https://mirrors.aliyun.com/pypi/simple/
 
 # =============================================================================
 # 离线包构建与部署 (Offline Deployment)

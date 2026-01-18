@@ -72,10 +72,8 @@ def init_okrs():
     """解析定义并初始化 OKR 记录。"""
     engine = create_engine(settings.database.uri)
     
-    # 强制清理并重建 OKR 相关表，以应用新的字段定义
-    logger.info('正在刷新 OKR 表结构...')
-    OKRKeyResult.__table__.drop(engine, checkfirst=True)
-    OKRObjective.__table__.drop(engine, checkfirst=True)
+    # 确保 OKR 相关表存在
+    logger.info('初始化 OKR 相关表结构...')
     Base.metadata.create_all(engine)
     
     SessionLocal = sessionmaker(bind=engine)

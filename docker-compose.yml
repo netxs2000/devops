@@ -20,6 +20,12 @@ services:
       - RABBITMQ__HOST=mq
       - RABBITMQ__USER=admin
       - RABBITMQ__PASSWORD=admin123
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "8000" ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
     command: uvicorn devops_portal.main:app --host 0.0.0.0 --port 8000
 
   # 2. 数据异步采集 Worker
@@ -125,6 +131,12 @@ services:
         condition: service_healthy
     environment:
       - PYTHONPATH=/app
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "8501" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     command: streamlit run dashboard/Home.py
 
 volumes:
