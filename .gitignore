@@ -113,3 +113,8 @@ persistence_data/
 postgres-data/
 data/
 rabbitmq_data/
+
+# Sensitive Data
+docs/employees.csv
+docs/gitlab-user.csv
+docs/zentao-user.csv
