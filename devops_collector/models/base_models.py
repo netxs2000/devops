@@ -83,9 +83,9 @@ class User(Base, TimestampMixin, SCDMixin):
     test_cases = relationship('GTMTestCase', back_populates='author')
     requirements = relationship('GTMRequirement', back_populates='author')
     managed_products_as_pm = relationship('Product', back_populates='product_manager', foreign_keys='Product.product_manager_id')
-    managed_products_as_dev = relationship('Product', foreign_keys='Product.dev_lead_id')
-    managed_products_as_qa = relationship('Product', foreign_keys='Product.qa_lead_id')
-    managed_products_as_release = relationship('Product', foreign_keys='Product.release_lead_id')
+    managed_products_as_dev = relationship('Product', back_populates='dev_lead', foreign_keys='Product.dev_lead_id')
+    managed_products_as_qa = relationship('Product', back_populates='qa_lead', foreign_keys='Product.qa_lead_id')
+    managed_products_as_release = relationship('Product', back_populates='release_lead', foreign_keys='Product.release_lead_id')
     project_memberships = relationship('GitLabProjectMember', back_populates='user')
     team_memberships = relationship('TeamMember', back_populates='user')
     
@@ -307,9 +307,9 @@ class Product(Base, TimestampMixin, SCDMixin):
 
     owner_team = relationship('Organization', back_populates='products')
     product_manager = relationship('User', foreign_keys=[product_manager_id], back_populates='managed_products_as_pm')
-    dev_lead = relationship('User', foreign_keys=[dev_lead_id])
-    qa_lead = relationship('User', foreign_keys=[qa_lead_id])
-    release_lead = relationship('User', foreign_keys=[release_lead_id])
+    dev_lead = relationship('User', foreign_keys=[dev_lead_id], back_populates='managed_products_as_dev')
+    qa_lead = relationship('User', foreign_keys=[qa_lead_id], back_populates='managed_products_as_qa')
+    release_lead = relationship('User', foreign_keys=[release_lead_id], back_populates='managed_products_as_release')
     project_relations = relationship('ProjectProductRelation', back_populates='product')
     
     def __repr__(self) -> str:

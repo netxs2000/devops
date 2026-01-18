@@ -118,3 +118,4 @@ rabbitmq_data/
 docs/employees.csv
 docs/gitlab-user.csv
 docs/zentao-user.csv
+*.csv
