@@ -1,8 +1,9 @@
 # 使用多阶段构建以优化镜像体积
 # 第一阶段：编译环境
-# 禁用官方镜像源：FROM python:3.11-slim-bookworm AS builder
+# 禁用官方镜像源：
+FROM python:3.11-slim-bookworm AS builder
 # 使用国内代理镜像源，例如阿里或特定的加速地址
-FROM docker.m.daocloud.io/library/python:3.11-slim-bookworm AS builder
+# FROM docker.m.daocloud.io/library/python:3.11-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -21,8 +22,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install --default-timeout=100 -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt
 
 # 第二阶段：运行时环境
-# 禁用官方镜像：FROM python:3.11-slim-bookworm，使用国内代理镜像源，例如阿里或特定的加速地址
-FROM docker.m.daocloud.io/library/python:3.11-slim-bookworm
+# 禁用官方镜像：
+FROM python:3.11-slim-bookworm
+# 使用国内代理镜像源，例如阿里或特定的加速地址
+# FROM docker.m.daocloud.io/library/python:3.11-slim-bookworm
 
 WORKDIR /app
 

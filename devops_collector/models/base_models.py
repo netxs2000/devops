@@ -307,9 +307,9 @@ class Product(Base, TimestampMixin, SCDMixin):
 
     owner_team = relationship('Organization', back_populates='products')
     product_manager = relationship('User', foreign_keys=[product_manager_id], back_populates='managed_products_as_pm')
-    dev_lead = relationship('User', foreign_keys=[dev_lead_id], back_populates='managed_products_as_dev')
-    qa_lead = relationship('User', foreign_keys=[qa_lead_id], back_populates='managed_products_as_qa')
-    release_lead = relationship('User', foreign_keys=[release_lead_id], back_populates='managed_products_as_release')
+    dev_lead = relationship('User', foreign_keys=[dev_lead_id], back_populates='managed_products_as_dev', overlaps="managed_products_as_dev")
+    qa_lead = relationship('User', foreign_keys=[qa_lead_id], back_populates='managed_products_as_qa', overlaps="managed_products_as_qa")
+    release_lead = relationship('User', foreign_keys=[release_lead_id], back_populates='managed_products_as_release', overlaps="managed_products_as_release")
     project_relations = relationship('ProjectProductRelation', back_populates='product')
     
     def __repr__(self) -> str:

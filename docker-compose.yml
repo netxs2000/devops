@@ -106,8 +106,8 @@ services:
       dockerfile: Dockerfile
     image: devops-platform-datahub:latest
     container_name: devops-datahub-cli
-    profiles:
-      - tools
+    # profiles:
+    #   - tools
     volumes:
       - .:/app
     env_file:
