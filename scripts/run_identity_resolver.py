@@ -14,7 +14,7 @@ from sqlalchemy.orm import sessionmaker
 # 确保可以导入项目模块
 sys.path.append(os.getcwd())
 
-from devops_collector.config import Config
+from devops_collector.config import settings
 from devops_collector.models.base_models import User, IdentityMapping
 
 # 配置日志
@@ -124,7 +124,7 @@ def main():
     """入口函数。"""
     logger.info("Starting Identity Resolver script...")
     
-    engine = create_engine(Config.DB_URI)
+    engine = create_engine(settings.database.uri)
     Session = sessionmaker(bind=engine)
     session = Session()
 

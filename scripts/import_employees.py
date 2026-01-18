@@ -68,8 +68,8 @@ def import_employees():
             
             # 1. 确定邮箱和用户名 (优先使用 CSV)
             if csv_email:
-                email = csv_email
-                username = csv_email.split('@')[0]
+                email = csv_email.lower().strip()
+                username = email.split('@')[0]
             else:
                 username = to_pinyin(name)
                 email = f"{username}@tjhq.com"
@@ -78,7 +78,7 @@ def import_employees():
             org_id = get_org_id(center, dept)
             org = session.query(Organization).filter_by(org_id=org_id).first()
             if not org:
-                # 尝试通过 org_name 模糊匹配
+                # 尝试通过 org_name 匹配
                 org = session.query(Organization).filter(Organization.org_name == dept).first()
                 if not org:
                     org = session.query(Organization).filter(Organization.org_name == center).first()
@@ -87,8 +87,9 @@ def import_employees():
             
             # 3. 创建或更新用户
             user = session.query(User).filter_by(employee_id=employee_id).first()
+            
             if not user:
-                # 如果工号不存在，尝试通过邮箱找（处理可能的重复录入）
+                # 如果工号不存在，尝试通过邮箱找（处理工号变更但邮箱未变的情况）
                 user = session.query(User).filter_by(primary_email=email).first()
             
             if not user:
@@ -106,13 +107,17 @@ def import_employees():
                     is_current=True
                 )
                 session.add(user)
-                logger.debug(f"已排队创建用户: {name}")
+                logger.info(f"创建新员工: {name} ({employee_id})")
             else:
+                # 严格更新现有数据对齐主数据
+                user.employee_id = employee_id
                 user.full_name = name
                 user.primary_email = email
                 user.department_id = final_org_id
                 user.position = position
-                logger.debug(f"已排队更新用户: {name}")
+                user.is_active = True
+                user.is_current = True
+                logger.debug(f"更新员工信息: {name} ({employee_id})")
             
             count += 1
             if count % 100 == 0:
