@@ -147,40 +147,8 @@
                     </a>
                 </div>
 
-                <!-- 分类：支持 -->
-                <div class="nav-group">
-                    <div class="nav-group-title">支持与战略</div>
-                    <a href="#sd_submit" class="nav-link" id="nav-sd-submit" onclick="switchView('sd_submit')">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                        工单反馈
-                    </a>
-                    <a href="#sd_my" class="nav-link" id="nav-sd-my" onclick="switchView('sd_my')">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            <path d="M8 9h8"></path>
-                            <path d="M8 13h6"></path>
-                        </svg>
-                        我的工单
-                    </a>
-                    <a href="#pulse" class="nav-link" id="nav-pulse" onclick="switchView('pulse')">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
-                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
-                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
-                        </svg>
-                        心情指数打卡
-                    </a>
-                </div>
-
-                <!-- 管理工具 -->
-                <div class="nav-group admin-only" style="display:none;">
+                <!-- 平台管理 (仅管理员可见) -->
+                <div class="nav-group admin-only" hidden>
                     <div class="nav-group-title">平台管理</div>
                     <a href="#admin_approvals" class="nav-link" id="nav-admin-approvals"
                         onclick="switchView('admin_approvals')">
@@ -218,6 +186,38 @@
                             <circle cx="9" cy="7" r="4"></circle>
                         </svg>
                         员工身份目录
+                    </a>
+                </div>
+
+                <!-- 分类：支持 -->
+                <div class="nav-group">
+                    <div class="nav-group-title">支持与战略</div>
+                    <a href="#sd_submit" class="nav-link" id="nav-sd-submit" onclick="switchView('sd_submit')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        工单反馈
+                    </a>
+                    <a href="#sd_my" class="nav-link" id="nav-sd-my" onclick="switchView('sd_my')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            <path d="M8 9h8"></path>
+                            <path d="M8 13h6"></path>
+                        </svg>
+                        我的工单
+                    </a>
+                    <a href="#pulse" class="nav-link" id="nav-pulse" onclick="switchView('pulse')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                        </svg>
+                        心情指数打卡
                     </a>
                 </div>
             </nav>

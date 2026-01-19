@@ -240,8 +240,20 @@ function initUserProfile(user) {
     }
 
     // 管理员及权限菜单显示逻辑
-    if (Auth.isAdmin() || Auth.hasPermission('USER:MANAGE')) {
-        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'flex');
+    const isAdmin = Auth.isAdmin();
+    const hasUserManage = Auth.hasPermission('USER:MANAGE');
+    const adminElements = document.querySelectorAll('.admin-only');
+
+    console.log('[initUserProfile] Admin check:', { isAdmin, hasUserManage, adminElementCount: adminElements.length });
+
+    if (isAdmin || hasUserManage) {
+        adminElements.forEach(el => {
+            // 使用 hidden 属性比 style.display 更可靠
+            el.removeAttribute('hidden');
+            console.log('[initUserProfile] Showing admin element:', el.className);
+        });
+    } else {
+        console.warn('[initUserProfile] User is not admin, hiding admin elements');
     }
 
     // 细粒度控制 (如果后续需要)
