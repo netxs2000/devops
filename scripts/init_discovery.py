@@ -27,7 +27,7 @@ def discover_gitlab(session):
         logger.warning('GitLab config missing, skipping discovery.')
         return
     logger.info(f'Connecting to GitLab at {settings.gitlab.url}...')
-    client = GitLabClient(settings.gitlab.url, settings.gitlab.private_token)
+    client = GitLabClient(settings.gitlab.url, settings.gitlab.private_token, verify_ssl=settings.gitlab.verify_ssl)
     if not client.test_connection():
         logger.error('Failed to connect to GitLab. Check URL and Token.')
         return

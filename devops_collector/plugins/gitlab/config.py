@@ -27,7 +27,8 @@ def get_config() -> Dict[str, Any]:
         'client': {
             'url': Config.GITLAB_URL,
             'token': Config.GITLAB_TOKEN,
-            'rate_limit': Config.REQUESTS_PER_SECOND
+            'rate_limit': Config.REQUESTS_PER_SECOND,
+            'verify_ssl': Config.GITLAB_VERIFY_SSL
         },
         'worker': {
             'enable_deep_analysis': Config.ENABLE_DEEP_ANALYSIS

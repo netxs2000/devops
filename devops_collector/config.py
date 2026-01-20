@@ -29,6 +29,7 @@ class GitLabSettings(BaseSettings):
     client_id: str = ''
     client_secret: str = ''
     redirect_uri: str = ''
+    verify_ssl: bool = True
 
 class DatabaseSettings(BaseSettings):
     """Database connection and retention settings.
@@ -283,6 +284,7 @@ class Config:
     GITLAB_CLIENT_ID = settings.gitlab.client_id
     GITLAB_CLIENT_SECRET = settings.gitlab.client_secret
     GITLAB_REDIRECT_URI = settings.gitlab.redirect_uri
+    GITLAB_VERIFY_SSL = settings.gitlab.verify_ssl
     AUTH_ALLOWED_DOMAINS = settings.auth.allowed_domains
     DB_URI = settings.database.uri
     RAW_DATA_RETENTION_DAYS = settings.database.raw_data_retention_days

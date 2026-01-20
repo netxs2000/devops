@@ -101,7 +101,7 @@ class BaseClient(ABC):
                 return self._get("version").ok
     """
 
-    def __init__(self, base_url: str, auth_headers: Dict[str, str], rate_limit: int=10, timeout: int=30, max_retries: int=5):
+    def __init__(self, base_url: str, auth_headers: Dict[str, str], rate_limit: int=10, timeout: int=30, max_retries: int=5, verify: bool=True):
         """初始化客户端。
         
         Args:
@@ -110,12 +110,14 @@ class BaseClient(ABC):
             rate_limit: 每秒请求上限
             timeout: 请求超时时间 (秒)
             max_retries: 最大重试次数
+            verify: 是否验证 SSL 证书
         """
         self.base_url = base_url.rstrip('/')
         self.headers = auth_headers
         self.limiter = RateLimiter(rate_limit)
         self.timeout = timeout
         self.max_retries = max_retries
+        self.verify = verify
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60), retry=retry_if_exception(is_retryable_exception))
     def _get(self, endpoint: str, params: Optional[Dict[str, Any]]=None) -> requests.Response:
@@ -135,7 +137,7 @@ class BaseClient(ABC):
         self.limiter.wait_for_token()
         url = f'{self.base_url}/{endpoint}'
         try:
-            response = requests.get(url, headers=self.headers, params=params, timeout=self.timeout)
+            response = requests.get(url, headers=self.headers, params=params, timeout=self.timeout, verify=self.verify)
             if response.status_code == 429:
                 retry_after = int(response.headers.get('Retry-After', 60))
                 logger.warning(f'Rate limited. Sleeping for {retry_after}s')
@@ -168,7 +170,7 @@ class BaseClient(ABC):
         if headers:
             req_headers.update(headers)
         try:
-            response = requests.post(url, headers=req_headers, data=data, json=json, timeout=self.timeout)
+            response = requests.post(url, headers=req_headers, data=data, json=json, timeout=self.timeout, verify=self.verify)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as e:
@@ -183,7 +185,7 @@ class BaseClient(ABC):
         self.limiter.wait_for_token()
         url = f'{self.base_url}/{endpoint}'
         try:
-            response = requests.put(url, headers=self.headers, json=data, timeout=self.timeout)
+            response = requests.put(url, headers=self.headers, json=data, timeout=self.timeout, verify=self.verify)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as e:

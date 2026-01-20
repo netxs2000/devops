@@ -8,22 +8,23 @@ class GitLabClient(BaseClient):
     封装了 GitLab API v4 的常用接口调用，处理分页、认证及基础的错误重试。
     """
 
-    def __init__(self, url: str, token: str, rate_limit: int=10):
+    def __init__(self, url: str, token: str, rate_limit: int=10, verify_ssl: bool=True):
         """初始化 GitLab 客户端。
         
         Args:
             url (str): GitLab 实例的 URL (如 https://gitlab.com)。
             token (str): 用户的 Private Token 或 Access Token。
             rate_limit (int): 每秒请求数限制。默认为 10。
+            verify_ssl (bool): 是否验证 SSL 证书。
         """
-        super().__init__(base_url=f"{url.rstrip('/')}/api/v4", auth_headers={'PRIVATE-TOKEN': token}, rate_limit=rate_limit)
+        super().__init__(base_url=f"{url.rstrip('/')}/api/v4", auth_headers={'PRIVATE-TOKEN': token}, rate_limit=rate_limit, verify=verify_ssl)
 
     def test_connection(self) -> bool:
         """测试与 GitLab 的连接状态 (快速探测，不进行重试)。"""
         try:
             url = f"{self.base_url}/version"
             import requests
-            response = requests.get(url, headers=self.headers, timeout=5)
+            response = requests.get(url, headers=self.headers, timeout=5, verify=self.verify)
             response.raise_for_status()
             return True
         except Exception:
