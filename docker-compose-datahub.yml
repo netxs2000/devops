@@ -1,0 +1,130 @@
+version: '3.8'
+
+services:
+  # --- Data Storage ---
+  datahub-elasticsearch:
+    image: elasticsearch:7.10.1
+    container_name: datahub-elasticsearch
+    environment:
+      - "discovery.type=single-node"
+      - "xpack.security.enabled=false"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=50s || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  datahub-mysql:
+    image: mysql:5.7
+    container_name: datahub-mysql
+    hostname: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=datahub
+      - MYSQL_USER=datahub
+      - MYSQL_PASSWORD=datahub
+      - MYSQL_ROOT_PASSWORD=datahub
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --default-authentication-plugin=mysql_native_password
+    volumes:
+      - datahub_mysql_data:/var/lib/mysql
+
+  datahub-zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: datahub-zookeeper
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  datahub-kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: datahub-kafka
+    hostname: broker
+    depends_on:
+      - datahub-zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+  datahub-schema-registry:
+    image: confluentinc/cp-schema-registry:7.4.0
+    container_name: datahub-schema-registry
+    hostname: schema-registry
+    depends_on:
+      - datahub-kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: broker:29092
+
+  # --- Simplified DataHub Setup (No separate mae/mce consumers for quickstart) ---
+  datahub-gms:
+    image: linkedin/datahub-gms:latest
+    container_name: datahub-gms
+    hostname: datahub-gms
+    ports:
+      - "8080:8080"
+    depends_on:
+      - datahub-mysql
+      - datahub-elasticsearch
+      - datahub-kafka
+    environment:
+      - EBEAN_DATASOURCE_USERNAME=datahub
+      - EBEAN_DATASOURCE_PASSWORD=datahub
+      - EBEAN_DATASOURCE_HOST=mysql:3306
+      - EBEAN_DATASOURCE_DRIVER=com.mysql.cj.jdbc.Driver
+      - EBEAN_DATASOURCE_URL=jdbc:mysql://mysql:3306/datahub?verifyServerCertificate=false&useSSL=true&useUnicode=yes&characterEncoding=UTF-8
+      - KAFKA_BOOTSTRAP_SERVER=broker:29092
+      - KAFKA_SCHEMAREGISTRY_URL=http://schema-registry:8081
+      - ELASTICSEARCH_HOST=datahub-elasticsearch
+      - ELASTICSEARCH_PORT=9200
+      - GRAPH_SERVICE_IMPL=elasticsearch
+      - ENTITY_SERVICE_IMPL=elasticsearch
+      - SEARCH_SERVICE_IMPL=elasticsearch
+      - DATAHUB_ANALYTICS_ENABLED=true
+      - DATAHUB_SERVER_TYPE=quickstart
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8080/health | grep UP || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  datahub-frontend:
+    image: linkedin/datahub-frontend-react:latest
+    container_name: datahub-frontend
+    hostname: datahub-frontend
+    ports:
+      - "9002:9002"
+    depends_on:
+      - datahub-gms
+    environment:
+      - DATAHUB_GMS_HOST=datahub-gms
+      - DATAHUB_GMS_PORT=8080
+      - DATAHUB_SECRET_TOKEN=datahub
+      - DATAHUB_APP_VERSION=1.0
+      - DATAHUB_PLAY_MEM=1024m
+      - DATAHUB_WEBSERVER_PORT=9002
+
+  # --- CLI/Init Job ---
+  # datahub-actions:
+  #   image: linkedin/datahub-actions:latest
+  #   container_name: datahub-actions
+  #   depends_on:
+  #     - datahub-gms
+
+volumes:
+  datahub_mysql_data:

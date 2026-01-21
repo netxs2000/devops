@@ -66,9 +66,9 @@ lock: ## [工具] 将 pyproject.toml 的依赖锁定到 requirements.txt
 package: ## [本地构建] 构建并打包镜像为 tar 文件 (devops-platform.tar)
 	@echo "$(GREEN)Building Docker images...$(RESET)"
 	docker build -t devops-platform:latest .
-	docker build -t devops-platform-datahub:latest datahub/
+	# docker build -t devops-platform-datahub:latest datahub/
 	@echo "$(GREEN)Saving images to devops-platform.tar...$(RESET)"
-	docker save -o devops-platform.tar devops-platform:latest devops-platform-datahub:latest
+	docker save -o devops-platform.tar devops-platform:latest
 	@echo "$(CYAN)Package created: devops-platform.tar$(RESET)"
 	@echo "Upload this file to your server and run 'make deploy-offline'"
 

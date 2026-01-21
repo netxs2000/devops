@@ -113,4 +113,23 @@ class UI {
         };
         window.requestAnimationFrame(step);
     }
+
+    /**
+     * 切换导航菜单折叠状态
+     * @param {HTMLElement} el 点击的标题元素
+     */
+    static toggleNav(el) {
+        console.log('UI.toggleNav triggered on:', el);
+        // Ensure we find the parent .nav-group regardless of which element was passed
+        const group = el.closest('.nav-group');
+        if (group) {
+            group.classList.toggle('expanded');
+            console.log('New state expanded:', group.classList.contains('expanded'));
+        } else {
+            console.error('toggleNav: No .nav-group parent found for', el);
+        }
+    }
 }
+
+// Ensure UI is globally available
+window.UI = UI;
