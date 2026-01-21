@@ -8,336 +8,72 @@
     <meta name="description" content="提交功能需求或改进建议">
     <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            /* Map old vars to new light theme */
-            --primary-gradient: var(--primary);
-            --dark-bg: var(--bg-main);
-            --card-bg: var(--card-bg);
-            --card-border: var(--border-color);
-            --text-primary: var(--text-main);
-            --text-secondary: var(--text-dim);
-            --input-bg: var(--bg-sidebar);
-            --shadow-lg: var(--shadow-md);
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--dark-bg);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Removed dynamic background */
-
-        header {
-            background: var(--bg-sidebar);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1.5rem 2rem;
-        }
-
-        .header-content {
-            max-width: 900px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .back-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .back-link:hover {
-            color: var(--text-primary);
-        }
-
-        main {
-            flex: 1;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 3rem 2rem;
-            width: 100%;
-        }
-
-        .form-header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .form-header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-header p {
-            color: var(--text-secondary);
-            font-size: 1.125rem;
-        }
-
-        .form-container {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 3rem;
-            /* backdrop-filter: blur(10px); */
-        }
-
-        .form-group {
-            margin-bottom: 2rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .required {
-            color: #00f2fe;
-        }
-
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            background: var(--input-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 1rem;
-            transition: all 0.3s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: var(--bg-sidebar);
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 150px;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .help-text {
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-            margin-top: 0.5rem;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 1rem;
-            background: var(--primary-gradient);
-            border: none;
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-size: 1.125rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 1rem;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .alert {
-            padding: 1rem 1.5rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            display: none;
-            animation: slideDown 0.3s ease-out;
-        }
-
-        .alert.success {
-            background: rgba(5, 150, 105, 0.1);
-            border: 1px solid var(--passed);
-            color: var(--passed);
-        }
-
-        .alert.error {
-            background: rgba(220, 38, 38, 0.1);
-            border: 1px solid var(--failed);
-            color: var(--failed);
-        }
-
-        .alert.show {
-            display: block;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        footer {
-            background: var(--bg-sidebar);
-            border-top: 1px solid var(--border-color);
-            padding: 1.5rem;
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        @media (max-width: 768px) {
-            .form-container {
-                padding: 2rem 1.5rem;
-            }
-
-            .form-header h1 {
-                font-size: 2rem;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .reporter-info {
-            background: var(--bg-sidebar);
-            border: 1px solid var(--border-color);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .reporter-avatar {
-            width: 32px;
-            height: 32px;
-            background: var(--primary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            font-weight: 700;
-        }
-    </style>
 </head>
 
 <body>
-    <header>
-        <div class="header-content">
-            <div class="logo">提交需求</div>
-            <a href="service_desk.html" class="back-link">← 返回服务台</a>
+    <header class="u-p-24 u-w-full sd-header">
+        <div class="u-flex u-flex-between u-mx-auto u-max-w-900">
+            <div class="u-text-primary u-weight-700 u-text-h2">提交需求</div>
+            <a href="service_desk.html" class="sd-nav-link">← 返回服务台</a>
         </div>
     </header>
 
-    <main>
-        <div class="form-header">
-            <h1>需求提交</h1>
-            <p>分享您的想法和建议，帮助我们打造更好的产品</p>
+    <main class="u-mx-auto u-p-40 u-max-w-900">
+        <div class="u-text-center u-mb-40">
+            <h1 class="u-text-primary u-mb-10 u-text-display">需求提交</h1>
+            <p class="u-text-dim u-text-h3">分享您的想法 and 建议，帮助我们打造更好的产品</p>
         </div>
 
         <div id="alertBox" class="alert"></div>
 
-        <div class="form-container">
-            <div id="reporterSection" class="reporter-info" style="display:none;">
-                <div class="reporter-avatar" id="reporterAvatar">?</div>
+        <div class="g-card u-p-40">
+            <div id="reporterSection" class="sd-reporter-info u-hide">
+                <div class="sd-reporter-avatar u-flex u-flex-center" id="reporterAvatar">?</div>
                 <div>
-                    <div style="font-size: 0.875rem; color: var(--text-secondary);">报告人</div>
-                    <div id="reporterName" style="font-weight: 600;">加载中...</div>
+                    <div class="u-text-dim u-text-tiny u-uppercase u-ls-05">
+                        报告人</div>
+                    <div id="reporterName" class="u-weight-600 u-text-body">加载中...</div>
                 </div>
             </div>
+
             <form id="requirementForm">
-                <div class="form-group">
-                    <label>受影响的业务系统 <span class="required">*</span></label>
-                    <select id="mdmId" required onchange="handleProjectChange()">
+                <div class="u-mb-24">
+                    <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">受影响的业务系统 <span
+                            class="u-text-error">*</span></label>
+                    <select id="mdmId" class="form-control" required onchange="handleProjectChange()">
                         <option value="">正在加载项目列表...</option>
                     </select>
-                    <div class="help-text">请选择您提出建议的业务系统名称</div>
+                    <div class="u-text-dim u-mt-8 u-text-caption">请选择您提出建议的业务系统名称</div>
                 </div>
 
-                <div class="form-group">
-                    <label>需求标题 <span class="required">*</span></label>
-                    <input type="text" id="title" required placeholder="简要描述您的需求">
+                <div class="u-mb-24">
+                    <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">需求标题 <span
+                            class="u-text-error">*</span></label>
+                    <input type="text" id="title" class="form-control" required placeholder="简要描述您的需求">
                 </div>
 
-                <div class="form-group">
-                    <label>需求详细描述 <span class="required">*</span></label>
-                    <textarea id="description" required
+                <div class="u-mb-24">
+                    <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">需求详细描述 <span
+                            class="u-text-error">*</span></label>
+                    <textarea id="description" class="form-control u-h-150" required
                         placeholder="请详细描述您的需求：&#10;- 背景和目的&#10;- 具体功能点&#10;- 预期效果&#10;- 其他补充说明"></textarea>
-                    <div class="help-text">描述越详细，我们越能准确理解您的需求</div>
+                    <div class="u-text-dim u-mt-8 u-text-caption">描述越详细，我们越能准确理解您的需求</div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>需求类型 <span class="required">*</span></label>
-                        <select id="reqType" required>
+                <div class="adm-grid-form u-mb-24">
+                    <div>
+                        <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">需求类型 <span
+                                class="u-text-error">*</span></label>
+                        <select id="reqType" class="form-control" required>
                             <option value="">请选择</option>
                             <option value="feature">新功能（Feature）</option>
                             <option value="enhancement">功能增强（Enhancement）</option>
                             <option value="bugfix">缺陷修复（Bugfix）</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>优先级</label>
-                        <select id="priority">
+                    <div>
+                        <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">优先级</label>
+                        <select id="priority" class="form-control">
                             <option value="P0">P0 - 紧急</option>
                             <option value="P1">P1 - 高</option>
                             <option value="P2" selected>P2 - 中</option>
@@ -346,52 +82,39 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>省份/地域</label>
-                        <input type="text" id="province" value="nationwide" placeholder="例如：广东、nationwide">
+                <div class="adm-grid-form u-mb-24">
+                    <div>
+                        <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">省份/地域</label>
+                        <input type="text" id="province" class="form-control" value="nationwide"
+                            placeholder="例如：广东、nationwide">
                     </div>
-                    <div class="form-group">
-                        <label>期望交付时间</label>
-                        <input type="date" id="expectedDelivery">
-                        <div class="help-text">可选，仅供参考</div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>需求原型/说明附件</label>
-                    <div id="uploadArea" style="
-                        border: 2px dashed var(--card-border);
-                        border-radius: 12px;
-                        padding: 2rem;
-                        text-align: center;
-                        cursor: pointer;
-                        transition: all 0.3s;
-                        background: var(--bg-sidebar);
-                        margin-bottom: 1rem;
-                    " onmouseover="this.style.borderColor='var(--primary)';this.style.background='var(--bg-card-hover)'"
-                        onmouseout="this.style.borderColor='var(--border-color)';this.style.background='var(--bg-sidebar)'"
-                        onclick="document.getElementById('fileInput').click()">
-                        <div style="font-size: 2rem; margin-bottom: 1rem;"></div>
-                        <div style="font-weight: 500;">点击或拖拽需求文档至此处上传</div>
-                        <div style="font-size: 0.8125rem; color: var(--text-secondary); margin-top: 0.5rem;">支持 PDF,
-                            Word, 图片等</div>
-                        <input type="file" id="fileInput" style="display:none" multiple
-                            onchange="handleFileUpload(event)">
-                    </div>
-                    <div id="filePreview"
-                        style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 1rem;">
+                    <div>
+                        <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">期望交付时间</label>
+                        <input type="date" id="expectedDelivery" class="form-control">
+                        <div class="u-text-dim u-mt-8 u-text-caption">可选，仅供参考</div>
                     </div>
                 </div>
 
-                <button type="submit" class="submit-btn" id="submitBtn">
+                <div class="u-mb-32">
+                    <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">需求原型/说明附件</label>
+                    <div id="uploadArea" class="sd-upload-area" onclick="document.getElementById('fileInput').click()">
+                        <div class="u-text-primary u-mb-10 u-text-h1">📄</div>
+                        <div class="u-weight-600">点击或拖拽需求文档至此处上传</div>
+                        <div class="u-text-dim u-mt-8 u-text-caption">支持 PDF, Word, 图片等</div>
+                        <input type="file" id="fileInput" class="u-hide" multiple onchange="handleFileUpload(event)">
+                    </div>
+                    <div id="filePreview" class="g-grid-fill-120">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary u-w-full u-p-16 u-text-h3" id="submitBtn">
                     提交需求
                 </button>
             </form>
         </div>
     </main>
 
-    <footer>
+    <footer class="u-p-24 u-text-center u-text-dim sd-footer u-mt-48">
         <p>© 2025 TJHQ</p>
     </footer>
 
@@ -410,7 +133,8 @@
 
             const user = await Auth.getCurrentUser();
             if (user) {
-                document.getElementById('reporterSection').style.display = 'flex';
+                document.getElementById('reporterSection').classList.remove('u-hide');
+                document.getElementById('reporterSection').classList.add('u-flex');
                 document.getElementById('reporterName').innerText = `${user.full_name || user.username} (${user.organization_name || 'Individual'})`;
                 document.getElementById('reporterAvatar').innerText = (user.full_name || user.username).charAt(0).toUpperCase();
             }
@@ -453,8 +177,8 @@
 
             for (const file of files) {
                 const previewItem = document.createElement('div');
-                previewItem.style = "position:relative; background: var(--input-bg); border-radius: 8px; padding: 0.5rem; text-align: center;";
-                previewItem.innerHTML = `<div class="loading" style="width:16px; height:16px; margin: 10px auto;"></div><div style="font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</div>`;
+                previewItem.className = 'upload-preview-item';
+                previewItem.innerHTML = `<div class="loading u-mx-auto u-mt-10 u-mb-10 u-square-16"></div><div class="u-text-caption u-truncate">${file.name}</div>`;
                 document.getElementById('filePreview').appendChild(previewItem);
 
                 const formData = new FormData();
@@ -469,10 +193,10 @@
 
                     if (result.markdown) {
                         uploadedAttachments.push(result.markdown);
-                        previewItem.innerHTML = `<div style="font-size: 1.5rem;">F</div><div style="font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${file.name}</div><div style="color: var(--passed); font-size: 0.75rem;">已准备</div>`;
+                        previewItem.innerHTML = `<div class="u-text-h1">F</div><div class="u-text-caption u-truncate">${file.name}</div><div class="u-text-success u-text-caption">已准备</div>`;
                     }
                 } catch (error) {
-                    previewItem.innerHTML = `<div style="color: var(--failed);">x</div><div style="font-size: 0.75rem;">失败</div>`;
+                    previewItem.innerHTML = `<div class="u-text-error">x</div><div class="u-text-caption">失败</div>`;
                 }
             }
         }

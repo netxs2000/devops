@@ -15,22 +15,23 @@
     </script>
     <style>
         body {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            font-family: 'Inter', sans-serif;
+            background-color: var(--sys-bg-app);
+            color: var(--sys-text-primary);
             margin: 0;
             padding: 0;
             display: flex;
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
+            font-size: var(--g-font-size-body);
+            line-height: var(--g-line-height-body);
         }
 
         /* 顶部导航 */
         header {
-            background-color: var(--bg-sidebar);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 2rem;
+            background-color: var(--sys-bg-sidebar);
+            border-bottom: 1px solid var(--sys-border-subtle);
+            padding: 16px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -43,9 +44,10 @@
         }
 
         h1 {
-            font-size: 1.25rem;
-            font-weight: 600;
+            font-size: var(--g-font-size-h2);
+            font-weight: var(--g-font-weight-bold);
             margin: 0;
+            color: var(--sys-text-primary);
         }
 
         .controls {
@@ -54,12 +56,12 @@
         }
 
         select {
-            background-color: var(--bg-main);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
+            background-color: var(--sys-bg-app);
+            color: var(--sys-text-primary);
+            border: 1px solid var(--sys-border-subtle);
+            padding: 8px 16px;
+            border-radius: var(--g-radius-sm);
+            font-size: var(--g-font-size-body);
         }
 
         button {
@@ -123,27 +125,27 @@
         }
 
         .column-title {
-            font-weight: 600;
-            font-size: 1rem;
-            color: var(--text-main);
+            font-weight: var(--g-font-weight-semibold);
+            font-size: var(--g-font-size-h3);
+            color: var(--sys-text-primary);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 8px;
         }
 
         .count-badge {
-            background-color: var(--bg-main);
-            padding: 0.125rem 0.5rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            color: var(--text-dim);
+            background-color: var(--sys-bg-app);
+            padding: 2px 8px;
+            border-radius: var(--g-radius-full);
+            font-size: var(--g-font-size-caption);
+            color: var(--sys-text-secondary);
         }
 
         .stats-bar {
             display: flex;
-            gap: 1rem;
-            font-size: 0.875rem;
-            color: var(--text-dim);
+            gap: 16px;
+            font-size: var(--g-font-size-body);
+            color: var(--sys-text-secondary);
         }
 
         /* 列表区域 */
@@ -196,13 +198,15 @@
         }
 
         .issue-title {
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+            font-weight: var(--g-font-weight-medium);
+            margin-bottom: 8px;
             display: -webkit-box;
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            line-height: 1.4;
+            line-height: var(--g-line-height-dense);
+            font-size: var(--g-font-size-body);
         }
 
         .card-footer {
@@ -343,23 +347,19 @@
                     <span class="count-badge" id="sprintCount">0</span>
                 </div>
                 <!-- V2: 进度详情展示 -->
-                <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-secondary); width: 100%;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                        <span>Progress: <span id="progressText"
-                                style="color: var(--text-main); font-weight: 600;">0%</span></span>
-                        <span><span id="closedCount" style="color: var(--passed)">0</span> / <span
+                <div class="u-mt-10 u-text-small u-text-dim u-w-full">
+                    <div class="u-flex u-flex-between u-mb-4">
+                        <span>Progress: <span id="progressText" class="u-text-main u-weight-600">0%</span></span>
+                        <span><span id="closedCount" class="u-text-passed">0</span> / <span
                                 id="totalSprintIssues">0</span> Done</span>
                     </div>
-                    <div
-                        style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
-                        <div id="progressBar"
-                            style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--passed), #34d399); transition: width 0.5s ease; box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);">
+                    <div class="u-w-full u-h-8 u-progress-track">
+                        <div id="progressBar" class="u-progress-fill">
                         </div>
                     </div>
                 </div>
-                <div class="stats-bar"
-                    style="margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; width: 100%;">
-                    <span>总权重: <b id="totalWeight" style="color: var(--text-main)">0</b></span>
+                <div class="stats-bar u-mt-12 u-border-t-subtle u-p-8 u-w-full">
+                    <span>总权重: <b id="totalWeight" class="u-text-main">0</b></span>
                 </div>
             </div>
             <div class="issue-list" id="sprintList" ondrop="drop(event)" ondragover="allowDrop(event)">
@@ -372,16 +372,14 @@
     <div id="releaseModal" class="modal-overlay">
         <div class="modal">
             <h2>确认发布版本</h2>
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">版本名称 (将作为 Git Tag 名)</label>
-                <input type="text" id="releaseVersionInput"
-                    style="width: 100%; padding: 0.625rem; background: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 0.375rem;"
-                    placeholder="v1.0.0">
-                <p style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.5rem;">
+            <div class="u-mb-24">
+                <label class="u-block u-mb-8 u-weight-500">版本名称 (将作为 Git Tag 名)</label>
+                <input type="text" id="releaseVersionInput" class="form-control" placeholder="v1.0.0">
+                <p class="u-text-caption u-text-dim u-mt-8">
                     提示：确认后系统将同步更新 GitLab 里程碑标题，并自动创建同名 Tag。
                 </p>
             </div>
-            <ul style="color: var(--text-secondary); font-size: 0.875rem; line-height: 1.6;">
+            <ul class="u-text-dim u-text-caption u-lh-1-6">
                 <li>同步更新 GitLab 里程碑标题</li>
                 <li>自动在代码库创建 Git Tag</li>
                 <li>生成版本变更日志</li>
@@ -402,7 +400,7 @@
             <p>绑定后，您可以使用“个人身份”进行拖拽规划、新建迭代和发布操作，且所有操作将以您的名义记录审计日志。</p>
             <div class="modal-actions">
                 <button class="secondary"
-                    onclick="document.getElementById('bindGitLabModal').style.display='none'">稍后</button>
+                    onclick="document.getElementById('bindGitLabModal').classList.remove('u-block')">稍后</button>
                 <button class="release-btn" onclick="window.location.href='/auth/gitlab/bind'">前往绑定</button>
             </div>
         </div>
@@ -412,29 +410,29 @@
     <div id="createSprintModal" class="modal-overlay">
         <div class="modal">
             <h2>新建迭代 (Sprint)</h2>
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="u-flex u-column u-gap-15">
                 <div>
-                    <label>迭代名称 (如 v1.1.0)</label>
-                    <input type="text" id="newSprintTitle" style="width: 100%; padding: 0.5rem;" placeholder="v1.1.0">
+                    <label class="form-label">迭代名称 (如 v1.1.0)</label>
+                    <input type="text" id="newSprintTitle" class="form-control" placeholder="v1.1.0">
                 </div>
-                <div style="display: flex; gap: 1rem;">
-                    <div style="flex: 1;">
-                        <label>开始日期</label>
-                        <input type="date" id="newSprintStart" style="width: 100%; padding: 0.5rem;">
+                <div class="u-flex u-gap-15">
+                    <div class="u-flex-1">
+                        <label class="form-label">开始日期</label>
+                        <input type="date" id="newSprintStart" class="form-control">
                     </div>
-                    <div style="flex: 1;">
-                        <label>截止日期</label>
-                        <input type="date" id="newSprintDue" style="width: 100%; padding: 0.5rem;">
+                    <div class="u-flex-1">
+                        <label class="form-label">截止日期</label>
+                        <input type="date" id="newSprintDue" class="form-control">
                     </div>
                 </div>
                 <div>
-                    <label>描述</label>
-                    <textarea id="newSprintDesc" style="width: 100%; padding: 0.5rem;" rows="3"></textarea>
+                    <label class="form-label">描述</label>
+                    <textarea id="newSprintDesc" class="form-control" rows="3"></textarea>
                 </div>
             </div>
             <div class="modal-actions">
                 <button class="secondary"
-                    onclick="document.getElementById('createSprintModal').style.display='none'">取消</button>
+                    onclick="document.getElementById('createSprintModal').classList.remove('u-block')">取消</button>
                 <button class="release-btn" onclick="executeCreateSprint()">创建</button>
             </div>
         </div>
@@ -444,11 +442,11 @@
     <div id="rolloverModal" class="modal-overlay">
         <div class="modal">
             <h2>检测到未完成任务</h2>
-            <p id="rolloverMsg" style="color: var(--danger-color); margin-bottom: 1rem;"></p>
+            <p id="rolloverMsg" class="u-text-error u-mb-16"></p>
             <p>是否将未完成的任务自动移动到下一个规划中的 Milestone（或 Backlog），并继续发布？</p>
             <div class="modal-actions">
                 <button class="secondary"
-                    onclick="document.getElementById('rolloverModal').style.display='none'">取消</button>
+                    onclick="document.getElementById('rolloverModal').classList.remove('u-block')">取消</button>
                 <button class="release-btn" onclick="handleRollover()">确认结转并发布</button>
             </div>
         </div>
@@ -467,16 +465,15 @@
 
             // Add create button next to milestone select
             const controlsDiv = document.querySelector('.controls');
-            const createBtn = document.createElement('button');
-            createBtn.className = 'secondary';
+            const createBtn = document.createElement('button'); // Declare createBtn
+            createBtn.className = 'secondary u-ml-8';
             createBtn.innerHTML = '+ 新建迭代';
-            createBtn.style.marginLeft = '0.5rem';
             createBtn.onclick = () => {
                 if (!currentProjectId) {
                     alert('请先选择项目');
                     return;
                 }
-                document.getElementById('createSprintModal').style.display = 'flex';
+                document.getElementById('createSprintModal').classList.add('u-block');
             };
             controlsDiv.appendChild(createBtn);
 
@@ -578,7 +575,7 @@
 
                 if (res.ok) {
                     alert('迭代创建成功！');
-                    document.getElementById('createSprintModal').style.display = 'none';
+                    document.getElementById('createSprintModal').classList.remove('u-block');
                     loadMilestones(currentProjectId); // Refresh list
                 } else {
                     const err = await res.json();
@@ -628,8 +625,7 @@
                 const card = document.createElement('div');
                 card.className = 'issue-card';
                 if (issue.state === 'closed') {
-                    card.style.opacity = '0.6';
-                    card.style.borderLeft = '4px solid var(--success-color)';
+                    card.classList.add('u-opacity-60', 'u-border-l-success');
                 }
                 card.draggable = true;
                 card.dataset.iid = issue.iid; // Use IID for GitLab
@@ -719,11 +715,7 @@
         // 发布逻辑
         function showReleaseModal() {
             document.getElementById('releaseVersionInput').value = currentMilestoneTitle;
-            document.getElementById('releaseModal').style.display = 'flex';
-        }
-
-        function closeReleaseModal() {
-            document.getElementById('releaseModal').style.display = 'none';
+            document.getElementById('releaseModal').classList.add('u-block');
         }
 
         async function executeRelease() {
@@ -762,12 +754,12 @@
                     // Hide release modal first
                     closeReleaseModal();
                     // Show rollover modal
-                    document.getElementById('rolloverModal').style.display = 'flex';
+                    document.getElementById('rolloverModal').classList.add('u-block');
 
                     return; // Stop here, wait for user action
                 } else if (res.status === 403) {
                     // Not bound
-                    document.getElementById('bindGitLabModal').style.display = 'flex';
+                    document.getElementById('bindGitLabModal').classList.add('u-block');
                 } else {
                     const err = await res.json();
                     alert('发布失败: ' + err.detail);

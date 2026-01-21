@@ -5,93 +5,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>心情指数打卡 - 开发者体验追踪</title>
+    <link href="css/main.css" rel="stylesheet">
     <style>
-        :root {
-            --primary: #2563eb;
-            --bg-main: #ffffff;
-            --card-bg: #f8fafc;
-            --text-main: #0f172a;
-            --text-dim: #64748b;
-            --border-color: #e2e8f0;
-        }
-
         body {
-            font-family: 'Inter', -apple-system, 'Microsoft YaHei', sans-serif;
-            background-color: var(--bg-main);
-            color: var(--text-main);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
+            background-color: var(--sys-bg-app);
         }
 
         .container {
-            background-color: var(--bg-main);
+            background-color: var(--sys-bg-card);
             padding: 40px;
-            border-radius: 12px;
+            border-radius: var(--g-radius-lg);
             text-align: center;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            border: 1px solid var(--sys-border-subtle);
+            box-shadow: var(--g-shadow-lg);
             max-width: 450px;
             width: 100%;
         }
 
         h1 {
-            color: var(--text-main);
-            font-size: 24px;
-            margin-bottom: 10px;
-            font-weight: 700;
+            color: var(--sys-text-primary);
+            font-size: var(--g-font-size-h1);
+            margin-bottom: 12px;
+            font-weight: var(--g-font-weight-bold);
         }
 
         p {
-            color: var(--text-dim);
-            margin-bottom: 30px;
+            color: var(--sys-text-secondary);
+            font-size: var(--g-font-size-body);
+            margin-bottom: 32px;
+            line-height: var(--g-line-height-body);
         }
 
         .faces {
             display: flex;
             justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 30px;
+            gap: 12px;
+            margin-bottom: 32px;
         }
 
         .face-btn {
             flex: 1;
-            padding: 10px 5px;
-            font-size: 13px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
+            padding: 12px 8px;
+            font-size: var(--g-font-size-caption);
+            font-weight: var(--g-font-weight-medium);
+            background-color: var(--sys-bg-sidebar);
+            border: 1px solid var(--sys-border-subtle);
+            border-radius: var(--g-radius-md);
             cursor: pointer;
             transition: all 0.2s ease;
-            color: var(--text-dim);
+            color: var(--sys-text-secondary);
         }
 
         .face-btn:hover:not(:disabled) {
-            border-color: var(--primary);
-            color: var(--primary);
-            background-color: #eff6ff;
+            border-color: var(--sys-primary);
+            color: var(--sys-primary);
+            background-color: var(--g-blue-50);
         }
 
         .face-btn.selected {
-            background-color: var(--primary);
-            color: #ffffff;
-            border-color: var(--primary);
+            background-color: var(--sys-primary);
+            color: var(--sys-text-on-primary);
+            border-color: var(--sys-primary);
         }
 
         .face-btn:disabled {
             cursor: not-allowed;
-            opacity: 0.7;
+            opacity: 0.6;
         }
 
         #message {
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 8px;
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: var(--g-radius-md);
             display: none;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: var(--g-font-size-body);
+            font-weight: var(--g-font-weight-medium);
+            line-height: var(--g-line-height-dense);
         }
 
         .success {

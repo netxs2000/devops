@@ -12,242 +12,17 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-    <style>
-        :root {
-            /* Map old vars to new light theme */
-            --primary-gradient: var(--primary);
-            --card-dark: var(--card-bg);
-            --text-main: var(--text-main);
-            --text-dim: var(--text-dim);
-            --glass: var(--bg-sidebar);
-            --border: var(--border-color);
-            --passed: var(--passed);
-            --failed: var(--failed);
-            --pending: #f59e0b;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: var(--bg-main);
-            color: var(--text-main);
-            min-height: 100vh;
-        }
-
-        .layout {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* Reusing Sidebar Styles for consistency if needed, but keeping it standalone for now */
-        .container {
-            flex: 1;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px;
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-        }
-
-        .page-info h1 {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .page-info p {
-            color: var(--text-dim);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-
-        .stat-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            padding: 24px;
-            border-radius: 20px;
-            /* backdrop-filter: blur(12px); */
-            box-shadow: var(--shadow-sm);
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-            margin-top: 8px;
-        }
-
-        .tickets-panel {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 24px;
-            padding: 30px;
-            /* backdrop-filter: blur(20px); */
-            box-shadow: var(--shadow-md);
-        }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-        }
-
-        .filter-pills {
-            display: flex;
-            gap: 10px;
-            background: var(--bg-sidebar);
-            padding: 6px;
-            border-radius: 12px;
-        }
-
-        .pill {
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: 0.2s;
-            color: var(--text-dim);
-        }
-
-        .pill.active {
-            background: var(--primary);
-            color: white;
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-        }
-
-        .ticket-list {
-            display: grid;
-            gap: 15px;
-        }
-
-        .ticket-card {
-            background: var(--glass);
-            border: 1px solid var(--border);
-            padding: 20px;
-            border-radius: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-
-        .ticket-card:hover {
-            background: var(--bg-card-hover);
-            transform: translateX(8px);
-            border-color: var(--primary);
-        }
-
-        .ticket-main {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .type-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            background: var(--bg-sidebar);
-        }
-
-        .ticket-info h3 {
-            font-size: 16px;
-            margin-bottom: 4px;
-        }
-
-        .ticket-meta {
-            display: flex;
-            gap: 15px;
-            font-size: 12px;
-            color: var(--text-dim);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .status-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .status-pending {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--pending);
-            border: 1px solid rgba(245, 158, 11, 0.2);
-        }
-
-        .status-in-progress {
-            background: rgba(59, 130, 246, 0.1);
-            color: #3b82f6;
-            border: 1px solid rgba(59, 130, 246, 0.2);
-        }
-
-        .status-completed {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--passed);
-            border: 1px solid var(--passed);
-        }
-
-        .btn-back {
-            background: var(--glass);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            padding: 10px 20px;
-            border-radius: 12px;
-            text-decoration: none;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: 0.2s;
-        }
-
-        .btn-back:hover {
-            background: var(--bg-card-hover);
-        }
-    </style>
-    </style>
 </head>
 
 <body>
-    <div class="container">
-        <header>
+    <div class="u-mx-auto u-p-40 u-max-w-1200">
+        <header class="u-flex u-flex-between u-mb-40 u-flex-center">
             <div class="page-info">
-                <h1>My Tickets</h1>
-                <p id="welcome-text">Loading your workspace...</p>
+                <h1 class="u-text-primary u-mb-8 u-text-display">My Tickets</h1>
+                <p id="welcome-text" class="u-text-dim u-text-h3">Loading your workspace...</p>
             </div>
             <div class="header-actions">
-                <a href="index.html" class="btn-back">
+                <a href="index.html" class="btn-ghost btn-icon-text">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="19" y1="12" x2="5" y2="12"></line>
                         <polyline points="12 19 5 12 12 5"></polyline>
@@ -257,38 +32,38 @@
             </div>
         </header>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">All Submissions</div>
-                <div class="stat-value" id="statTotal">0</div>
+        <div class="sd-stats-grid u-mb-40">
+            <div class="sd-stat-item">
+                <div class="sd-stat-label">All Submissions</div>
+                <div class="sd-stat-value" id="statTotal">0</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Pending Review</div>
-                <div class="stat-value" id="statPending" style="color:var(--pending)">0</div>
+            <div class="sd-stat-item">
+                <div class="sd-stat-label">Pending Review</div>
+                <div class="sd-stat-value u-text-warning" id="statPending">0</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Processing</div>
-                <div class="stat-value" id="statInProgress" style="color:#3b82f6">0</div>
+            <div class="sd-stat-item">
+                <div class="sd-stat-label">Processing</div>
+                <div class="sd-stat-value u-text-info" id="statInProgress">0</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Resolved</div>
-                <div class="stat-value" id="statCompleted" style="color:var(--passed)">0</div>
+            <div class="sd-stat-item">
+                <div class="sd-stat-label">Resolved</div>
+                <div class="sd-stat-value u-text-success" id="statCompleted">0</div>
             </div>
         </div>
 
-        <div class="tickets-panel">
-            <div class="panel-header">
-                <h2 style="font-size: 20px;">Ticket History</h2>
-                <div class="filter-pills">
-                    <div class="pill active" data-filter="all">All</div>
-                    <div class="pill" data-filter="pending">Pending</div>
-                    <div class="pill" data-filter="in-progress">In Progress</div>
-                    <div class="pill" data-filter="completed">Completed</div>
+        <div class="g-card u-p-32">
+            <div class="u-flex u-flex-between u-flex-center u-mb-24">
+                <h2 class="u-text-h2">Ticket History</h2>
+                <div class="sd-tabs u-mb-0 u-p-0 u-border-none">
+                    <div class="sd-tab is-active" data-filter="all">All</div>
+                    <div class="sd-tab" data-filter="pending">Pending</div>
+                    <div class="sd-tab" data-filter="in-progress">In Progress</div>
+                    <div class="sd-tab" data-filter="completed">Completed</div>
                 </div>
             </div>
 
-            <div id="ticketsContainer" class="ticket-list">
-                <div style="text-align: center; padding: 60px; color: var(--text-dim);">
+            <div id="ticketsContainer" class="u-flex u-flex-column u-gap-15">
+                <div class="u-text-center u-p-60 u-text-dim">
                     Fetching records...
                 </div>
             </div>
@@ -332,7 +107,7 @@
                 }
             } catch (error) {
                 NotificationSystem.show(error.message || 'Connection Error', 'error');
-                document.getElementById('ticketsContainer').innerHTML = `<div style="text-align:center; color:var(--failed)">${error.message}</div>`;
+                document.getElementById('ticketsContainer').innerHTML = `<div class="u-text-center u-text-error">${error.message}</div>`;
             }
         }
 
@@ -341,7 +116,7 @@
             const filtered = currentFilter === 'all' ? allTickets : allTickets.filter(t => t.status === currentFilter);
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div style="text-align:center; padding:40px; color:var(--text-dim);">No matching records found.</div>`;
+                container.innerHTML = `<div class="u-text-center u-p-40 u-text-dim">No matching records found.</div>`;
                 return;
             }
 
@@ -355,29 +130,29 @@
                 };
 
                 return `
-                    <div class="ticket-card" onclick="location.href='service_desk_track.html?code=${t.tracking_code}'">
-                        <div class="ticket-main">
-                            <div class="type-icon">${typeIcon}</div>
-                            <div class="ticket-info">
-                                <h3>${t.title}</h3>
-                                <div class="ticket-meta">
+                    <div class="sd-card u-p-24 u-flex u-flex-between u-flex-center u-pointer-cursor u-radius-md" onclick="location.href='service_desk_track.html?code=${t.tracking_code}'">
+                        <div class="u-flex u-flex-center u-gap-20">
+                            <div class="u-flex u-flex-center u-radius-md u-bg-sidebar u-border-subtle u-text-primary u-weight-600 u-text-caption u-square-44">${typeIcon}</div>
+                            <div>
+                                <h3 class="u-mb-4 u-text-body u-weight-600">${t.title}</h3>
+                                <div class="u-flex u-gap-16 u-text-dim u-text-tiny">
                                     <span>ID: ${t.tracking_code}</span>
                                     <span>•</span>
                                     <span>Created ${date}</span>
-                                    ${t.gitlab_issue_iid ? `<span>•</span><span style="color:var(--primary)">GitLab Issue #${t.gitlab_issue_iid}</span>` : ''}
+                                    ${t.gitlab_issue_iid ? `<span>•</span><span class="u-text-primary">GitLab Issue #${t.gitlab_issue_iid}</span>` : ''}
                                 </div>
                             </div>
                         </div>
-                        <div class="status-badge status-${t.status}">${statusMap[t.status] || t.status}</div>
+                        <div class="sd-badge sd-badge--${t.status}">${statusMap[t.status] || t.status}</div>
                     </div>
                 `;
             }).join('');
         }
 
-        document.querySelectorAll('.pill').forEach(pill => {
+        document.querySelectorAll('.sd-tab').forEach(pill => {
             pill.addEventListener('click', () => {
-                document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
+                document.querySelectorAll('.sd-tab').forEach(p => p.classList.remove('is-active'));
+                pill.classList.add('is-active');
                 currentFilter = pill.dataset.filter;
                 displayTickets();
             });

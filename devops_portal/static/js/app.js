@@ -70,10 +70,10 @@ function switchView(view) {
     ];
 
     const viewItems = [
-        'results', 'statsGrid', 'testExecutionView', 'bugView', 'matrixView',
-        'requirementsView', 'reportsView', 'view-servicedesk',
-        'sdSubmitView', 'sdMyView', 'decisionHubView', 'governanceView', 'pulseView',
-        'adminApprovalsView', 'adminProductsView', 'adminProjectsView', 'adminUsersView'
+        'qa-dashboard-view', 'qa-test-results', 'qa-stats-grid', 'qa-execution-view', 'qa-defect-view', 'pm-matrix-view',
+        'pm-requirements-view', 'rpt-insights-view', 'sd-support-view',
+        'sd-submit-view', 'sd-my-view', 'sys-decision-hub-view', 'sys-governance-view', 'sys-pulse-view',
+        'adm-approvals-view', 'adm-products-view', 'adm-projects-view', 'adm-users-view'
     ];
 
     // Reset all nav and views
@@ -109,56 +109,65 @@ function switchView(view) {
     }
 
     // 控制主 Header 的显隐
-    const headerEl = document.getElementById('main-header');
+    const headerEl = document.getElementById('sys-header');
     const headerViews = ['dashboard', 'tests', 'test-cases', 'defects', 'requirements', 'matrix', 'reports'];
 
     if (headerEl) {
-        headerEl.style.display = (headerViews.includes(view) || !view) ? 'flex' : 'none';
+        headerEl.style.display = (headerViews.includes(view) || !view || view === 'dashboard') ? 'flex' : 'none';
     }
 
     // 显示对应视图
-    if (view === 'tests' || view === 'test-cases' || view === 'dashboard') {
-        document.getElementById('results').style.display = 'flex';
-        document.getElementById('statsGrid').style.display = 'grid';
+    const showIfExist = (id, display = 'block') => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = display;
+    };
+
+    if (view === 'tests' || view === 'test-cases' || view === 'dashboard' || !view) {
+        showIfExist('qa-dashboard-view', 'block');
+        showIfExist('qa-test-results', 'flex');
+        showIfExist('qa-stats-grid', 'grid');
     } else if (view === 'test-execution') {
-        document.getElementById('testExecutionView').style.display = 'block';
+        showIfExist('qa-execution-view');
     } else if (view === 'defects') {
-        document.getElementById('bugView').style.display = 'block';
+        showIfExist('qa-defect-view');
         if (typeof loadBugs === 'function') loadBugs();
     } else if (view === 'requirements') {
-        document.getElementById('requirementsView').style.display = 'block';
+        showIfExist('pm-requirements-view');
         if (typeof loadRequirements === 'function') loadRequirements();
     } else if (view === 'support' || view === 'servicedesk') {
-        document.getElementById('view-servicedesk').style.display = 'block';
+        showIfExist('sd-support-view');
         if (typeof loadServiceDeskTickets === 'function') loadServiceDeskTickets();
     } else if (view === 'matrix') {
-        document.getElementById('matrixView').style.display = 'block';
+        showIfExist('pm-matrix-view');
         if (typeof loadMatrix === 'function') loadMatrix();
     } else if (view === 'reports') {
-        document.getElementById('reportsView').style.display = 'block';
+        showIfExist('rpt-insights-view');
         if (typeof renderReportDashboard === 'function') renderReportDashboard();
     } else if (view === 'sd_submit') {
-        document.getElementById('sdSubmitView').style.display = 'block';
-        document.getElementById('sdFrame').src = 'service_desk.html';
+        showIfExist('sd-submit-view');
+        const frame = document.getElementById('sdFrame');
+        if (frame) frame.src = 'service_desk.html';
         UI.toggleLoading('', false);
     } else if (view === 'sd_my') {
-        document.getElementById('sdMyView').style.display = 'block';
-        document.getElementById('sdMyFrame').src = 'service_desk_my_tickets.html';
+        showIfExist('sd-my-view');
+        const frame = document.getElementById('sdMyFrame');
+        if (frame) frame.src = 'service_desk_my_tickets.html';
         UI.toggleLoading('', false);
     } else if (view === 'pulse') {
-        document.getElementById('pulseView').style.display = 'block';
-        document.getElementById('pulseFrame').src = 'devex_pulse.html';
+        showIfExist('sys-pulse-view');
+        const frame = document.getElementById('pulseFrame');
+        if (frame) frame.src = 'devex_pulse.html';
         UI.toggleLoading('', false);
     } else if (view === 'admin_approvals') {
-        document.getElementById('adminApprovalsView').style.display = 'block';
+        showIfExist('adm-approvals-view');
     } else if (view === 'admin_products') {
-        document.getElementById('adminProductsView').style.display = 'block';
+        showIfExist('adm-products-view');
         loadAdminProducts();
     } else if (view === 'admin_projects') {
-        document.getElementById('adminProjectsView').style.display = 'block';
+        showIfExist('adm-projects-view');
         loadAdminProjects();
     } else if (view === 'admin_users') {
-        document.getElementById('adminUsersView').style.display = 'block';
+        showIfExist('adm-users-view');
         loadAdminUsers();
     }
 }
@@ -197,10 +206,10 @@ function initPulse() {
  */
 function refreshActiveView() {
     const views = [
-        { id: 'results', refresh: () => typeof loadTestCases === 'function' && loadTestCases(true) },
-        { id: 'requirementsView', refresh: () => typeof loadRequirements === 'function' && loadRequirements() },
-        { id: 'bugView', refresh: () => typeof loadBugs === 'function' && loadBugs() },
-        { id: 'view-servicedesk', refresh: () => typeof loadServiceDeskTickets === 'function' && loadServiceDeskTickets() }
+        { id: 'qa-test-results', refresh: () => typeof loadTestCases === 'function' && loadTestCases(true) },
+        { id: 'pm-requirements-view', refresh: () => typeof loadRequirements === 'function' && loadRequirements() },
+        { id: 'qa-defect-view', refresh: () => typeof loadBugs === 'function' && loadBugs() },
+        { id: 'sd-support-view', refresh: () => typeof loadServiceDeskTickets === 'function' && loadServiceDeskTickets() }
     ];
 
     for (let view of views) {
@@ -243,6 +252,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             initPulse();
             if (window.location.hash) {
                 switchView(window.location.hash.substring(1));
+            } else {
+                switchView('dashboard');
             }
         }
     } catch (e) {
@@ -377,18 +388,23 @@ async function loadAdminProjects() {
     try {
         const mdmTbody = document.getElementById('mdmProjectsTableBody');
         const unlinkedTbody = document.getElementById('unlinkedReposTableBody');
-        const orgs = await Api.request('/admin/organizations');
         const mdmProjects = await Api.request('/admin/mdm-projects');
         const unlinkedRepos = await Api.request('/admin/unlinked-repos');
 
         mdmTbody.innerHTML = '';
         mdmProjects.forEach(p => {
             const tr = document.createElement('tr');
+            const statusClass = p.status === 'RELEASED' ? 'adm-badge--active' : 'adm-badge--pending';
             tr.innerHTML = `
-                <td><b>${p.project_name}</b><br><small>${p.project_id}</small></td>
+                <td>
+                    <div class="u-flex-column">
+                        <span class="u-weight-600 u-text-primary">${p.project_name}</span>
+                        <span class="u-text-dim" style="font-size: 12px;">${p.project_id}</span>
+                    </div>
+                </td>
                 <td>${p.project_type}</td>
-                <td><span class="badge ${p.status === 'RELEASED' ? 'badge-passed' : ''}">${p.status}</span></td>
-                <td>${p.lead_repo_id ? '✅ 已绑定' : '⚠️ 未绑定'}</td>
+                <td><span class="adm-badge ${statusClass}">${p.status}</span></td>
+                <td>${p.lead_repo_id ? '<span class="u-text-success u-weight-600">✅ 已绑定</span>' : '<span class="u-text-warning u-weight-600">⚠️ 未绑定</span>'}</td>
                 <td style="text-align:center;">${p.repo_count}</td>
             `;
             mdmTbody.appendChild(tr);
@@ -397,7 +413,10 @@ async function loadAdminProjects() {
         unlinkedTbody.innerHTML = '';
         unlinkedRepos.forEach(r => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${r.name}</td><td><button class="btn btn-sm" onclick="doLink(${r.id})">关联</button></td>`;
+            tr.innerHTML = `
+                <td>${r.name}</td>
+                <td><button class="btn-primary" style="padding: 4px 12px; font-size: 13px;" onclick="doLink(${r.id})">关联</button></td>
+            `;
             unlinkedTbody.appendChild(tr);
         });
     } catch (e) { console.error(e); }
@@ -411,12 +430,12 @@ async function loadAdminUsers() {
         mappings.forEach(m => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><b>${m.user_name}</b></td>
-                <td>${m.source_system}</td>
+                <td><span class="u-weight-600 u-text-primary">${m.user_name}</span></td>
+                <td><span class="adm-badge adm-badge--pending" style="background: rgba(59, 130, 246, 0.1); color: var(--sys-primary); border-color: rgba(59, 130, 246, 0.2);">${m.source_system}</span></td>
                 <td><code>${m.external_user_id}</code></td>
                 <td>${m.external_username || '-'}</td>
                 <td>${m.external_email || '-'}</td>
-                <td><button class="btn btn-sm btn-danger" onclick="deleteMapping(${m.id})">删除</button></td>
+                <td><button class="btn-ghost" style="padding: 4px 12px; font-size: 13px; color: var(--status-error);" onclick="deleteMapping(${m.id})">删除</button></td>
             `;
             tbody.appendChild(tr);
         });
@@ -430,7 +449,13 @@ async function loadAdminProducts() {
         productTbody.innerHTML = '';
         products.forEach(p => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><b>${p.product_name}</b></td><td>${p.category}</td><td>${p.lifecycle_status}</td><td>${p.owner_team_id}</td><td><button class="btn btn-sm">编辑</button></td>`;
+            tr.innerHTML = `
+                <td><span class="u-weight-600 u-text-primary">${p.product_name}</span></td>
+                <td>${p.category}</td>
+                <td><span class="adm-badge adm-badge--active">${p.lifecycle_status}</span></td>
+                <td>${p.owner_team_id}</td>
+                <td><button class="btn-primary" style="padding: 4px 12px; font-size: 13px;">编辑</button></td>
+            `;
             productTbody.appendChild(tr);
         });
     } catch (e) { console.error(e); }

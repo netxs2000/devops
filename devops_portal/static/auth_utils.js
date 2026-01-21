@@ -223,16 +223,7 @@ const NotificationSystem = {
         if (document.getElementById('notification-container')) return;
         const container = document.createElement('div');
         container.id = 'notification-container';
-        container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            pointer-events: none;
-        `;
+        container.className = 'sys-notification-container';
         document.body.appendChild(container);
 
         // SSE Listener
@@ -245,14 +236,11 @@ const NotificationSystem = {
         if (this.eventSource) this.eventSource.close();
 
         const token = Auth.getToken();
-        // 因为 EventSource 不能原生传 Header，我们通过 URL 参数或 Cookie 处理，
-        // 这里采用后台支持的 token 参数模式，或者简单的 open_browser 鉴权模拟
         this.eventSource = new EventSource(`/notifications/stream?token=${token}`);
 
         this.eventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                // Pass metadata if available
                 this.show(data.message, data.type || 'info', data.metadata);
             } catch (e) {
                 console.error("SSE Message parsing error", e);
@@ -271,33 +259,7 @@ const NotificationSystem = {
         const container = document.getElementById('notification-container');
 
         const toast = document.createElement('div');
-        const colors = {
-            success: '#10b981',
-            error: '#ef4444',
-            info: '#3b82f6',
-            warning: '#f59e0b'
-        };
-
-        toast.style.cssText = `
-            background: rgba(15, 15, 35, 0.95);
-            border-left: 4px solid ${colors[type]};
-            color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);
-            backdrop-filter: blur(12px);
-            font-family: 'Outfit', sans-serif;
-            font-size: 14px;
-            min-width: 280px;
-            max-width: 400px;
-            transform: translateX(120%);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: auto;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            line-height: 1.5;
-        `;
+        toast.className = `sys-toast sys-toast--${type}`;
 
         const icon = {
             success: '✅',
@@ -306,14 +268,17 @@ const NotificationSystem = {
             warning: '⚠️'
         }[type];
 
-        let contentHtml = `<div style="flex:1;">
-            <div style="font-weight:600; margin-bottom:2px;">${message}</div>`;
+        let contentHtml = `
+            <span class="sys-toast__icon">${icon}</span>
+            <div class="sys-toast__content">
+                <div class="sys-toast__title">${message}</div>
+        `;
 
         if (metadata) {
-            contentHtml += `<div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:4px; display:flex; flex-direction:column; gap:2px;">`;
+            contentHtml += `<div class="sys-toast__meta">`;
 
             if (metadata.failure_reason) {
-                contentHtml += `<div>Reason: <span style="color:#fca5a5;">${metadata.failure_reason}</span></div>`;
+                contentHtml += `<div>Reason: <span style="color: var(--status-error);">${metadata.failure_reason}</span></div>`;
             }
             if (metadata.test_case_title) {
                 contentHtml += `<div>Case: ${metadata.test_case_title}</div>`;
@@ -329,18 +294,17 @@ const NotificationSystem = {
         }
 
         contentHtml += `</div>`;
-
-        toast.innerHTML = `<span style="font-size:18px; position:relative; top:1px;">${icon}</span>${contentHtml}`;
+        toast.innerHTML = contentHtml;
         container.appendChild(toast);
 
         // Animate in
-        setTimeout(() => toast.style.transform = 'translateX(0)', 10);
+        setTimeout(() => toast.classList.add('is-active'), 10);
 
-        // Auto remove (longer duration for errors/metadata)
+        // Auto remove
         const duration = (type === 'error' || metadata) ? 8000 : 5000;
         setTimeout(() => {
-            toast.style.transform = 'translateX(120%)';
-            setTimeout(() => toast.remove(), 300);
+            toast.classList.remove('is-active');
+            setTimeout(() => toast.remove(), 400);
         }, duration);
     }
 };

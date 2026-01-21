@@ -8,265 +8,55 @@
     <meta name="description" content="Service Desk 登录">
     <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary-gradient: var(--primary);
-            --dark-bg: var(--bg-main);
-            --card-bg: var(--card-bg);
-            --card-border: var(--border-color);
-            --text-primary: var(--text-main);
-            --text-secondary: var(--text-dim);
-            --input-bg: var(--bg-sidebar);
-            --shadow-lg: var(--shadow-md);
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--dark-bg);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Removed dynamic background */
-
-        header {
-            background: var(--bg-sidebar);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1.5rem 2rem;
-        }
-
-        .header-content {
-            max-width: 500px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .back-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .back-link:hover {
-            color: var(--text-primary);
-        }
-
-        main {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .login-container {
-            width: 100%;
-            max-width: 450px;
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .login-header h1 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .login-header p {
-            color: var(--text-secondary);
-        }
-
-        .login-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 2.5rem;
-            /* backdrop-filter: blur(10px); */
-            box-shadow: var(--shadow-md);
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 1rem;
-            transition: all 0.2s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-        }
-
-        .login-btn {
-            width: 100%;
-            padding: 0.875rem;
-            background: var(--primary-gradient);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 0.5rem;
-        }
-
-        .login-btn:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .login-btn:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            display: none;
-            animation: slideDown 0.3s ease-out;
-            font-size: 0.9rem;
-        }
-
-        .alert.error {
-            background: rgba(220, 38, 38, 0.1);
-            border: 1px solid var(--failed);
-            color: var(--failed);
-        }
-
-        .alert.success {
-            background: rgba(5, 150, 105, 0.1);
-            border: 1px solid var(--passed);
-            color: var(--passed);
-        }
-
-        .alert.show {
-            display: block;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .register-prompt {
-            text-align: center;
-            margin-top: 1.5rem;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .register-prompt a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .register-prompt a:hover {
-            text-decoration: underline;
-        }
-
-        footer {
-            background: var(--bg-sidebar);
-            border-top: 1px solid var(--border-color);
-            padding: 1.5rem;
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-    </style>
 </head>
 
 <body>
-    <header>
-        <div class="header-content">
-            <div class="logo">登录</div>
-            <a href="service_desk.html" class="back-link">← 返回首页</a>
+    <header class="u-p-24 u-w-full sd-header">
+        <div class="u-flex u-flex-between u-mx-auto u-max-w-500">
+            <div class="u-text-primary u-weight-700 u-text-h2">登录</div>
+            <a href="service_desk.html" class="sd-nav-link">← 返回首页</a>
         </div>
     </header>
 
-    <main>
-        <div class="login-container">
-            <div class="login-header">
-                <h1>Service Desk</h1>
-                <p>请登录以访问 DevOps 服务台</p>
+    <main class="sys-auth-container">
+        <div class="sys-auth-card">
+            <div class="sys-auth-header">
+                <h1 class="sys-auth-title">Service Desk</h1>
+                <p class="sys-auth-subtitle">请登录以访问 DevOps 服务台</p>
             </div>
 
-            <div class="login-card">
+            <div class="g-card u-p-40">
                 <div id="alertBox" class="alert"></div>
 
                 <form id="loginForm">
-                    <div class="form-group">
-                        <label>邮箱地址</label>
-                        <input type="email" id="email" required placeholder="name@example.com" autocomplete="email">
+                    <div class="u-mb-24">
+                        <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">邮箱地址</label>
+                        <input type="email" id="email" class="form-control" required placeholder="name@example.com"
+                            autocomplete="email">
                     </div>
 
-                    <div class="form-group">
-                        <label>密码</label>
-                        <input type="password" id="password" required placeholder="请输入您的密码"
+                    <div class="u-mb-32">
+                        <div class="u-flex u-flex-between u-mb-8">
+                            <label class="u-text-dim u-weight-500 u-block u-text-body">密码</label>
+                        </div>
+                        <input type="password" id="password" class="form-control" required placeholder="请输入您的密码"
                             autocomplete="current-password">
                     </div>
 
-                    <button type="submit" class="login-btn" id="loginBtn">
+                    <button type="submit" class="btn-primary u-w-full u-p-16" id="loginBtn">
                         登 录
                     </button>
                 </form>
 
-                <div class="register-prompt">
-                    还没有账号？ <a href="service_desk_register.html">注册新账户</a>
+                <div class="sys-auth-footer">
+                    <span>还没有账号？</span>
+                    <a href="service_desk_register.html">注册新账户</a>
                 </div>
             </div>
         </div>
     </main>
 
-    <footer>
+    <footer class="u-p-24 u-text-center u-text-dim sd-footer">
         <p>© 2025 TJHQ</p>
     </footer>
 

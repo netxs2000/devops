@@ -22,27 +22,26 @@
 </head>
 
 <body>
-    <div class="app-container">
+    <div class="sys-app-container">
         <!-- Toast Notification Container for Real-time Pulse -->
         <div id="toast-container"></div>
 
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
+        <aside class="sys-sidebar">
+            <div class="sys-sidebar-header">
                 <h1>DevOps Portal</h1>
                 <p>Enterprise Management Hub</p>
-                <div id="data-scope-badge-v2"
-                    style="display: none; align-items: center; gap: 6px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.1); padding: 4px 10px; border-radius: 6px; font-size: 11px; color: var(--primary); margin-top: 12px; font-weight: 600;">
+                <div id="data-scope-badge-v2" class="sys-tag u-align-center u-gap-10 u-mt-10 u-hide">
                     <span id="scope-icon-v2"></span>
                     <span id="scope-value-v2">Loading...</span>
                 </div>
             </div>
 
-            <nav class="sidebar-nav" id="sidebar-nav-container" style="flex: 1; overflow-y: auto;">
+            <nav class="sidebar-nav u-w-full u-h-full" id="sidebar-nav-container">
                 <!-- Sidebar content will be rendered by renderSidebar() in app.js -->
             </nav>
 
-            <div class="user-profile">
+            <div class="sys-user-profile">
                 <div class="user-avatar" id="user-avatar">?</div>
                 <div class="user-info">
                     <div class="user-name" id="user-display-name">Loading...</div>
@@ -59,12 +58,13 @@
         </aside>
 
         <!-- Main Workspace -->
-        <main class="main-content">
-            <header id="main-header">
+        <main class="sys-main-content">
+            <header id="sys-header">
                 <div class="page-info">
-                    <div style="display: flex; align-items: center; gap: 15px;">
+                    <div class="u-align-center u-gap-15">
                         <h1>Test Repository</h1>
-                        <span id="data-scope-badge" class="scope-badge" style="display: none;">
+                        <span class="sys-tag">Beta</span>
+                        <span id="data-scope-badge" class="scope-badge u-hide">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -73,22 +73,20 @@
                             Data Scope: <span id="user-province">Global</span>
                         </span>
                     </div>
-                    <p id="projectTitle">Select a project to view test execution insights</p>
+                    <p id="projectTitle" class="u-text-dim">Select a project to view test execution insights</p>
                 </div>
-                <div class="controls">
+                <div class="u-align-center u-gap-15">
                     <div class="input-wrapper">
                         <input type="number" id="projectId" placeholder="GitLab Project ID" value="">
                     </div>
                     <button class="btn-primary" onclick="loadTestCases()">Load Repository</button>
-                    <button class="btn-primary" style="background: var(--primary);" onclick="createNewRequirement()">
+                    <button class="btn-primary" onclick="createNewRequirement()">
                         + Req
                     </button>
-                    <button class="btn-primary" style="background: var(--accent);" onclick="openModal()">
+                    <button class="btn-ghost" onclick="openModal()">
                         + Case
                     </button>
-                    <button class="btn-primary"
-                        style="background: var(--passed); color: white; border: none; display: flex; align-items: center; gap: 8px;"
-                        onclick="executeBatchPass()">
+                    <button class="btn-success btn-icon-text" onclick="executeBatchPass()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.5">
                             <polyline points="20 6 9 17 4 12"></polyline>
@@ -96,8 +94,7 @@
                         Batch Pass
                     </button>
                     <div class="header-actions">
-                        <button class="btn-primary" onclick="openReqModal()"
-                            style="background:var(--accent); display:flex; align-items:center; gap:8px;">
+                        <button class="btn-ghost btn-icon-text" onclick="openReqModal()">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -105,9 +102,7 @@
                             </svg>
                             Add Requirement
                         </button>
-                        <button class="btn-primary"
-                            style="background:var(--card-dark); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:8px;"
-                            onclick="loadRequirements()">
+                        <button class="btn-ghost btn-icon-text" onclick="loadRequirements()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path d="M23 4v6h-6"></path>
@@ -117,9 +112,7 @@
                             Sync
                         </button>
                     </div>
-                    <button class="btn-primary"
-                        style="background: var(--card-dark); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px;"
-                        onclick="runDeduplicationScan()">
+                    <button class="btn-ghost btn-icon-text" onclick="runDeduplicationScan()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path
@@ -128,9 +121,7 @@
                         </svg>
                         Clean Up
                     </button>
-                    <button class="btn-primary"
-                        style="background: var(--card-dark); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px;"
-                        onclick="exportRTMReport()">
+                    <button class="btn-ghost btn-icon-text" onclick="exportRTMReport()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -138,9 +129,7 @@
                         </svg>
                         Export RTM
                     </button>
-                    <button class="btn-primary"
-                        style="background: var(--accent); color: white; border: none; display: flex; align-items: center; gap: 8px;"
-                        onclick="loadAssetLibrary()">
+                    <button class="btn-primary btn-icon-text" onclick="loadAssetLibrary()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
@@ -148,9 +137,7 @@
                         </svg>
                         Browse Assets
                     </button>
-                    <button class="btn-primary"
-                        style="background: var(--pending); color: white; border: none; display: flex; align-items: center; gap: 8px;"
-                        onclick="openImportModal()">
+                    <button class="btn-warning btn-icon-text" onclick="openImportModal()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -159,9 +146,7 @@
                         </svg>
                         Bulk Import
                     </button>
-                    <button class="btn-primary"
-                        style="background: var(--card-dark); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px;"
-                        onclick="exportReport()">
+                    <button class="btn-ghost btn-icon-text" onclick="exportReport()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -173,105 +158,102 @@
                 </div>
             </header>
 
-            <div id="loading">Synchronizing Data...</div>
+            <!-- Dashboard View -->
+            <div id="qa-dashboard-view">
+                <div id="loading">Synchronizing Data...</div>
 
-            <!-- Stats Bar -->
-            <div class="stats-grid" id="statsGrid" style="display: none;">
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">Success Rate</span>
+                <!-- Stats Bar -->
+                <div class="stats-grid u-hide" id="qa-stats-grid">
+                    <div class="stat-card u-p-24">
+                        <div class="stat-header">
+                            <span class="stat-title">Success Rate</span>
+                        </div>
+                        <div class="stat-value" id="stat-rate">0%</div>
                     </div>
-                    <div class="stat-value" id="stat-rate">0%</div>
+                    <div class="stat-card u-p-24">
+                        <div class="stat-header">
+                            <span class="stat-title">Defects Found</span>
+                            <span id="bug-alert-icon" class="sys-tag u-bg-error-light u-text-error u-hide">High
+                                Priority</span>
+                        </div>
+                        <div class="stat-value u-text-error" id="stat-bugs">0</div>
+                    </div>
+                    <div class="stat-card u-p-24">
+                        <div class="stat-header">
+                            <span class="stat-title">Passed / Failed</span>
+                        </div>
+                        <div class="u-flex u-gap-10 u-align-center">
+                            <span class="stat-value u-text-success" id="stat-passed">0</span>
+                            <span class="u-text-dim">/</span>
+                            <span class="stat-value u-text-error" id="stat-failed">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card u-p-24">
+                        <div class="stat-header">
+                            <span class="stat-title">Total Scenarios</span>
+                        </div>
+                        <div class="stat-value" id="stat-total">0</div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">Defects Found</span>
-                        <span class="stat-indicator" id="bug-alert-icon"
-                            style="display:none; background: rgba(220, 38, 38, 0.1); color: var(--failed);">High
-                            Priority</span>
-                    </div>
-                    <div class="stat-value" id="stat-bugs" style="color: var(--failed);">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">Passed / Failed</span>
-                    </div>
-                    <div style="display:flex; align-items:baseline; gap:10px;">
-                        <span class="stat-value" id="stat-passed" style="color: var(--passed);">0</span>
-                        <span style="color:var(--text-dim); font-size:18px;">/</span>
-                        <span class="stat-value" id="stat-failed" style="color: var(--failed);">0</span>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">Total Scenarios</span>
-                    </div>
-                    <div class="stat-value" id="stat-total">0</div>
-                </div>
-            </div>
 
-            <div class="test-list" id="results">
-                <div class="empty-state">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)"
-                        stroke-width="1.5" style="margin-bottom: 20px;">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    <p>Enter a Project ID to explore structured test suites.</p>
+                <div class="test-list" id="qa-test-results">
+                    <div class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)"
+                            stroke-width="1.5" class="u-mb-20">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p>Enter a Project ID to explore structured test suites.</p>
+                    </div>
                 </div>
-            </div>
+            </div> <!-- End of qa-dashboard-view -->
 
-            <div id="testExecutionView" style="display:none;">
-                <div class="glass-panel"
-                    style="padding: 40px; text-align: center; background: rgba(37, 99, 235, 0.02);">
-                    <div style="font-size: 48px; margin-bottom: 20px;">⚡</div>
-                    <h2 style="color: var(--primary); margin-bottom: 12px;">测试执行工作台</h2>
-                    <p style="color: var(--text-dim); max-width: 500px; margin: 0 auto 24px;">
+            <div id="qa-execution-view" class="u-hide">
+                <div class="g-glass-panel u-p-40 u-text-center u-bg-primary-light">
+                    <div class="u-text-h1 u-mb-20 u-mx-auto u-text-48">⚡</div>
+                    <h2 class="u-text-primary u-mb-20 u-text-h1">测试执行工作台</h2>
+                    <p class="u-text-dim u-max-w-500 u-mx-auto u-mb-20">
                         在此处管理并执行当前的测试轮次。您可以从用例库中指派用例到特定版本，并实时记录执行状态。
                     </p>
-                    <div
-                        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 800px; margin: 0 auto;">
-                        <div
-                            style="background: var(--bg-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
-                            <div style="font-size: 24px; font-weight: 700; color: var(--primary);">0</div>
-                            <div style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">待指派任务</div>
+                    <div class="u-flex u-gap-20 u-mx-auto u-max-w-800">
+                        <div class="g-card u-flex-shrink-0 u-flex-1">
+                            <div class="u-weight-700 u-text-primary u-text-h1">0</div>
+                            <div class="u-text-dim u-mt-10 u-text-tiny">待指派任务</div>
                         </div>
-                        <div
-                            style="background: var(--bg-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
-                            <div style="font-size: 24px; font-weight: 700; color: var(--warning);">0</div>
-                            <div style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">正在执行</div>
+                        <div class="g-card u-flex-shrink-0 u-flex-1">
+                            <div class="u-weight-700 u-text-warning u-text-h1">0</div>
+                            <div class="u-text-dim u-mt-10 u-text-tiny">正在执行</div>
                         </div>
-                        <div
-                            style="background: var(--bg-sidebar); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color);">
-                            <div style="font-size: 24px; font-weight: 700; color: var(--passed);">0</div>
-                            <div style="font-size: 12px; color: var(--text-dim); margin-top: 4px;">今日已封闭</div>
+                        <div class="g-card u-flex-shrink-0 u-flex-1">
+                            <div class="u-weight-700 u-text-success u-text-h1">0</div>
+                            <div class="u-text-dim u-mt-10 u-text-tiny">今日已封闭</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="bugView" style="display:none;">
-                <div class="test-list" id="bugResults" style="margin-top:20px;">
+            <div id="qa-defect-view" class="u-hide">
+                <div class="test-list u-mt-20" id="bugResults">
                     <!-- Bug list here -->
                 </div>
             </div>
 
-            <div id="requirementsView" style="display:none;">
-                <div class="stats-grid" id="reqStatsGrid" style="margin-bottom:20px;">
-                    <div class="stat-card">
+            <div id="pm-requirements-view" class="u-hide">
+                <div class="stats-grid" id="reqStatsGrid" class="u-mb-20">
+                    <div class="stat-card u-p-24">
                         <span class="stat-title">Requirement Coverage</span>
-                        <div class="stat-value" id="req-coverage-rate" style="color:var(--primary);">0%</div>
+                        <div class="stat-value u-text-primary" id="req-coverage-rate">0%</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card u-p-24">
                         <span class="stat-title">Pass Rate (Verified)</span>
-                        <div class="stat-value" id="req-pass-rate" style="color:var(--passed);">0%</div>
+                        <div class="stat-value u-text-success" id="req-pass-rate">0%</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card u-p-24">
                         <span class="stat-title">At Risk / Missing Cases</span>
-                        <div class="stat-value" id="req-risk-count" style="color:var(--failed);">0</div>
+                        <div class="stat-value u-text-error" id="req-risk-count">0</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card u-p-24">
                         <span class="stat-title">Approved Requirements</span>
                         <div class="stat-value" id="req-approved-total">0</div>
                     </div>
@@ -282,21 +264,20 @@
             </div>
 
             <!-- ServiceDesk Support View (For RD to Review) -->
-            <section id="view-servicedesk" style="display:none;">
+            <section id="sd-support-view" class="u-hide">
                 <div class="section-header">
                     <div>
                         <h2 class="section-title">Support Center</h2>
                         <p class="section-desc">Feedback and requests from internal business users.</p>
                     </div>
                     <div class="header-actions">
-                        <button class="btn-primary"
-                            style="background:var(--card-dark); border:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:8px;"
-                            onclick="loadServiceDeskTickets()">
+                        <button class="btn-ghost btn-icon-text" onclick="loadServiceDeskTickets()">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path d="M23 4v6h-6"></path>
                                 <path d="M1 20v-6h6"></path>
-                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15">
+                                </path>
                             </svg>
                             Sync Feedback
                         </button>
@@ -308,9 +289,9 @@
             </section>
 
             <!-- Reports View -->
-            <div id="reportsView" style="display:none;">
+            <div id="rpt-insights-view" class="u-hide">
                 <!-- Global Quality Alerts Panel -->
-                <div class="live-alerts-panel" id="globalAlertsPanel" style="display:none;">
+                <div class="live-alerts-panel u-hide" id="globalAlertsPanel">
                     <div id="globalAlertsList"></div>
                 </div>
 
@@ -323,10 +304,11 @@
                         <span class="section-label">工单类型分布 (Issue Type)</span>
                         <canvas id="typeChart"></canvas>
                     </div>
-                    <div class="testimony-card" style="grid-column: span 2;">
-                        <div id="testimony-content" class="testimony-text">Generating quality assessment...</div>
+                    <div class="testimony-card u-span-2">
+                        <div id="testimony-content" class="testimony-text u-text-dim">Generating quality assessment...
+                        </div>
                     </div>
-                    <div class="chart-container" style="grid-column: span 2;">
+                    <div class="chart-container u-span-2">
                         <table class="bench-table">
                             <thead>
                                 <tr>
@@ -344,50 +326,53 @@
             </div>
 
             <!-- Service Desk Webview (Integrated Content) -->
-            <div id="sdSubmitView" style="display:none; height: calc(100vh - 200px);">
-                <div class="glass-panel" style="height: 100%; padding: 0; overflow: hidden;">
-                    <iframe id="sdFrame" src=""
-                        style="width:100%; height:100%; border:none; border-radius: 20px;"></iframe>
+            <div id="sd-submit-view" class="u-hide u-h-v-minus-200">
+                <div class="glass-panel u-h-full u-p-0 u-overflow-hidden">
+                    <iframe id="sdFrame" src="" class="u-w-full u-h-full u-border-none u-radius-lg"></iframe>
                 </div>
             </div>
 
-            <div id="sdMyView" style="display:none; height: calc(100vh - 200px);">
-                <div class="glass-panel" style="height: 100%; padding: 0; overflow: hidden;">
-                    <iframe id="sdMyFrame" src=""
-                        style="width:100%; height:100%; border:none; border-radius: 20px;"></iframe>
+            <div id="sd-my-view" class="u-hide u-h-v-minus-200">
+                <div class="glass-panel u-h-full u-p-0 u-overflow-hidden">
+                    <iframe id="sdMyFrame" src="" class="u-w-full u-h-full u-border-none u-radius-lg"></iframe>
                 </div>
             </div>
 
-
-
-            <div id="pulseView" style="display:none; height: calc(100vh - 200px);">
-                <div class="glass-panel" style="height: 100%; padding: 0; overflow: hidden;">
-                    <iframe id="pulseFrame" src=""
-                        style="width:100%; height:100%; border:none; border-radius: 20px;"></iframe>
+            <div id="sys-pulse-view" class="u-hide u-h-v-minus-200">
+                <div class="glass-panel u-h-full u-p-0 u-overflow-hidden">
+                    <iframe id="pulseFrame" src="" class="u-w-full u-h-full u-border-none u-radius-lg"></iframe>
                 </div>
             </div>
 
-            <div id="adminProjectsView" style="display:none;">
-                <div class="glass-panel adm-panel">
+            <div id="adm-projects-view" class="u-hide">
+                <div class="adm-panel">
                     <div class="adm-header">
                         <div>
-                            <h2 style="margin: 0;">业务项目管理 (Two-Layer)</h2>
+                            <h2 class="adm-title">业务项目管理 (Two-Layer)</h2>
                             <p class="adm-title-desc">管理业务主项目 (MDM) 及其关联的 GitLab 技术仓库。</p>
                         </div>
-                        <button class="btn btn-primary" onclick="openCreateProjectModal()">➕ 新建主项目</button>
+                        <button class="btn-primary btn-icon-text" onclick="openCreateProjectModal()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            新建主项目
+                        </button>
                     </div>
 
                     <div class="adm-grid-2-cols">
-                        <!-- 左侧：主项目列表 -->
-                        <div class="table-container">
-                            <h4 class="adm-section-title">1. 业务主项目清单</h4>
-                            <table class="data-table">
+                        <div class="adm-table-container">
+                            <h4 class="adm-section-title">
+                                <span class="u-text-primary">01.</span> 业务主项目清单
+                            </h4>
+                            <table class="adm-data-table">
                                 <thead>
                                     <tr>
                                         <th>项目ID/名称</th>
                                         <th>类型</th>
                                         <th>状态</th>
-                                        <th>受理中心 (Lead Repo)</th>
+                                        <th>受理中心</th>
                                         <th>仓库数</th>
                                     </tr>
                                 </thead>
@@ -397,14 +382,15 @@
                             </table>
                         </div>
 
-                        <!-- 右侧：待关联仓库 -->
-                        <div class="table-container">
-                            <h4 class="adm-section-title">2. 待指派仓库 (Technical Repos)</h4>
-                            <table class="data-table">
+                        <div class="adm-table-container">
+                            <h4 class="adm-section-title">
+                                <span class="u-text-primary">02.</span> 待指派仓库 (Repos)
+                            </h4>
+                            <table class="adm-data-table">
                                 <thead>
                                     <tr>
                                         <th>仓库名称</th>
-                                        <th>关联到业务项目...</th>
+                                        <th>操作</th>
                                     </tr>
                                 </thead>
                                 <tbody id="unlinkedReposTableBody">
@@ -416,25 +402,31 @@
                 </div>
             </div>
 
-            <div id="adminApprovalsView" style="display:none;" class="view-iframe-container">
+            <div id="adm-approvals-view" class="u-hide view-iframe-container">
                 <iframe id="adminApprovalsFrame" src="service_desk_admin.html" class="view-iframe"></iframe>
             </div>
 
-            <div id="adminProductsView" style="display:none;">
-                <div class="glass-panel adm-panel">
+            <div id="adm-products-view" class="u-hide">
+                <div class="adm-panel">
                     <div class="adm-header">
                         <div>
-                            <h2 style="margin: 0;">产品体系管理 (Product Architecture)</h2>
+                            <h2 class="adm-title">产品体系管理 (Architecture)</h2>
                             <p class="adm-title-desc">管理业务产品线，并将其映射到具体的研发项目。</p>
                         </div>
-                        <button class="btn btn-primary" onclick="openCreateProductModal()">➕
-                            新增产品</button>
+                        <button class="btn-primary btn-icon-text" onclick="openCreateProductModal()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            新增产品
+                        </button>
                     </div>
 
                     <div class="adm-grid-equal-2-cols">
-                        <div class="table-container">
-                            <h4 class="adm-section-title">1. 产品列表</h4>
-                            <table class="data-table">
+                        <div class="adm-table-container">
+                            <h4 class="adm-section-title">01. 产品列表</h4>
+                            <table class="adm-data-table">
                                 <thead>
                                     <tr>
                                         <th>产品名称/编号</th>
@@ -450,17 +442,17 @@
                             </table>
                         </div>
 
-                        <div class="table-container">
-                            <h4 class="adm-section-title">2. 产品-项目关联关系</h4>
+                        <div class="adm-table-container">
+                            <h4 class="adm-section-title">02. 产品-项目关联关系</h4>
                             <div class="adm-form-group-compact">
-                                <p class="adm-form-label-small">将选中的产品关联到项目：</p>
-                                <div class="adm-select-group">
-                                    <select id="linkProductSelect" class="form-control" style="flex: 1;"></select>
-                                    <select id="linkProjectSelect" class="form-control" style="flex: 1;"></select>
-                                    <button class="btn btn-primary" onclick="submitProductProjectLink()">建立关联</button>
+                                <p class="adm-form-label-small">建立关联绑定：</p>
+                                <div class="u-flex u-gap-10">
+                                    <select id="linkProductSelect" class="form-control u-flex-1"></select>
+                                    <select id="linkProjectSelect" class="form-control u-flex-1"></select>
+                                    <button class="btn-primary" onclick="submitProductProjectLink()">建立关联</button>
                                 </div>
                             </div>
-                            <table class="data-table">
+                            <table class="adm-data-table">
                                 <thead>
                                     <tr>
                                         <th>项目</th>
@@ -478,19 +470,27 @@
                 </div>
             </div>
 
-            <div id="adminUsersView" style="display:none;">
-                <div class="glass-panel adm-panel">
+            <div id="adm-users-view" class="u-hide">
+                <div class="adm-panel">
                     <div class="adm-header">
                         <div>
-                            <h2 style="margin: 0;">人员身份校准中心 (User Mapping)</h2>
+                            <h2 class="adm-title">人员身份校准中心 (User Mapping)</h2>
                             <p class="adm-title-desc">建立员工全局 ID 与外部系统 (GitLab/Jira) 账号的强关联。</p>
                         </div>
-                        <button class="btn btn-primary" onclick="openCreateMappingModal()">➕
-                            添加身份绑定</button>
+                        <button class="btn-primary btn-icon-text" onclick="openCreateMappingModal()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="8.5" cy="7" r="4"></circle>
+                                <line x1="20" y1="8" x2="20" y2="14"></line>
+                                <line x1="17" y1="11" x2="23" y2="11"></line>
+                            </svg>
+                            添加身份绑定
+                        </button>
                     </div>
 
-                    <div class="table-container">
-                        <table class="data-table">
+                    <div class="adm-table-container">
+                        <table class="adm-data-table">
                             <thead>
                                 <tr>
                                     <th>员工姓名</th>
@@ -511,9 +511,9 @@
 
             <!-- Create Identity Mapping Modal -->
             <div id="createMappingModal" class="modal-overlay">
-                <div class="modal" style="width: 500px;">
-                    <h3>添加身份绑定</h3>
-                    <div class="adm-form-group" style="margin-top: 15px;">
+                <div class="modal u-max-w-500">
+                    <h3 class="u-mb-20">添加身份绑定</h3>
+                    <div class="adm-form-group">
                         <label>选择员工</label>
                         <select id="mapGlobalUser" class="form-control"></select>
                     </div>
@@ -542,17 +542,17 @@
                         <label>外部系统邮箱</label>
                         <input type="text" id="mapExternalEmail" placeholder="e.g. zs@gmail.com" class="form-control">
                     </div>
-                    <div class="modal-actions" style="margin-top: 20px;">
-                        <button class="btn" onclick="closeCreateMappingModal()">取消</button>
-                        <button class="btn btn-primary" onclick="submitCreateMapping()">保存绑定</button>
+                    <div class="u-flex u-gap-10 u-flex-end u-mt-32">
+                        <button class="btn-ghost" onclick="closeCreateMappingModal()">取消</button>
+                        <button class="btn-primary" onclick="submitCreateMapping()">保存绑定</button>
                     </div>
                 </div>
             </div>
 
             <!-- Create MDM Project Modal -->
             <div id="createProjectModal" class="modal-overlay">
-                <div class="modal" style="width: 600px; max-height: 90vh; overflow-y: auto;">
-                    <h3>新建业务主项目</h3>
+                <div class="modal u-max-w-800">
+                    <h3 class="u-mb-20">新建业务主项目</h3>
                     <div class="adm-grid-form">
                         <div class="adm-form-group">
                             <label>项目唯一ID (ID)</label>
@@ -595,13 +595,13 @@
                             </select>
                         </div>
                     </div>
-                    <div class="adm-form-group" style="margin-top: 15px;">
+                    <div class="adm-form-group u-mt-16">
                         <label>项目简述</label>
                         <textarea id="newProjDesc" placeholder="项目详细背景说明..." class="form-control" rows="3"></textarea>
                     </div>
-                    <div class="modal-actions" style="margin-top: 20px;">
-                        <button class="btn" onclick="closeCreateProjectModal()">取消</button>
-                        <button class="btn btn-primary" onclick="submitCreateProject()">立即创建</button>
+                    <div class="u-flex u-gap-10 u-flex-end u-mt-32">
+                        <button class="btn-ghost" onclick="closeCreateProjectModal()">取消</button>
+                        <button class="btn-primary" onclick="submitCreateProject()">立即创建</button>
                     </div>
                 </div>
             </div>
@@ -611,22 +611,22 @@
     <!-- Create Case Modal -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal">
-            <h2 style="margin:0 0 25px;">New Test Case</h2>
-            <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px;">
+            <h2 class="u-mb-20">New Test Case</h2>
+            <div class="u-flex u-gap-20">
                 <div class="form-group">
                     <label>Case Title</label>
-                    <input type="text" id="new_title" placeholder="e.g. User Login Validation" style="width:100%;">
+                    <input type="text" id="new_title" placeholder="e.g. User Login Validation" class="u-w-full">
                 </div>
                 <div class="form-group">
                     <label>Requirement IID</label>
-                    <div style="display:flex; gap:8px;">
-                        <input type="number" id="new_req_iid" placeholder="Associated ID" style="flex:1;">
-                        <button class="btn-primary" style="background:var(--accent); font-size:12px; padding:4px 10px;"
-                            onclick="generateMagicSteps()" title="AI Generative Steps from AC">AI Generate</button>
+                    <div class="u-flex u-gap-10">
+                        <input type="number" id="new_req_iid" placeholder="Associated ID" class="u-flex-1">
+                        <button class="btn-primary u-text-tiny u-p-4 u-bg-accent" onclick="generateMagicSteps()"
+                            title="AI Generative Steps from AC">AI Generate</button>
                     </div>
                 </div>
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+            <div class="u-grid-2">
                 <div class="form-group">
                     <label>Priority</label>
                     <select id="new_priority" class="form-control">
@@ -654,16 +654,15 @@
             <div class="form-group">
                 <label>Test Steps</label>
                 <div id="stepsContainer">
-                    <div class="step-row" style="display:flex; gap:8px; margin-bottom:8px;">
-                        <input type="text" placeholder="Action" class="form-control step-action" style="flex:2;">
-                        <input type="text" placeholder="Expected" class="form-control step-expected" style="flex:1;">
+                    <div class="step-row u-flex u-gap-10 u-mb-8">
+                        <input type="text" placeholder="Action" class="form-control step-action u-span-2 u-flex-2">
+                        <input type="text" placeholder="Expected" class="form-control step-expected u-flex-1">
                     </div>
                 </div>
                 <button class="btn-add-step" onclick="addStepRow()">+ Add Step</button>
             </div>
-            <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:30px;">
-                <button class="btn-primary" style="background:transparent; border:1px solid rgba(255,255,255,0.1);"
-                    onclick="closeModal()">Cancel</button>
+            <div class="u-flex u-flex-end u-gap-12 u-mt-32">
+                <button class="btn-primary btn-outline" onclick="closeModal()">Cancel</button>
                 <button class="btn-primary" onclick="submitNewCase()">Create Case</button>
             </div>
         </div>
@@ -671,20 +670,19 @@
 
     <!-- Professional Bug Modal -->
     <div class="modal-overlay" id="bugModalOverlay">
-        <div class="modal" style="width: 600px; border-top: 4px solid var(--failed);">
-            <div class="page-info" style="margin-bottom: 20px;">
-                <h2 style="color: var(--failed);">Report New Defect</h2>
-                <p>Capturing failure context for <span id="bug-target-id" style="font-weight: 700;">#0</span></p>
+        <div class="modal u-w-600 modal--error-top">
+            <div class="page-info u-mb-20">
+                <h2 class="u-text-error">Report New Defect</h2>
+                <p>Capturing failure context for <span id="bug-target-id" class="u-weight-700">#0</span></p>
             </div>
             <div class="form-group">
                 <label>Bug Summary (Title)</label>
-                <input type="text" id="quick-bug-title" class="form-control" placeholder="What went wrong?"
-                    style="width: 100%;">
+                <input type="text" id="quick-bug-title" class="form-control u-w-full" placeholder="What went wrong?">
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+            <div class="u-grid-2 u-grid-gap-12">
                 <div class="form-group">
                     <label>Severity</label>
-                    <select id="bug_severity" class="form-control" style="width:100%;">
+                    <select id="bug_severity" class="form-control u-w-full">
                         <option value="S1">S1 - Critical</option>
                         <option value="S2" selected>S2 - Major</option>
                         <option value="S3">S3 - Minor</option>
@@ -692,22 +690,20 @@
                 </div>
                 <div class="form-group">
                     <label>Environment</label>
-                    <input type="text" id="bug_env" class="form-control" value="Staging" style="width:100%;">
+                    <input type="text" id="bug_env" class="form-control u-w-full" value="Staging">
                 </div>
             </div>
             <div class="form-group">
                 <label>Steps to Reproduce</label>
-                <textarea id="bug_steps" class="form-control" rows="3" style="width: 100%;"></textarea>
+                <textarea id="bug_steps" class="form-control u-w-full" rows="3"></textarea>
             </div>
-            <div class="image-paste-area" id="paste-area"
-                style="border: 2px dashed rgba(255,255,255,0.1); padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 15px;">
+            <div class="image-paste-area u-p-20 u-text-center u-radius-md u-mb-16" id="paste-area">
                 Click or Paste Screenshot here
-                <img id="img-preview" style="display:none; max-height:150px; margin-top:10px;">
+                <img id="img-preview" class="u-hide u-mt-10 u-max-h-150">
             </div>
-            <div style="display:flex; justify-content: flex-end; gap: 12px;">
-                <button class="btn-primary" style="background: transparent; border: 1px solid rgba(255,255,255,0.1);"
-                    onclick="closeBugModal()">Cancel</button>
-                <button class="btn-primary" style="background: var(--failed);" onclick="submitQuickBug()">Submit
+            <div class="u-flex u-flex-end u-gap-12">
+                <button class="btn-primary btn-outline" onclick="closeBugModal()">Cancel</button>
+                <button class="btn-primary u-bg-error" onclick="submitQuickBug()">Submit
                     Defect</button>
             </div>
         </div>
@@ -715,50 +711,45 @@
 
     <!-- Bulk Import Modal -->
     <div class="modal-overlay" id="importModalOverlay">
-        <div class="modal" style="width: 500px;">
-            <h2 style="margin:0 0 15px;">Bulk Import</h2>
-            <div class="form-group"
-                style="border: 2px dashed rgba(255,255,255,0.1); padding: 30px; text-align: center; border-radius: 12px;">
-                <input type="file" id="importFile" accept=".xlsx, .csv" style="display:none;"
-                    onchange="updateFileName(this)">
-                <label for="importFile" style="cursor:pointer;">
-                    <div id="fileNameDisplay" style="color:var(--text-main); font-weight:600;">Click to select file
+        <div class="modal u-w-500">
+            <h2 class="u-m-0 u-mb-15">Bulk Import</h2>
+            <div class="form-group u-p-32 u-text-center u-radius-lg u-border-dashed">
+                <input type="file" id="importFile" accept=".xlsx, .csv" class="u-hide" onchange="updateFileName(this)">
+                <label for="importFile" class="u-pointer-cursor">
+                    <div id="fileNameDisplay" class="u-text-primary u-weight-600">Click to select file
                     </div>
                 </label>
             </div>
-            <div style="margin: 25px 0; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
-                <h3 style="font-size:14px; margin-bottom:12px;">Option 2: Clone from Another Project</h3>
-                <div style="display:flex; gap:10px;">
-                    <input type="number" id="sourceProjectId" class="form-control" placeholder="Source Project ID"
-                        style="flex:1;">
-                    <button class="btn-primary" style="background:var(--accent); font-size:12px;"
-                        onclick="submitClone()">Clone</button>
+            <div class="u-mt-24 u-p-20 u-border-t-subtle">
+                <h3 class="u-text-tiny u-mb-12">Option 2: Clone from Another Project</h3>
+                <div class="u-flex u-gap-10">
+                    <input type="number" id="sourceProjectId" class="form-control u-flex-1"
+                        placeholder="Source Project ID">
+                    <button class="btn-primary u-text-tiny u-bg-accent" onclick="submitClone()">Clone</button>
                 </div>
             </div>
-            <div style="display:flex; justify-content:flex-end; gap:12px;">
-                <button class="btn-primary" style="background:transparent; border:1px solid rgba(255,255,255,0.1);"
-                    onclick="closeImportModal()">Cancel</button>
+            <div class="u-flex u-flex-end u-gap-12">
+                <button class="btn-primary btn-outline" onclick="closeImportModal()">Cancel</button>
                 <button class="btn-primary" onclick="submitImport()">Start Import</button>
             </div>
         </div>
     </div>
 
     <div class="modal-overlay" id="reqModalOverlay">
-        <div class="modal" style="width: 600px; border-top: 4px solid var(--accent);">
-            <h2 style="margin:0 0 20px;">New Requirement</h2>
+        <div class="modal u-w-600 modal--accent-top">
+            <h2 class="u-mb-20">New Requirement</h2>
             <div class="form-group">
                 <label>Title</label>
-                <input type="text" id="req_title" class="form-control" style="width:100%;">
+                <input type="text" id="req_title" class="form-control u-w-full">
             </div>
             <div class="form-group">
                 <label>Description / AC (Markdown)</label>
-                <textarea id="req_value" class="form-control" rows="8" placeholder="## 验收标准\n- [ ] AC1..."
-                    style="width:100%;"></textarea>
+                <textarea id="req_value" class="form-control u-w-full" rows="8"
+                    placeholder="## 验收标准\n- [ ] AC1..."></textarea>
             </div>
-            <div style="display:flex; justify-content:flex-end; gap:12px;">
-                <button class="btn-primary" style="background:transparent; border:1px solid rgba(255,255,255,0.1);"
-                    onclick="closeReqModal()">Cancel</button>
-                <button class="btn-primary" style="background:var(--accent);" onclick="submitRequirement()">Deploy
+            <div class="u-flex u-flex-end u-gap-12">
+                <button class="btn-primary btn-outline" onclick="closeReqModal()">Cancel</button>
+                <button class="btn-primary u-bg-accent" onclick="submitRequirement()">Deploy
                     Requirement</button>
             </div>
         </div>
@@ -768,15 +759,14 @@
     <div class="modal-overlay" id="assetModalOverlay">
         <div class="modal">
             <div id="assetList"></div>
-            <div style="text-align:right; margin-top:20px;"><button class="btn-primary"
-                    onclick="closeAssetModal()">Close</button></div>
+            <div class="u-text-right u-mt-20"><button class="btn-primary" onclick="closeAssetModal()">Close</button>
+            </div>
         </div>
     </div>
     <div class="modal-overlay" id="codeModalOverlay">
         <div class="modal">
-            <div id="code-display"
-                style="background:#0f172a; padding:20px; border-radius:8px; font-family:monospace; white-space:pre-wrap; max-height:400px; overflow-y:auto;">
-            </div><button class="btn-primary" style="margin-top:20px;" onclick="closeCodeModal()">Close</button>
+            <div id="code-display" class="g-code-block u-max-h-400">
+            </div><button class="btn-primary u-mt-20" onclick="closeCodeModal()">Close</button>
         </div>
     </div>
     <div class="modal-overlay" id="conflictModalOverlay">
@@ -791,8 +781,7 @@
     </div>
     <div class="modal-overlay" id="rcaModalOverlay">
         <div class="modal">
-            <div id="rca-suggestions" style="line-height:1.6; color:var(--text-main);"></div><button class="btn-primary"
-                style="margin-top:20px;"
+            <div id="rca-suggestions" class="u-lh-1-6 u-text-primary"></div><button class="btn-primary u-mt-20"
                 onclick="document.getElementById('rcaModalOverlay').style.display='none'">Close</button>
         </div>
     </div>
@@ -802,16 +791,15 @@
         <div class="modal">
             <h2>Connect GitLab Account</h2>
             <p>Link your personal GitLab account to enable advanced features:</p>
-            <ul style="color: var(--text-secondary); margin-bottom: 20px;">
+            <ul class="u-text-secondary u-mb-20">
                 <li>Create and manage Iterations</li>
                 <li>Execute Releases directly from Portal</li>
                 <li>Auto-track contributions in your name</li>
             </ul>
-            <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px;">
-                <button class="btn-primary" style="background:transparent; border:1px solid rgba(255,255,255,0.1);"
+            <div class="modal-actions u-flex u-flex-end u-gap-10">
+                <button class="btn-primary btn-outline"
                     onclick="document.getElementById('bindGitLabModal').style.display='none'">Later</button>
-                <button class="btn-primary" style="background:#e24329;"
-                    onclick="window.location.href='/auth/gitlab/bind'">
+                <button class="btn-primary u-bg-error" onclick="window.location.href='/auth/gitlab/bind'">
                     Connect with GitLab
                 </button>
             </div>

@@ -1,110 +1,165 @@
-/* Admin Specific Styles */
+/* ==========================================
+   ADMIN MODULE STYLES (adm- prefix)
+   ========================================== */
+
+/* Layout & Containers */
 .adm-panel {
-    padding: 2rem !important;
-}
-
-.adm-grid {
-    display: grid;
-    gap: 2rem;
-}
-
-.adm-grid-2-cols {
-    display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
-    gap: 2rem;
-}
-
-.adm-grid-equal-2-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-}
-
-.adm-grid-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-top: 15px;
+    padding: var(--g-p-32) !important;
+    background: var(--sys-bg-card);
+    border: 1px solid var(--sys-border-subtle);
+    border-radius: var(--g-radius-lg);
+    box-shadow: var(--g-shadow-md);
 }
 
 .adm-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 32px;
+}
+
+.adm-title {
+    font-size: var(--g-font-size-h1);
+    font-weight: var(--g-font-weight-bold);
+    color: var(--sys-text-primary);
+    margin: 0;
 }
 
 .adm-title-desc {
-    color: var(--text-dim);
-    margin: 5px 0 0;
+    font-size: var(--g-font-size-body);
+    color: var(--sys-text-secondary);
+    margin-top: 4px;
 }
 
-.adm-table-container {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1.5rem;
+.adm-grid-2-cols {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 24px;
+}
+
+.adm-grid-equal-2-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
 }
 
 .adm-section-title {
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.adm-badge {
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    display: inline-flex;
+    font-size: var(--g-font-size-h3);
+    font-weight: var(--g-font-weight-semibold);
+    color: var(--sys-text-primary);
+    margin-bottom: 16px;
+    display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
-.adm-badge-active {
-    background: rgba(16, 185, 129, 0.1);
-    color: var(--passed);
-    border: 1px solid rgba(16, 185, 129, 0.2);
-}
-
-.adm-badge-warning {
-    background: rgba(217, 119, 6, 0.1);
-    color: var(--warning);
-    border: 1px solid rgba(217, 119, 6, 0.2);
-}
-
-.adm-badge-passed {
-    background: rgba(37, 99, 235, 0.1);
-    color: var(--primary);
-    border: 1px solid rgba(37, 99, 235, 0.2);
+/* Forms (Administrative) */
+.adm-grid-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 16px;
 }
 
 .adm-form-group {
-    margin-bottom: 1rem;
+    margin-bottom: 16px;
+}
+
+.adm-form-group label {
+    display: block;
+    font-size: var(--g-font-size-caption);
+    font-weight: var(--g-font-weight-medium);
+    color: var(--sys-text-secondary);
+    margin-bottom: 8px;
 }
 
 .adm-form-group-compact {
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    margin-bottom: 15px;
+    padding: 16px;
+    background: var(--sys-bg-sidebar);
+    border: 1px solid var(--sys-border-subtle);
+    border-radius: var(--g-radius-md);
+    margin-bottom: 16px;
 }
 
 .adm-form-label-small {
-    font-size: 12px;
-    margin-bottom: 8px;
-    color: var(--text-dim);
-    display: block;
+    font-size: var(--g-font-size-caption);
+    font-weight: var(--g-font-weight-semibold);
+    color: var(--sys-text-secondary);
+    margin-bottom: 10px;
 }
 
-.adm-select-group {
-    display: flex;
-    gap: 10px;
+/* Badges & Status */
+.adm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--g-radius-sm);
+    font-size: var(--g-font-size-tiny);
+    font-weight: var(--g-font-weight-bold);
+    text-transform: uppercase;
 }
 
-.adm-flex-center {
+.adm-badge--active,
+.adm-badge--released {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--status-success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.adm-badge--pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--status-warning);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.adm-badge--error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--status-error);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Tables (Administrative) */
+.adm-table-container {
+    background: var(--sys-bg-card);
+    border: 1px solid var(--sys-border-subtle);
+    border-radius: var(--g-radius-md);
+    overflow: hidden;
+}
+
+.adm-data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.adm-data-table th {
+    background: var(--sys-bg-sidebar);
+    color: var(--sys-text-secondary);
+    font-size: var(--g-font-size-caption);
+    font-weight: var(--g-font-weight-semibold);
+    text-transform: uppercase;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--sys-border-subtle);
+}
+
+.adm-data-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--sys-border-subtle);
+    font-size: var(--g-font-size-body);
+    color: var(--sys-text-primary);
+}
+
+.adm-data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.adm-data-table tr:hover {
+    background: var(--sys-bg-sidebar);
+}
+
+/* Utils */
+.adm-u-flex-center {
     display: flex;
     align-items: center;
     justify-content: center;

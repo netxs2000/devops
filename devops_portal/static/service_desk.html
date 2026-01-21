@@ -8,325 +8,31 @@
     <meta name="description" content="GitLab 测试管理中台 Service Desk - 业务方缺陷与需求提交平台">
     <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            /* Map old vars to new light theme */
-            --primary-gradient: var(--primary);
-            --secondary-gradient: var(--accent);
-            --success-gradient: var(--passed);
-            --dark-bg: var(--bg-main);
-            --card-bg: var(--card-bg);
-            --card-border: var(--border-color);
-            --text-primary: var(--text-main);
-            --text-secondary: var(--text-dim);
-            --shadow-lg: var(--shadow-md);
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--dark-bg);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-        }
-
-        /* 动态背景 */
-        /* Removed dynamic background */
-
-        @keyframes backgroundShift {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.8;
-            }
-        }
-
-        /* 头部导航 */
-        header {
-            background: var(--bg-sidebar);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1.5rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            margin-left: 2rem;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-        }
-
-        /* 主容器 */
-        main {
-            flex: 1;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 4rem 2rem;
-            width: 100%;
-        }
-
-        /* 英雄区域 */
-        .hero {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-
-        .hero h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: var(--text-main);
-        }
-
-        .hero p {
-            font-size: 1.25rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        /* 服务卡片网格 */
-        .services-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
-        }
-
-        .service-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 2.5rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .service-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--primary-gradient);
-            opacity: 0;
-            transition: opacity 0.3s;
-            z-index: -1;
-        }
-
-        .service-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--primary);
-        }
-
-        .service-card:hover::before {
-            opacity: 0.1;
-        }
-
-        .service-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
-            background: var(--primary-gradient);
-        }
-
-        /* Removed icon gradients */
-
-        .service-card h2 {
-            font-size: 1.5rem;
-            margin-bottom: 0.75rem;
-            font-weight: 600;
-        }
-
-        .service-card p {
-            color: var(--text-secondary);
-            line-height: 1.6;
-            margin-bottom: 1.5rem;
-        }
-
-        .service-card .btn {
-            display: inline-block;
-            padding: 0.75rem 1.5rem;
-            background: var(--bg-main);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-primary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
-
-        .service-card .btn:hover {
-            background: var(--bg-sidebar);
-            transform: translateX(4px);
-        }
-
-        /* 统计信息 */
-        .stats-section {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 2rem;
-        }
-
-        .stats-section h3 {
-            font-size: 1.25rem;
-            margin-bottom: 1.5rem;
-            text-align: center;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1.5rem;
-            text-align: center;
-        }
-
-        .stat-item {
-            padding: 1rem;
-            background: var(--bg-sidebar);
-            border-radius: 8px;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-        }
-
-        /* 页脚 */
-        footer {
-            background: var(--bg-sidebar);
-            border-top: 1px solid var(--card-border);
-            padding: 2rem;
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        /* 响应式设计 */
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2rem;
-            }
-
-            .services-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .nav-links a {
-                margin-left: 1rem;
-                font-size: 0.875rem;
-            }
-        }
-
-        /* 动画 */
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .service-card {
-            animation: fadeInUp 0.6s ease-out backwards;
-        }
-
-        .service-card:nth-child(1) {
-            animation-delay: 0.1s;
-        }
-
-        .service-card:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .service-card:nth-child(3) {
-            animation-delay: 0.3s;
-        }
-    </style>
 </head>
 
 <body>
-    <header>
-        <div class="header-content">
-            <div class="logo">Service Desk</div>
-            <nav class="nav-links">
-                <a href="/">返回主页</a>
-                <a href="service_desk_login.html">登录</a>
-                <a href="service_desk_register.html">注册</a>
-                <a href="service_desk_my_tickets.html">我的工单</a>
+    <header class="u-p-24 u-w-full sd-header">
+        <div class="u-flex u-flex-between u-mx-auto u-max-w-1200">
+            <div class="u-text-primary u-weight-700 u-text-display">Service Desk</div>
+            <nav class="u-flex u-gap-20 nav-links">
+                <!-- Nav items will be updated by JS -->
+                <a href="/" class="sd-nav-link">返回主页</a>
+                <a href="service_desk_login.html" class="sd-nav-link">登录</a>
+                <a href="service_desk_register.html" class="sd-nav-link">注册</a>
+                <a href="service_desk_my_tickets.html" class="sd-nav-link">我的工单</a>
             </nav>
         </div>
     </header>
 
-    <main>
-        <section class="hero">
-            <h1>业务支持服务台</h1>
-            <p>快速提交缺陷报告和需求建议，我们将为您提供专业的技术支持与反馈</p>
+    <main class="u-mx-auto u-p-40 u-max-w-1200 u-mt-64">
+        <section class="sd-hero u-p-0">
+            <h1 class="sd-hero__title u-text-display u-mb-16">业务支持服务台</h1>
+            <p class="sd-hero__desc u-text-h3">快速提交缺陷报告和需求建议，我们将为您提供专业的技术支持与反馈</p>
         </section>
 
-        <section class="services-grid">
-            <div class="service-card" onclick="location.href='service_desk_bug.html'">
-                <div class="service-icon">
+        <section class="sd-card-grid">
+            <div class="sd-card u-radius-lg u-pointer-cursor" onclick="location.href='service_desk_bug.html'">
+                <div class="sd-card__icon u-flex u-flex-center">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 2c0 4-4 8-4 8s-4-4-4-8 4-8 4-8z"></path>
@@ -339,13 +45,15 @@
                         <circle cx="15" cy="9" r="2"></circle>
                     </svg>
                 </div>
-                <h2>提交缺陷</h2>
-                <p>发现系统问题？立即提交缺陷报告，我们会尽快为您处理并反馈修复进度。</p>
-                <a href="service_desk_bug.html" class="btn">立即提交 →</a>
+                <h2 class="sd-card__title u-text-h2 u-mb-12">提交缺陷</h2>
+                <p class="sd-card__desc u-text-body u-mb-24">发现系统问题？立即提交缺陷报告，我们会尽快为您处理并反馈修复进度。</p>
+                <a href="service_desk_bug.html"
+                    class="btn-ghost u-text-body u-radius-md u-text-center sd-btn-action">立即提交
+                    →</a>
             </div>
 
-            <div class="service-card" onclick="location.href='service_desk_requirement.html'">
-                <div class="service-icon">
+            <div class="sd-card u-radius-lg u-pointer-cursor" onclick="location.href='service_desk_requirement.html'">
+                <div class="sd-card__icon u-flex u-flex-center">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -355,50 +63,53 @@
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
                 </div>
-                <h2>提交需求</h2>
-                <p>有新的功能建议或改进意见？提交您的需求，帮助我们持续优化产品。</p>
-                <a href="service_desk_requirement.html" class="btn">立即提交 →</a>
+                <h2 class="sd-card__title u-text-h2 u-mb-12">提交需求</h2>
+                <p class="sd-card__desc u-text-body u-mb-24">有新的功能建议或改进意见？提交您的需求，帮助我们持续优化产品。</p>
+                <a href="service_desk_requirement.html" class="btn-ghost u-radius-md u-text-center sd-btn-action">立即提交
+                    →</a>
             </div>
 
-            <div class="service-card" onclick="location.href='service_desk_track.html'">
-                <div class="service-icon">
+            <div class="sd-card u-radius-lg u-pointer-cursor" onclick="location.href='service_desk_track.html'">
+                <div class="sd-card__icon u-flex u-flex-center">
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
                 </div>
-                <h2>工单查询</h2>
-                <p>使用追踪码查询您提交的工单处理进度，实时了解最新状态。</p>
-                <a href="service_desk_track.html" class="btn">立即查询 →</a>
+                <h2 class="sd-card__title u-text-h2 u-mb-12">工单查询</h2>
+                <p class="sd-card__desc u-text-body u-mb-24">使用追踪码查询您提交的工单处理进度，实时了解最新状态。</p>
+                <a href="service_desk_track.html"
+                    class="btn-ghost u-text-body u-radius-md u-text-center sd-btn-action">立即查询
+                    →</a>
             </div>
         </section>
 
-        <section class="stats-section">
-            <h3>服务统计</h3>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-value" id="totalTickets">-</div>
-                    <div class="stat-label">累计工单</div>
+        <section class="sd-stats-section">
+            <h3 class="sd-stats-section__title">服务统计</h3>
+            <div class="sd-stats-grid">
+                <div class="sd-stat-item">
+                    <div class="sd-stat-value" id="totalTickets">-</div>
+                    <div class="sd-stat-label">累计工单</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="pendingTickets">-</div>
-                    <div class="stat-label">处理中</div>
+                <div class="sd-stat-item">
+                    <div class="sd-stat-value" id="pendingTickets">-</div>
+                    <div class="sd-stat-label">处理中</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="completedTickets">-</div>
-                    <div class="stat-label">已完成</div>
+                <div class="sd-stat-item">
+                    <div class="sd-stat-value" id="completedTickets">-</div>
+                    <div class="sd-stat-label">已完成</div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value">
+                <div class="sd-stat-item">
+                    <div class="sd-stat-value">
                         < 24h</div>
-                            <div class="stat-label">平均响应时间</div>
+                            <div class="sd-stat-label">平均响应时间</div>
                     </div>
                 </div>
         </section>
     </main>
 
-    <footer>
+    <footer class="u-p-24 u-text-center u-text-dim sd-footer u-mt-64">
         <p>© 2025 TJHQ</p>
     </footer>
 
@@ -431,16 +142,16 @@
             if (token) {
                 // 已登录
                 nav.innerHTML = `
-                    <a href="/">返回主页</a>
-                    <a href="service_desk_my_tickets.html">我的工单</a>
-                    <a href="#" onclick="logout(event)">退出</a>
+                    <a href="/" class="sd-nav-link">返回主页</a>
+                    <a href="service_desk_my_tickets.html" class="sd-nav-link">我的工单</a>
+                    <a href="#" class="sd-nav-link" onclick="logout(event)">退出</a>
                 `;
             } else {
                 // 未登录
                 nav.innerHTML = `
-                    <a href="/">返回主页</a>
-                    <a href="service_desk_login.html">登录</a>
-                    <a href="service_desk_register.html">注册</a>
+                    <a href="/" class="sd-nav-link">返回主页</a>
+                    <a href="service_desk_login.html" class="sd-nav-link">登录</a>
+                    <a href="service_desk_register.html" class="sd-nav-link">注册</a>
                 `;
             }
         }

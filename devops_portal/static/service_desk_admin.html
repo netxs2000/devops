@@ -11,384 +11,64 @@
     <script>
         // 权限准入校验
         if (!Auth.isLoggedIn() || !Auth.hasPermission('USER:MANAGE')) {
-            document.body.innerHTML = `
-                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:var(--bg-main); color:var(--text-main);">
-                    <div style="font-size:60px; margin-bottom:20px;">🚫</div>
-                    <h2>权限不足</h2>
-                    <p style="color:var(--text-dim); margin-top:10px;">您没有访问管理后台的权限，请联系管理员分配 USER:MANAGE 权限。</p>
-                    <button onclick="window.parent.location.reload()" class="btn-token" style="margin-top:20px; padding:10px 20px;">返回首页</button>
-                </div>
-            `;
+            document.addEventListener('DOMContentLoaded', () => {
+                document.body.innerHTML = `
+                    <div class="sys-unauthorized-overlay">
+                        <div class="sys-unauthorized-icon">🚫</div>
+                        <h2 class="sys-unauthorized-title">权限不足</h2>
+                        <p class="sys-unauthorized-desc">您没有访问管理后台的权限，请通过主页申请相关权限或联系管理员分配 USER:MANAGE 权限。</p>
+                        <button onclick="window.parent.location.reload()" class="btn-primary">返回首页</button>
+                    </div>
+                `;
+            });
             throw new Error("Unauthorized access");
         }
     </script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            /* Map old vars to new light theme */
-            --primary-gradient: var(--primary);
-            --dark-bg: var(--bg-main);
-            --card-bg: var(--card-bg);
-            --border-color: var(--border-color);
-            --text-primary: var(--text-main);
-            --text-secondary: var(--text-dim);
-            --success: var(--passed);
-            --danger: var(--failed);
-            --warning: #f59e0b;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-main);
-            color: var(--text-primary);
-            min-height: 100vh;
-        }
-
-        header {
-            background: var(--bg-sidebar);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1rem 2rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .header-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.25rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .admin-badge {
-            font-size: 0.625rem;
-            background: var(--primary);
-            color: #fff;
-            padding: 0.125rem 0.375rem;
-            border-radius: 4px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        main {
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-        }
-
-        .page-title {
-            margin-bottom: 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .page-title h1 {
-            font-size: 1.875rem;
-        }
-
-        .stats-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2.5rem;
-        }
-
-        .stat-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 0.5rem;
-        }
-
-        .tab {
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            color: var(--text-secondary);
-            font-weight: 500;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .tab.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        .table-container {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-
-        th {
-            background: var(--bg-sidebar);
-            color: var(--text-secondary);
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        td {
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 0.875rem;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        .user-info {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-
-        .user-name {
-            font-weight: 600;
-        }
-
-        .user-email {
-            color: var(--text-secondary);
-            font-size: 0.75rem;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.625rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .status-pending {
-            background: rgba(245, 158, 11, 0.1);
-            color: var(--warning);
-        }
-
-        .status-approved {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--success);
-        }
-
-        .status-rejected {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--danger);
-        }
-
-        .actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        button {
-            padding: 0.375rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid transparent;
-        }
-
-        .btn-approve {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-approve:hover {
-            background: #059669;
-        }
-
-        .btn-reject {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-reject:hover {
-            opacity: 0.9;
-        }
-
-        .btn-token {
-            background: var(--bg-sidebar);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-        }
-
-        .token-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            /* backdrop-filter: blur(4px); */
-        }
-
-        .modal-content {
-            background: var(--card-bg);
-            padding: 2.5rem;
-            border-radius: 16px;
-            border: 1px solid var(--border-color);
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .modal-content h2 {
-            margin-bottom: 1rem;
-        }
-
-        .modal-content p {
-            color: var(--text-secondary);
-            margin-bottom: 1.5rem;
-        }
-
-        .modal-content input {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: var(--bg-sidebar);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-primary);
-            margin-bottom: 1.5rem;
-        }
-
-        .reject-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1001;
-        }
-
-        .reject-content {
-            background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 12px;
-            width: 400px;
-        }
-
-        .reject-content textarea {
-            width: 100%;
-            height: 100px;
-            background: var(--bg-sidebar);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 0.75rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-        }
-
-        .loading {
-            padding: 4rem;
-            text-align: center;
-            color: var(--text-secondary);
-        }
-
-        .empty {
-            padding: 4rem;
-            text-align: center;
-            color: var(--text-secondary);
-        }
-    </style>
 </head>
 
 <body>
-    <header>
-        <div class="header-content">
-            <div class="logo">Service Desk <span class="admin-badge">Admin</span></div>
+    <header class="u-p-24 u-w-full sd-header">
+        <div class="u-flex u-flex-between u-mx-auto u-max-w-1400">
+            <div class="u-text-primary u-weight-700 u-text-h2">
+                Service Desk <span class="sys-tag u-v-middle u-ml-8">Admin</span>
+            </div>
             <div id="adminInfo"></div>
         </div>
     </header>
 
-    <!-- 移除了 TokenGate，现在由全局 JWT 认证 -->
-
-    <div id="rejectModal" class="reject-modal">
-        <div class="reject-content">
-            <h3>拒绝注册申请</h3>
-            <p style="font-size: 0.875rem; color: var(--text-secondary); margin-top: 0.5rem;">请说明拒绝原因：</p>
-            <textarea id="rejectReason" placeholder="例如：不是目标用户、信息不全等..."></textarea>
+    <div id="rejectModal" class="modal-overlay">
+        <div class="modal u-max-w-500">
+            <h3 class="u-mb-12 u-text-h3">拒绝注册申请</h3>
+            <p class="u-text-dim u-mb-8 u-text-body">请说明拒绝原因：</p>
+            <textarea id="rejectReason" class="form-control u-mb-20 u-h-100"
+                placeholder="例如：不是目标用户、信息不全等..."></textarea>
             <input type="hidden" id="rejectEmail">
-            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                <button class="btn-token" onclick="closeRejectModal()">取消</button>
-                <button class="btn-reject" onclick="submitReject()">确认拒绝</button>
+            <div class="u-flex u-gap-10 u-flex-end">
+                <button class="btn-ghost" onclick="closeRejectModal()">取消</button>
+                <button class="btn-danger" onclick="submitReject()">确认拒绝</button>
             </div>
         </div>
     </div>
 
-    <main id="adminMain" style="display: none;">
-        <div class="page-title">
-            <h1>用户管理</h1>
-            <!-- 移除了退出按钮，由父容器统一管理 -->
+    <main id="adminMain" class="u-mx-auto u-p-40 u-max-w-1400 u-hide">
+        <div class="u-mb-32">
+            <h1 class="u-text-primary u-text-display">用户管理</h1>
+            <p class="u-text-dim u-text-h3">审核服务台用户的注册申请及管理权限</p>
         </div>
 
-        <div class="stats-row" id="statsRow">
+        <div class="sd-stats-grid u-mb-40" id="statsRow">
             <!-- Stats will be loaded here -->
         </div>
 
-        <div class="tabs">
-            <div class="tab active" onclick="loadTab('pending', this)">待审批</div>
-            <div class="tab" onclick="loadTab('approved', this)">正式用户</div>
-            <div class="tab" onclick="loadTab('rejected', this)">已拒绝</div>
-            <div class="tab" onclick="loadTab('all', this)">全部记录</div>
+        <div class="sd-tabs u-mb-24">
+            <div class="sd-tab is-active" onclick="loadTab('pending', this)">待审批</div>
+            <div class="sd-tab" onclick="loadTab('approved', this)">正式用户</div>
+            <div class="sd-tab" onclick="loadTab('rejected', this)">已拒绝</div>
+            <div class="sd-tab" onclick="loadTab('all', this)">全部记录</div>
         </div>
 
-        <div class="table-container">
-            <table id="userTable">
+        <div class="sd-admin-table-container">
+            <table class="sd-table" id="userTable">
                 <thead>
                     <tr>
                         <th>用户信息</th>
@@ -405,14 +85,7 @@
         </div>
     </main>
 
-    <footer style="
-        background: var(--bg-sidebar);
-        border-top: 1px solid var(--border-color);
-        padding: 1.5rem;
-        text-align: center;
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-        margin-top: 2rem;">
+    <footer class="u-p-24 u-text-center u-text-dim sd-footer u-mt-48">
         <p>© 2025 TJHQ</p>
     </footer>
 
@@ -421,7 +94,7 @@
 
         async function loadData() {
             const container = document.getElementById('userTableBody');
-            container.innerHTML = '<tr><td colspan="5" class="loading">正在加载数据...</td></tr>';
+            container.innerHTML = '<tr><td colspan="5" class="u-p-40 u-text-center u-text-dim">正在加载数据...</td></tr>';
 
             try {
                 let url = `/service-desk/admin/all-users`;
@@ -437,28 +110,28 @@
                 displayUsers(result.users);
 
             } catch (err) {
-                container.innerHTML = `<tr><td colspan="5" class="empty">加载出错: ${err.message}</td></tr>`;
+                container.innerHTML = `<tr><td colspan="5" class="u-p-40 u-text-center u-text-error">加载出错: ${err.message}</td></tr>`;
             }
         }
 
         function updateStats(stats) {
             const row = document.getElementById('statsRow');
             row.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-label">待审批</div>
-                    <div class="stat-value" style="color: var(--warning)">${stats.pending}</div>
+                <div class="sd-stat-item">
+                    <div class="sd-stat-label">待审批</div>
+                    <div class="sd-stat-value u-text-warning">${stats.pending}</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">正式用户</div>
-                    <div class="stat-value" style="color: var(--success)">${stats.approved}</div>
+                <div class="sd-stat-item">
+                    <div class="sd-stat-label">正式用户</div>
+                    <div class="sd-stat-value u-text-success">${stats.approved}</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">已拒绝</div>
-                    <div class="stat-value" style="color: var(--danger)">${stats.rejected}</div>
+                <div class="sd-stat-item">
+                    <div class="sd-stat-label">已拒绝</div>
+                    <div class="sd-stat-value u-text-error">${stats.rejected}</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">用户总数</div>
-                    <div class="stat-value">${stats.total}</div>
+                <div class="sd-stat-item">
+                    <div class="sd-stat-label">用户总数</div>
+                    <div class="sd-stat-value">${stats.total}</div>
                 </div>
             `;
         }
@@ -466,7 +139,7 @@
         function displayUsers(users) {
             const container = document.getElementById('userTableBody');
             if (!users || users.length === 0) {
-                container.innerHTML = `<tr><td colspan="5" class="empty">暂无用户记录</td></tr>`;
+                container.innerHTML = `<tr><td colspan="5" class="u-p-40 u-text-center u-text-dim">暂无用户记录</td></tr>`;
                 return;
             }
 
@@ -481,26 +154,26 @@
 
                 return `
                     <tr>
-                        <td>
-                            <div class="user-info">
-                                <span class="user-name">${user.name}</span>
-                                <span class="user-email">${user.email}</span>
+                        <td class="u-p-16">
+                            <div class="u-flex-column">
+                                <span class="u-weight-600 u-text-primary u-text-body">${user.name}</span>
+                                <span class="u-text-dim u-text-caption">${user.email}</span>
                             </div>
                         </td>
-                        <td>${user.company}</td>
-                        <td style="color: var(--text-secondary)">${date}</td>
-                        <td>
-                            <span class="status-badge status-${user.status}">${statusLabel}</span>
-                            ${user.gitlab_user_id ? `<div style="font-size: 0.7rem; color: var(--primary); margin-top: 4px;">ID: ${user.gitlab_user_id}</div>` : ''}
+                        <td class="u-p-16 u-text-body">${user.company}</td>
+                        <td class="u-p-16 u-text-dim u-text-caption">${date}</td>
+                        <td class="u-p-16">
+                            <span class="sd-badge sd-badge--${user.status}">${statusLabel}</span>
+                            ${user.gitlab_user_id ? `<div class="u-text-primary u-mt-4 u-weight-500 u-text-tiny">GitLab ID: ${user.gitlab_user_id}</div>` : ''}
                         </td>
-                        <td>
+                        <td class="u-p-16">
                             ${user.status === 'pending' ? `
-                                <div class="actions">
-                                    <button class="btn-approve" onclick="approveWithId('${user.email}')">通过</button>
-                                    <button class="btn-reject" onclick="openRejectModal('${user.email}')">拒绝</button>
+                                <div class="u-flex u-gap-10">
+                                    <button class="btn-primary u-p-4 u-text-caption" onclick="approveWithId('${user.email}')">通过</button>
+                                    <button class="btn-ghost u-p-4 u-text-caption u-text-error" onclick="openRejectModal('${user.email}')">拒绝</button>
                                 </div>
                             ` : `
-                                <span style="font-size: 0.75rem; color: var(--text-secondary)">
+                                <span class="u-text-dim u-text-caption">
                                     ${user.status === 'rejected' ? `理由: ${user.reject_reason || '无'}` : '已处理'}
                                 </span>
                             `}
@@ -512,8 +185,8 @@
 
         function loadTab(tab, el) {
             currentTab = tab;
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            el.classList.add('active');
+            document.querySelectorAll('.sd-tab').forEach(t => t.classList.remove('is-active'));
+            el.classList.add('is-active');
             loadData();
         }
 
@@ -543,11 +216,11 @@
 
         function openRejectModal(email) {
             document.getElementById('rejectEmail').value = email;
-            document.getElementById('rejectModal').style.display = 'flex';
+            document.getElementById('rejectModal').classList.add('u-flex');
         }
 
         function closeRejectModal() {
-            document.getElementById('rejectModal').style.display = 'none';
+            document.getElementById('rejectModal').classList.remove('u-flex');
         }
 
         function submitReject() {
@@ -563,7 +236,7 @@
 
         // Initialize
         window.onload = () => {
-            document.getElementById('adminMain').style.display = 'block';
+            document.getElementById('adminMain').classList.remove('u-hide');
             loadData();
         };
     </script>

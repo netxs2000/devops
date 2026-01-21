@@ -8,309 +8,76 @@
     <meta name="description" content="Service Desk 用户注册申请">
     <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --primary-gradient: var(--primary);
-            --dark-bg: var(--bg-main);
-            --card-bg: var(--card-bg);
-            --card-border: var(--border-color);
-            --text-primary: var(--text-main);
-            --text-secondary: var(--text-dim);
-            --input-bg: var(--bg-sidebar);
-            --shadow-lg: var(--shadow-md);
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--dark-bg);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Removed dynamic background */
-
-        header {
-            background: var(--bg-sidebar);
-            border-bottom: 1px solid var(--border-color);
-            padding: 1.5rem 2rem;
-        }
-
-        .header-content {
-            max-width: 600px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .back-link {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-
-        .back-link:hover {
-            color: var(--text-primary);
-        }
-
-        main {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-        }
-
-        .register-container {
-            width: 100%;
-            max-width: 550px;
-        }
-
-        .register-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .register-header h1 {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .register-header p {
-            color: var(--text-secondary);
-        }
-
-        .register-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 2.5rem;
-            /* backdrop-filter: blur(10px); */
-            box-shadow: var(--shadow-md);
-        }
-
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1.25rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-group.full-width {
-            grid-column: span 2;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            background: var(--input-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-primary);
-            font-family: inherit;
-            font-size: 1rem;
-            transition: all 0.2s;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-        }
-
-        .register-btn {
-            width: 100%;
-            padding: 0.875rem;
-            background: var(--primary-gradient);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 1rem;
-        }
-
-        .register-btn:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .register-btn:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .alert {
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            display: none;
-            animation: slideDown 0.3s ease-out;
-            font-size: 0.875rem;
-            line-height: 1.5;
-        }
-
-        .alert.success {
-            background: rgba(5, 150, 105, 0.1);
-            border: 1px solid var(--passed);
-            color: var(--passed);
-        }
-
-        .alert.error {
-            background: rgba(220, 38, 38, 0.1);
-            border: 1px solid var(--failed);
-            color: var(--failed);
-        }
-
-        .alert.show {
-            display: block;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .login-link {
-            text-align: center;
-            margin-top: 1.5rem;
-            font-size: 0.875rem;
-            color: var(--text-secondary);
-        }
-
-        .login-link a {
-            color: var(--primary);
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .login-link a:hover {
-            text-decoration: underline;
-        }
-
-        footer {
-            background: var(--bg-sidebar);
-            border-top: 1px solid var(--border-color);
-            padding: 1.5rem;
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        @media (max-width: 600px) {
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .form-group.full-width {
-                grid-column: span 1;
-            }
-
-            .register-card {
-                padding: 1.5rem;
-            }
-        }
-    </style>
 </head>
 
 <body>
-    <header>
-        <div class="header-content">
-            <div class="logo">注册申请</div>
-            <a href="service_desk_login.html" class="back-link">← 返回登录</a>
+    <header class="u-p-24 u-w-full sd-header">
+        <div class="u-flex u-flex-between u-mx-auto u-max-w-600">
+            <div class="u-text-primary u-weight-700 u-text-h2">注册申请</div>
+            <a href="service_desk_login.html" class="sd-nav-link">←
+                返回登录</a>
         </div>
     </header>
 
-    <main>
-        <div class="register-container">
-            <div class="register-header">
-                <h1>加入 Service Desk</h1>
-                <p>注册新账户，开启便捷的业务支持体验</p>
+    <main class="sys-auth-container">
+        <div class="sys-auth-card u-max-w-600">
+            <div class="sys-auth-header">
+                <h1 class="sys-auth-title">加入 Service Desk</h1>
+                <p class="sys-auth-subtitle u-text-h3">一个账户，通行所有研发协同工具</p>
             </div>
 
-            <div class="register-card">
+            <div class="g-card u-p-40">
                 <div id="alertBox" class="alert"></div>
 
                 <form id="registerForm">
-                    <div class="form-grid">
-                        <div class="form-group full-width">
-                            <label>邮箱地址 (必填)</label>
-                            <input type="email" id="email" required placeholder="name@example.com" autocomplete="email">
+                    <div class="adm-grid-form u-mb-24">
+                        <div class="u-span-2">
+                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">公司邮箱
+                                (必填)</label>
+                            <input type="email" id="email" class="form-control" required placeholder="name@company.com"
+                                autocomplete="email">
                         </div>
 
-                        <div class="form-group full-width">
-                            <label>设置密码 (必填)</label>
-                            <input type="password" id="password" required placeholder="请设置登录密码"
+                        <div class="u-span-2">
+                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">设置密码
+                                (必填)</label>
+                            <input type="password" id="password" class="form-control" required placeholder="请设置登录密码"
                                 autocomplete="new-password">
                         </div>
 
-                        <div class="form-group">
-                            <label>姓名 (必填)</label>
-                            <input type="text" id="fullName" required placeholder="真实姓名">
+                        <div>
+                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">姓名
+                                (必填)</label>
+                            <input type="text" id="fullName" class="form-control" required placeholder="真实姓名">
                         </div>
 
-                        <div class="form-group">
-                            <label>员工 ID (可选)</label>
-                            <input type="text" id="employeeId" placeholder="工号/HR ID">
+                        <div>
+                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">员工 ID
+                                (可选)</label>
+                            <input type="text" id="employeeId" class="form-control" placeholder="工号/HR ID">
                         </div>
 
-                        <div class="form-group full-width">
-                            <label>所在部门 (可选)</label>
-                            <input type="text" id="departmentCode" placeholder="例如：产品部">
+                        <div class="u-span-2">
+                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">所在部门
+                                (可选)</label>
+                            <input type="text" id="departmentCode" class="form-control" placeholder="例如：产品研发部">
                         </div>
                     </div>
 
-                    <button type="submit" class="register-btn" id="registerBtn">
+                    <button type="submit" class="btn-primary u-w-full u-p-16" id="registerBtn">
                         注册账号
                     </button>
                 </form>
 
-                <div class="login-link">
-                    已有账号？ <a href="service_desk_login.html">前往登录</a>
+                <div class="sys-auth-footer">
+                    <span>已有账号？</span>
+                    <a href="service_desk_login.html">前往登录</a>
                 </div>
             </div>
         </div>
     </main>
 
-    <footer>
+    <footer class="u-p-24 u-text-center u-text-dim sd-footer">
         <p>© 2025 TJHQ</p>
     </footer>
 
@@ -368,18 +135,17 @@
                 if (response.ok) {
                     showAlert('注册成功！请使用新账号登录', 'success');
                     registerForm.reset();
-                    registerForm.style.display = 'none';
+                    registerForm.classList.add('u-hide');
 
                     // 添加返回登录按钮
                     const successAction = document.createElement('div');
-                    successAction.style.textAlign = 'center';
-                    successAction.style.marginTop = '2rem';
+                    successAction.className = 'u-text-center u-mt-32';
                     successAction.innerHTML = `
-                        <a href="service_desk_login.html" class="register-btn" style="text-decoration: none; display: inline-block;">
+                        <a href="service_desk_login.html" class="btn-primary u-inline-block u-no-underline">
                             前往登录页面
                         </a>
                     `;
-                    document.querySelector('.register-card').appendChild(successAction);
+                    document.querySelector('.g-card').appendChild(successAction);
                 } else {
                     showAlert(`Error: ${result.detail || '注册失败，请稍后重试'}`, 'error');
                     registerBtn.disabled = false;
