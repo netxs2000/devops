@@ -11,14 +11,12 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/admin.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="auth_utils.js"></script>
-    <script>
-        // Enforce Authentication
+    <script type="module">
+        import { Auth } from './js/modules/sys_core.js';
         if (!Auth.isLoggedIn()) {
             window.location.replace('service_desk_login.html');
         }
     </script>
-    <script src="js/core.js"></script>
 </head>
 
 <body>
@@ -47,7 +45,7 @@
                     <div class="user-name" id="user-display-name">Loading...</div>
                     <div class="user-dept" id="user-display-dept">Please wait</div>
                 </div>
-                <button class="logout-btn" onclick="Auth.logout()">
+                <button class="logout-btn js-logout">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                         <polyline points="16 17 21 12 16 7"></polyline>
@@ -79,14 +77,14 @@
                     <div class="input-wrapper">
                         <input type="number" id="projectId" placeholder="GitLab Project ID" value="">
                     </div>
-                    <button class="btn-primary" onclick="loadTestCases()">Load Repository</button>
-                    <button class="btn-primary" onclick="createNewRequirement()">
+                    <button class="btn-primary js-btn-load-repo">Load Repository</button>
+                    <button class="btn-primary js-btn-create-req">
                         + Req
                     </button>
-                    <button class="btn-ghost" onclick="openModal()">
+                    <button class="btn-ghost js-btn-open-create-modal">
                         + Case
                     </button>
-                    <button class="btn-success btn-icon-text" onclick="executeBatchPass()">
+                    <button class="btn-success btn-icon-text js-btn-batch-pass">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.5">
                             <polyline points="20 6 9 17 4 12"></polyline>
@@ -94,7 +92,7 @@
                         Batch Pass
                     </button>
                     <div class="header-actions">
-                        <button class="btn-ghost btn-icon-text" onclick="openReqModal()">
+                        <button class="btn-ghost btn-icon-text js-btn-open-req-modal">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -102,7 +100,7 @@
                             </svg>
                             Add Requirement
                         </button>
-                        <button class="btn-ghost btn-icon-text" onclick="loadRequirements()">
+                        <button class="btn-ghost btn-icon-text js-btn-sync-req">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path d="M23 4v6h-6"></path>
@@ -112,7 +110,7 @@
                             Sync
                         </button>
                     </div>
-                    <button class="btn-ghost btn-icon-text" onclick="runDeduplicationScan()">
+                    <button class="btn-ghost btn-icon-text js-btn-dedup-scan">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path
@@ -121,7 +119,7 @@
                         </svg>
                         Clean Up
                     </button>
-                    <button class="btn-ghost btn-icon-text" onclick="exportRTMReport()">
+                    <button class="btn-ghost btn-icon-text js-btn-export-rtm">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -129,7 +127,7 @@
                         </svg>
                         Export RTM
                     </button>
-                    <button class="btn-primary btn-icon-text" onclick="loadAssetLibrary()">
+                    <button class="btn-primary btn-icon-text js-btn-browse-assets">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
@@ -137,7 +135,7 @@
                         </svg>
                         Browse Assets
                     </button>
-                    <button class="btn-warning btn-icon-text" onclick="openImportModal()">
+                    <button class="btn-warning btn-icon-text js-btn-open-import-modal">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -146,7 +144,7 @@
                         </svg>
                         Bulk Import
                     </button>
-                    <button class="btn-ghost btn-icon-text" onclick="exportReport()">
+                    <button class="btn-ghost btn-icon-text js-btn-export-report">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -271,7 +269,7 @@
                         <p class="section-desc">Feedback and requests from internal business users.</p>
                     </div>
                     <div class="header-actions">
-                        <button class="btn-ghost btn-icon-text" onclick="loadServiceDeskTickets()">
+                        <button class="btn-ghost btn-icon-text js-btn-sync-tickets">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path d="M23 4v6h-6"></path>
@@ -351,7 +349,7 @@
                             <h2 class="adm-title">业务项目管理 (Two-Layer)</h2>
                             <p class="adm-title-desc">管理业务主项目 (MDM) 及其关联的 GitLab 技术仓库。</p>
                         </div>
-                        <button class="btn-primary btn-icon-text" onclick="openCreateProjectModal()">
+                        <button class="btn-primary btn-icon-text js-btn-create-project">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -413,7 +411,7 @@
                             <h2 class="adm-title">产品体系管理 (Architecture)</h2>
                             <p class="adm-title-desc">管理业务产品线，并将其映射到具体的研发项目。</p>
                         </div>
-                        <button class="btn-primary btn-icon-text" onclick="openCreateProductModal()">
+                        <button class="btn-primary btn-icon-text js-btn-create-product">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -449,7 +447,7 @@
                                 <div class="u-flex u-gap-10">
                                     <select id="linkProductSelect" class="form-control u-flex-1"></select>
                                     <select id="linkProjectSelect" class="form-control u-flex-1"></select>
-                                    <button class="btn-primary" onclick="submitProductProjectLink()">建立关联</button>
+                                    <button class="btn-primary js-btn-link-product-project">建立关联</button>
                                 </div>
                             </div>
                             <table class="adm-data-table">
@@ -477,7 +475,7 @@
                             <h2 class="adm-title">人员身份校准中心 (User Mapping)</h2>
                             <p class="adm-title-desc">建立员工全局 ID 与外部系统 (GitLab/Jira) 账号的强关联。</p>
                         </div>
-                        <button class="btn-primary btn-icon-text" onclick="openCreateMappingModal()">
+                        <button class="btn-primary btn-icon-text js-btn-add-identity-mapping">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -543,8 +541,8 @@
                         <input type="text" id="mapExternalEmail" placeholder="e.g. zs@gmail.com" class="form-control">
                     </div>
                     <div class="u-flex u-gap-10 u-flex-end u-mt-32">
-                        <button class="btn-ghost" onclick="closeCreateMappingModal()">取消</button>
-                        <button class="btn-primary" onclick="submitCreateMapping()">保存绑定</button>
+                        <button class="btn-ghost js-btn-close-mapping-modal">取消</button>
+                        <button class="btn-primary js-btn-submit-mapping">保存绑定</button>
                     </div>
                 </div>
             </div>
@@ -600,8 +598,8 @@
                         <textarea id="newProjDesc" placeholder="项目详细背景说明..." class="form-control" rows="3"></textarea>
                     </div>
                     <div class="u-flex u-gap-10 u-flex-end u-mt-32">
-                        <button class="btn-ghost" onclick="closeCreateProjectModal()">取消</button>
-                        <button class="btn-primary" onclick="submitCreateProject()">立即创建</button>
+                        <button class="btn-ghost js-btn-close-project-modal">取消</button>
+                        <button class="btn-primary js-btn-submit-project">立即创建</button>
                     </div>
                 </div>
             </div>
@@ -621,7 +619,7 @@
                     <label>Requirement IID</label>
                     <div class="u-flex u-gap-10">
                         <input type="number" id="new_req_iid" placeholder="Associated ID" class="u-flex-1">
-                        <button class="btn-primary u-text-tiny u-p-4 u-bg-accent" onclick="generateMagicSteps()"
+                        <button class="btn-primary u-text-tiny u-p-4 u-bg-accent js-btn-ai-generate"
                             title="AI Generative Steps from AC">AI Generate</button>
                     </div>
                 </div>
@@ -659,11 +657,11 @@
                         <input type="text" placeholder="Expected" class="form-control step-expected u-flex-1">
                     </div>
                 </div>
-                <button class="btn-add-step" onclick="addStepRow()">+ Add Step</button>
+                <button class="btn-add-step js-btn-add-step">+ Add Step</button>
             </div>
             <div class="u-flex u-flex-end u-gap-12 u-mt-32">
-                <button class="btn-primary btn-outline" onclick="closeModal()">Cancel</button>
-                <button class="btn-primary" onclick="submitNewCase()">Create Case</button>
+                <button class="btn-primary btn-outline js-btn-close-modal">Cancel</button>
+                <button class="btn-primary js-btn-submit-case">Create Case</button>
             </div>
         </div>
     </div>
@@ -702,8 +700,8 @@
                 <img id="img-preview" class="u-hide u-mt-10 u-max-h-150">
             </div>
             <div class="u-flex u-flex-end u-gap-12">
-                <button class="btn-primary btn-outline" onclick="closeBugModal()">Cancel</button>
-                <button class="btn-primary u-bg-error" onclick="submitQuickBug()">Submit
+                <button class="btn-primary btn-outline js-btn-close-bug-modal">Cancel</button>
+                <button class="btn-primary u-bg-error js-btn-submit-bug">Submit
                     Defect</button>
             </div>
         </div>
@@ -714,7 +712,7 @@
         <div class="modal u-w-500">
             <h2 class="u-m-0 u-mb-15">Bulk Import</h2>
             <div class="form-group u-p-32 u-text-center u-radius-lg u-border-dashed">
-                <input type="file" id="importFile" accept=".xlsx, .csv" class="u-hide" onchange="updateFileName(this)">
+                <input type="file" id="importFile" accept=".xlsx, .csv" class="u-hide js-file-import-input">
                 <label for="importFile" class="u-pointer-cursor">
                     <div id="fileNameDisplay" class="u-text-primary u-weight-600">Click to select file
                     </div>
@@ -729,8 +727,8 @@
                 </div>
             </div>
             <div class="u-flex u-flex-end u-gap-12">
-                <button class="btn-primary btn-outline" onclick="closeImportModal()">Cancel</button>
-                <button class="btn-primary" onclick="submitImport()">Start Import</button>
+                <button class="btn-primary btn-outline js-btn-close-import-modal">Cancel</button>
+                <button class="btn-primary js-btn-submit-import">Start Import</button>
             </div>
         </div>
     </div>
@@ -748,9 +746,8 @@
                     placeholder="## 验收标准\n- [ ] AC1..."></textarea>
             </div>
             <div class="u-flex u-flex-end u-gap-12">
-                <button class="btn-primary btn-outline" onclick="closeReqModal()">Cancel</button>
-                <button class="btn-primary u-bg-accent" onclick="submitRequirement()">Deploy
-                    Requirement</button>
+                <button class="btn-primary btn-outline js-btn-close-req-modal">Cancel</button>
+                <button class="btn-primary u-bg-accent js-btn-submit-req">Deploy Requirement</button>
             </div>
         </div>
     </div>
@@ -759,30 +756,30 @@
     <div class="modal-overlay" id="assetModalOverlay">
         <div class="modal">
             <div id="assetList"></div>
-            <div class="u-text-right u-mt-20"><button class="btn-primary" onclick="closeAssetModal()">Close</button>
+            <div class="u-text-right u-mt-20"><button class="btn-primary js-btn-close-asset-modal">Close</button>
             </div>
         </div>
     </div>
     <div class="modal-overlay" id="codeModalOverlay">
         <div class="modal">
             <div id="code-display" class="g-code-block u-max-h-400">
-            </div><button class="btn-primary u-mt-20" onclick="closeCodeModal()">Close</button>
+            </div><button class="btn-primary u-mt-20 js-btn-close-code-modal">Close</button>
         </div>
     </div>
     <div class="modal-overlay" id="conflictModalOverlay">
         <div class="modal">
-            <div id="conflictResults"></div><button class="btn-primary" onclick="closeConflictModal()">Close</button>
+            <div id="conflictResults"></div><button class="btn-primary js-btn-close-conflict-modal">Close</button>
         </div>
     </div>
     <div class="modal-overlay" id="dedupModalOverlay">
         <div class="modal">
-            <div id="dedup-results-list"></div><button class="btn-primary" onclick="closeDedupModal()">Close</button>
+            <div id="dedup-results-list"></div><button class="btn-primary js-btn-close-dedup-modal">Close</button>
         </div>
     </div>
-    <div class="modal-overlay" id="rcaModalOverlay">
+    <div class="modal-overlay u-hide" id="rcaModalOverlay">
         <div class="modal">
             <div id="rca-suggestions" class="u-lh-1-6 u-text-primary"></div><button class="btn-primary u-mt-20"
-                onclick="document.getElementById('rcaModalOverlay').style.display='none'">Close</button>
+                onclick="UI.hideModal('rcaModalOverlay');">Close</button>
         </div>
     </div>
 
@@ -797,90 +794,243 @@
                 <li>Auto-track contributions in your name</li>
             </ul>
             <div class="modal-actions u-flex u-flex-end u-gap-10">
-                <button class="btn-primary btn-outline"
-                    onclick="document.getElementById('bindGitLabModal').style.display='none'">Later</button>
-                <button class="btn-primary u-bg-error" onclick="window.location.href='/auth/gitlab/bind'">
+                <button class="btn-primary btn-outline" <button
+                    class="btn-primary btn-outline js-btn-close-gitlab-modal">Later</button>
+                <button class="btn-primary u-bg-error js-btn-gitlab-bind">
                     Connect with GitLab
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Core Scripts -->
-    <script src="js/app.js"></script>
-    <script src="js/utils.js"></script>
+    <!-- UI Templates -->
+    <template id="sd-ticket-tpl">
+        <div
+            class="test-item sd-ticket-item u-border-l-success u-flex u-flex-between u-p-16 u-bg-white-03 u-mb-10 u-radius-md js-ticket-row">
+            <div class="test-main">
+                <span class="priority-tag sys-tag--admin js-ticket-iid"></span>
+                <div class="test-title u-weight-600 u-mt-8 u-mb-8 js-ticket-title"></div>
+                <div class="test-meta u-text-tiny u-text-dim js-ticket-meta"></div>
+            </div>
+            <div class="test-actions u-flex u-gap-8 u-align-center js-ticket-actions">
+                <button class="btn-action-small js-action-defect">🐞 Defect</button>
+                <button class="btn-action-small js-action-req">📐 Req</button>
+                <button class="btn-action-small btn-reject js-action-reject">✕ Dismiss</button>
+                <button class="btn-action-small btn-ai js-action-ai-rca">🧠 AI RCA</button>
+            </div>
+        </div>
+    </template>
 
-    <!-- Business Modules -->
-    <script src="js/modules/test-cases.js"></script>
-    <script src="js/modules/defects.js"></script>
-    <script src="js/modules/requirements.js"></script>
-    <script src="js/modules/service-desk.js"></script>
-    <script src="js/modules/reports.js"></script>
+    <template id="qa-test-case-tpl">
+        <div class="test-card js-test-card">
+            <div class="test-header js-case-toggle">
+                <div class="test-info">
+                    <div class="custom-checkbox js-case-selector"></div>
+                    <div class="status-blob js-status-blob"></div>
+                    <div class="test-title-group">
+                        <span class="test-iid js-case-iid"></span>
+                        <span class="test-title js-case-title"></span>
+                        <span class="status-stale-badge u-hide js-stale-badge" title="Requirement changed!">⚠️
+                            Outdated</span>
+                    </div>
+                </div>
+                <div class="test-badges">
+                    <span class="tag-badge js-tag-priority"></span>
+                    <span class="tag-badge js-tag-type"></span>
+                    <div class="btn-action">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div class="trend-dots u-flex u-gap-8 u-p-16 js-trend-container"></div>
+            <div class="test-content js-case-content">
+                <div class="grid-detail">
+                    <div class="flow-zone">
+                        <div class="section-label">Execution Flow</div>
+                        <div class="steps-list js-steps-container"></div>
+                    </div>
+                    <div class="meta-zone">
+                        <div class="section-label">Traceability</div>
+                        <div class="meta-pill"><b>Requirement</b> <span class="js-meta-req"></span></div>
+                        <div class="meta-pill"><b>Defects</b>
+                            <div class="js-meta-bugs"></div>
+                        </div>
+                        <div class="meta-pill"><b>Pre-conditions</b>
+                            <p class="js-meta-pre"></p>
+                        </div>
+                        <a href="" target="_blank" class="gitlab-link js-case-link">View in GitLab</a>
+                        <div class="u-mt-20 js-history-section">
+                            <div class="section-label">Audit Trail</div>
+                            <div class="history-list js-history-container"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="execution-shelf js-execution-shelf">
+                    <button class="btn-shelf u-hide js-btn-bug">Report Bug</button>
+                    <button class="btn-shelf btn-warn js-btn-block">Block</button>
+                    <button class="btn-shelf btn-error js-btn-fail">Fail</button>
+                    <button class="btn-shelf btn-magic js-btn-magic">Magic Code</button>
+                    <button class="btn-shelf btn-success js-btn-pass">Pass Case</button>
+                    <button class="btn-shelf btn-ack u-hide js-btn-ack">✓ Sync & Ack</button>
+                </div>
+            </div>
+        </div>
+    </template>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log("🚀 Test Hub Modularized Core Initialized.");
-            checkGitLabStatus();
-        });
+    <template id="qa-test-step-tpl">
+        <div class="step-item">
+            <div class="step-count js-step-num"></div>
+            <div class="step-text">
+                <div class="step-action-text js-step-action"></div>
+                <div class="step-expected-text js-step-expected"></div>
+            </div>
+        </div>
+    </template>
 
-        async function checkGitLabStatus() {
-            // Check for success param
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('bind_success')) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-                alert('GitLab Account Linked Successfully!');
-            }
+    <template id="qa-defect-tpl">
+        <div class="test-card js-defect-card">
+            <div class="test-header u-cursor-default">
+                <div class="test-info">
+                    <div class="status-blob js-defect-status-blob"></div>
+                    <div class="test-title-group">
+                        <span class="test-iid js-defect-iid"></span>
+                        <a href="" target="_blank" class="test-title u-no-decoration u-color-white js-defect-title"></a>
+                    </div>
+                </div>
+                <div class="test-badges js-defect-badges">
+                    <span class="tag-badge js-defect-state"></span>
+                </div>
+            </div>
+        </div>
+    </template>
 
-            // Fetch status from backend
-            try {
-                const token = JSON.parse(localStorage.getItem('token') || '{}').access_token || localStorage.getItem('access_token');
+    <template id="pm-requirement-tpl">
+        <div class="test-card js-req-card">
+            <div class="test-header u-cursor-default">
+                <div class="test-info">
+                    <div class="status-blob js-req-status-blob"></div>
+                    <div class="test-title-group">
+                        <div class="u-align-center u-gap-8">
+                            <span class="test-iid js-req-iid"></span>
+                            <span class="sys-req-at-risk-text u-hide js-req-risk-tag">⚠ AT RISK</span>
+                        </div>
+                        <span class="test-title js-req-title"></span>
+                    </div>
+                </div>
+                <div class="u-align-center u-gap-12 js-req-actions">
+                    <span class="tag-badge js-req-status-badge"></span>
+                    <button class="btn-shelf js-req-next-action"></button>
+                    <button class="btn-shelf js-req-conflict-action" title="Check conflicts">⚖️</button>
+                </div>
+            </div>
+        </div>
+    </template>
 
-                if (token) {
-                    const res = await fetch('/auth/me', {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    });
+    <template id="rpt-recent-issue-row-tpl">
+        <tr>
+            <td class="js-issue-index"></td>
+            <td><span class="req-id-pill js-issue-iid"></span> <span class="js-issue-title"></span></td>
+            <td class="js-issue-dept"></td>
+            <td><span class="js-issue-state"></span></td>
+            <td class="js-issue-date"></td>
+        </tr>
+    </template>
 
-                    if (res.ok) {
-                        const user = await res.json();
-                        if (user.gitlab_connected) {
-                            updateGitLabUI(true);
-                        }
-                        // Update user info display while we are at it
-                        if (document.getElementById('user-display-name')) {
-                            document.getElementById('user-display-name').innerText = user.full_name || user.email;
-                        }
-                        if (document.getElementById('user-display-dept') && user.department) {
-                            document.getElementById('user-display-dept').innerText = user.department.org_name;
-                        }
+    <template id="rpt-alert-tpl">
+        <div class="rpt-alert-item">
+            <div class="rpt-alert-item__pulse"></div>
+            <span class="rpt-alert-item__province js-alert-province"></span>
+            <span class="rpt-alert-item__title js-alert-title"></span>
+            <span class="rpt-alert-item__time js-alert-time"></span>
+        </div>
+    </template>
 
-                        if (user.gitlab_connected) {
-                            updateGitLabUI(true);
-                        }
-                    }
-                }
-            } catch (e) { console.error('Failed to sync auth status:', e); }
-        }
+    <template id="adm-product-row-tpl">
+        <tr>
+            <td><span class="u-weight-600 u-text-primary js-prod-name"></span></td>
+            <td class="js-prod-category"></td>
+            <td><span class="adm-badge adm-badge--active js-prod-status"></span></td>
+            <td class="js-prod-owner"></td>
+            <td><button class="btn-primary btn--small js-prod-edit">编辑</button></td>
+        </tr>
+    </template>
 
+    <template id="adm-project-row-tpl">
+        <tr>
+            <td>
+                <div class="u-flex-column">
+                    <span class="u-weight-600 u-text-primary js-proj-name"></span>
+                    <span class="u-text-dim u-text-tiny js-proj-id"></span>
+                </div>
+            </td>
+            <td class="js-proj-type"></td>
+            <td><span class="adm-badge js-proj-status"></span></td>
+            <td class="js-proj-binding"></td>
+            <td class="u-text-center js-proj-repos"></td>
+        </tr>
+    </template>
 
-        function openGitLabBindModal() {
-            document.getElementById('bindGitLabModal').style.display = 'flex';
-        }
+    <template id="adm-unlinked-repo-row-tpl">
+        <tr>
+            <td class="js-repo-name"></td>
+            <td><button class="btn-primary btn--small js-repo-link">关联</button></td>
+        </tr>
+    </template>
 
-        function updateGitLabUI(isConnected) {
-            const link = document.getElementById('gitlab-bind-link');
-            const icon = document.getElementById('gitlab-status-icon');
-            const text = document.getElementById('gitlab-status-text');
+    <template id="adm-user-mapping-row-tpl">
+        <tr>
+            <td><span class="u-weight-600 u-text-primary js-user-name"></span></td>
+            <td><span class="adm-badge sys-tag--admin js-user-source"></span></td>
+            <td><code class="js-user-ext-id"></code></td>
+            <td class="js-user-ext-name"></td>
+            <td class="js-user-ext-email"></td>
+            <td><button class="btn-ghost btn--small u-text-error js-user-delete">删除</button></td>
+        </tr>
+    </template>
 
-            if (isConnected) {
-                icon.innerText = '';
-                text.innerText = 'GitLab Linked';
-                link.onclick = (e) => { e.preventDefault(); }; // Disable click or show unlink
-                link.style.color = 'var(--passed)';
-            }
-        }
-    </script>
+    <template id="sys-nav-group-tpl">
+        <div class="nav-group js-nav-group">
+            <div class="nav-group-title js-nav-group-title">
+                <span class="js-group-label"></span>
+                <svg class="nav-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </div>
+            <div class="nav-items js-nav-items"></div>
+        </div>
+    </template>
+
+    <template id="sys-nav-link-tpl">
+        <a class="nav-link js-nav-link">
+            <svg class="js-nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2"></svg>
+            <span class="js-link-label"></span>
+            <span class="nav-badge u-hide js-nav-badge">0</span>
+        </a>
+    </template>
+
+    <template id="sys-recent-project-tpl">
+        <div class="nav-link u-pointer-cursor js-recent-proj">
+            <span class="u-opacity-60">#</span> <span class="js-proj-info"></span>
+        </div>
+    </template>
+
+    <template id="qa-asset-card-tpl">
+        <div class="asset-card u-flex u-flex-between u-p-16 u-bg-white-03 u-mb-10 u-radius-md">
+            <div class="asset-info">
+                <h4 class="u-m-0 js-asset-title"></h4>
+                <div class="u-text-tiny u-text-dim js-asset-meta"></div>
+            </div>
+            <button class="btn-primary btn--small js-asset-import">Import</button>
+        </div>
+    </template>
+
+    <!-- Main Entry -->
+    <script type="module" src="js/modules/sys_app.js"></script>
+
 </body>
 
 </html>

@@ -58,6 +58,10 @@ app.include_router(admin_router.router)
 app.include_router(devex_pulse_router.router)
 
 
+
+# Mount static files explicitly to /static to support frontend paths (e.g. LOGIN_PAGE in sys_core.js)
+app.mount("/static", StaticFiles(directory="devops_portal/static", html=True), name="static-assets")
+
 # Mount static files to root to serve index.html, css, js and other html pages directly
 app.mount("/", StaticFiles(directory="devops_portal/static", html=True), name="static")
 

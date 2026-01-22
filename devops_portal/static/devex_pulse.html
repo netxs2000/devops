@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>心情指数打卡 - 开发者体验追踪</title>
     <link href="css/main.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             display: flex;
@@ -15,179 +16,28 @@
             margin: 0;
             background-color: var(--sys-bg-app);
         }
-
-        .container {
-            background-color: var(--sys-bg-card);
-            padding: 40px;
-            border-radius: var(--g-radius-lg);
-            text-align: center;
-            border: 1px solid var(--sys-border-subtle);
-            box-shadow: var(--g-shadow-lg);
-            max-width: 450px;
-            width: 100%;
-        }
-
-        h1 {
-            color: var(--sys-text-primary);
-            font-size: var(--g-font-size-h1);
-            margin-bottom: 12px;
-            font-weight: var(--g-font-weight-bold);
-        }
-
-        p {
-            color: var(--sys-text-secondary);
-            font-size: var(--g-font-size-body);
-            margin-bottom: 32px;
-            line-height: var(--g-line-height-body);
-        }
-
-        .faces {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 32px;
-        }
-
-        .face-btn {
-            flex: 1;
-            padding: 12px 8px;
-            font-size: var(--g-font-size-caption);
-            font-weight: var(--g-font-weight-medium);
-            background-color: var(--sys-bg-sidebar);
-            border: 1px solid var(--sys-border-subtle);
-            border-radius: var(--g-radius-md);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: var(--sys-text-secondary);
-        }
-
-        .face-btn:hover:not(:disabled) {
-            border-color: var(--sys-primary);
-            color: var(--sys-primary);
-            background-color: var(--g-blue-50);
-        }
-
-        .face-btn.selected {
-            background-color: var(--sys-primary);
-            color: var(--sys-text-on-primary);
-            border-color: var(--sys-primary);
-        }
-
-        .face-btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        #message {
-            margin-top: 24px;
-            padding: 16px;
-            border-radius: var(--g-radius-md);
-            display: none;
-            font-size: var(--g-font-size-body);
-            font-weight: var(--g-font-weight-medium);
-            line-height: var(--g-line-height-dense);
-        }
-
-        .success {
-            background-color: rgba(5, 150, 105, 0.1);
-            color: #059669;
-            border: 1px solid rgba(5, 150, 105, 0.2);
-        }
-
-        .error {
-            background-color: rgba(220, 38, 38, 0.1);
-            color: #dc2626;
-            border: 1px solid rgba(220, 38, 38, 0.2);
-        }
     </style>
 </head>
 
 <body>
 
-    <div class="container">
-        <h1>心情指数打卡</h1>
-        <p>您今日的研发心情如何？</p>
+    <div class="sys-pulse_container">
+        <h1 class="u-mb-12 u-text-h1">心情指数打卡</h1>
+        <p class="u-mb-32 u-text-dim">您今日的研发心情如何？</p>
 
-        <div class="faces" id="faces-container">
-            <button class="face-btn" onclick="submitFeedback(1)" id="btn-1">非常不满意</button>
-            <button class="face-btn" onclick="submitFeedback(2)" id="btn-2">不满意</button>
-            <button class="face-btn" onclick="submitFeedback(3)" id="btn-3">一般</button>
-            <button class="face-btn" onclick="submitFeedback(4)" id="btn-4">满意</button>
-            <button class="face-btn" onclick="submitFeedback(5)" id="btn-5">非常满意</button>
+        <div class="sys-pulse_faces" id="faces-container">
+            <button class="sys-pulse_btn js-pulse-btn" data-score="1">非常不满意</button>
+            <button class="sys-pulse_btn js-pulse-btn" data-score="2">不满意</button>
+            <button class="sys-pulse_btn js-pulse-btn" data-score="3">一般</button>
+            <button class="sys-pulse_btn js-pulse-btn" data-score="4">满意</button>
+            <button class="sys-pulse_btn js-pulse-btn" data-score="5">非常满意</button>
         </div>
 
-        <div id="message"></div>
+        <div id="message" class="sys-pulse_message"></div>
     </div>
 
-    <script>
-        // 在实际应用中，这通常来自会话或 Cookie
-        const USER_EMAIL = "demo_user@example.com";
-
-        // 页面加载时检查打卡状态
-        async function checkStatus() {
-            try {
-                const res = await fetch(`/devex-pulse/status/${USER_EMAIL}`);
-                const data = await res.json();
-                if (data.submitted) {
-                    showSuccess(data.message || "您今日已完成打卡");
-                    disableButtons();
-                }
-            } catch (e) {
-                console.error("无法获取打卡状态", e);
-            }
-        }
-
-        // 提交反馈
-        async function submitFeedback(score) {
-            try {
-                const res = await fetch('/devex-pulse/submit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_email: USER_EMAIL, score: score })
-                });
-
-                const data = await res.json();
-
-                if (res.ok) {
-                    showSuccess(data.message || "打卡成功");
-                    disableButtons();
-                    highlightButton(score);
-                } else {
-                    showError(data.detail || "提交失败");
-                }
-            } catch (e) {
-                showError("网络错误");
-            }
-        }
-
-        function showSuccess(msg) {
-            const el = document.getElementById('message');
-            el.className = 'success';
-            el.innerText = msg;
-            el.style.display = 'block';
-        }
-
-        function showError(msg) {
-            const el = document.getElementById('message');
-            el.className = 'error';
-            el.innerText = msg;
-            el.style.display = 'block';
-        }
-
-        function disableButtons() {
-            const btns = document.querySelectorAll('.face-btn');
-            btns.forEach(b => b.disabled = true);
-        }
-
-        function highlightButton(score) {
-            const btn = document.getElementById(`btn-${score}`);
-            if (btn) btn.classList.add('selected');
-        }
-
-        // 初始化
-        checkStatus();
-    </script>
-
+    <!-- Scripts -->
+    <script src="js/modules/sys_pulse.js" type="module"></script>
 </body>
 
 </html>

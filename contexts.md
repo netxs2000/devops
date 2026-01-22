@@ -21,6 +21,7 @@
     - Align names across DB -> Model -> API -> Frontend.
     - Strict Google Style for Python.
     - Mandatory comments/docstrings.
+    - **Frontend Convention**: Follow `docs/frontend/CONVENTIONS.md` for Native CSS & JS standards.
 5.  **Validation**: `make deploy` triggers full containerized deployment & initialization.
 
 ## Directory Structure

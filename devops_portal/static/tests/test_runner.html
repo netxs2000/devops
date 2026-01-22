@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Frontend Test Runner - DevOps Platform</title>
+    <link href="../css/main.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 40px;
+            background: var(--sys-bg-app);
+        }
+
+        .test-header {
+            margin-bottom: 32px;
+            border-bottom: 2px solid var(--sys-border-subtle);
+            padding-bottom: 16px;
+        }
+
+        .console-log {
+            font-family: 'Courier New', Courier, monospace;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="test-header">
+        <h1 class="u-text-primary">Frontend Integration & Unit Tests</h1>
+        <p class="u-text-dim">Executing tests for refactored modular handlers...</p>
+    </div>
+
+    <div id="test-log" class="console-log">
+        <!-- Console messages will be mirrored here -->
+    </div>
+
+    <!-- The actual test script -->
+    <script type="module" src="unit_tests.js"></script>
+
+    <script>
+        // Mirror console to DOM for convenience
+        const logContainer = document.getElementById('test-log');
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        console.log = function (...args) {
+            originalLog.apply(console, args);
+            const line = document.createElement('div');
+            line.style.marginBottom = '4px';
+            line.textContent = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+            if (line.textContent.includes('[PASS]')) line.style.color = '#4ade80';
+            if (line.textContent.includes('[DESCRIBE]')) line.style.fontWeight = 'bold';
+            logContainer.appendChild(line);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        };
+
+        console.error = function (...args) {
+            originalError.apply(console, args);
+            const line = document.createElement('div');
+            line.style.color = '#f87171';
+            line.style.marginBottom = '4px';
+            line.textContent = '[FAIL] ' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+            logContainer.appendChild(line);
+        };
+    </script>
+</body>
+
+</html>

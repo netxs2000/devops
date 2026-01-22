@@ -134,33 +134,6 @@ async def reject_ticket(
     iid: int, 
     project_id: int = Body(..., embed=True), 
     reason: str = Body(..., embed=True), 
-    current_user = Depends(get_current_user)
-):
-    """RD 拒绝并关闭反馈。"""
-    try:
-        service = TestingService() # TestingService might behave differently regarding client
-        # It's imported from test_management_service.py which takes session, client.
-        # But here it's instantiated without args!
-        # TestingService definition (step 176): __init__(self, session: Session, client: GitLabClient)
-        # So this line `service = TestingService()` will fail at runtime if not mocked!
-        # This endpoint is NOT tested in my new Service Desk tests?
-        # NO, I didn't add test for reject_ticket.
-        # But I should probably fix it if I spot it.
-        # For now, I'll update it to check logic, but TestingService needs client.
-        # I'll disable the warning for now or assume it is handled by mock in tests, but for logic correctness it likely needs client injection too.
-        # I'll leave it as is to avoid scope creep, or just fix it if dependencies are available.
-        # Actually, let's fix it by injecting client and db.
-        pass
-    except Exception as e: # pylint: disable=broad-exception-caught
-        logger.error("Reject ticket failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e)) from e
-
-# Re-implementing reject_ticket to be correct
-@router.post('/tickets/{iid}/reject')
-async def reject_ticket_fixed(
-    iid: int, 
-    project_id: int = Body(..., embed=True), 
-    reason: str = Body(..., embed=True), 
     current_user = Depends(get_current_user),
     db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client)
@@ -168,7 +141,12 @@ async def reject_ticket_fixed(
     """RD 拒绝并关闭反馈。"""
     try:
         service = TestingService(session=db, client=client)
-        success = await service.reject_ticket(project_id=project_id, ticket_iid=iid, reason=reason, actor_name=current_user.full_name)
+        success = await service.reject_ticket(
+            project_id=project_id, 
+            ticket_iid=iid, 
+            reason=reason, 
+            actor_name=current_user.full_name
+        )
         if not success:
             raise HTTPException(status_code=404, detail='Ticket not found')
         return {'message': 'Ticket rejected and closed'}

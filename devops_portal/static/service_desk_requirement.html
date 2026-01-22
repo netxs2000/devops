@@ -97,11 +97,11 @@
 
                 <div class="u-mb-32">
                     <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">需求原型/说明附件</label>
-                    <div id="uploadArea" class="sd-upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div id="uploadArea" class="sd-upload-area">
                         <div class="u-text-primary u-mb-10 u-text-h1">📄</div>
                         <div class="u-weight-600">点击或拖拽需求文档至此处上传</div>
                         <div class="u-text-dim u-mt-8 u-text-caption">支持 PDF, Word, 图片等</div>
-                        <input type="file" id="fileInput" class="u-hide" multiple onchange="handleFileUpload(event)">
+                        <input type="file" id="fileInput" class="u-hide" multiple>
                     </div>
                     <div id="filePreview" class="g-grid-fill-120">
                     </div>
@@ -118,132 +118,11 @@
         <p>© 2025 TJHQ</p>
     </footer>
 
+    <!-- Scripts -->
     <script src="auth_utils.js"></script>
-    <script>
-        const form = document.getElementById('requirementForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const alertBox = document.getElementById('alertBox');
-        let uploadedAttachments = [];
-
-        async function initPage() {
-            if (!Auth.isLoggedIn()) {
-                window.location.href = 'service_desk_login.html';
-                return;
-            }
-
-            const user = await Auth.getCurrentUser();
-            if (user) {
-                document.getElementById('reporterSection').classList.remove('u-hide');
-                document.getElementById('reporterSection').classList.add('u-flex');
-                document.getElementById('reporterName').innerText = `${user.full_name || user.username} (${user.organization_name || 'Individual'})`;
-                document.getElementById('reporterAvatar').innerText = (user.full_name || user.username).charAt(0).toUpperCase();
-            }
-
-            await loadBusinessProjects();
-        }
-
-        async function loadBusinessProjects() {
-            const select = document.getElementById('mdmId');
-            try {
-                const projects = await fetch('/service-desk/business-projects', {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('sd_token')}` }
-                }).then(res => res.json());
-
-                select.innerHTML = '<option value="">-- 请选择业务系统 --</option>';
-                projects.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.name;
-                    select.appendChild(opt);
-                });
-            } catch (e) {
-                select.innerHTML = '<option value="">加载失败，请刷新</option>';
-            }
-        }
-
-        function handleProjectChange() {
-            uploadedAttachments = [];
-            document.getElementById('filePreview').innerHTML = '';
-        }
-
-        async function handleFileUpload(event) {
-            const files = event.target.files;
-            const mdmId = document.getElementById('mdmId').value;
-
-            if (!mdmId) {
-                alert('请先选择业务系统，以便我们将附件归档。');
-                return;
-            }
-
-            for (const file of files) {
-                const previewItem = document.createElement('div');
-                previewItem.className = 'upload-preview-item';
-                previewItem.innerHTML = `<div class="loading u-mx-auto u-mt-10 u-mb-10 u-square-16"></div><div class="u-text-caption u-truncate">${file.name}</div>`;
-                document.getElementById('filePreview').appendChild(previewItem);
-
-                const formData = new FormData();
-                formData.append('file', file);
-
-                try {
-                    const response = await fetch(`/service-desk/upload?mdm_id=${mdmId}`, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-
-                    if (result.markdown) {
-                        uploadedAttachments.push(result.markdown);
-                        previewItem.innerHTML = `<div class="u-text-h1">F</div><div class="u-text-caption u-truncate">${file.name}</div><div class="u-text-success u-text-caption">已准备</div>`;
-                    }
-                } catch (error) {
-                    previewItem.innerHTML = `<div class="u-text-error">x</div><div class="u-text-caption">失败</div>`;
-                }
-            }
-        }
-
-        function showAlert(message, type) {
-            alertBox.textContent = message;
-            alertBox.className = `alert ${type} show`;
-            setTimeout(() => {
-                alertBox.classList.remove('show');
-            }, 5000);
-        }
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '提交中<span class="loading"></span>';
-
-            const formData = {
-                title: document.getElementById('title').value.trim(),
-                description: document.getElementById('description').value.trim(),
-                req_type: document.getElementById('reqType').value,
-                priority: document.getElementById('priority').value,
-                province: document.getElementById('province').value.trim(),
-                expected_delivery: document.getElementById('expectedDelivery').value || null,
-                attachments: uploadedAttachments
-            };
-
-            const mdmId = document.getElementById('mdmId').value;
-
-            try {
-                const url = `/service-desk/submit-requirement?mdm_id=${mdmId}`;
-                const result = await Api.post(url, formData);
-
-                showAlert(`提交成功: ${result.message}`, 'success');
-                setTimeout(() => {
-                    alert(`追踪码：${result.tracking_code}\n\n请保存。`);
-                    window.location.href = `service_desk_track.html?code=${result.tracking_code}`;
-                }, 1000);
-            } catch (error) {
-                showAlert(`提交失败：${error.message || '网络错误'}`, 'error');
-                submitBtn.disabled = false;
-                submitBtn.textContent = '提交需求';
-            }
-        });
-
-        window.addEventListener('load', initPage);
-    </script>
+    <script src="js/modules/sd_portal.js" type="module"></script>
 </body>
+
+</html>
 
 </html>

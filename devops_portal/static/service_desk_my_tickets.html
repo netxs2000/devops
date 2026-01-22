@@ -62,7 +62,7 @@
                 </div>
             </div>
 
-            <div id="ticketsContainer" class="u-flex u-flex-column u-gap-15">
+            <div id="myTicketsList" class="u-flex u-flex-column u-gap-15">
                 <div class="u-text-center u-p-60 u-text-dim">
                     Fetching records...
                 </div>
@@ -70,96 +70,31 @@
         </div>
     </div>
 
-    <script src="auth_utils.js"></script>
-
-    <script>
-        let allTickets = [];
-        let currentFilter = 'all';
-
-        async function loadTickets() {
-            if (!Auth.isLoggedIn()) {
-                window.location.href = 'service_desk_login.html';
-                return;
-            }
-
-            try {
-                const user = await Auth.getCurrentUser();
-                if (!user) {
-                    console.error("User not found after successful login check");
-                    return;
-                }
-                document.getElementById('welcome-text').innerText = `Welcome back, ${user.full_name || user.username || 'User'}. Viewing your latest updates.`;
-
-                const result = await Api.get('/service-desk/my-tickets');
-
-                // Update Stats
-                document.getElementById('statTotal').innerText = result.stats.total;
-                document.getElementById('statPending').innerText = result.stats.pending;
-                document.getElementById('statInProgress').innerText = result.stats.in_progress;
-                document.getElementById('statCompleted').innerText = result.stats.completed;
-
-                allTickets = result.tickets;
-                displayTickets();
-
-                // Mock Notification Center Integration
-                if (result.stats.pending > 5) {
-                    NotificationSystem.show(`You have ${result.stats.pending} pending tickets. High workload detected.`, 'warning');
-                }
-            } catch (error) {
-                NotificationSystem.show(error.message || 'Connection Error', 'error');
-                document.getElementById('ticketsContainer').innerHTML = `<div class="u-text-center u-text-error">${error.message}</div>`;
-            }
-        }
-
-        function displayTickets() {
-            const container = document.getElementById('ticketsContainer');
-            const filtered = currentFilter === 'all' ? allTickets : allTickets.filter(t => t.status === currentFilter);
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<div class="u-text-center u-p-40 u-text-dim">No matching records found.</div>`;
-                return;
-            }
-
-            container.innerHTML = filtered.map(t => {
-                const typeIcon = t.ticket_type === 'bug' ? 'Bug' : 'Req';
-                const date = new Date(t.created_at).toLocaleDateString();
-                const statusMap = {
-                    'pending': 'Pending',
-                    'in-progress': 'Processing',
-                    'completed': 'Resolved'
-                };
-
-                return `
-                    <div class="sd-card u-p-24 u-flex u-flex-between u-flex-center u-pointer-cursor u-radius-md" onclick="location.href='service_desk_track.html?code=${t.tracking_code}'">
-                        <div class="u-flex u-flex-center u-gap-20">
-                            <div class="u-flex u-flex-center u-radius-md u-bg-sidebar u-border-subtle u-text-primary u-weight-600 u-text-caption u-square-44">${typeIcon}</div>
-                            <div>
-                                <h3 class="u-mb-4 u-text-body u-weight-600">${t.title}</h3>
-                                <div class="u-flex u-gap-16 u-text-dim u-text-tiny">
-                                    <span>ID: ${t.tracking_code}</span>
-                                    <span>•</span>
-                                    <span>Created ${date}</span>
-                                    ${t.gitlab_issue_iid ? `<span>•</span><span class="u-text-primary">GitLab Issue #${t.gitlab_issue_iid}</span>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="sd-badge sd-badge--${t.status}">${statusMap[t.status] || t.status}</div>
+    <!-- Templates -->
+    <template id="sd-ticket-row-tpl">
+        <div class="sd-card u-p-24 u-flex u-flex-between u-flex-center u-pointer-cursor u-radius-md js-ticket-row">
+            <div class="u-flex u-flex-center u-gap-20">
+                <div
+                    class="u-flex u-flex-center u-radius-md u-bg-sidebar u-border-subtle u-text-primary u-weight-600 u-text-caption u-square-44 js-tk-type-icon">
+                    -</div>
+                <div>
+                    <h3 class="u-mb-4 u-text-body u-weight-600 js-tk-title">-</h3>
+                    <div class="u-flex u-gap-16 u-text-dim u-text-tiny">
+                        <span>ID: <span class="js-tk-code">-</span></span>
+                        <span>•</span>
+                        <span>Created <span class="js-tk-date">-</span></span>
                     </div>
-                `;
-            }).join('');
-        }
+                </div>
+            </div>
+            <div class="sd-badge js-tk-status">-</div>
+        </div>
+    </template>
 
-        document.querySelectorAll('.sd-tab').forEach(pill => {
-            pill.addEventListener('click', () => {
-                document.querySelectorAll('.sd-tab').forEach(p => p.classList.remove('is-active'));
-                pill.classList.add('is-active');
-                currentFilter = pill.dataset.filter;
-                displayTickets();
-            });
-        });
-
-        window.addEventListener('load', loadTickets);
-    </script>
+    <!-- Scripts -->
+    <script src="auth_utils.js"></script>
+    <script src="js/modules/sd_portal.js" type="module"></script>
 </body>
+
+</html>
 
 </html>

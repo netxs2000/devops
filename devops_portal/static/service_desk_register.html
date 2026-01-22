@@ -81,84 +81,8 @@
         <p>© 2025 TJHQ</p>
     </footer>
 
-    <script>
-        const registerForm = document.getElementById('registerForm');
-        const alertBox = document.getElementById('alertBox');
-        const registerBtn = document.getElementById('registerBtn');
-
-        function showAlert(message, type) {
-            alertBox.textContent = message;
-            alertBox.className = `alert ${type} show`;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const fullName = document.getElementById('fullName').value.trim();
-            const employeeId = document.getElementById('employeeId').value.trim();
-            const departmentCode = document.getElementById('departmentCode').value.trim();
-
-            // 邮箱后缀校验
-            const allowedDomains = ['tjhq.com', 'mofit.com.cn', 'szlongtu.com'];
-            const emailDomain = email.split('@')[1]?.toLowerCase();
-            if (!allowedDomains.includes(emailDomain)) {
-                showAlert(`仅支持以下域名的公司邮箱注册: ${allowedDomains.join(', ')}`, 'error');
-                return;
-            }
-
-            registerBtn.disabled = true;
-            registerBtn.textContent = '注册中...';
-
-            try {
-                // 构建 JSON 请求体
-                const payload = {
-                    email: email,
-                    password: password,
-                    full_name: fullName,
-                    employee_id: employeeId || null,
-                    department_code: departmentCode || null
-                };
-
-                const response = await fetch('/auth/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    showAlert('注册成功！请使用新账号登录', 'success');
-                    registerForm.reset();
-                    registerForm.classList.add('u-hide');
-
-                    // 添加返回登录按钮
-                    const successAction = document.createElement('div');
-                    successAction.className = 'u-text-center u-mt-32';
-                    successAction.innerHTML = `
-                        <a href="service_desk_login.html" class="btn-primary u-inline-block u-no-underline">
-                            前往登录页面
-                        </a>
-                    `;
-                    document.querySelector('.g-card').appendChild(successAction);
-                } else {
-                    showAlert(`Error: ${result.detail || '注册失败，请稍后重试'}`, 'error');
-                    registerBtn.disabled = false;
-                    registerBtn.textContent = '注册账号';
-                }
-            } catch (error) {
-                console.error(error);
-                showAlert(`网络错误，请检查连接`, 'error');
-                registerBtn.disabled = false;
-                registerBtn.textContent = '注册账号';
-            }
-        });
-    </script>
+    <script src="auth_utils.js"></script>
+    <script src="js/modules/auth_portal.js" type="module"></script>
 </body>
 
 </html>

@@ -60,7 +60,13 @@ class UI {
         const loadingDiv = document.getElementById('loading');
         if (loadingDiv) {
             loadingDiv.innerText = message;
-            loadingDiv.style.display = show ? 'block' : 'none';
+            if (show) {
+                loadingDiv.classList.remove('u-hide');
+                loadingDiv.classList.add('u-block');
+            } else {
+                loadingDiv.classList.add('u-hide');
+                loadingDiv.classList.remove('u-block');
+            }
         }
     }
 
@@ -70,23 +76,42 @@ class UI {
      * @param {string} type 类型: 'success' | 'error' | 'info'
      */
     static showToast(message, type = 'info') {
-        const container = document.getElementById('toast-container');
+        const container = document.getElementById('toast-container') || document.getElementById('sys-notification-container');
         if (!container) return;
 
-        const t = document.createElement('div');
-        t.className = `toast toast-${type}`;
-        t.innerHTML = `
-            <div style="font-size:18px"></div>
-            <div style="flex:1">
-                <div style="font-weight:600; font-size:13px; color:var(--text-main)">System Update</div>
-                <div style="font-size:12px; color:var(--text-dim);">${message}</div>
-            </div>
-        `;
-        container.appendChild(t);
+        const toast = document.createElement('div');
+        toast.className = `sys-toast sys-toast--${type}`;
+
+        // 图标占位
+        const icon = document.createElement('div');
+        icon.className = 'sys-toast__icon';
+
+        // 内容容器
+        const content = document.createElement('div');
+        content.className = 'sys-toast__content';
+
+        const title = document.createElement('div');
+        title.className = 'sys-toast__title';
+        title.textContent = 'System Notice';
+
+        const meta = document.createElement('div');
+        meta.className = 'sys-toast__meta';
+        meta.textContent = message;
+
+        content.appendChild(title);
+        content.appendChild(meta);
+
+        toast.appendChild(icon);
+        toast.appendChild(content);
+
+        container.appendChild(toast);
+
+        // 触发动画
+        setTimeout(() => toast.classList.add('is-active'), 10);
+
         setTimeout(() => {
-            t.style.opacity = '0';
-            t.style.transform = 'translateX(20px)';
-            setTimeout(() => t.remove(), 500);
+            toast.classList.remove('is-active');
+            setTimeout(() => toast.remove(), 400);
         }, 6000);
     }
 
@@ -127,6 +152,30 @@ class UI {
             console.log('New state expanded:', group.classList.contains('expanded'));
         } else {
             console.error('toggleNav: No .nav-group parent found for', el);
+        }
+    }
+
+    /**
+     * 显示模态框
+     * @param {string} id 模态框 ID
+     */
+    static showModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.remove('u-hide');
+            modal.classList.add('u-flex');
+        }
+    }
+
+    /**
+     * 隐藏模态框
+     * @param {string} id 模态框 ID
+     */
+    static hideModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.add('u-hide');
+            modal.classList.remove('u-flex');
         }
     }
 }

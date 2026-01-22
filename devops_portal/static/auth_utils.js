@@ -268,33 +268,50 @@ const NotificationSystem = {
             warning: '⚠️'
         }[type];
 
-        let contentHtml = `
-            <span class="sys-toast__icon">${icon}</span>
-            <div class="sys-toast__content">
-                <div class="sys-toast__title">${message}</div>
-        `;
+        const iconEl = document.createElement('span');
+        iconEl.className = 'sys-toast__icon';
+        iconEl.textContent = icon;
+        toast.appendChild(iconEl);
+
+        const contentWrapper = document.createElement('div');
+        contentWrapper.className = 'sys-toast__content';
+        const titleEl = document.createElement('div');
+        titleEl.className = 'sys-toast__title';
+        titleEl.textContent = message;
+        contentWrapper.appendChild(titleEl);
 
         if (metadata) {
-            contentHtml += `<div class="sys-toast__meta">`;
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'sys-toast__meta';
 
             if (metadata.failure_reason) {
-                contentHtml += `<div>Reason: <span style="color: var(--status-error);">${metadata.failure_reason}</span></div>`;
+                const reasonDiv = document.createElement('div');
+                reasonDiv.textContent = 'Reason: ';
+                const reasonSpan = document.createElement('span');
+                reasonSpan.style.color = 'var(--status-error)';
+                reasonSpan.textContent = metadata.failure_reason;
+                reasonDiv.appendChild(reasonSpan);
+                metaDiv.appendChild(reasonDiv);
             }
             if (metadata.test_case_title) {
-                contentHtml += `<div>Case: ${metadata.test_case_title}</div>`;
+                const caseDiv = document.createElement('div');
+                caseDiv.textContent = `Case: ${metadata.test_case_title}`;
+                metaDiv.appendChild(caseDiv);
             }
             if (metadata.requirement_title) {
-                contentHtml += `<div>Req: ${metadata.requirement_title}</div>`;
+                const reqDiv = document.createElement('div');
+                reqDiv.textContent = `Req: ${metadata.requirement_title}`;
+                metaDiv.appendChild(reqDiv);
             }
             if (metadata.executor) {
-                contentHtml += `<div>By: ${metadata.executor.split(' ')[0]}</div>`;
+                const execDiv = document.createElement('div');
+                execDiv.textContent = `By: ${metadata.executor.split(' ')[0]}`;
+                metaDiv.appendChild(execDiv);
             }
-
-            contentHtml += `</div>`;
+            contentWrapper.appendChild(metaDiv);
         }
 
-        contentHtml += `</div>`;
-        toast.innerHTML = contentHtml;
+        toast.appendChild(contentWrapper);
         container.appendChild(toast);
 
         // Animate in
