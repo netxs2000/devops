@@ -723,7 +723,7 @@
                 <div class="u-flex u-gap-10">
                     <input type="number" id="sourceProjectId" class="form-control u-flex-1"
                         placeholder="Source Project ID">
-                    <button class="btn-primary u-text-tiny u-bg-accent" onclick="submitClone()">Clone</button>
+                    <button class="btn-primary u-text-tiny u-bg-accent js-btn-clone-project">Clone</button>
                 </div>
             </div>
             <div class="u-flex u-flex-end u-gap-12">
@@ -778,8 +778,8 @@
     </div>
     <div class="modal-overlay u-hide" id="rcaModalOverlay">
         <div class="modal">
-            <div id="rca-suggestions" class="u-lh-1-6 u-text-primary"></div><button class="btn-primary u-mt-20"
-                onclick="UI.hideModal('rcaModalOverlay');">Close</button>
+            <div id="rca-suggestions" class="u-lh-1-6 u-text-primary"></div><button
+                class="btn-primary u-mt-20 js-btn-close-rca-modal">Close</button>
         </div>
     </div>
 

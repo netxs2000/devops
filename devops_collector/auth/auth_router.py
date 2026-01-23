@@ -190,8 +190,49 @@ def auth_read_users_me(token: str = Depends(auth_service.auth_oauth2_scheme), db
         HTTPException: 令牌无效或用户未找到。
     """
     user = auth_service.auth_get_current_user(db, token)
-    token_obj = auth_service.auth_get_gitlab_token(db, user.global_user_id)
     
-    resp = auth_schema.AuthUserResponse.model_validate(user)
-    resp.gitlab_connected = True if token_obj else False
-    return resp
+    # 1. Base User Info
+    resp_data = {
+        "global_user_id": str(user.global_user_id),
+        "email": str(user.primary_email),
+        "full_name": str(user.full_name),
+        "employee_id": str(user.employee_id) if user.employee_id else None,
+        "is_active": bool(user.is_active),
+        "gitlab_connected": False, # Default
+        "roles": [],
+        "department": None
+    }
+
+    # 2. GitLab Token Check (Safe)
+    try:
+        token_obj = auth_service.auth_get_gitlab_token(db, user.global_user_id)
+        if token_obj:
+            resp_data["gitlab_connected"] = True
+    except Exception as e:
+        print(f"[Warn] GitLab Token check failed: {e}")
+
+    # 3. Roles Access (Safe)
+    if user.roles:
+        try:
+            resp_data["roles"] = [{"role_key": str(r.role_key), "role_name": str(r.role_name)} for r in user.roles]
+        except Exception:
+            pass
+
+    # 4. Department & Location Access (Safe)
+    try:
+        if user.department:
+            resp_data["department"] = {
+                "org_id": str(user.department.org_id),
+                "org_name": str(user.department.org_name)
+            }
+        
+        if user.location:
+            resp_data["location"] = {
+                "location_id": str(user.location.location_id),
+                "location_name": str(user.location.location_name),
+                "region": str(user.location.region) if user.location.region else None
+            }
+    except Exception:
+        pass
+
+    return resp_data

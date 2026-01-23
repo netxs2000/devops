@@ -73,7 +73,10 @@ class User(Base, TimestampMixin, SCDMixin):
     primary_email = Column(String(255), unique=True, index=True, comment='主邮箱地址')
     department_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment='所属部门ID')
     position = Column(String(100), comment='职位/岗位名称')
+    location_id = Column(String(50), ForeignKey('mdm_locations.location_id'), nullable=True, comment='常驻办公地点ID')
     is_active = Column(Boolean, default=True, comment='是否在职')
+
+    location = relationship('Location', foreign_keys=[location_id])
     is_survivor = Column(Boolean, default=False, comment='是否通过合并保留的账号')
     department = relationship('Organization', foreign_keys=[department_id], back_populates='users')
     managed_organizations = relationship('Organization', foreign_keys='Organization.manager_user_id', back_populates='manager')

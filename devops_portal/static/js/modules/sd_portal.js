@@ -4,6 +4,8 @@
  * @author Antigravity
  */
 
+import { Auth, Api, NotificationSystem } from './sys_core.js';
+
 const SDPortalHandler = {
     /**
      * 初始化页面的通用逻辑
@@ -545,6 +547,8 @@ const SDPortalHandler = {
     }
 };
 
-// 全局暴露以支持 DOM 加载触发
-window.SDPortalHandler = SDPortalHandler;
+// ES6 Module Export
+export default SDPortalHandler;
+
+// 全局暴露以支持 DOM 加载触发 (向后兼容)
 document.addEventListener('DOMContentLoaded', () => SDPortalHandler.init());

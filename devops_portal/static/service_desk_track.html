@@ -8,8 +8,8 @@
     <meta name="description" content="查询工单处理进度">
     <link href="css/main.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="auth_utils.js"></script>
-    <script>
+    <script type="module">
+        import { Auth } from './js/modules/sys_core.js';
         if (!Auth.isLoggedIn()) {
             window.location.replace('service_desk_login.html');
         }
@@ -92,7 +92,6 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="auth_utils.js"></script>
     <script src="js/modules/sd_portal.js" type="module"></script>
 </body>
 

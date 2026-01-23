@@ -4,6 +4,8 @@
  * @author Antigravity
  */
 
+import { Api, UI } from './sys_core.js';
+
 const SysUtilsHandler = {
     /**
      * 加载额外数据（最近项目、流水线状态、用例历史）

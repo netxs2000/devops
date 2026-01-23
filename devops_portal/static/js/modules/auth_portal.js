@@ -4,6 +4,8 @@
  * @author Antigravity
  */
 
+import { Auth } from './sys_core.js';
+
 const AuthPortal = {
     init() {
         console.log("Auth Portal Initialized.");

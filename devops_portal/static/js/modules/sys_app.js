@@ -173,11 +173,13 @@ const SysAppHandler = {
             if (target.closest('.js-btn-close-code-modal')) UI.hideModal('codeModalOverlay');
             if (target.closest('.js-btn-close-conflict-modal')) UI.hideModal('conflictModalOverlay');
             if (target.closest('.js-btn-close-dedup-modal')) UI.hideModal('dedupModalOverlay');
+            if (target.closest('.js-btn-close-rca-modal')) UI.hideModal('rcaModalOverlay');
             if (target.closest('.js-btn-close-gitlab-modal')) UI.hideModal('bindGitLabModal');
 
             // 业务提交
             if (target.closest('.js-btn-submit-req')) PmRequirementHandler.submit();
             if (target.closest('.js-btn-submit-import')) SysUtilsHandler.submitImport();
+            if (target.closest('.js-btn-clone-project')) UI.showToast("Clone feature coming soon...", "info");
             if (target.closest('.js-btn-sync-tickets')) SdServiceDeskHandler.loadTickets();
         });
     },
@@ -195,7 +197,6 @@ const SysAppHandler = {
             const user = await Auth.getCurrentUser();
             if (user) {
                 this.state.user = user;
-                window.currentUser = user; // 临时保持全局兼容性
                 this.renderUserProfile(user);
                 this.renderSidebar(user);
 
@@ -452,13 +453,8 @@ const SysAppHandler = {
     }
 };
 
-// 暴露全局
-window.sys_switchView = (view) => SysAppHandler.switchView(view);
-window.qa_loadTestCases = (silent) => QaTestCaseHandler.load(silent);
-window.qa_createBug = (iid) => QaDefectHandler.initCreateForm(iid);
-window.qa_openRCAAssistant = (iid, projectId) => QaDefectHandler.openRCA(iid, projectId);
-window.pm_openReqModal = () => PmRequirementHandler.openModal();
-
+// 自动初始化
 document.addEventListener('DOMContentLoaded', () => SysAppHandler.init());
 
+// ES6 Module Export
 export default SysAppHandler;
