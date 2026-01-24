@@ -11,54 +11,51 @@
 </head>
 
 <body>
-    <header class="u-p-24 u-w-full sd-header">
-        <div class="u-flex u-flex-between u-mx-auto u-max-w-500">
-            <div class="u-text-primary u-weight-700 u-text-h2">登录</div>
-            <a href="service_desk.html" class="sd-nav-link">← 返回首页</a>
-        </div>
-    </header>
-
     <main class="sys-auth-container">
         <div class="sys-auth-card">
-            <div class="sys-auth-header">
-                <h1 class="sys-auth-title">Service Desk</h1>
-                <p class="sys-auth-subtitle">请登录以访问 DevOps 服务台</p>
-            </div>
+            <div class="auth-glass-panel">
+                <div class="sys-auth-header">
+                    <div class="sys-auth-logo">D</div>
+                    <h1 class="sys-auth-title">Sign In</h1>
+                    <p class="sys-auth-subtitle">DevOps Enterprise Platform</p>
+                </div>
 
-            <div class="g-card u-p-40">
                 <div id="alertBox" class="alert"></div>
 
                 <form id="loginForm">
                     <div class="u-mb-24">
-                        <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">邮箱地址</label>
-                        <input type="email" id="email" class="form-control" required placeholder="name@example.com"
+                        <label class="u-text-dim u-weight-600 u-mb-8 u-block u-text-tiny u-uppercase u-ls-05">Corporate
+                            Email</label>
+                        <input type="email" id="email" class="form-control" required placeholder="name@company.com"
                             autocomplete="email">
                     </div>
 
                     <div class="u-mb-32">
                         <div class="u-flex u-flex-between u-mb-8">
-                            <label class="u-text-dim u-weight-500 u-block u-text-body">密码</label>
+                            <label class="u-text-dim u-weight-600 u-block u-text-tiny u-uppercase u-ls-05">Security
+                                Key</label>
                         </div>
-                        <input type="password" id="password" class="form-control" required placeholder="请输入您的密码"
+                        <input type="password" id="password" class="form-control" required placeholder="Enter password"
                             autocomplete="current-password">
                     </div>
 
-                    <button type="submit" class="btn-primary u-w-full u-p-16" id="loginBtn">
-                        登 录
+                    <button type="submit" class="btn-primary u-w-full u-p-16 u-radius-md u-weight-600" id="loginBtn">
+                        Continue →
                     </button>
                 </form>
 
                 <div class="sys-auth-footer">
-                    <span>还没有账号？</span>
-                    <a href="service_desk_register.html">注册新账户</a>
+                    <span>New to platform?</span>
+                    <a href="service_desk_register.html">Create ID</a>
                 </div>
+            </div>
+
+            <div class="u-mt-32 u-text-center">
+                <a href="service_desk.html" class="sd-nav-link u-text-tiny u-weight-600 u-uppercase u-ls-05">← Back to
+                    Portal</a>
             </div>
         </div>
     </main>
-
-    <footer class="u-p-24 u-text-center u-text-dim sd-footer">
-        <p>© 2025 TJHQ</p>
-    </footer>
 
     <script src="js/modules/auth_portal.js" type="module"></script>
 </body>

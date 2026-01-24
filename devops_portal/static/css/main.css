@@ -155,6 +155,38 @@ body {
     color: var(--text-main);
     font-size: var(--g-font-size-body);
     line-height: var(--g-line-height-body);
+    overflow: auto;
+    min-height: 100vh;
+}
+
+/* --- Apple Style Scrollbar --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.2);
+    background-clip: content-box;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* App layout constraint for the main dashboard */
+body.is-app-layout {
     overflow: hidden;
     height: 100vh;
 }
@@ -575,6 +607,11 @@ body {
 
 .u-h-150 {
     height: 150px !important;
+}
+
+.u-h-auto-fill {
+    flex: 1;
+    min-height: 0;
 }
 
 .u-h-v-minus-200 {
@@ -1046,7 +1083,7 @@ body {
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 9999;
 }
 
 .modal {
@@ -1623,30 +1660,60 @@ body {
     gap: 2px;
 }
 
-/* Auth Pages */
+/* Auth Pages (Apple Style Refinement) */
 .sys-auth-container {
-    min-height: calc(100vh - 160px);
+    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
-    background: var(--sys-bg-app);
+    padding: 60px 20px;
+    background: radial-gradient(circle at top left, var(--g-blue-50), #f5f5f7);
+    overflow-y: auto;
 }
 
 .sys-auth-card {
     width: 100%;
-    max-width: 480px;
+    max-width: 440px;
+    position: relative;
+    z-index: 10;
+}
+
+.auth-glass-panel {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 24px;
+    padding: 48px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.02);
+    transition: transform 0.3s ease;
 }
 
 .sys-auth-header {
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: 40px;
+}
+
+.sys-auth-logo {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, var(--sys-primary), var(--g-blue-400));
+    color: white;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 32px;
+    font-weight: 800;
+    box-shadow: 0 10px 20px var(--sys-bg-primary-fade);
 }
 
 .sys-auth-title {
-    font-size: 32px;
+    font-size: var(--g-font-size-display);
     font-weight: 700;
-    color: var(--sys-primary);
+    color: var(--sys-text-primary);
+    letter-spacing: -0.02em;
     margin-bottom: 8px;
 }
 
@@ -1657,7 +1724,7 @@ body {
 
 .sys-auth-footer {
     text-align: center;
-    margin-top: 24px;
+    margin-top: 32px;
     font-size: 14px;
     color: var(--sys-text-secondary);
 }
@@ -1666,6 +1733,7 @@ body {
     color: var(--sys-primary);
     font-weight: 600;
     text-decoration: none;
+    margin-left: 4px;
 }
 
 .sys-auth-footer a:hover {
@@ -1752,6 +1820,23 @@ body {
 .sys-tag--success-light {
     background: var(--sys-bg-success-fade) !important;
     color: var(--status-success) !important;
+}
+
+.u-label-caps {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--sys-text-secondary);
+}
+
+.btn-primary.u-bg-error {
+    background: var(--status-error) !important;
+    color: white !important;
+}
+
+.btn-primary.u-bg-error:hover {
+    background: var(--g-red-600) !important;
 }
 
 .sys-rca-similar-card {

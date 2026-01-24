@@ -19,14 +19,29 @@ logger = logging.getLogger(__name__)
 
 @router.get('/business-projects')
 async def list_business_projects(current_user: User = Depends(get_current_user), db: Session = Depends(get_auth_db)):
-    """获取业务侧可选的主项目列表（经组织隔离，且已配置受理仓库）。"""
-    query = db.query(ProjectMaster).filter(
-        ProjectMaster.is_current.is_(True), 
+    """获取用户可见业务系统列表。
+    
+    逻辑：拉取所有生效产品，并确保该产品下至少关联了一个配置了受理仓库的项目。
+    """
+    from devops_collector.models.base_models import Product, ProjectProductRelation
+    
+    # 查找所有已建立关联且项目有受理仓库的产品
+    products = db.query(Product).join(
+        ProjectProductRelation, Product.product_id == ProjectProductRelation.product_id
+    ).join(
+        ProjectMaster, ProjectProductRelation.project_id == ProjectMaster.project_id
+    ).filter(
+        Product.is_current.is_(True),
+        ProjectMaster.is_current.is_(True),
         ProjectMaster.lead_repo_id.is_not(None)
-    )
-    query = apply_plugin_privacy_filter(db, query, ProjectMaster, current_user)
-    projects = query.all()
-    return [{'id': p.project_id, 'name': p.project_name, 'description': p.description} for p in projects]
+    ).distinct().all()
+    
+    # 如果没有配置了受理中心的产品，则降级返回所有产品（为了让下拉框不为空，方便后期配置）
+    if not products:
+        products = db.query(Product).filter(Product.is_current.is_(True)).all()
+        return [{'id': p.product_id, 'name': p.product_name, 'description': p.product_description, 'status': 'no_lead'} for p in products]
+
+    return [{'id': p.product_id, 'name': p.product_name, 'description': p.product_description} for p in products]
 
 @router.post('/upload')
 async def upload_service_desk_attachment(
@@ -65,11 +80,24 @@ async def submit_bug_via_service_desk(
     db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client)
 ):
-    """【两层架构】通过业务主项目的受理仓库提交 Bug。"""
+    """【三层映射】通过产品 ID 查找到归属项目，并通过其受理中心提交 Bug。"""
+    from devops_collector.models.base_models import Product, ProjectProductRelation
     try:
-        mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == mdm_id).first()
+        # 1. 尝试找到关联该产品且配置了受理仓库的项目
+        mdm_p = db.query(ProjectMaster).join(
+            ProjectProductRelation, ProjectMaster.project_id == ProjectProductRelation.project_id
+        ).filter(
+            ProjectProductRelation.product_id == mdm_id,
+            ProjectMaster.lead_repo_id.is_not(None),
+            ProjectMaster.is_current.is_(True)
+        ).first()
+
+        # 2. 兜底策略：如果产品没有配置受理中心，则报错，要求管理员先配置
         if not mdm_p or not mdm_p.lead_repo_id:
-            raise HTTPException(status_code=400, detail='该项目未配置受理中心仓库')
+            # 记录详细日志以便排查
+            logger.error(f"Submission failed: Product {mdm_id} has no lead_repo configured.")
+            raise HTTPException(status_code=400, detail='该业务系统当前未配置线上受理中心，请通过线下渠道联系 RD 负责人或联系管理员。')
+        
         service = ServiceDeskService(client)
         ticket = await service.create_ticket(
             db=db, 
@@ -101,11 +129,21 @@ async def submit_requirement_via_service_desk(
     db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client)
 ):
-    """【两层架构】通过业务主项目的受理仓库提交需求。"""
+    """【三层映射】通过产品 ID 查找到归属项目，并通过其受理中心提交需求。"""
+    from devops_collector.models.base_models import Product, ProjectProductRelation
     try:
-        mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == mdm_id).first()
+        # 相同逻辑查找归属项目
+        mdm_p = db.query(ProjectMaster).join(
+            ProjectProductRelation, ProjectMaster.project_id == ProjectProductRelation.project_id
+        ).filter(
+            ProjectProductRelation.product_id == mdm_id,
+            ProjectMaster.lead_repo_id.is_not(None),
+            ProjectMaster.is_current.is_(True)
+        ).first()
+
         if not mdm_p or not mdm_p.lead_repo_id:
-            raise HTTPException(status_code=400, detail='该项目未配置受理中心仓库')
+            raise HTTPException(status_code=400, detail='该业务系统尚未开通线上需求提报流程（未配置受理中心）。')
+            
         service = ServiceDeskService(client)
         ticket = await service.create_ticket(
             db=db, 

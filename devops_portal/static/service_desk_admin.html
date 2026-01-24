@@ -24,33 +24,47 @@
     </header>
 
     <!-- Reject Modal -->
-    <div id="rejectModal" class="modal-overlay u-hide u-flex-center">
-        <div class="modal u-max-w-500 g-card">
-            <h3 class="u-mb-12 u-text-h3">拒绝注册申请</h3>
-            <p class="u-text-dim u-mb-8 u-text-body">请说明拒绝原因：</p>
-            <textarea id="rejectReason" class="form-control u-mb-20 u-h-100 u-w-full u-p-16 u-border-subtle u-radius-sm"
-                placeholder="例如：不是目标用户、信息不全等..."></textarea>
-            <input type="hidden" id="rejectEmail">
-            <div class="u-flex u-gap-10 u-flex-end">
-                <button class="btn-ghost js-btn-close-reject-modal u-p-8 u-pointer-cursor">取消</button>
-                <button
-                    class="btn-danger js-btn-submit-reject u-bg-error-light u-text-error u-p-8 u-radius-sm u-border-none u-pointer-cursor">确认拒绝</button>
+    <div id="rejectModal" class="modal-overlay u-hide">
+        <div class="sys-auth-card u-max-w-500">
+            <div class="auth-glass-panel">
+                <div class="sys-auth-header u-mb-24">
+                    <h3 class="sys-auth-title u-text-h2">拒绝注册申请</h3>
+                    <p class="sys-auth-subtitle">请说明驳回的具体原因，将发送至用户邮箱</p>
+                </div>
+
+                <div class="u-mb-24">
+                    <label class="u-label-caps u-mb-8 u-block">驳回理由 (Required)</label>
+                    <textarea id="rejectReason" class="form-control u-h-120" placeholder="例如：信息不全、非本部门员工..."></textarea>
+                    <input type="hidden" id="rejectEmail">
+                </div>
+
+                <div class="u-flex u-gap-12 u-flex-end">
+                    <button class="btn-ghost u-p-10-20 u-radius-md js-btn-close-reject-modal">取消</button>
+                    <button class="btn-primary u-bg-error u-p-10-20 u-radius-md js-btn-submit-reject">确认拒绝</button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Approve Modal (New) -->
-    <div id="approveModal" class="modal-overlay u-hide u-flex-center">
-        <div class="modal u-max-w-500 g-card">
-            <h3 class="u-mb-12 u-text-h3">通过注册申请</h3>
-            <p class="u-text-dim u-mb-8 u-text-body">请配置用户的 GitLab User ID (可选)：</p>
-            <input type="text" id="approveGitlabId"
-                class="form-control u-mb-20 u-w-full u-p-16 u-border-subtle u-radius-sm" placeholder="例如：123">
-            <input type="hidden" id="approveEmail">
-            <div class="u-flex u-gap-10 u-flex-end">
-                <button class="btn-ghost js-btn-close-approve-modal u-p-8 u-pointer-cursor">取消</button>
-                <button
-                    class="btn-primary js-btn-submit-approve u-bg-primary-light u-text-primary u-p-8 u-radius-sm u-border-none u-pointer-cursor">确认通过</button>
+    <div id="approveModal" class="modal-overlay u-hide">
+        <div class="sys-auth-card u-max-w-500">
+            <div class="auth-glass-panel">
+                <div class="sys-auth-header u-mb-24">
+                    <h3 class="sys-auth-title u-text-h2">核准注册申请</h3>
+                    <p class="sys-auth-subtitle">核准后用户即可登录平台，建议绑定 GitLab ID</p>
+                </div>
+
+                <div class="u-mb-24">
+                    <label class="u-label-caps u-mb-8 u-block">GitLab User ID (Optional)</label>
+                    <input type="text" id="approveGitlabId" class="form-control" placeholder="e.g. 556">
+                    <input type="hidden" id="approveEmail">
+                </div>
+
+                <div class="u-flex u-gap-12 u-flex-end">
+                    <button class="btn-ghost u-p-10-20 u-radius-md js-btn-close-approve-modal">取消</button>
+                    <button class="btn-primary u-p-10-20 u-radius-md js-btn-submit-approve">确认通过</button>
+                </div>
             </div>
         </div>
     </div>

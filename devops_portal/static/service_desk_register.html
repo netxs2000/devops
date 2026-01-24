@@ -11,75 +11,73 @@
 </head>
 
 <body>
-    <header class="u-p-24 u-w-full sd-header">
-        <div class="u-flex u-flex-between u-mx-auto u-max-w-600">
-            <div class="u-text-primary u-weight-700 u-text-h2">注册申请</div>
-            <a href="service_desk_login.html" class="sd-nav-link">←
-                返回登录</a>
-        </div>
-    </header>
-
     <main class="sys-auth-container">
-        <div class="sys-auth-card u-max-w-600">
-            <div class="sys-auth-header">
-                <h1 class="sys-auth-title">加入 Service Desk</h1>
-                <p class="sys-auth-subtitle u-text-h3">一个账户，通行所有研发协同工具</p>
-            </div>
+        <div class="sys-auth-card" style="max-width: 540px;">
+            <div class="auth-glass-panel">
+                <div class="sys-auth-header">
+                    <div class="sys-auth-logo">D</div>
+                    <h1 class="sys-auth-title">Create ID</h1>
+                    <p class="sys-auth-subtitle">Join the Enterprise Management Hub</p>
+                </div>
 
-            <div class="g-card u-p-40">
                 <div id="alertBox" class="alert"></div>
 
                 <form id="registerForm">
                     <div class="adm-grid-form u-mb-24">
                         <div class="u-span-2">
-                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">公司邮箱
-                                (必填)</label>
+                            <label
+                                class="u-text-dim u-weight-600 u-mb-8 u-block u-text-tiny u-uppercase u-ls-05">Corporate
+                                Email</label>
                             <input type="email" id="email" class="form-control" required placeholder="name@company.com"
                                 autocomplete="email">
                         </div>
 
                         <div class="u-span-2">
-                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">设置密码
-                                (必填)</label>
-                            <input type="password" id="password" class="form-control" required placeholder="请设置登录密码"
-                                autocomplete="new-password">
+                            <label
+                                class="u-text-dim u-weight-600 u-mb-8 u-block u-text-tiny u-uppercase u-ls-05">Security
+                                Key</label>
+                            <input type="password" id="password" class="form-control" required
+                                placeholder="Min 8 characters" autocomplete="new-password">
                         </div>
 
                         <div>
-                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">姓名
-                                (必填)</label>
-                            <input type="text" id="fullName" class="form-control" required placeholder="真实姓名">
+                            <label class="u-text-dim u-weight-600 u-mb-8 u-block u-text-tiny u-uppercase u-ls-05">Full
+                                Name</label>
+                            <input type="text" id="fullName" class="form-control" required placeholder="Legal Name">
                         </div>
 
                         <div>
-                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">员工 ID
-                                (可选)</label>
-                            <input type="text" id="employeeId" class="form-control" placeholder="工号/HR ID">
+                            <label
+                                class="u-text-dim u-weight-600 u-mb-8 u-block u-text-tiny u-uppercase u-ls-05">Employee
+                                ID</label>
+                            <input type="text" id="employeeId" class="form-control" placeholder="HR system ID">
                         </div>
 
                         <div class="u-span-2">
-                            <label class="u-text-dim u-weight-500 u-mb-8 u-block u-text-body">所在部门
-                                (可选)</label>
-                            <input type="text" id="departmentCode" class="form-control" placeholder="例如：产品研发部">
+                            <label
+                                class="u-text-dim u-weight-600 u-mb-8 u-block u-text-tiny u-uppercase u-ls-05">Department</label>
+                            <input type="text" id="departmentCode" class="form-control"
+                                placeholder="e.g. Core Engineering">
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-primary u-w-full u-p-16" id="registerBtn">
-                        注册账号
+                    <button type="submit" class="btn-primary u-w-full u-p-16 u-radius-md u-weight-600" id="registerBtn">
+                        Create Account →
                     </button>
                 </form>
 
                 <div class="sys-auth-footer">
-                    <span>已有账号？</span>
-                    <a href="service_desk_login.html">前往登录</a>
+                    <span>Already have ID?</span>
+                    <a href="service_desk_login.html">Sign In</a>
                 </div>
+            </div>
+
+            <div class="u-mt-32 u-text-center">
+                <a href="service_desk.html" class="sd-nav-link u-text-tiny u-weight-600 u-uppercase u-ls-05">← Back to
+                    Portal</a>
             </div>
         </div>
     </main>
-
-    <footer class="u-p-24 u-text-center u-text-dim sd-footer">
-        <p>© 2025 TJHQ</p>
-    </footer>
 
     <script src="js/modules/auth_portal.js" type="module"></script>
 </body>

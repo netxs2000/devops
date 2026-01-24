@@ -19,7 +19,7 @@
     </script>
 </head>
 
-<body>
+<body class="is-app-layout">
     <div class="sys-app-container">
         <!-- Toast Notification Container for Real-time Pulse -->
         <div id="toast-container"></div>
@@ -324,20 +324,20 @@
             </div>
 
             <!-- Service Desk Webview (Integrated Content) -->
-            <div id="sd-submit-view" class="u-hide u-h-v-minus-200">
-                <div class="glass-panel u-h-full u-p-0 u-overflow-hidden">
+            <div id="sd-submit-view" class="u-hide u-h-auto-fill">
+                <div class="glass-panel u-h-full u-p-0">
                     <iframe id="sdFrame" src="" class="u-w-full u-h-full u-border-none u-radius-lg"></iframe>
                 </div>
             </div>
 
-            <div id="sd-my-view" class="u-hide u-h-v-minus-200">
-                <div class="glass-panel u-h-full u-p-0 u-overflow-hidden">
+            <div id="sd-my-view" class="u-hide u-h-auto-fill">
+                <div class="glass-panel u-h-full u-p-0">
                     <iframe id="sdMyFrame" src="" class="u-w-full u-h-full u-border-none u-radius-lg"></iframe>
                 </div>
             </div>
 
-            <div id="sys-pulse-view" class="u-hide u-h-v-minus-200">
-                <div class="glass-panel u-h-full u-p-0 u-overflow-hidden">
+            <div id="sys-pulse-view" class="u-hide u-h-auto-fill">
+                <div class="glass-panel u-h-full u-p-0">
                     <iframe id="pulseFrame" src="" class="u-w-full u-h-full u-border-none u-radius-lg"></iframe>
                 </div>
             </div>
@@ -794,11 +794,119 @@
                 <li>Auto-track contributions in your name</li>
             </ul>
             <div class="modal-actions u-flex u-flex-end u-gap-10">
-                <button class="btn-primary btn-outline" <button
-                    class="btn-primary btn-outline js-btn-close-gitlab-modal">Later</button>
+                <button class="btn-primary btn-outline js-btn-close-gitlab-modal">Later</button>
                 <button class="btn-primary u-bg-error js-btn-gitlab-bind">
                     Connect with GitLab
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Product Modal -->
+    <div class="modal-overlay u-hide" id="createProductModal">
+        <div class="sys-auth-card u-max-w-600">
+            <div class="auth-glass-panel">
+                <div class="sys-auth-header u-mb-24">
+                    <h3 class="sys-auth-title u-text-h2">新增业务产品</h3>
+                    <p class="sys-auth-subtitle">定义新的业务产品线，用于跨项目资源分摊和质量分析</p>
+                </div>
+
+                <div class="adm-grid-form u-mb-24">
+                    <div class="u-span-2">
+                        <label class="u-label-caps u-mb-8 u-block">产品名称 (Product Name)</label>
+                        <input type="text" id="prodName" class="form-control" placeholder="例如：预算一体化系统">
+                    </div>
+                    <div>
+                        <label class="u-label-caps u-mb-8 u-block">唯一标识 (ID)</label>
+                        <input type="text" id="prodId" class="form-control" placeholder="E.g. BUDGET_SYS">
+                    </div>
+                    <div>
+                        <label class="u-label-caps u-mb-8 u-block">分类 (Category)</label>
+                        <select id="prodCategory" class="form-control">
+                            <option value="CORE_PRODUCT">核心产品</option>
+                            <option value="INTERNAL_TOOL">内部工具</option>
+                            <option value="OPERATIONAL_SERVICE">运管服务</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="u-flex u-gap-12 u-flex-end">
+                    <button class="btn-ghost u-p-10-20 u-radius-md js-btn-close-product-modal">取消</button>
+                    <button class="btn-primary u-p-10-20 u-radius-md js-btn-submit-product">创建产品</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Project Modal (Minimal) -->
+    <div class="modal-overlay u-hide" id="createProjectModal">
+        <div class="sys-auth-card u-max-w-600">
+            <div class="auth-glass-panel">
+                <div class="sys-auth-header u-mb-24">
+                    <h3 class="sys-auth-title u-text-h2">新增业务主项目</h3>
+                    <p class="sys-auth-subtitle">从 MDM 层面建立新的研发主项目记录</p>
+                </div>
+
+                <div class="adm-grid-form u-mb-24">
+                    <div class="u-span-2">
+                        <label class="u-label-caps u-mb-8 u-block">项目名称</label>
+                        <input type="text" id="newProjName" class="form-control" placeholder="项目全称">
+                    </div>
+                    <div>
+                        <label class="u-label-caps u-mb-8 u-block">项目编码</label>
+                        <input type="text" id="newProjId" class="form-control" placeholder="P-2025-001">
+                    </div>
+                    <div>
+                        <label class="u-label-caps u-mb-8 u-block">项目类型</label>
+                        <select id="newProjType" class="form-control">
+                            <option value="SPRINT">敏捷迭代型</option>
+                            <option value="MAINTENANCE">运维支撑型</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="u-flex u-gap-12 u-flex-end">
+                    <button class="btn-ghost u-p-10-20 u-radius-md js-btn-close-project-modal">取消</button>
+                    <button class="btn-primary u-p-10-20 u-radius-md js-btn-submit-project">确认创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Identity Mapping Modal (New) -->
+    <div class="modal-overlay u-hide" id="createMappingModal">
+        <div class="sys-auth-card u-max-w-600">
+            <div class="auth-glass-panel">
+                <div class="sys-auth-header u-mb-24">
+                    <h3 class="sys-auth-title u-text-h2">建立账号映射</h3>
+                    <p class="sys-auth-subtitle">将员工全局身份与外部系统（GitLab/Jira）账号强绑定</p>
+                </div>
+
+                <div class="adm-grid-form u-mb-24">
+                    <div class="u-span-2">
+                        <label class="u-label-caps u-mb-8 u-block">目标员工 (Select Employee)</label>
+                        <select id="mappingUserSelect" class="form-control">
+                            <option value="">正在加载用户列表...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="u-label-caps u-mb-8 u-block">外部系统</label>
+                        <select id="mappingSourceSystem" class="form-control">
+                            <option value="GITLAB">GitLab</option>
+                            <option value="JIRA">Jira Service Desk</option>
+                            <option value="SONAR">SonarQube</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="u-label-caps u-mb-8 u-block">外部 UID</label>
+                        <input type="text" id="mappingExtId" class="form-control" placeholder="例如：1024">
+                    </div>
+                </div>
+
+                <div class="u-flex u-gap-12 u-flex-end">
+                    <button class="btn-ghost u-p-10-20 u-radius-md js-btn-close-mapping-modal">取消</button>
+                    <button class="btn-primary u-p-10-20 u-radius-md js-btn-submit-mapping">立即绑定</button>
+                </div>
             </div>
         </div>
     </div>
