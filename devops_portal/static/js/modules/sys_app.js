@@ -3,6 +3,7 @@ import QaTestCaseHandler from './qa_test_cases.js';
 import QaDefectHandler from './qa_defects.js';
 import PmRequirementHandler from './pm_requirements.js';
 import SdServiceDeskHandler from './sd_service_desk.js';
+import SDPortalHandler from './sd_portal.js';
 import RptOverviewHandler from './rpt_overview.js';
 import SysUtilsHandler from './sys_utils.js';
 import AdmManageHandler from './adm_manage.js';
@@ -16,7 +17,7 @@ const SysAppHandler = {
                 title: "项目执行",
                 expanded: true,
                 items: [
-                    { id: "nav-iterations", label: "迭代计划", href: "iteration_plan.html", icon: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" },
+                    { id: "nav-iterations", label: "迭代计划", href: "#iteration_plan", view: "iteration_plan", icon: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" },
                     { id: "nav-reqs", label: "需求管理", href: "#requirements", view: "requirements", icon: "M9 11l3 3L22 4; M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
                     { id: "nav-support", label: "工单管理", href: "#support", view: "support", icon: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z; M8 9h8; M8 13h6" }
                 ]
@@ -26,7 +27,7 @@ const SysAppHandler = {
                 expanded: true,
                 items: [
                     { id: "nav-dashboard", label: "质量看板", href: "#dashboard", view: "dashboard", icon: "rect x=3 y=3 width=7 height=7; rect x=14 y=3 width=7 height=7; rect x=14 y=14 width=7 height=7; rect x=3 y=14 width=7 height=7", active: true },
-                    { id: "nav-tests", label: "用例库", href: "#test-cases", view: "test-cases", icon: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" },
+                    { id: "nav-tests", label: "测试用例", href: "#test-cases", view: "test-cases", icon: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" },
                     { id: "nav-test-execution", label: "测试执行", href: "#test-execution", view: "test-execution", icon: "M13 2L3 14h9l-1 8 10-12h-9l1-8z" },
                     { id: "nav-defects", label: "缺陷管理", href: "#defects", view: "defects", icon: "circle cx=12 cy=12 r=10; line x1=12 y1=8 x2=12 y2=12; line x1=12 y1=16 x2=12.01 y2=16", badgeId: "badge-defects" },
                     { id: "nav-matrix", label: "追溯矩阵", href: "#matrix", view: "matrix", icon: "M12 2v20M2 12h20; M17 7l-5 5-5-5" }
@@ -333,8 +334,8 @@ const SysAppHandler = {
 
         const viewItems = [
             'qa-dashboard-view', 'qa-test-results', 'qa-stats-grid', 'qa-execution-view', 'qa-defect-view', 'pm-matrix-view',
-            'pm-requirements-view', 'rpt-insights-view', 'sd-support-view',
-            'sd-submit-view', 'sd-my-view', 'sys-decision-hub-view', 'sys-governance-view', 'sys-pulse-view',
+            'pm-requirements-view', 'pm-iteration-view', 'rpt-insights-view', 'sd-support-view',
+            'sd-submit-view', 'sd-my-view', 'sd-portal-view', 'sys-decision-hub-view', 'sys-governance-view', 'sys-pulse-view',
             'adm-approvals-view', 'adm-products-view', 'adm-projects-view', 'adm-users-view'
         ];
 
@@ -383,6 +384,15 @@ const SysAppHandler = {
         };
 
         switch (view) {
+            case 'iteration_plan':
+                show('pm-iteration-view');
+                const iterView = document.getElementById('pm-iteration-view');
+                if (iterView && !iterView.querySelector('pm-iteration-board')) {
+                    iterView.innerHTML = '';
+                    const board = document.createElement('pm-iteration-board');
+                    iterView.appendChild(board);
+                }
+                break;
             case 'dashboard':
             case 'test-cases':
             case 'tests':
@@ -415,16 +425,23 @@ const SysAppHandler = {
                 RptOverviewHandler.render();
                 break;
             case 'sd_submit':
-                show('sd-submit-view');
-                this.iframeLoad('sdFrame', 'service_desk.html');
+                show('sd-portal-view');
+                SDPortalHandler.init(); // Ensure container is ready
+                SDPortalHandler.renderLanding();
                 break;
             case 'sd_my':
-                show('sd-my-view');
-                this.iframeLoad('sdMyFrame', 'service_desk_my_tickets.html');
+                show('sd-portal-view');
+                SDPortalHandler.init();
+                SDPortalHandler.renderMyTickets();
                 break;
             case 'pulse':
                 show('sys-pulse-view');
-                this.iframeLoad('pulseFrame', 'devex_pulse.html');
+                const pulseView = document.getElementById('sys-pulse-view');
+                if (pulseView) {
+                    pulseView.innerHTML = '';
+                    const pulse = document.createElement('sys-pulse');
+                    pulseView.appendChild(pulse);
+                }
                 break;
             case 'admin_approvals':
                 show('adm-approvals-view');

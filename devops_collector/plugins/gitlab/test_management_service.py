@@ -18,6 +18,7 @@ from sqlalchemy import or_, and_
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.gitlab.models import GitLabProject, GitLabIssue
 from devops_collector.models.test_management import GTMTestCase
+from devops_collector.models.base_models import ProjectMaster, ProjectProductRelation, Organization
 from devops_collector.plugins.gitlab.parser import GitLabTestParser
 from devops_portal import schemas
 
@@ -28,6 +29,7 @@ class TestManagementService:
     
     负责处理测试用例、需求和缺陷的生命周期管理，并提供高质量的质量看板数据。
     """
+    __test__ = False
 
     def __init__(self, session: Session, client: GitLabClient):
         """初始化测试管理服务。
@@ -41,34 +43,92 @@ class TestManagementService:
 
     async def get_test_cases(self, db: Session, project_id: int, current_user: Any) -> List[schemas.TestCase]:
         """获取并解析 GitLab 项目中的所有测试用例。"""
-        # 这里的实现逻辑是：先从数据库取缓存，如果没有或者需要实时的，从 GitLab 取。
-        # 为了简单且符合当前路由逻辑，我们从 GitLab 获取带有 type::test 标签的 Issue。
         try:
-            # 使用同步的 generator 转换为列表
+            # 获取项目信息：优先获取 MDM 主项目名称，若未绑定则显示 GitLab 项目名
+            project = db.query(GitLabProject).filter(GitLabProject.id == project_id).first()
+            project_name = f"P{project_id}"
+            if project:
+                project_name = project.mdm_project.project_name if project.mdm_project else project.name
+            
+            # 获取 Issue 列表
             issues = list(self.client.get_project_issues(project_id))
-            test_cases = []
-            for issue_data in issues:
-                labels = issue_data.get('labels', [])
-                if 'type::test' in labels:
-                    parsed = GitLabTestParser.parse_description(issue_data.get('description', ''))
-                    # 转换结果
-                    tc = schemas.TestCase(
-                        id=issue_data['id'],
-                        iid=issue_data['iid'],
-                        title=issue_data['title'],
-                        priority=parsed['priority'],
-                        test_type=parsed['test_type'],
-                        requirement_id=str(GitLabTestParser.extract_requirement_id(issue_data.get('description', '')) or ''),
-                        pre_conditions=parsed['pre_conditions'].split('\n') if parsed['pre_conditions'] else [],
-                        steps=[schemas.TestStep(step_number=s['step_number'], action=s['action'], expected_result=s['expected']) for s in parsed['test_steps']],
-                        result=self._determine_result_from_labels(labels),
-                        web_url=issue_data['web_url']
-                    )
-                    test_cases.append(tc)
-            return test_cases
+            return self._parse_issues_to_test_cases(issues, project_name=project_name)
         except Exception as e:
             logger.error(f"Failed to get test cases for project {project_id}: {e}")
             raise e
+
+    def _parse_issues_to_test_cases(self, issues: List[Dict], project_name: Optional[str] = None) -> List[schemas.TestCase]:
+        """将 GitLab Issue 数据解析为测试用例模型。"""
+        test_cases = []
+        for issue_data in issues:
+            labels = issue_data.get('labels', [])
+            if 'type::test' in labels:
+                parsed = GitLabTestParser.parse_description(issue_data.get('description', ''))
+                # 转换结果
+                tc = schemas.TestCase(
+                    id=issue_data['id'],
+                    iid=issue_data['iid'],
+                    title=issue_data['title'],
+                    priority=parsed['priority'],
+                    test_type=parsed['test_type'],
+                    requirement_id=str(GitLabTestParser.extract_requirement_id(issue_data.get('description', '')) or ''),
+                    pre_conditions=parsed['pre_conditions'].split('\n') if parsed['pre_conditions'] else [],
+                    steps=[schemas.TestStep(step_number=s['step_number'], action=s['action'], expected_result=s['expected']) for s in parsed['test_steps']],
+                    result=self._determine_result_from_labels(labels),
+                    web_url=issue_data['web_url'],
+                    project_name=project_name
+                )
+                test_cases.append(tc)
+        return test_cases
+
+    async def get_aggregated_test_cases(
+        self, 
+        db: Session, 
+        current_user: Any, 
+        product_id: Optional[str] = None, 
+        org_id: Optional[str] = None
+    ) -> List[schemas.TestCase]:
+        """按产品或组织聚合获取多个项目下的测试用例。"""
+        # 1. 查找目标项目列表
+        project_ids = []
+        
+        if product_id:
+            # 查找关联到该产品的所有项目
+            relations = db.query(ProjectProductRelation).filter(
+                ProjectProductRelation.product_id == product_id
+            ).all()
+            mdm_ids = [r.project_id for r in relations]
+            git_projects = db.query(GitLabProject).filter(
+                GitLabProject.mdm_project_id.in_(mdm_ids)
+            ).all()
+            project_ids = [p.id for p in git_projects]
+            
+        elif org_id:
+            # 查找该部门下的所有项目
+            mdm_projects = db.query(ProjectMaster).filter(
+                ProjectMaster.org_id == org_id
+            ).all()
+            mdm_ids = [p.project_id for p in mdm_projects]
+            git_projects = db.query(GitLabProject).filter(
+                GitLabProject.mdm_project_id.in_(mdm_ids)
+            ).all()
+            project_ids = [p.id for p in git_projects]
+
+        if not project_ids:
+            return []
+
+        # 2. 并行或循环获取各项目的用例
+        # 注：GitLab API 访问受限，目前采用顺序循环，后期可优化为并发执行
+        all_test_cases = []
+        for pid in project_ids:
+            try:
+                cases = await self.get_test_cases(db, pid, current_user)
+                all_test_cases.extend(cases)
+            except Exception as e:
+                logger.warning(f"Failed to fetch aggregated cases for project {pid}: {e}")
+                continue
+                
+        return all_test_cases
 
     def _determine_result_from_labels(self, labels: List[str]) -> str:
         """根据标签确定执行结果。"""

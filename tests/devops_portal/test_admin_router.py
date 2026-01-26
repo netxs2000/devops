@@ -40,10 +40,10 @@ def test_create_identity_mapping(authenticated_client, db_session, mock_user):
     # The default mock_user in conftest has 'role="admin"', but code checks 'SYSTEM_ADMIN' in user.roles list?
     # devops_portal/dependencies.py: user_role_codes = [r.code for r in current_user.roles]
     # So I need to add a Role object to the user.
-    from devops_collector.models.base_models import Role, UserRole
+    from devops_collector.models.base_models import SysRole, UserRole
     
     db_session.add(mock_user)
-    role = Role(code="SYSTEM_ADMIN", name="System Admin")
+    role = SysRole(role_key="SYSTEM_ADMIN", role_name="System Admin")
     db_session.add(role)
     db_session.commit()
     

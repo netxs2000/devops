@@ -12,7 +12,7 @@ class TestStep(BaseModel):
 
 class TestCase(BaseModel):
     """测试用例核心模型"""
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
     id: int = Field(validation_alias='global_issue_id')
     iid: int = Field(validation_alias='gitlab_issue_iid')
     title: str
@@ -24,6 +24,7 @@ class TestCase(BaseModel):
     result: str = 'pending'
     web_url: Optional[str] = None
     linked_bugs: List[Dict[str, str]] = []
+    project_name: Optional[str] = None # 所属项目名称 (用于聚合视图)
 
 class ExecutionRecord(BaseModel):
     """测试执行审计记录"""

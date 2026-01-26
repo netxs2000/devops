@@ -117,7 +117,7 @@ const AuthPortal = {
                 successAction.className = 'u-text-center u-mt-32';
 
                 const link = document.createElement('a');
-                link.href = 'service_desk_login.html';
+                link.href = 'index.html';
                 link.className = 'btn-primary u-inline-block u-no-underline';
                 link.textContent = '前往登录页面';
 

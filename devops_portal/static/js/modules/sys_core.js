@@ -7,7 +7,7 @@
 const AUTH_CONFIG = {
     TOKEN_KEY: 'sd_token',
     USER_KEY: 'sd_user',
-    LOGIN_PAGE: '/service_desk_login.html'
+    LOGIN_PAGE: '/'  // 重定向到首页，由全局登录 Modal 处理
 };
 
 /**
@@ -27,11 +27,29 @@ export const Auth = {
         localStorage.removeItem(AUTH_CONFIG.USER_KEY);
         this._payloadCache = null;
         this._lastToken = null;
+        // 触发全局登录事件，由 index.html 处理
+        document.dispatchEvent(new CustomEvent('sys:logout'));
         window.location.href = AUTH_CONFIG.LOGIN_PAGE;
     },
 
     isLoggedIn() {
-        return !!this.getToken();
+        const token = this.getToken();
+        if (!token) return false;
+
+        // 检查 JWT 是否过期
+        try {
+            const payload = this.getPayload();
+            if (!payload || !payload.exp) return false;
+            // exp 是 Unix 时间戳 (秒)
+            if (Date.now() >= payload.exp * 1000) {
+                // Token 已过期，清理并返回 false
+                this.logout();
+                return false;
+            }
+            return true;
+        } catch (e) {
+            return false;
+        }
     },
 
     async getCurrentUser() {

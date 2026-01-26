@@ -190,6 +190,111 @@ async function runTests() {
         });
     });
 
+    // 6. Service Desk - Service & Component Tests
+    await describe('Service Desk - Service & Component', async () => {
+        const { SDService } = await import('../js/modules/sd_service.js');
+        await import('../js/components/sd_stat_card.component.js');
+
+        await it('should fetch tickets correctly', async () => {
+            mockFetch([{ id: 1, title: 'Test Ticket' }]);
+            const tickets = await SDService.getTickets();
+            expect(tickets.length).toBe(1);
+            expect(tickets[0].title).toBe('Test Ticket');
+            resetFetch();
+        });
+
+        await it('should update stat card value via attribute', async () => {
+            const card = document.createElement('sd-stat-card');
+            document.body.appendChild(card);
+
+            card.setAttribute('value', '42');
+            card.setAttribute('label', 'Test Cards');
+
+            // Wait for attributeChangedCallback
+            await new Promise(r => setTimeout(r, 0));
+
+            const shadowValue = card.shadowRoot.querySelector('.value');
+            expect(shadowValue.textContent).toBe('42');
+
+            document.body.removeChild(card);
+        });
+
+        await it('should submit ticket with correct payload', async () => {
+            let capturedUrl = '';
+            let capturedBody = null;
+
+            window.fetch = async (url, options) => {
+                capturedUrl = url;
+                capturedBody = JSON.parse(options.body);
+                return {
+                    ok: true,
+                    json: async () => ({ tracking_code: 'BUG-123' })
+                };
+            };
+
+            const payload = { title: 'Broken UI' };
+            const result = await SDService.submitTicket('bug', 'MDM-1', payload);
+
+            expect(result.tracking_code).toBe('BUG-123');
+            resetFetch();
+        });
+    });
+    // 7. PM Iteration - Service & Component Tests
+    await describe('PM Iteration - Service & Component', async () => {
+        const { PMIterationService } = await import('../js/modules/pm_iteration_service.js');
+        await import('../js/components/pm_issue_card.component.js');
+
+        await it('should fetch projects correctly', async () => {
+            mockFetch([{ id: 101, path: 'group/project' }]);
+            const projects = await PMIterationService.getProjects();
+            expect(projects.length).toBe(1);
+            expect(projects[0].id).toBe(101);
+            resetFetch();
+        });
+
+        await it('should render issue card correctly via attributes', async () => {
+            const card = document.createElement('pm-issue-card');
+            document.body.appendChild(card);
+
+            card.setAttribute('title', 'Refactor UI');
+            card.setAttribute('iid', '42');
+            card.setAttribute('type', 'bug');
+            card.setAttribute('status', 'closed');
+
+            // Wait for render
+            await new Promise(r => setTimeout(r, 0));
+
+            const shadow = card.shadowRoot;
+            expect(shadow.querySelector('.title').textContent).toBe('Refactor UI');
+            expect(shadow.querySelector('.iid').textContent).toBe('#42');
+            expect(shadow.querySelector('.card').classList.contains('is-closed')).toBeTruthy();
+            expect(shadow.querySelector('.label').textContent).toBe('bug');
+
+            document.body.removeChild(card);
+        });
+
+        await it('should plan issue with correct payload', async () => {
+            let capturedUrl = '';
+            let capturedBody = null;
+
+            window.fetch = async (url, options) => {
+                capturedUrl = url;
+                capturedBody = JSON.parse(options.body);
+                return {
+                    ok: true,
+                    json: async () => ({ status: 'success' })
+                };
+            };
+
+            await PMIterationService.planIssue(101, 42, 202);
+
+            expect(capturedUrl).toContain('/projects/101/plan');
+            expect(capturedBody.issue_iid).toBe(42);
+            expect(capturedBody.milestone_id).toBe(202);
+            resetFetch();
+        });
+    });
+
     // Summary
     console.log('%c---------------------------------------', 'color: #94a3b8;');
     console.log(`%cTest Suite Finished: ${results.pass} Passed, ${results.fail} Failed`,

@@ -1,6 +1,7 @@
 # 前端开发规范 (Native CSS & JavaScript) - Apple Style Edition
 
 ## 一、 核心理念
+
 1. **去框架化工程化**：虽然不使用 React/Vue，但必须通过模块化、服务层分层等手段达到同等的代码复用与维护能力。
 2. **Apple Style Premium UI**：视觉效果必须对齐苹果公司（Apple Inc.）设计语言。优先采用浅色系、高通透感、大幅留白的视觉体验。
 3. **逻辑与样式解耦**：CSS 只负责视觉，JS 只负责逻辑，两者通过 `js-` 类名和 `dataset` 桥接，严禁混用。
@@ -75,12 +76,44 @@
 
 ---
 
-## 五、 全链路命名对齐要求
+## 五、 Web Component 开发规约 (Web Components)
+
+为了在不引入重型框架的情况下实现高度的代码复用和视觉一致性，本项目采用原生 **Web Components** 封装通用的 UI 组件和复杂的业务部件。
+
+### 1. 核心标准
+*   **命名规范**：
+    *   **强制前缀**：必须使用业务域前缀或全局前缀（如 `<sd-card>`, `<g-button>`）。
+    *   **横杠原则**：组件名必须包含至少一个连字符 `-`（浏览器原生要求）。
+*   **封装标准 (Shadow DOM)**：
+    *   **强制启用**：所有组件必须使用 `this.attachShadow({mode: 'open'})` 开启隔离罩。
+    *   **隔离原则**：组件内部样式不应受外部影响，反之亦然。内部装饰应优先使用宿主选择器 `:host`。
+*   **样式集成**：
+    *   **禁止硬编码颜色**：组件内部 CSS 必须使用 `var(--...)` 引用 `main.css` 中定义的设计令牌（Design Tokens）。
+    *   **通透感适配**：若组件包含背景，需支持 `glassmorphism` 样式变量。
+
+### 2. 数据与交互 (Props & Events)
+*   **单一数据流**：
+    *   **属性传入 (Attributes)**：配置信息（如状态、大小、颜色主题）通过 HTML 属性传入。
+    *   **事件驱动 (Events)**：组件内部的状态变化必须通过 `new CustomEvent()` 向上冒泡，严禁在组件内部直接修改外部变量。
+*   **反应式更新**：
+    *   利用 `attributeChangedCallback` 监听属性变化并按需局部更新 DOM，确保性能最优。
+
+### 3. 文件组织
+*   **存储路径**：`devops_portal/static/js/components/`。
+*   **命名格式**：`{prefix}_{name}.component.js`。
+*   **单文件组件**：每个 JavaScript 文件应包含一个完整的类定义和 `customElements.define` 注册逻辑。
+
+---
+
+## 六、 全链路命名对齐要求
 
 | 维度 | 规范格式 | 示例 |
 | :--- | :--- | :--- |
 | **JS 脚本文件名** | `{prefix}_{resource}.js` | `sd_ticket_service.js` |
+| **组件文件名** | `{prefix}_{name}.component.js` | `sd_ticket_card.component.js` |
+| **自定义 HTML 标签** | `<{prefix}-{name}>` | `<sd-priority-badge>` |
 | **API 路径** | `/api/{prefix}/{resource}` | `/api/sd/tickets` |
 | **CSS 类名** | `.prefix-component__element` | `.sd-table__cell` |
 | **DOM 逻辑钩子** | `.js-{action}-{resource}` | `.js-delete-ticket` |
 | **数据属性** | `data-{key}="{value}"` | `data-ticket-id="123"` |
+

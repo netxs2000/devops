@@ -13,13 +13,42 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module">
         import { Auth } from './js/modules/sys_core.js';
+        // 如果未登录，显示登录模态框而非重定向到已删除的页面
         if (!Auth.isLoggedIn()) {
-            window.location.replace('service_desk_login.html');
+            document.addEventListener('DOMContentLoaded', () => {
+                const loginModal = document.getElementById('loginModal');
+                if (loginModal) {
+                    loginModal.classList.remove('u-hide');
+                    loginModal.classList.add('u-flex');
+                }
+            });
         }
     </script>
 </head>
 
 <body class="is-app-layout">
+    <!-- Login Modal (显示给未登录用户) -->
+    <div id="loginModal" class="modal-overlay u-hide" style="z-index: 9999;">
+        <div class="sys-auth-card" style="max-width: 400px;">
+            <div class="auth-glass-panel">
+                <div class="sys-auth-header u-mb-24">
+                    <h3 class="sys-auth-title u-text-h2">DevOps Portal</h3>
+                    <p class="sys-auth-subtitle">请登录以继续</p>
+                </div>
+                <div class="u-mb-24">
+                    <label class="u-label-caps u-mb-8 u-block">邮箱</label>
+                    <input type="email" id="login-email" class="form-control" placeholder="your.email@company.com">
+                </div>
+                <div class="u-mb-24">
+                    <label class="u-label-caps u-mb-8 u-block">密码</label>
+                    <input type="password" id="login-password" class="form-control" placeholder="••••••••">
+                </div>
+                <button id="login-submit" class="btn-primary u-w-full u-p-12-20 u-radius-md">登录</button>
+                <div id="login-error" class="u-text-error u-text-tiny u-mt-12 u-hide"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="sys-app-container">
         <!-- Toast Notification Container for Real-time Pulse -->
         <div id="toast-container"></div>
@@ -159,6 +188,11 @@
             <!-- Dashboard View -->
             <div id="qa-dashboard-view">
                 <div id="loading">Synchronizing Data...</div>
+
+                <!-- Web Component: Product/Org Selector -->
+                <div class="u-mb-24">
+                    <adm-product-selector></adm-product-selector>
+                </div>
 
                 <!-- Stats Bar -->
                 <div class="stats-grid u-hide" id="qa-stats-grid">
@@ -323,23 +357,19 @@
                 </div>
             </div>
 
-            <!-- Service Desk Webview (Integrated Content) -->
-            <div id="sd-submit-view" class="u-hide u-h-auto-fill">
-                <div class="glass-panel u-h-full u-p-0">
-                    <iframe id="sdFrame" src="" class="u-w-full u-h-full u-border-none u-radius-lg"></iframe>
-                </div>
+            <!-- Service Desk Native View (Replaces iframes) -->
+            <div id="sd-portal-view" class="u-hide u-h-auto-fill u-p-40 u-scroll-y">
+                <!-- Content injected dynamically via Js -->
             </div>
 
-            <div id="sd-my-view" class="u-hide u-h-auto-fill">
-                <div class="glass-panel u-h-full u-p-0">
-                    <iframe id="sdMyFrame" src="" class="u-w-full u-h-full u-border-none u-radius-lg"></iframe>
-                </div>
+            <!-- Project Management Iteration Board View -->
+            <div id="pm-iteration-view" class="u-hide u-h-auto-fill u-p-40 u-scroll-y">
+                <!-- pm-iteration-board component injected dynamically -->
             </div>
 
-            <div id="sys-pulse-view" class="u-hide u-h-auto-fill">
-                <div class="glass-panel u-h-full u-p-0">
-                    <iframe id="pulseFrame" src="" class="u-w-full u-h-full u-border-none u-radius-lg"></iframe>
-                </div>
+            <!-- DevEx Pulse Native View -->
+            <div id="sys-pulse-view" class="u-hide u-h-auto-fill u-flex u-flex-center u-bg-subtle">
+                <!-- sys-pulse component injected dynamically -->
             </div>
 
             <div id="adm-projects-view" class="u-hide">
@@ -362,22 +392,11 @@
                     <div class="adm-grid-2-cols">
                         <div class="adm-table-container">
                             <h4 class="adm-section-title">
-                                <span class="u-text-primary">01.</span> 业务主项目清单
+                                <span class="u-text-primary">01.</span> 业务主项目清单 (MDM)
                             </h4>
-                            <table class="adm-data-table">
-                                <thead>
-                                    <tr>
-                                        <th>项目ID/名称</th>
-                                        <th>类型</th>
-                                        <th>状态</th>
-                                        <th>受理中心</th>
-                                        <th>仓库数</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="mdmProjectsTableBody">
-                                    <!-- Dynamic -->
-                                </tbody>
-                            </table>
+                            <div class="adm-cards-grid u-mt-16 js-mdm-projects-grid">
+                                <!-- <adm-project-card> injected here -->
+                            </div>
                         </div>
 
                         <div class="adm-table-container">
@@ -391,7 +410,7 @@
                                         <th>操作</th>
                                     </tr>
                                 </thead>
-                                <tbody id="unlinkedReposTableBody">
+                                <tbody class="js-unlinked-repos-tbody">
                                     <!-- Dynamic -->
                                 </tbody>
                             </table>
@@ -400,8 +419,35 @@
                 </div>
             </div>
 
-            <div id="adm-approvals-view" class="u-hide view-iframe-container">
-                <iframe id="adminApprovalsFrame" src="service_desk_admin.html" class="view-iframe"></iframe>
+            <div id="adm-approvals-view" class="u-hide">
+                <div class="adm-panel">
+                    <div class="adm-header">
+                        <div>
+                            <h2 class="adm-title">用户注册审批</h2>
+                            <p class="adm-title-desc">审核服务台用户注册申请并分配相应权限。</p>
+                        </div>
+                    </div>
+
+                    <div class="test-list u-mb-24 js-adm-reg-stats"
+                        style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                        <!-- Stats injected here -->
+                    </div>
+
+                    <div class="adm-tabs u-mb-24 u-border-b-subtle u-flex u-gap-20">
+                        <div class="adm-tab is-active js-adm-reg-tab u-pointer-cursor u-pb-10 u-weight-600"
+                            data-status="pending" style="border-bottom: 2px solid var(--primary);">待审批</div>
+                        <div class="adm-tab js-adm-reg-tab u-pointer-cursor u-pb-10 u-text-dim" data-status="approved">
+                            正式用户</div>
+                        <div class="adm-tab js-adm-reg-tab u-pointer-cursor u-pb-10 u-text-dim" data-status="rejected">
+                            已拒绝</div>
+                        <div class="adm-tab js-adm-reg-tab u-pointer-cursor u-pb-10 u-text-dim" data-status="all">全部记录
+                        </div>
+                    </div>
+
+                    <div class="adm-cards-grid js-adm-reg-list">
+                        <!-- <adm-registration-card> injected here -->
+                    </div>
+                </div>
             </div>
 
             <div id="adm-products-view" class="u-hide">
@@ -423,30 +469,19 @@
 
                     <div class="adm-grid-equal-2-cols">
                         <div class="adm-table-container">
-                            <h4 class="adm-section-title">01. 产品列表</h4>
-                            <table class="adm-data-table">
-                                <thead>
-                                    <tr>
-                                        <th>产品名称/编号</th>
-                                        <th>分类</th>
-                                        <th>状态</th>
-                                        <th>维护团队</th>
-                                        <th>操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="productsTableBody">
-                                    <!-- Dynamic -->
-                                </tbody>
-                            </table>
+                            <h4 class="adm-section-title">01. 产品体系矩阵 (Cards)</h4>
+                            <div class="adm-cards-grid u-mt-16 js-products-grid">
+                                <!-- <adm-product-card> components injected here -->
+                            </div>
                         </div>
 
                         <div class="adm-table-container">
-                            <h4 class="adm-section-title">02. 产品-项目关联关系</h4>
+                            <h4 class="adm-section-title">02. 产品-项目关联映射</h4>
                             <div class="adm-form-group-compact">
                                 <p class="adm-form-label-small">建立关联绑定：</p>
                                 <div class="u-flex u-gap-10">
-                                    <select id="linkProductSelect" class="form-control u-flex-1"></select>
-                                    <select id="linkProjectSelect" class="form-control u-flex-1"></select>
+                                    <select class="form-control u-flex-1 js-link-product-select"></select>
+                                    <select class="form-control u-flex-1 js-link-project-select"></select>
                                     <button class="btn-primary js-btn-link-product-project">建立关联</button>
                                 </div>
                             </div>
@@ -459,7 +494,7 @@
                                         <th>分摊比例</th>
                                     </tr>
                                 </thead>
-                                <tbody id="productProjectTableBody">
+                                <tbody class="js-product-project-tbody">
                                     <!-- Dynamic -->
                                 </tbody>
                             </table>
@@ -499,7 +534,7 @@
                                     <th>操作</th>
                                 </tr>
                             </thead>
-                            <tbody id="userMappingsTableBody">
+                            <tbody class="js-user-mappings-tbody">
                                 <!-- Dynamic -->
                             </tbody>
                         </table>
@@ -507,102 +542,6 @@
                 </div>
             </div>
 
-            <!-- Create Identity Mapping Modal -->
-            <div id="createMappingModal" class="modal-overlay">
-                <div class="modal u-max-w-500">
-                    <h3 class="u-mb-20">添加身份绑定</h3>
-                    <div class="adm-form-group">
-                        <label>选择员工</label>
-                        <select id="mapGlobalUser" class="form-control"></select>
-                    </div>
-                    <div class="adm-form-group">
-                        <label>系统来源</label>
-                        <select id="mapSourceSystem" class="form-control">
-                            <option value="GITLAB">GitLab</option>
-                            <option value="JIRA">Jira</option>
-                            <option value="SONAR">SonarQube</option>
-                            <option value="JENKINS">Jenkins</option>
-                            <option value="ZENTAO">ZenTao</option>
-                            <option value="JFROG">JFrog</option>
-                            <option value="NEXUS">Nexus</option>
-                        </select>
-                    </div>
-                    <div class="adm-form-group">
-                        <label>外部系统 UID (必填)</label>
-                        <input type="text" id="mapExternalId" placeholder="例如 GitLab ID: 556" class="form-control">
-                    </div>
-                    <div class="adm-form-group">
-                        <label>外部系统用户名</label>
-                        <input type="text" id="mapExternalUsername" placeholder="e.g. zhangsan_dev"
-                            class="form-control">
-                    </div>
-                    <div class="adm-form-group">
-                        <label>外部系统邮箱</label>
-                        <input type="text" id="mapExternalEmail" placeholder="e.g. zs@gmail.com" class="form-control">
-                    </div>
-                    <div class="u-flex u-gap-10 u-flex-end u-mt-32">
-                        <button class="btn-ghost js-btn-close-mapping-modal">取消</button>
-                        <button class="btn-primary js-btn-submit-mapping">保存绑定</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Create MDM Project Modal -->
-            <div id="createProjectModal" class="modal-overlay">
-                <div class="modal u-max-w-800">
-                    <h3 class="u-mb-20">新建业务主项目</h3>
-                    <div class="adm-grid-form">
-                        <div class="adm-form-group">
-                            <label>项目唯一ID (ID)</label>
-                            <input type="text" id="newProjId" placeholder="PRJ_JIRA_PAY_101" class="form-control">
-                        </div>
-                        <div class="adm-form-group">
-                            <label>项目名称 (Name)</label>
-                            <input type="text" id="newProjName" placeholder="2025Q4 支付链路优化" class="form-control">
-                        </div>
-                        <div class="adm-form-group">
-                            <label>项目类型 (Type)</label>
-                            <select id="newProjType" class="form-control">
-                                <option value="SPRINT">敏捷迭代 (SPRINT)</option>
-                                <option value="WATERFALL">瀑布项目 (WATERFALL)</option>
-                                <option value="RESEARCH">研发研究 (RESEARCH)</option>
-                            </select>
-                        </div>
-                        <div class="adm-form-group">
-                            <label>归属部门 (Org)</label>
-                            <select id="newProjOrg" class="form-control"></select>
-                        </div>
-                        <div class="adm-form-group">
-                            <label>计划开始 (Start)</label>
-                            <input type="date" id="newProjPlanStart" class="form-control">
-                        </div>
-                        <div class="adm-form-group">
-                            <label>计划交付 (End)</label>
-                            <input type="date" id="newProjPlanEnd" class="form-control">
-                        </div>
-                        <div class="adm-form-group">
-                            <label>预算编码 (Budget)</label>
-                            <input type="text" id="newProjBudgetCode" placeholder="BC_2025_TECH_01"
-                                class="form-control">
-                        </div>
-                        <div class="adm-form-group">
-                            <label>预算类型</label>
-                            <select id="newProjBudgetType" class="form-control">
-                                <option value="CAPEX">资本化 (CAPEX)</option>
-                                <option value="OPEX">费用化 (OPEX)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="adm-form-group u-mt-16">
-                        <label>项目简述</label>
-                        <textarea id="newProjDesc" placeholder="项目详细背景说明..." class="form-control" rows="3"></textarea>
-                    </div>
-                    <div class="u-flex u-gap-10 u-flex-end u-mt-32">
-                        <button class="btn-ghost js-btn-close-project-modal">取消</button>
-                        <button class="btn-primary js-btn-submit-project">立即创建</button>
-                    </div>
-                </div>
-            </div>
         </main>
     </div>
 
@@ -814,15 +753,15 @@
                 <div class="adm-grid-form u-mb-24">
                     <div class="u-span-2">
                         <label class="u-label-caps u-mb-8 u-block">产品名称 (Product Name)</label>
-                        <input type="text" id="prodName" class="form-control" placeholder="例如：预算一体化系统">
+                        <input type="text" class="form-control js-prod-name-input" placeholder="例如：预算一体化系统">
                     </div>
                     <div>
                         <label class="u-label-caps u-mb-8 u-block">唯一标识 (ID)</label>
-                        <input type="text" id="prodId" class="form-control" placeholder="E.g. BUDGET_SYS">
+                        <input type="text" class="form-control js-prod-id-input" placeholder="E.g. BUDGET_SYS">
                     </div>
                     <div>
                         <label class="u-label-caps u-mb-8 u-block">分类 (Category)</label>
-                        <select id="prodCategory" class="form-control">
+                        <select class="form-control js-prod-category-select">
                             <option value="CORE_PRODUCT">核心产品</option>
                             <option value="INTERNAL_TOOL">内部工具</option>
                             <option value="OPERATIONAL_SERVICE">运管服务</option>
@@ -850,15 +789,15 @@
                 <div class="adm-grid-form u-mb-24">
                     <div class="u-span-2">
                         <label class="u-label-caps u-mb-8 u-block">项目名称</label>
-                        <input type="text" id="newProjName" class="form-control" placeholder="项目全称">
+                        <input type="text" class="form-control js-new-proj-name-input" placeholder="项目全称">
                     </div>
                     <div>
                         <label class="u-label-caps u-mb-8 u-block">项目编码</label>
-                        <input type="text" id="newProjId" class="form-control" placeholder="P-2025-001">
+                        <input type="text" class="form-control js-new-proj-id-input" placeholder="P-2025-001">
                     </div>
                     <div>
                         <label class="u-label-caps u-mb-8 u-block">项目类型</label>
-                        <select id="newProjType" class="form-control">
+                        <select class="form-control js-new-proj-type-select">
                             <option value="SPRINT">敏捷迭代型</option>
                             <option value="MAINTENANCE">运维支撑型</option>
                         </select>
@@ -885,13 +824,13 @@
                 <div class="adm-grid-form u-mb-24">
                     <div class="u-span-2">
                         <label class="u-label-caps u-mb-8 u-block">目标员工 (Select Employee)</label>
-                        <select id="mappingUserSelect" class="form-control">
+                        <select class="form-control js-mapping-user-select">
                             <option value="">正在加载用户列表...</option>
                         </select>
                     </div>
                     <div>
                         <label class="u-label-caps u-mb-8 u-block">外部系统</label>
-                        <select id="mappingSourceSystem" class="form-control">
+                        <select class="form-control js-mapping-source-system">
                             <option value="GITLAB">GitLab</option>
                             <option value="JIRA">Jira Service Desk</option>
                             <option value="SONAR">SonarQube</option>
@@ -899,7 +838,7 @@
                     </div>
                     <div>
                         <label class="u-label-caps u-mb-8 u-block">外部 UID</label>
-                        <input type="text" id="mappingExtId" class="form-control" placeholder="例如：1024">
+                        <input type="text" class="form-control js-mapping-ext-id" placeholder="例如：1024">
                     </div>
                 </div>
 
@@ -929,74 +868,6 @@
         </div>
     </template>
 
-    <template id="qa-test-case-tpl">
-        <div class="test-card js-test-card">
-            <div class="test-header js-case-toggle">
-                <div class="test-info">
-                    <div class="custom-checkbox js-case-selector"></div>
-                    <div class="status-blob js-status-blob"></div>
-                    <div class="test-title-group">
-                        <span class="test-iid js-case-iid"></span>
-                        <span class="test-title js-case-title"></span>
-                        <span class="status-stale-badge u-hide js-stale-badge" title="Requirement changed!">⚠️
-                            Outdated</span>
-                    </div>
-                </div>
-                <div class="test-badges">
-                    <span class="tag-badge js-tag-priority"></span>
-                    <span class="tag-badge js-tag-type"></span>
-                    <div class="btn-action">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-            <div class="trend-dots u-flex u-gap-8 u-p-16 js-trend-container"></div>
-            <div class="test-content js-case-content">
-                <div class="grid-detail">
-                    <div class="flow-zone">
-                        <div class="section-label">Execution Flow</div>
-                        <div class="steps-list js-steps-container"></div>
-                    </div>
-                    <div class="meta-zone">
-                        <div class="section-label">Traceability</div>
-                        <div class="meta-pill"><b>Requirement</b> <span class="js-meta-req"></span></div>
-                        <div class="meta-pill"><b>Defects</b>
-                            <div class="js-meta-bugs"></div>
-                        </div>
-                        <div class="meta-pill"><b>Pre-conditions</b>
-                            <p class="js-meta-pre"></p>
-                        </div>
-                        <a href="" target="_blank" class="gitlab-link js-case-link">View in GitLab</a>
-                        <div class="u-mt-20 js-history-section">
-                            <div class="section-label">Audit Trail</div>
-                            <div class="history-list js-history-container"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="execution-shelf js-execution-shelf">
-                    <button class="btn-shelf u-hide js-btn-bug">Report Bug</button>
-                    <button class="btn-shelf btn-warn js-btn-block">Block</button>
-                    <button class="btn-shelf btn-error js-btn-fail">Fail</button>
-                    <button class="btn-shelf btn-magic js-btn-magic">Magic Code</button>
-                    <button class="btn-shelf btn-success js-btn-pass">Pass Case</button>
-                    <button class="btn-shelf btn-ack u-hide js-btn-ack">✓ Sync & Ack</button>
-                </div>
-            </div>
-        </div>
-    </template>
-
-    <template id="qa-test-step-tpl">
-        <div class="step-item">
-            <div class="step-count js-step-num"></div>
-            <div class="step-text">
-                <div class="step-action-text js-step-action"></div>
-                <div class="step-expected-text js-step-expected"></div>
-            </div>
-        </div>
-    </template>
 
     <template id="qa-defect-tpl">
         <div class="test-card js-defect-card">
@@ -1056,48 +927,6 @@
         </div>
     </template>
 
-    <template id="adm-product-row-tpl">
-        <tr>
-            <td><span class="u-weight-600 u-text-primary js-prod-name"></span></td>
-            <td class="js-prod-category"></td>
-            <td><span class="adm-badge adm-badge--active js-prod-status"></span></td>
-            <td class="js-prod-owner"></td>
-            <td><button class="btn-primary btn--small js-prod-edit">编辑</button></td>
-        </tr>
-    </template>
-
-    <template id="adm-project-row-tpl">
-        <tr>
-            <td>
-                <div class="u-flex-column">
-                    <span class="u-weight-600 u-text-primary js-proj-name"></span>
-                    <span class="u-text-dim u-text-tiny js-proj-id"></span>
-                </div>
-            </td>
-            <td class="js-proj-type"></td>
-            <td><span class="adm-badge js-proj-status"></span></td>
-            <td class="js-proj-binding"></td>
-            <td class="u-text-center js-proj-repos"></td>
-        </tr>
-    </template>
-
-    <template id="adm-unlinked-repo-row-tpl">
-        <tr>
-            <td class="js-repo-name"></td>
-            <td><button class="btn-primary btn--small js-repo-link">关联</button></td>
-        </tr>
-    </template>
-
-    <template id="adm-user-mapping-row-tpl">
-        <tr>
-            <td><span class="u-weight-600 u-text-primary js-user-name"></span></td>
-            <td><span class="adm-badge sys-tag--admin js-user-source"></span></td>
-            <td><code class="js-user-ext-id"></code></td>
-            <td class="js-user-ext-name"></td>
-            <td class="js-user-ext-email"></td>
-            <td><button class="btn-ghost btn--small u-text-error js-user-delete">删除</button></td>
-        </tr>
-    </template>
 
     <template id="sys-nav-group-tpl">
         <div class="nav-group js-nav-group">
@@ -1136,9 +965,72 @@
         </div>
     </template>
 
-    <!-- Main Entry -->
+    <script type="module" src="js/components/adm_product_card.component.js"></script>
+    <script type="module" src="js/components/adm_project_card.component.js"></script>
+    <script type="module" src="js/components/adm_registration_card.component.js"></script>
+    <script type="module" src="js/components/sd_stat_card.component.js"></script>
+    <script type="module" src="js/components/sd_landing.component.js"></script>
+    <script type="module" src="js/components/sd_request_form.component.js"></script>
+    <script type="module" src="js/components/sd_ticket_list.component.js"></script>
+    <script type="module" src="js/components/qa_test_case_card.component.js"></script>
+    <script type="module" src="js/components/sys_pulse.component.js"></script>
+    <script type="module" src="js/components/pm_iteration_board.component.js"></script>
     <script type="module" src="js/modules/sys_app.js"></script>
 
+    <!-- Login Handler -->
+    <script type="module">
+        import { Auth, Api, UI } from './js/modules/sys_core.js';
+
+        document.getElementById('login-submit')?.addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-submit');
+
+            if (!email || !password) {
+                errorEl.textContent = '请填写邮箱和密码';
+                errorEl.classList.remove('u-hide');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            errorEl.classList.add('u-hide');
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ username: email, password })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '登录失败');
+                }
+
+                const data = await response.json();
+                Auth.setToken(data.access_token);
+
+                // Reload page to initialize app
+                window.location.reload();
+            } catch (e) {
+                errorEl.textContent = e.message;
+                errorEl.classList.remove('u-hide');
+                btn.disabled = false;
+                btn.textContent = '登录';
+            }
+        });
+
+        // Enter key support
+        ['login-email', 'login-password'].forEach(id => {
+            document.getElementById(id)?.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    document.getElementById('login-submit').click();
+                }
+            });
+        });
+    </script>
 </body>
 
 </html>

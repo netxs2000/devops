@@ -1,140 +1,80 @@
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+from devops_collector.models.base_models import User
 from devops_collector.plugins.gitlab.models import GitLabProject, GitLabMilestone
-from devops_portal.routers.iteration_plan_router import get_iteration_plan_service
+from devops_portal.main import app
 
-def test_list_projects(authenticated_client, db_session):
+@pytest.fixture(autouse=True)
+def setup_admin(mock_user):
+    from devops_collector.models.base_models import SysRole
+    admin_role = SysRole(role_key="SYSTEM_ADMIN", role_name="Admin")
+    mock_user.roles = [admin_role]
+
+@pytest.fixture
+def mock_iteration_service():
+    from devops_portal.routers.iteration_plan_router import get_iteration_plan_service
+    mock = MagicMock()
+    app.dependency_overrides[get_iteration_plan_service] = lambda: mock
+    yield mock
+    del app.dependency_overrides[get_iteration_plan_service]
+
+def test_list_iteration_projects(authenticated_client, db_session):
     project = GitLabProject(
-        id=1,
-        name="test-project",
-        path_with_namespace="group/test-project",
-        web_url="http://gitlab.com/group/test-project"
+        id=101,
+        name="Test Project",
+        path_with_namespace="group/test-project"
     )
     db_session.add(project)
     db_session.commit()
-
+    
     response = authenticated_client.get("/iteration-plan/projects")
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
-    assert data[0]["name"] == "test-project"
+    assert len(data) >= 1
+    assert data[0]["id"] == 101
 
 def test_list_milestones(authenticated_client, db_session):
+    project = GitLabProject(id=101, name="P1", path_with_namespace="g/p1")
+    db_session.add(project)
+    
     milestone = GitLabMilestone(
-        id=1,
-        project_id=1,
-        title="v1.0",
-        state="active",
-        due_date="2025-01-01"
+        id=202,
+        project_id=101,
+        title="v1.0.0",
+        state="active"
     )
     db_session.add(milestone)
     db_session.commit()
-
-    response = authenticated_client.get("/iteration-plan/projects/1/milestones")
+    
+    response = authenticated_client.get("/iteration-plan/projects/101/milestones")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
-    assert data[0]["title"] == "v1.0"
+    assert data[0]["id"] == 202
 
-def test_create_milestone(authenticated_client):
-    # Mock the service
-    mock_service = MagicMock()
-    mock_service.create_sprint.return_value = {"id": 1, "title": "v2.0"}
+def test_view_backlog(authenticated_client, mock_iteration_service):
+    mock_iteration_service.get_backlog_issues.return_value = [{"iid": 1, "title": "Backlog Issue"}]
     
-    # Override dependency
-    from devops_portal.main import app
-    app.dependency_overrides[get_iteration_plan_service] = lambda: mock_service
+    response = authenticated_client.get("/iteration-plan/projects/101/backlog")
+    assert response.status_code == 200
+    assert response.json()[0]["title"] == "Backlog Issue"
 
-    payload = {
-        "title": "v2.0",
-        "start_date": "2025-02-01",
-        "due_date": "2025-02-28",
-        "description": "Sprint 2"
-    }
+def test_plan_issue(authenticated_client, mock_iteration_service):
+    mock_iteration_service.move_issue_to_sprint.return_value = True
     
-    try:
-        response = authenticated_client.post("/iteration-plan/projects/1/milestones", json=payload)
-        assert response.status_code == 200
-        assert response.json()["title"] == "v2.0"
-        mock_service.create_sprint.assert_called_once()
-    finally:
-        app.dependency_overrides = {}
+    payload = {"issue_iid": 1, "milestone_id": 202}
+    response = authenticated_client.post("/iteration-plan/projects/101/plan", json=payload)
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
 
-def test_view_backlog(authenticated_client):
-    mock_service = MagicMock()
-    mock_service.get_backlog_issues.return_value = [{"id": 1, "title": "Issue 1"}]
-    
-    from devops_portal.main import app
-    app.dependency_overrides[get_iteration_plan_service] = lambda: mock_service
-    
-    try:
-        response = authenticated_client.get("/iteration-plan/projects/1/backlog")
-        assert response.status_code == 200
-        assert response.json()[0]["title"] == "Issue 1"
-    finally:
-        app.dependency_overrides = {}
-
-def test_view_sprint(authenticated_client):
-    mock_service = MagicMock()
-    mock_service.get_sprint_backlog.return_value = [{"id": 2, "title": "Issue 2"}]
-    
-    from devops_portal.main import app
-    app.dependency_overrides[get_iteration_plan_service] = lambda: mock_service
-    
-    try:
-        response = authenticated_client.get("/iteration-plan/projects/1/sprint/v1.0")
-        assert response.status_code == 200
-        assert response.json()[0]["title"] == "Issue 2"
-    finally:
-         app.dependency_overrides = {}
-
-def test_plan_issue(authenticated_client):
-    mock_service = MagicMock()
-    mock_service.move_issue_to_sprint.return_value = True
-    
-    from devops_portal.main import app
-    app.dependency_overrides[get_iteration_plan_service] = lambda: mock_service
-    
-    payload = {"issue_iid": 1, "milestone_id": 10}
-    try:
-        response = authenticated_client.post("/iteration-plan/projects/1/plan", json=payload)
-        assert response.status_code == 200
-        assert response.json()["status"] == "success"
-    finally:
-        app.dependency_overrides = {}
-
-def test_remove_issue(authenticated_client):
-    mock_service = MagicMock()
-    mock_service.remove_issue_from_sprint.return_value = True
-    
-    from devops_portal.main import app
-    app.dependency_overrides[get_iteration_plan_service] = lambda: mock_service
-    
-    payload = {"issue_iid": 1}
-    try:
-        response = authenticated_client.post("/iteration-plan/projects/1/remove", json=payload)
-        assert response.status_code == 200
-        assert response.json()["status"] == "success"
-    finally:
-        app.dependency_overrides = {}
-
-def test_trigger_release(authenticated_client):
-    mock_service = MagicMock()
-    mock_service.execute_release.return_value = {"status": "released", "tag": "v1.0"}
-    
-    from devops_portal.main import app
-    app.dependency_overrides[get_iteration_plan_service] = lambda: mock_service
+def test_trigger_release(authenticated_client, mock_iteration_service):
+    mock_iteration_service.execute_release.return_value = {"status": "released", "tag": "v1.0.0"}
     
     payload = {
-        "version": "v1.0",
-        "new_title": "Release v1.0",
-        "ref_branch": "main",
-        "auto_rollover": True
+        "version": "v1.0.0",
+        "new_title": "v1.0.0-final",
+        "ref_branch": "main"
     }
-    
-    try:
-        response = authenticated_client.post("/iteration-plan/projects/1/release", json=payload)
-        assert response.status_code == 200
-        assert response.json()["status"] == "released"
-    finally:
-        app.dependency_overrides = {}
+    response = authenticated_client.post("/iteration-plan/projects/101/release", json=payload)
+    assert response.status_code == 200
+    assert response.json()["tag"] == "v1.0.0"

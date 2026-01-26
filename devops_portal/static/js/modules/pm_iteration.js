@@ -1,4 +1,5 @@
 import { Api, UI, Auth } from './sys_core.js';
+import { PMIterationService } from './pm_iteration_service.js';
 
 /**
  * @file pm_iteration.js
@@ -20,15 +21,21 @@ const PmIterationHandler = {
         await this.loadProjects();
         this.checkBindStatus();
         this.initCreateButton();
+
+        // 预防 iframe 嵌套
+        if (window !== window.top) {
+            document.querySelectorAll('a[href="/"], a[href="index.html"]').forEach(link => {
+                link.target = '_top';
+            });
+        }
     },
 
     /**
      * 绑定静态事件
      */
     bindEvents() {
-        // 使用更具描述性的选择器
-        const projectSelect = document.getElementById('projectSelect');
-        const milestoneSelect = document.getElementById('milestoneSelect');
+        const projectSelect = document.querySelector('.js-project-select');
+        const milestoneSelect = document.querySelector('.js-milestone-select');
 
         if (projectSelect) {
             projectSelect.addEventListener('change', (e) => this.handleProjectChange(e.target.value));
@@ -51,12 +58,12 @@ const PmIterationHandler = {
             refreshBtn.addEventListener('click', () => this.loadData());
         }
 
-        const releaseBtn = document.getElementById('releaseBtn');
+        const releaseBtn = document.querySelector('.js-release-btn');
         if (releaseBtn) {
             releaseBtn.addEventListener('click', () => this.showReleaseModal());
         }
 
-        const confirmReleaseBtn = document.getElementById('confirmReleaseBtn');
+        const confirmReleaseBtn = document.querySelector('.js-confirm-release-btn');
         if (confirmReleaseBtn) {
             confirmReleaseBtn.addEventListener('click', () => this.executeRelease());
         }
@@ -83,15 +90,14 @@ const PmIterationHandler = {
      * 初始化新建迭代按钮
      */
     initCreateButton() {
-        const controlsDiv = document.querySelector('.controls');
+        const controlsDiv = document.querySelector('.js-pm-controls');
         if (!controlsDiv) return;
 
-        // 检查是否已存在按钮
         if (controlsDiv.querySelector('.js-create-sprint-btn')) return;
 
         const createBtn = document.createElement('button');
-        createBtn.className = 'secondary u-ml-8 js-create-sprint-btn';
-        createBtn.textContent = '+ 新建迭代';
+        createBtn.className = 'btn-ghost u-ml-12 js-create-sprint-btn';
+        createBtn.innerHTML = '<span>+ 新建迭代</span>';
         createBtn.addEventListener('click', () => {
             if (!this.state.currentProjectId) {
                 return UI.showToast('请先选择项目', 'warning');
@@ -110,11 +116,11 @@ const PmIterationHandler = {
      * 加载项目列表
      */
     async loadProjects() {
-        const select = document.getElementById('projectSelect');
+        const select = document.querySelector('.js-project-select');
         if (!select) return;
 
         try {
-            const projects = await Api.get('/iteration-plan/projects');
+            const projects = await PMIterationService.getProjects();
             select.innerHTML = '<option value="" disabled selected>选择项目...</option>';
 
             projects.forEach(p => {
@@ -137,17 +143,17 @@ const PmIterationHandler = {
         try {
             await this.loadMilestones(projectId);
 
-            const msSelect = document.getElementById('milestoneSelect');
+            const msSelect = document.querySelector('.js-milestone-select');
             if (msSelect) msSelect.value = '';
 
-            const clearList = (id) => {
-                const el = document.getElementById(id);
+            const clearList = (selector) => {
+                const el = document.querySelector(selector);
                 if (el) el.innerHTML = '';
             };
-            clearList('backlogList');
-            clearList('sprintList');
+            clearList('.js-backlog-list');
+            clearList('.js-sprint-list');
 
-            const releaseBtn = document.getElementById('releaseBtn');
+            const releaseBtn = document.querySelector('.js-release-btn');
             if (releaseBtn) releaseBtn.disabled = true;
         } finally {
             UI.toggleLoading("", false);
@@ -158,13 +164,13 @@ const PmIterationHandler = {
      * 加载里程碑
      */
     async loadMilestones(projectId) {
-        const msSelect = document.getElementById('milestoneSelect');
+        const msSelect = document.querySelector('.js-milestone-select');
         if (!msSelect) return;
 
         msSelect.innerHTML = '<option value="" disabled selected>加载里程碑...</option>';
 
         try {
-            const milestones = await Api.get(`/iteration-plan/projects/${projectId}/milestones`);
+            const milestones = await PMIterationService.getMilestones(projectId);
             msSelect.innerHTML = '<option value="" disabled selected>选择迭代...</option>';
 
             if (milestones.length === 0) {
@@ -197,7 +203,7 @@ const PmIterationHandler = {
         this.state.currentMilestoneId = e.target.value;
         this.state.currentMilestoneTitle = selectedOption.dataset.title;
 
-        const releaseBtn = document.getElementById('releaseBtn');
+        const releaseBtn = document.querySelector('.js-release-btn');
         if (releaseBtn) releaseBtn.disabled = false;
 
         this.loadData();
@@ -213,12 +219,12 @@ const PmIterationHandler = {
         UI.toggleLoading("同步看板状态...", true);
         try {
             const [backlogIssues, sprintIssues] = await Promise.all([
-                Api.get(`/iteration-plan/projects/${currentProjectId}/backlog`),
-                Api.get(`/iteration-plan/projects/${currentProjectId}/sprint/${encodeURIComponent(currentMilestoneTitle)}`)
+                PMIterationService.getBacklog(currentProjectId),
+                PMIterationService.getSprint(currentProjectId, currentMilestoneTitle)
             ]);
 
-            this.renderList('backlogList', backlogIssues, 'backlogCount');
-            this.renderList('sprintList', sprintIssues, 'sprintCount');
+            this.renderList('.js-backlog-list', backlogIssues, '.js-backlog-count');
+            this.renderList('.js-sprint-list', sprintIssues, '.js-sprint-count');
             this.updateStats(sprintIssues);
         } catch (e) {
             UI.showToast("看板数据获取失败: " + e.message, "error");
@@ -228,52 +234,36 @@ const PmIterationHandler = {
     },
 
     /**
-     * 渲染列表 (显式安全性处理)
+     * 渲染列表 (使用 Web Components)
      */
-    renderList(containerId, issues, countBadgeId) {
-        const container = document.getElementById(containerId);
-        const countBadge = document.getElementById(countBadgeId);
+    renderList(containerSelector, issues, countBadgeSelector) {
+        const container = document.querySelector(containerSelector);
+        const countBadge = document.querySelector(countBadgeSelector);
         if (!container) return;
 
         container.innerHTML = '';
         if (countBadge) countBadge.textContent = issues.length;
 
-        const template = document.getElementById('pm-issue-card-tpl');
         const fragment = document.createDocumentFragment();
 
         issues.forEach(issue => {
-            const clone = template.content.cloneNode(true);
-            const card = clone.querySelector('.pm-issue-card');
+            const card = document.createElement('pm-issue-card');
 
-            if (issue.state === 'closed') {
-                card.classList.add('is-closed');
-            }
+            // 设置属性，触发影子 DOM 渲染
+            card.setAttribute('title', issue.title);
+            card.setAttribute('iid', issue.iid);
+            card.setAttribute('status', issue.state);
+            card.setAttribute('author', issue.author?.name || 'Unknown');
+            if (issue.weight) card.setAttribute('weight', issue.weight);
+
+            const isBug = (issue.labels || []).includes('type::bug');
+            card.setAttribute('type', isBug ? 'bug' : 'feature');
 
             card.dataset.iid = issue.iid;
-            card.dataset.id = issue.id;
-
-            // 文本内容显式填充 (XSS 防御)
-            clone.querySelector('.js-card-title').textContent = issue.title;
-            clone.querySelector('.js-card-iid').textContent = `#${issue.iid}`;
-
-            const labelContainer = clone.querySelector('.js-card-labels');
-            if (labelContainer) {
-                const label = document.createElement('span');
-                const isBug = (issue.labels || []).includes('type::bug');
-                label.className = `label ${isBug ? 'bug' : 'req'}`;
-                label.textContent = isBug ? 'Bug' : 'Feature';
-                labelContainer.appendChild(label);
-            }
-
-            clone.querySelector('.js-card-author').textContent = issue.author?.name || 'Unknown';
-            const weightEl = clone.querySelector('.js-card-weight');
-            if (weightEl && issue.weight) {
-                weightEl.textContent = `${issue.weight} pts`;
-                weightEl.classList.remove('u-hide');
-            }
-
+            card.setAttribute('draggable', 'true');
             card.addEventListener('dragstart', (e) => this.handleDragStart(e));
-            fragment.appendChild(clone);
+
+            fragment.appendChild(card);
         });
 
         container.appendChild(fragment);
@@ -284,23 +274,23 @@ const PmIterationHandler = {
      */
     updateStats(sprintIssues) {
         const totalWeight = sprintIssues.reduce((sum, i) => sum + (i.weight || 0), 0);
-        const totalWeightEl = document.getElementById('totalWeight');
+        const totalWeightEl = document.querySelector('.js-total-weight');
         if (totalWeightEl) totalWeightEl.textContent = totalWeight;
 
         const totalCount = sprintIssues.length;
         const closedCount = sprintIssues.filter(i => i.state === 'closed').length;
         const progress = totalCount > 0 ? Math.round((closedCount / totalCount) * 100) : 0;
 
-        const updateTxt = (id, txt) => {
-            const el = document.getElementById(id);
+        const updateTxt = (selector, txt) => {
+            const el = document.querySelector(selector);
             if (el) el.textContent = txt;
         };
 
-        updateTxt('totalSprintIssues', totalCount);
-        updateTxt('closedCount', closedCount);
-        updateTxt('progressText', `${progress}%`);
+        updateTxt('.js-total-sprint-issues', totalCount);
+        updateTxt('.js-closed-count', closedCount);
+        updateTxt('.js-progress-text', `${progress}%`);
 
-        const progressBar = document.getElementById('progressBar');
+        const progressBar = document.querySelector('.js-progress-bar');
         if (progressBar) progressBar.style.width = `${progress}%`;
     },
 
@@ -309,7 +299,7 @@ const PmIterationHandler = {
      */
     handleDragStart(ev) {
         ev.dataTransfer.setData("iid", ev.currentTarget.dataset.iid);
-        ev.dataTransfer.setData("source", ev.currentTarget.parentElement.id);
+        ev.dataTransfer.setData("source", ev.currentTarget.parentElement.classList.contains('js-backlog-list') ? 'backlogList' : 'sprintList');
         ev.dataTransfer.effectAllowed = "move";
     },
 
@@ -328,7 +318,8 @@ const PmIterationHandler = {
 
         const iid = ev.dataTransfer.getData("iid");
         const sourceListId = ev.dataTransfer.getData("source");
-        const targetListId = targetList.id;
+        const isTargetSprint = targetList.classList.contains('js-sprint-list');
+        const targetListId = isTargetSprint ? 'sprintList' : 'backlogList';
 
         if (sourceListId === targetListId) return;
 
@@ -336,15 +327,10 @@ const PmIterationHandler = {
         UI.toggleLoading("Move in progress...", true);
 
         try {
-            if (targetListId === 'sprintList') {
-                await Api.post(`/iteration-plan/projects/${currentProjectId}/plan`, {
-                    issue_iid: parseInt(iid),
-                    milestone_id: parseInt(currentMilestoneId)
-                });
+            if (isTargetSprint) {
+                await PMIterationService.planIssue(currentProjectId, iid, currentMilestoneId);
             } else {
-                await Api.post(`/iteration-plan/projects/${currentProjectId}/remove`, {
-                    issue_iid: parseInt(iid)
-                });
+                await PMIterationService.removeIssue(currentProjectId, iid);
             }
             UI.showToast("操作成功", "success");
             this.loadData();
@@ -359,18 +345,18 @@ const PmIterationHandler = {
      * 发布工作流
      */
     showReleaseModal() {
-        const input = document.getElementById('releaseVersionInput');
+        const input = document.querySelector('.js-release-version-input');
         if (input) input.value = this.state.currentMilestoneTitle;
         UI.showModal('releaseModal');
     },
 
     async executeRelease() {
-        const newTitle = document.getElementById('releaseVersionInput').value.trim();
+        const newTitle = document.querySelector('.js-release-version-input').value.trim();
         if (!newTitle) return UI.showToast('版本名称不能为空', 'warning');
 
         UI.toggleLoading("正在同步 GitLab 里程碑及 Tag...", true);
         try {
-            await Api.post(`/iteration-plan/projects/${this.state.currentProjectId}/release`, {
+            await PMIterationService.release(this.state.currentProjectId, {
                 version: this.state.currentMilestoneTitle,
                 new_title: newTitle,
                 ref_branch: 'main'
@@ -381,7 +367,7 @@ const PmIterationHandler = {
             this.loadData();
         } catch (error) {
             if (error.status === 409) {
-                const msgEl = document.getElementById('rolloverMsg');
+                const msgEl = document.querySelector('.js-rollover-msg');
                 if (msgEl) msgEl.textContent = (error.message || "").split('|')[0];
                 this.closeModals();
                 UI.showModal('rolloverModal');
@@ -399,11 +385,11 @@ const PmIterationHandler = {
      * 处理结转
      */
     async handleRollover() {
-        const newTitle = document.getElementById('releaseVersionInput').value.trim();
+        const newTitle = document.querySelector('.js-release-version-input').value.trim();
         UI.toggleLoading("正在迁移未完成任务...", true);
 
         try {
-            await Api.post(`/iteration-plan/projects/${this.state.currentProjectId}/release`, {
+            await PMIterationService.release(this.state.currentProjectId, {
                 version: this.state.currentMilestoneTitle,
                 new_title: newTitle,
                 ref_branch: 'main',
@@ -425,17 +411,16 @@ const PmIterationHandler = {
      * 新建迭代
      */
     async executeCreateSprint() {
-        const val = (id) => document.getElementById(id).value.trim();
-        const title = val('newSprintTitle');
+        const title = document.querySelector('.js-new-sprint-title').value.trim();
         if (!title) return UI.showToast('请输入迭代名称', 'warning');
 
         UI.toggleLoading("创建里程碑中...", true);
         try {
-            await Api.post(`/iteration-plan/projects/${this.state.currentProjectId}/milestones`, {
+            await PMIterationService.createMilestone(this.state.currentProjectId, {
                 title: title,
-                start_date: val('newSprintStart') || null,
-                due_date: val('newSprintDue') || null,
-                description: val('newSprintDesc') || null
+                start_date: document.querySelector('.js-new-sprint-start').value || null,
+                due_date: document.querySelector('.js-new-sprint-due').value || null,
+                description: document.querySelector('.js-new-sprint-desc').value || null
             });
 
             UI.showToast('迭代创建成功！', 'success');

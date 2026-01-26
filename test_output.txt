@@ -1,0 +1,123 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.1, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\netxs\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\netxs\devops\devops
+configfile: pyproject.toml
+plugins: anyio-4.12.0, cov-4.1.0, requests-mock-1.12.1
+collecting ... collected 5 items / 4 deselected / 1 selected
+
+tests/devops_portal/test_iteration_plan_router.py::test_trigger_release PASSED [100%]
+
+============================== warnings summary ===============================
+devops_collector\auth\auth_database.py:17
+  C:\Users\netxs\devops\devops\devops_collector\auth\auth_database.py:17: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    AuthBase = declarative_base()
+
+tests/devops_portal/test_iteration_plan_router.py::test_trigger_release
+  C:\Users\netxs\devops\devops\tests\devops_portal\conftest.py:46: SAWarning: Can't sort tables for DROP; an unresolvable foreign key dependency exists between tables: mdm_identities, mdm_locations, mdm_organizations; and backend does not support ALTER.  To restore at least a partial sort, apply use_alter=True to ForeignKey and ForeignKeyConstraint objects involved in the cycle to mark these as known cycles that will be ignored.
+    Base.metadata.drop_all(bind=engine)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+---------- coverage: platform win32, python 3.13.1-final-0 -----------
+Name                                                           Stmts   Miss  Cover   Missing
+--------------------------------------------------------------------------------------------
+devops_collector\__init__.py                                       3      0   100%
+devops_collector\auth\__init__.py                                  7      0   100%
+devops_collector\auth\auth_database.py                            12      4    67%   25-29
+devops_collector\auth\auth_dependency.py                          12      4    67%   31-41
+devops_collector\auth\auth_router.py                              83     61    27%   40-59, 76-96, 113-123, 141-176, 192-238
+devops_collector\auth\auth_schema.py                              37      0   100%
+devops_collector\auth\auth_service.py                             95     63    34%   38-41, 53, 64, 76-87, 99, 110-113, 125-143, 156-163, 175-176, 189-203, 218-229, 244, 258-260
+devops_collector\config.py                                       144      3    98%   93, 215, 239
+devops_collector\core\__init__.py                                  4      0   100%
+devops_collector\core\admin_service.py                            75     58    23%   27, 31-50, 64-75, 79-96, 100-110, 114, 118-131, 136-170
+devops_collector\core\algorithms.py                               78     78     0%   9-124
+devops_collector\core\analytics\eloc.py                          100     69    31%   40-60, 83-164, 168-172, 175, 178, 182-191, 194, 197
+devops_collector\core\base_client.py                              89     67    25%   40-42, 50-60, 64-65, 72-75, 115-120, 137-152, 167-180, 185-195, 204
+devops_collector\core\base_worker.py                              69     53    23%   26-27, 32, 48-78, 82, 86-89, 93-94, 98-111
+devops_collector\core\devex_pulse_service.py                      21     10    52%   23, 27-34, 39-54
+devops_collector\core\identity_manager.py                         37     28    24%   39-103
+devops_collector\core\notifiers.py                                57     57     0%   5-142
+devops_collector\core\okr_service.py                              71     71     0%   6-156
+devops_collector\core\plugin_loader.py                            86     65    24%   48-98, 107, 119, 131-145, 153-171, 176
+devops_collector\core\registry.py                                 82     42    49%   60-62, 81, 107-111, 127-130, 142-145, 157-167, 180-184, 193, 206-209, 224-227, 232-234
+devops_collector\core\retention_manager.py                        41     41     0%   4-81
+devops_collector\core\reverse_etl.py                              78     78     0%   6-111
+devops_collector\core\schemas.py                                  37     37     0%   6-99
+devops_collector\core\security.py                                178    153    14%   52-74, 88-98, 111-122, 137-147, 160-186, 200-206, 218-221, 248-293, 316-344, 349-365, 378-400, 414-433
+devops_collector\core\services.py                                 32     22    31%   53-74
+devops_collector\core\utils.py                                    32     22    31%   21-24, 36-39, 52-59, 74-79
+devops_collector\models\__init__.py                               14      4    71%   35-38
+devops_collector\models\base_models.py                           659     17    97%   40-42, 101, 106, 111, 116-118, 405, 410, 679, 716-719, 750
+devops_collector\models\dependency.py                             84      0   100%
+devops_collector\models\events.py                                 13      9    31%   12-21
+devops_collector\models\service_desk.py                           21      0   100%
+devops_collector\mq.py                                            39     39     0%   7-94
+devops_collector\plugins\__init__.py                               6      1    83%   24
+devops_collector\plugins\dependency_check\__init__.py              8      8     0%   7-17
+devops_collector\plugins\dependency_check\client.py               55     55     0%   5-103
+devops_collector\plugins\dependency_check\config.py                4      4     0%   5-15
+devops_collector\plugins\dependency_check\worker.py              254    254     0%   5-309
+devops_collector\plugins\gitlab\__init__.py                       11      1    91%   14
+devops_collector\plugins\gitlab\airbyte_client.py                 40     40     0%   7-95
+devops_collector\plugins\gitlab\config.py                          4      2    50%   24-26
+devops_collector\plugins\gitlab\events.py                         21     10    52%   9-17, 25-29
+devops_collector\plugins\gitlab\gitlab_client.py                 246    203    17%   20, 24-31, 42, 53, 67-78, 90, 104-115, 129-140, 153-162, 175-184, 197-206, 219-228, 240, 252, 264-273, 285-294, 306-315, 327-336, 347, 359-360, 372-381, 393-402, 414, 426, 438, 451, 464, 476, 488, 500, 511, 522, 534-546, 559, 573-576, 590-593, 606, 621-628, 640, 658-670
+devops_collector\plugins\gitlab\identity_service.py               73     59    19%   25-26, 30-40, 44-60, 79-82, 86-91, 95-113
+devops_collector\plugins\gitlab\iteration_plan_service.py        126    108    14%   33-34, 45-55, 64-70, 74-79, 83-88, 116-215, 219-227, 231-237
+devops_collector\plugins\gitlab\labels.py                          1      1     0%   5
+devops_collector\plugins\gitlab\mixins\asset_mixin.py            118    100    15%   24-26, 35-44, 55, 64-79, 90, 99-123, 134, 143-163, 172-178, 186-194, 202-207
+devops_collector\plugins\gitlab\mixins\base_mixin.py              29     24    17%   32-56
+devops_collector\plugins\gitlab\mixins\commit_mixin.py           102     87    15%   34, 50-68, 82-191, 199-204
+devops_collector\plugins\gitlab\mixins\issue_mixin.py            118    102    14%   30, 39-41, 52-86, 97-105, 117-124, 136-166, 176-192
+devops_collector\plugins\gitlab\mixins\mr_mixin.py                67     56    16%   28, 40-42, 51-80, 92-113
+devops_collector\plugins\gitlab\mixins\pipeline_mixin.py          53     40    25%   27, 40-42, 51-66, 77, 88-90, 99-114
+devops_collector\plugins\gitlab\mixins\traceability_mixin.py      40     31    22%   31-43, 54-71
+devops_collector\plugins\gitlab\models.py                        607    137    77%   182, 187, 192, 207, 212-216, 221-222, 229-233, 238-243, 345-347, 354-371, 392-396, 401, 406-408, 423, 438, 593-596, 601-606, 612-616, 631, 638-641, 646-648, 653-656, 661-663, 668-671, 676-678, 683-696, 701-702, 707-713, 718-720, 903, 918, 933, 948, 1009, 1024, 1039-1041, 1056, 1238-1242, 1247-1251
+devops_collector\plugins\gitlab\parser.py                         34     27    21%   29-53, 65-66
+devops_collector\plugins\gitlab\quality_service.py                45     32    29%   28-30, 35-70, 81, 85
+devops_collector\plugins\gitlab\service_desk_service.py           48     36    25%   20, 46-88, 92, 98, 111-133
+devops_collector\plugins\gitlab\worker.py                         89     65    27%   34-40, 44-68, 72-91, 96-103, 107-112
+devops_collector\plugins\jenkins\__init__.py                      12     12     0%   7-24
+devops_collector\plugins\jenkins\airbyte_client.py                71     71     0%   6-146
+devops_collector\plugins\jenkins\client.py                        56     56     0%   6-147
+devops_collector\plugins\jenkins\config.py                         4      4     0%   5-26
+devops_collector\plugins\jenkins\models.py                        42     42     0%   5-99
+devops_collector\plugins\jenkins\parser.py                        34     34     0%   5-52
+devops_collector\plugins\jenkins\worker.py                       134    134     0%   5-176
+devops_collector\plugins\jfrog\__init__.py                         8      8     0%   7-17
+devops_collector\plugins\jfrog\client.py                          27     27     0%   2-55
+devops_collector\plugins\jfrog\config.py                           4      4     0%   5-15
+devops_collector\plugins\jfrog\models.py                          71     71     0%   2-184
+devops_collector\plugins\jfrog\worker.py                          86     86     0%   2-100
+devops_collector\plugins\jira\__init__.py                         11      1    91%   14
+devops_collector\plugins\jira\airbyte_client.py                   90     90     0%   6-159
+devops_collector\plugins\jira\client.py                           70     55    21%   24-26, 30-31, 35-39, 43-58, 62-73, 77-89, 93-94, 98-99
+devops_collector\plugins\jira\config.py                            4      1    75%   15
+devops_collector\plugins\jira\models.py                           87      0   100%
+devops_collector\plugins\jira\worker.py                          176    152    14%   33, 37-64, 68-76, 92-101, 117-132, 136-137, 141-181, 185-194, 203-220, 224-234, 238-243
+devops_collector\plugins\nexus\__init__.py                         8      8     0%   7-17
+devops_collector\plugins\nexus\client.py                          44     44     0%   2-73
+devops_collector\plugins\nexus\config.py                           4      4     0%   5-15
+devops_collector\plugins\nexus\models.py                          33     33     0%   2-74
+devops_collector\plugins\nexus\worker.py                          65     65     0%   2-79
+devops_collector\plugins\sonarqube\__init__.py                    12      1    92%   15
+devops_collector\plugins\sonarqube\airbyte_client.py              46     46     0%   6-97
+devops_collector\plugins\sonarqube\client.py                     108     89    18%   37-38, 42-49, 62-66, 70-78, 89-91, 109-116, 132-138, 145-153, 161-162, 170-171, 176-177, 191-202, 218-238
+devops_collector\plugins\sonarqube\config.py                       4      2    50%   24-26
+devops_collector\plugins\sonarqube\models.py                     103      5    95%   60, 75, 90, 105, 110
+devops_collector\plugins\sonarqube\transformer.py                 47     35    26%   36, 51-57, 69-95
+devops_collector\plugins\sonarqube\worker.py                      78     56    28%   16-17, 35-40, 44-54, 58-73, 77-85, 89-101
+devops_collector\plugins\zentao\__init__.py                        8      8     0%   7-17
+devops_collector\plugins\zentao\client.py                         75     75     0%   5-109
+devops_collector\plugins\zentao\config.py                          4      4     0%   5-15
+devops_collector\plugins\zentao\models.py                        139    139     0%   5-288
+devops_collector\plugins\zentao\worker.py                        275    275     0%   2-380
+devops_collector\scheduler.py                                     65     65     0%   5-104
+devops_collector\worker.py                                        51     51     0%   8-82
+--------------------------------------------------------------------------------------------
+TOTAL                                                           6745   4491    33%
+Coverage HTML written to dir htmlcov
+
+================ 1 passed, 4 deselected, 2 warnings in 12.65s =================
