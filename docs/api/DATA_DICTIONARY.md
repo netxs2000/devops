@@ -1,6 +1,6 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-01-22 04:41:47  
+> **生成时间**: 2026-01-26 09:43:19  
 > **版本**: v2.2 (企业级标准版)  
 > **状态**: 有效 (Active)
 
@@ -333,6 +333,7 @@
 | `primary_email` | String(255) | UNIQUE, INDEX | 是 | - | 主邮箱地址 |
 | `department_id` | String(100) | FK | 是 | - | 所属部门ID |
 | `position` | String(100) | - | 是 | - | 职位/岗位名称 |
+| `location_id` | String(50) | FK | 是 | - | 常驻办公地点ID |
 | `is_active` | Boolean | - | 是 | True | 是否在职 |
 | `is_survivor` | Boolean | - | 是 | False | 是否通过合并保留的账号 |
 | `total_eloc` | Numeric | - | 是 | 0.0 | 累计有效代码行数 |
@@ -347,6 +348,7 @@
 
 #### 关系映射
 
+- **location**: many-to-one -> `Location`
 - **department**: many-to-one -> `Organization`
 - **managed_organizations**: one-to-many -> `Organization`
 - **identities**: one-to-many -> `IdentityMapping`
