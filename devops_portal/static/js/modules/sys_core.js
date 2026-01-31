@@ -53,18 +53,18 @@ export const Auth = {
     },
 
     async getCurrentUser() {
-        const cachedUser = localStorage.getItem(AUTH_CONFIG.USER_KEY);
-        if (cachedUser) {
-            try { return JSON.parse(cachedUser); }
-            catch (e) { console.error("解析缓存用户信息失败", e); }
-        }
+        // DevEnv Fix: Always fetch from server to validate session
+        // const cachedUser = localStorage.getItem(AUTH_CONFIG.USER_KEY);
 
         try {
             const user = await Api.get('/auth/me');
-            localStorage.setItem(AUTH_CONFIG.USER_KEY, JSON.stringify(user));
+            if (user) {
+                localStorage.setItem(AUTH_CONFIG.USER_KEY, JSON.stringify(user));
+            }
             return user;
         } catch (error) {
             console.error("获取用户信息失败", error);
+            // 明确捕获 401 未授权，触发登出
             if (error.status === 401) { this.logout(); }
             return null;
         }

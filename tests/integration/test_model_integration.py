@@ -10,22 +10,24 @@ sys.path.append(os.getcwd())
 import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.core.plugin_loader import PluginLoader
-PluginLoader.autodiscover()
-PluginLoader.load_models()
-
-from devops_collector.models import Base, Organization, User, IdentityMapping, Product, GTMTestCase, GTMRequirement, Service, ResourceCost
-from devops_collector.plugins.gitlab.models import (
-    GitLabProject as Project, GitLabCommit as Commit, GitLabIssue as Issue,
-    GitLabMilestone as Milestone, GitLabNote as Note, GitLabDeployment as Deployment,
-    GitLabProjectMember as ProjectMember
-)
-from devops_collector.plugins.sonarqube.models import SonarProject, SonarMeasure
-from devops_collector.plugins.jira.models import JiraProject
-
 def run_integration_test():
     """执行深度集成测试，涵盖组织架构、用户身份、跨插件关联、DORA 指标等 14 个场景。"""
     print('Starting deep integration test...')
+    
+    # 延迟加载，防止 collection 阶段死锁
+    from devops_collector.core.plugin_loader import PluginLoader
+    PluginLoader.autodiscover()
+    PluginLoader.load_models()
+
+    from devops_collector.models import Base, Organization, User, IdentityMapping, Product, GTMTestCase, GTMRequirement, Service, ResourceCost
+    from devops_collector.plugins.gitlab.models import (
+        GitLabProject as Project, GitLabCommit as Commit, GitLabIssue as Issue,
+        GitLabMilestone as Milestone, GitLabNote as Note, GitLabDeployment as Deployment,
+        GitLabProjectMember as ProjectMember
+    )
+    from devops_collector.plugins.sonarqube.models import SonarProject, SonarMeasure
+    from devops_collector.plugins.jira.models import JiraProject
+
     engine = create_engine('sqlite:///:memory:')
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)

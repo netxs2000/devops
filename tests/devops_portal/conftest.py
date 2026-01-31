@@ -18,6 +18,8 @@ from devops_portal.main import app
 from devops_portal.dependencies import get_current_user
 from devops_collector.models.base_models import User
 from devops_collector.auth.auth_database import get_auth_db
+# Import ServiceDeskTicket to register it with Base.metadata before create_all
+from devops_collector.models.service_desk import ServiceDeskTicket
 
 # Setup in-memory SQLite database
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"

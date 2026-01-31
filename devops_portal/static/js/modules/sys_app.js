@@ -221,8 +221,10 @@ const SysAppHandler = {
             if (el) el.textContent = txt;
         };
 
-        setText('user-display-name', user.full_name);
-        setText('user-avatar', user.full_name.charAt(0).toUpperCase());
+        // Fix: Use safe access for user fields
+        const displayName = user.full_name || user.username || 'User';
+        setText('user-display-name', displayName);
+        setText('user-avatar', (displayName.charAt(0) || 'U').toUpperCase());
 
         const dept = user.department?.org_name || user.department_code || 'No Dept';
         const loc = user.location?.location_name || 'Global';

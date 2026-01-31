@@ -4,7 +4,7 @@
 #  所有操作均在容器内部执行，确保环境一致性
 # -----------------------------------------------------------
 
-.PHONY: help deploy init test build up down logs sync-all shell clean lock install init-dev docs
+.PHONY: help deploy init test build up down logs sync-all shell clean lock install init-dev docs e2e-install e2e-test e2e-test-headed e2e-test-trace e2e-smoke e2e-show-trace
 
 # 颜色定义
 YELLOW := \033[1;33m
@@ -192,6 +192,36 @@ dbt-build: ## 执行 dbt 建模转换
 validate: ## 执行数据质量校验 (Great Expectations)
 	@echo "$(GREEN)Running Data Quality Validation...$(RESET)"
 	$(EXEC_CMD) python scripts/validate_models.py
+
+# =============================================================================
+# E2E 测试 (Playwright)
+# =============================================================================
+
+e2e-install: ## [本地] 安装 Playwright E2E 测试依赖
+	@echo "$(GREEN)Installing E2E test dependencies...$(RESET)"
+	pip install -e .[e2e] -i https://mirrors.aliyun.com/pypi/simple/
+	playwright install chromium
+	@echo "$(CYAN)E2E dependencies installed successfully!$(RESET)"
+
+e2e-test: ## [本地] 运行 Service Desk E2E 测试 (无头模式)
+	@echo "$(GREEN)Running E2E tests (headless)...$(RESET)"
+	pytest tests/e2e/service_desk/ -v --headed=false
+
+e2e-test-headed: ## [本地] 运行 E2E 测试 (可视化模式, 用于调试)
+	@echo "$(GREEN)Running E2E tests (headed mode for debugging)...$(RESET)"
+	pytest tests/e2e/service_desk/ -v --headed
+
+e2e-test-trace: ## [本地] 运行 E2E 测试并保留失败追踪
+	@echo "$(GREEN)Running E2E tests with tracing...$(RESET)"
+	pytest tests/e2e/service_desk/ -v --tracing=retain-on-failure
+
+e2e-smoke: ## [本地] 运行 E2E 冒烟测试 (快速验证)
+	@echo "$(GREEN)Running E2E smoke tests...$(RESET)"
+	pytest tests/e2e/service_desk/ -v -m smoke
+
+e2e-show-trace: ## [本地] 打开 Playwright Trace Viewer 分析失败测试
+	@echo "$(GREEN)Opening Playwright Trace Viewer...$(RESET)"
+	playwright show-trace test-results/
 
 
 # 定义 DataHub CLI 运行命令 (临时容器)
