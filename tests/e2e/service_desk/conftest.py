@@ -159,7 +159,6 @@ def authenticated_page(
     """
     print(f"Navigating to {app_server}/static/index.html for authentication...")
     page.goto(f"{app_server}/static/index.html")
-    page.wait_for_load_state("networkidle")
 
     # 等待登录模态框出现
     login_modal = page.locator("#loginModal")
@@ -181,7 +180,6 @@ def authenticated_page(
             page.click("#login-submit")
 
             # 等待登录完成 (页面刷新)
-            page.wait_for_load_state("networkidle")
 
             # 验证登录成功
             page.wait_for_selector("#user-display-name", state="visible", timeout=15000)
