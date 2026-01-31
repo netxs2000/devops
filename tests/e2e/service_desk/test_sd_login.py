@@ -83,6 +83,7 @@ class TestServiceDeskLogin:
         error = self.page.locator("#login-error")
         expect(error).to_be_visible()
 
+    @pytest.mark.smoke
     def test_successful_login_should_hide_modal_and_show_sidebar(
         self,
         test_user_credentials: dict

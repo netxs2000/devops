@@ -32,6 +32,7 @@ class TestServiceDeskSupportCenter:
     # 工单列表测试
     # =========================================================================
 
+    @pytest.mark.smoke
     def test_navigate_to_support_center_should_show_ticket_list(self):
         """
         场景：导航到 Support Center
@@ -47,6 +48,7 @@ class TestServiceDeskSupportCenter:
         title = self.page.locator("text=Support Center")
         expect(title).to_be_visible()
 
+    @pytest.mark.smoke
     def test_ticket_list_should_load_tickets_from_api(self):
         """
         场景：工单列表应从 API 加载数据

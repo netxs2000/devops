@@ -47,6 +47,7 @@ class TestServiceDeskAPIEndpoints:
     # 健康检查
     # =========================================================================
 
+    @pytest.mark.smoke
     def test_health_endpoint_should_return_200(self):
         """
         验证健康检查端点

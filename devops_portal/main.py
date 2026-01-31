@@ -59,6 +59,12 @@ app.include_router(devex_pulse_router.router)
 
 
 
+@app.get("/health")
+async def health_check():
+    """基础健康检查端点。"""
+    return {"status": "ok", "version": settings.version if hasattr(settings, 'version') else "unknown"}
+
+
 # Mount static files explicitly to /static to support frontend paths (e.g. LOGIN_PAGE in sys_core.js)
 app.mount("/static", StaticFiles(directory="devops_portal/static", html=True), name="static-assets")
 
