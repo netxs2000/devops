@@ -30,7 +30,7 @@ async def get_province_quality(project_id: int, current_user=Depends(get_current
     """获取各省份的质量分布数据（已实现部门级数据隔离）。"""
     from devops_collector.config import Config
     url = f'{settings.gitlab.url}/api/v4/projects/{project_id}/issues'
-    headers = {'PRIVATE-TOKEN': settings.gitlab.token}
+    headers = {'PRIVATE-TOKEN': settings.gitlab.private_token}
     params = {'state': 'all', 'per_page': 100}
     try:
         # Use globally managed AsyncClient from Config
