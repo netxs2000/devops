@@ -23,6 +23,7 @@ class TestServiceDeskLogin:
         self.base_url = app_server
         self.base_page = BasePage(page, app_server)
 
+    @pytest.mark.smoke
     def test_unauthenticated_user_should_see_login_modal(self):
         """
         场景：未登录用户访问页面
@@ -92,26 +93,31 @@ class TestServiceDeskLogin:
         场景：正确凭据登录
         期望：隐藏登录模态框，显示侧边栏和用户信息
         """
+        print(f"Navigating to {self.base_url}/static/index.html")
         self.page.goto(f"{self.base_url}/static/index.html")
         self.page.wait_for_load_state("networkidle")
 
+        # 确保登录模态框可见
+        login_modal = self.page.locator("#loginModal")
+        print("Waiting for login modal to be visible...")
+        expect(login_modal).to_be_visible(timeout=10000)
+
         # 填写正确凭据
+        print(f"Filling login info for {test_user_credentials['email']}")
         self.page.fill("#login-email", test_user_credentials["email"])
         self.page.fill("#login-password", test_user_credentials["password"])
         self.page.click("#login-submit")
 
         # 等待页面刷新
+        print("Waiting for network idle after login...")
         self.page.wait_for_load_state("networkidle")
 
         # 验证登录成功
-        # 模态框应该隐藏或不存在
-        login_modal = self.page.locator("#loginModal")
-        # 用户名应该显示
+        print("Verifying user display name...")
         user_name = self.page.locator("#user-display-name")
-
-        # 如果登录成功，用户名应该可见
-        if user_name.is_visible():
-            expect(user_name).not_to_have_text("Loading...")
+        expect(user_name).to_be_visible(timeout=10000)
+        expect(user_name).not_to_have_text("Loading...", timeout=10000)
+        print("Login verification successful!")
 
     def test_enter_key_should_submit_login(self):
         """

@@ -194,6 +194,11 @@ const SysAppHandler = {
      * 初始化用户信息
      */
     async initUser() {
+        if (!Auth.isLoggedIn()) {
+            console.log("User not logged in, skipping user init.");
+            return;
+        }
+
         try {
             const user = await Auth.getCurrentUser();
             if (user) {
@@ -204,8 +209,6 @@ const SysAppHandler = {
                 // 恢复上次浏览视图
                 const initialView = window.location.hash.substring(1) || 'dashboard';
                 this.switchView(initialView);
-            } else {
-                Auth.logout();
             }
         } catch (e) {
             console.error("User init failed", e);

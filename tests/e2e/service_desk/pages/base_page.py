@@ -22,7 +22,6 @@ class BasePage:
         """导航到指定路径"""
         url = f"{self.base_url}{path}"
         self.page.goto(url)
-        self.page.wait_for_load_state("networkidle")
 
     def goto_static(self) -> None:
         """导航到主静态页面"""
@@ -37,7 +36,6 @@ class BasePage:
         sidebar = self.page.locator("#sidebar-nav-container")
         link = sidebar.locator(f".nav-link:has-text('{link_text}')")
         link.click()
-        self.page.wait_for_load_state("networkidle")
 
     def expand_sidebar_group(self, group_text: str) -> None:
         """展开侧边栏分组"""
@@ -51,9 +49,11 @@ class BasePage:
 
     def wait_for_toast(self, message: str = None, timeout: int = 5000) -> Locator:
         """等待 Toast 提示出现"""
-        toast = self.page.locator("#toast-container .toast")
+        # 兼容两种可能的容器 ID
+        toast = self.page.locator(".sys-toast, .toast").first
         toast.wait_for(state="visible", timeout=timeout)
         if message:
+            # message 可能是 success, error, info 或具体文本
             expect(toast).to_contain_text(message)
         return toast
 

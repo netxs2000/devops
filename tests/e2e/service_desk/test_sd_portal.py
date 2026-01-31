@@ -38,7 +38,7 @@ class TestServiceDeskPortalSubmit:
         expect(self.page.locator("sd-landing")).to_be_visible()
         
         # 验证标题
-        expect(self.page.locator("text=Support Center")).to_be_visible()
+        expect(self.page.locator("text=Service Desk")).to_be_visible()
 
     @pytest.mark.smoke
     def test_submit_bug_report_flow(self, test_user_credentials: dict):
@@ -48,31 +48,33 @@ class TestServiceDeskPortalSubmit:
         """
         self.portal_page.navigate_to_portal()
         
-        # 1. 等待产品列表加载并选择一个产品 (如果有的话)
-        # 这里使用 locator 检查是否有产品卡片
-        product_cards = self.page.locator(".product-card")
-        if product_cards.count() > 0:
-            product_cards.first.click()
-        
-        # 2. 点击报告 Bug
-        # 注意：ServicePortalPage 中定义了选择器
+        # 1. 点击报告 Bug (进入表单页)
         self.portal_page.click_report_bug()
+        
+        # 2. 等待表单加载并选择产品
+        # 我们假设系统中至少有一个产品，选择第一个
+        form = self.page.locator("sd-request-form")
+        product_select = form.locator("#product_id")
+        product_select.wait_for(state="visible", timeout=10000)
+        
+        # 如果有选项，选择第二个 (跳过 "请选择系统...")
+        options = product_select.locator("option")
+        if options.count() > 1:
+            product_select.select_option(index=1)
         
         # 3. 填写表单
         bug_title = f"E2E Test Bug - {test_user_credentials['email'].split('@')[0]}"
         self.portal_page.fill_bug_form(
             title=bug_title,
             actual_result="E2E automation test: System crashed on startup",
-            expected_result="System should start normally",
             steps="1. Run E2E test\n2. Observe result"
         )
         
         # 4. 提交
         self.portal_page.submit_form()
         
-        # 5. 验证成功提示
-        # 寻找包含 "Submitted" 或 "Success" 的文本
-        expect(self.page.locator("text=Ticket Submitted")).to_be_visible(timeout=10000)
+        # 5. 验证成功提示 (UI.showToast 会显示 "工单提交成功")
+        self.portal_page.wait_for_toast("success", timeout=10000)
 
     @pytest.mark.smoke
     def test_my_tickets_should_display_submitted_tickets(self):

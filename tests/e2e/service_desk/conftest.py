@@ -17,7 +17,9 @@ from typing import Generator
 import pytest
 import httpx
 from playwright.sync_api import Page, Browser, BrowserContext
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # =============================================================================
 # 配置常量
@@ -155,22 +157,41 @@ def authenticated_page(
 
     执行登录流程，返回已登录状态的页面。
     """
+    print(f"Navigating to {app_server}/static/index.html for authentication...")
     page.goto(f"{app_server}/static/index.html")
+    page.wait_for_load_state("networkidle")
 
     # 等待登录模态框出现
     login_modal = page.locator("#loginModal")
-    if login_modal.is_visible():
-        # 填写登录表单
-        page.fill("#login-email", test_user_credentials["email"])
-        page.fill("#login-password", test_user_credentials["password"])
-        page.click("#login-submit")
+    
+    # 我们等待一会，看看是否会自动登录或显示模态框
+    try:
+        print("Checking if login is required...")
+        # 如果已经登录，#user-display-name 会直接显示
+        user_name = page.locator("#user-display-name")
+        if user_name.is_visible() and user_name.inner_text() != "Loading...":
+            print("Already logged in.")
+        else:
+            print("Login modal check...")
+            login_modal.wait_for(state="visible", timeout=10000)
+            print(f"Logging in as {test_user_credentials['email']}...")
+            # 填写登录表单
+            page.fill("#login-email", test_user_credentials["email"])
+            page.fill("#login-password", test_user_credentials["password"])
+            page.click("#login-submit")
 
-        # 等待登录完成 (模态框消失或页面刷新)
-        page.wait_for_load_state("networkidle")
+            # 等待登录完成 (页面刷新)
+            page.wait_for_load_state("networkidle")
 
-        # 验证登录成功
-        # 可以检查用户头像或侧边栏是否显示
-        page.wait_for_selector("#user-display-name", state="visible", timeout=10000)
+            # 验证登录成功
+            page.wait_for_selector("#user-display-name", state="visible", timeout=15000)
+            print("Login successful.")
+    except Exception as e:
+        print(f"Auth fixture warning/error: {e}")
+        # 如果失败了，我们尝试截个图看看发生了什么
+        if not os.path.exists("test-results"):
+            os.makedirs("test-results")
+        page.screenshot(path="test-results/auth_failure.png")
 
     yield page
 

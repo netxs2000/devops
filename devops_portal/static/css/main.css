@@ -272,7 +272,7 @@ body.is-app-layout {
 
 /* Functional Utilities (u- prefix) */
 .u-flex {
-    display: flex;
+    display: flex !important;
 }
 
 .u-flex-center {
