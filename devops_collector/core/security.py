@@ -39,6 +39,17 @@ ADMIN_ROLE_KEY = 'SYSTEM_ADMIN'
 MAX_ROLE_HIERARCHY_DEPTH = 3
 
 
+def generate_random_password(length: int = 16) -> str:
+    """生成安全的随机密码。
+    
+    用于 OAuth 自动创建账户时分配初始占位密码。
+    """
+    import secrets
+    import string
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+
 def get_user_org_scope_ids(db: Session, user: User) -> List[str]:
     """获取用户组织权限范围内的所有部门 ID (支持无限级向下递归)。
 

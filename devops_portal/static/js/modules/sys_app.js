@@ -70,10 +70,42 @@ const SysAppHandler = {
      */
     async init() {
         console.log("Sys App Handler Initialized.");
+        this.handleOAuthCallback();
         this.bindEvents();
         await this.initUser();
         NotificationSystem.startSSE();
         this.checkGitLabStatus();
+    },
+
+    /**
+     * 处理 OAuth 回调参数 (access_token)
+     */
+    handleOAuthCallback() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('access_token');
+        const authState = urlParams.get('auth_state');
+        const authError = urlParams.get('auth_error');
+
+        if (token) {
+            Auth.setToken(token);
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, document.title, newUrl);
+            UI.showToast('Login successful via GitLab!', 'success');
+        } else if (authState === 'pending') {
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, document.title, newUrl);
+            alert('您的账号已通过 GitLab 自动创建，但目前处于“待审批”状态。请联系系统管理员激活您的账号后再试。');
+        } else if (authError) {
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, document.title, newUrl);
+            const errorMsgs = {
+                'domain_not_allowed': '您的 GitLab 邮箱域名不在允许的范围内，请联系管理员。',
+                'token_exchange_failed': 'GitLab 令牌交换失败，请重试。',
+                'user_info_failed': '获取 GitLab 用户信息失败。',
+                'email_missing': '您的 GitLab 账号缺少邮箱信息。'
+            };
+            UI.showToast(errorMsgs[authError] || `登录失败: ${authError}`, 'error');
+        }
     },
 
     /**
@@ -163,6 +195,11 @@ const SysAppHandler = {
 
         this.bindAction('.js-btn-gitlab-bind', () => {
             window.location.href = '/auth/gitlab/bind';
+        });
+
+        // GitLab 登录按钮 (在登录 Modal 中)
+        this.bindAction('#gitlab-login', () => {
+            window.location.href = '/auth/gitlab/login';
         });
 
         // 模态框关闭及通用动作委派

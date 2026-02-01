@@ -4,7 +4,7 @@
 #  所有操作均在容器内部执行，确保环境一致性
 # -----------------------------------------------------------
 
-.PHONY: help deploy init test build up down logs sync-all shell clean lock install init-dev docs e2e-install e2e-test e2e-test-headed e2e-test-trace e2e-smoke e2e-show-trace
+.PHONY: help deploy init test test-local lint fmt diagnose check-imports build up down logs sync-all shell clean lock install init-dev docs e2e-install e2e-test e2e-test-headed e2e-test-trace e2e-smoke e2e-show-trace
 
 # 颜色定义
 YELLOW := \033[1;33m
@@ -180,6 +180,40 @@ test: ## 运行所有测试 (容器内)
 	@echo "$(GREEN)Running unit and integration tests (inside container)...$(RESET)"
 	$(EXEC_CMD) pytest tests/
 
+test-local: ## [本地] 运行单元测试 (不带负载)
+	@echo "$(GREEN)Running unit tests locally...$(RESET)"
+	pytest tests/unit/ -v
+
+test-integration-local: ## [本地] 运行集成测试 (如授权、同步流)
+	@echo "$(GREEN)Running integration tests locally...$(RESET)"
+	pytest tests/integration/ -v
+
+lint: ## [本地] 代码质量检查 (flake8, pylint)
+	@echo "$(GREEN)Running flake8 check...$(RESET)"
+	flake8 devops_collector/ devops_portal/
+	@echo "$(GREEN)Running pylint check...$(RESET)"
+	pylint devops_collector/ devops_portal/
+
+fmt: ## [本地] 代码格式化 (black)
+	@echo "$(GREEN)Formatting code with black...$(RESET)"
+	black devops_collector/ devops_portal/ tests/ scripts/
+
+diagnose: ## [本地] 系统综合诊断 (API, DB, Config)
+	@echo "$(GREEN)Running system diagnosis...$(RESET)"
+	python scripts/sys_diagnose.py
+
+diag-db: ## [本地] 数据库专项诊断
+	@echo "$(GREEN)Running database diagnosis...$(RESET)"
+	python scripts/diag_db.py
+
+diag-mq: ## [本地] 消息队列专项诊断
+	@echo "$(GREEN)Running RabbitMQ diagnosis...$(RESET)"
+	python scripts/diag_mq.py
+
+check-imports: ## [本地] 检查核心模块导入依赖
+	@echo "$(GREEN)Checking module imports...$(RESET)"
+	python scripts/check_imports.py
+
 sync-all: ## 手动触发全量数据同步
 	@echo "$(GREEN)Triggering full sync...$(RESET)"
 	$(EXEC_CMD) python -m devops_collector.scheduler --force-all
@@ -232,12 +266,15 @@ datahub-ingest: ## 同步元数据到 DataHub (PostgreSQL & dbt)
 	$(DATAHUB_CMD) datahub ingest -c datahub/recipe_postgres.yml
 	$(DATAHUB_CMD) datahub ingest -c datahub/recipe_dbt.yml
 
-clean: ## 清理临时文件
-	@echo "$(GREEN)Cleaning temporary files...$(RESET)"
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type f -name "*.log" -delete
+clean: ## 清理临时文件和测试产物
+	@echo "$(GREEN)Cleaning temporary files and test artifacts...$(RESET)"
+	@powershell -Command " \
+		Get-ChildItem -Path . -Include __pycache__ -Recurse -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; \
+		Get-ChildItem -Path . -Include *.pyc,*.pyo,*.log,.coverage -File -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue; \
+		if (Test-Path htmlcov) { Remove-Item -Path htmlcov -Recurse -Force }; \
+		if (Test-Path .pytest_cache) { Remove-Item -Path .pytest_cache -Recurse -Force }; \
+		if (Test-Path test-results) { Remove-Item -Path test-results -Recurse -Force }; \
+	"
 
 # =============================================================================
 # 文档生成工具

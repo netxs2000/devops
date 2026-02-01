@@ -20,12 +20,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
 from devops_collector.config import settings, Config
-from devops_collector.auth import auth_router, auth_service
+from devops_collector.auth import auth_router, auth_service, auth_schema
 from devops_collector.auth.auth_database import AuthSessionLocal
 from devops_collector.models import User
 from devops_collector.core import security
-# from devops_collector.gitlab_sync.services.testing_service import TestingService
-from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_portal import schemas
 
 
@@ -57,6 +55,14 @@ app.include_router(iteration_plan_router.router)
 app.include_router(admin_router.router)
 app.include_router(devex_pulse_router.router)
 
+
+
+
+@app.get('/callback')
+async def login_callback_compat(request: Request):
+    """兼容性重定向：将旧的根路径回调重定向到 API 路由。"""
+    query_params = str(request.query_params)
+    return RedirectResponse(url=f'/api/auth/gitlab/callback?{query_params}')
 
 
 @app.get("/health")

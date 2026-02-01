@@ -11,10 +11,12 @@ from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
+import httpx
 from devops_collector.models.base_models import User, UserCredential
 from devops_collector.config import settings, Config
 from uuid import UUID
 from devops_collector.auth.auth_database import get_auth_db
+from devops_collector.auth import auth_schema
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -258,3 +260,103 @@ def auth_get_current_active_user(current_user: User = Depends(get_current_user_o
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail='Inactive user')
     return current_user
+
+async def auth_process_gitlab_callback(db: Session, code: str) -> dict:
+    """处理 GitLab OAuth 回调的核心业务逻辑。
+    
+    包含：换取 Token、获取并校验用户信息、查找/创建用户、生成系统 JWT。
+    
+    Args:
+        db: 数据库会话
+        code: GitLab 授权码
+        
+    Returns:
+        dict: 结果字典，包含 redirect_url 或错误信息
+    """
+    from devops_collector.core import security
+    
+    # 1. 换取 Token
+    async with httpx.AsyncClient(verify=settings.gitlab.verify_ssl) as client:
+        resp = await client.post(
+            f'{settings.gitlab.url}/oauth/token', 
+            data={
+                'client_id': settings.gitlab.client_id, 
+                'client_secret': settings.gitlab.client_secret, 
+                'code': code, 
+                'grant_type': 'authorization_code', 
+                'redirect_uri': settings.gitlab.redirect_uri
+            }
+        )
+        if resp.status_code != 200:
+            logger.error(f"GitLab OAuth Token Exchange Failed: {resp.text}")
+            return {"error": "token_exchange_failed"}
+        token_data = resp.json()
+
+    # 2. 获取用户信息
+    async with httpx.AsyncClient(verify=settings.gitlab.verify_ssl) as client:
+        user_resp = await client.get(
+            f'{settings.gitlab.url}/api/v4/user',
+            headers={'Authorization': f'Bearer {token_data["access_token"]}'}
+        )
+        if user_resp.status_code != 200:
+            return {"error": "user_info_failed"}
+        gitlab_user = user_resp.json()
+
+    email = gitlab_user.get('email')
+    full_name = gitlab_user.get('name') or gitlab_user.get('username')
+    
+    if not email:
+        return {"error": "email_missing"}
+
+    # 3. 校验邮箱域名
+    if not auth_validate_email_domain(email):
+        return {"error": "domain_not_allowed"}
+
+    # 4. 查找或创建用户
+    user = auth_get_user_by_email(db, email)
+    
+    if not user:
+        # 自动创建待审批账户
+        user = auth_create_user(
+            db=db, 
+            user_data=auth_schema.AuthRegisterRequest(
+                email=email,
+                password=security.generate_random_password(),
+                full_name=full_name,
+                employee_id=None
+            )
+        )
+        user.is_active = False
+        db.commit()
+        logger.info(f"New pending user created via GitLab OAuth: {email}")
+
+    # 5. 更新用户的 GitLab Token
+    auth_upsert_gitlab_token(db, str(user.global_user_id), token_data)
+
+    # 6. 如果用户未激活，返回 pending 状态
+    if not user.is_active:
+        return {"state": "pending"}
+
+    # 7. 生成本系统 JWT
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    user_roles = [r.role_key for r in user.roles] if user.roles else []
+    user_permissions = security.get_user_permissions(db, user)
+    data_scope = security.get_user_effective_data_scope(db, user)
+    
+    token_payload = {
+        'sub': user.primary_email,
+        'user_id': str(user.global_user_id),
+        'username': user.username or email.split('@')[0],
+        'full_name': user.full_name,
+        'department_id': user.department_id,
+        'roles': user_roles,
+        'permissions': user_permissions,
+        'data_scope': data_scope
+    }
+    
+    access_token = auth_create_access_token(
+        data=token_payload, 
+        expires_delta=access_token_expires
+    )
+
+    return {"access_token": access_token}

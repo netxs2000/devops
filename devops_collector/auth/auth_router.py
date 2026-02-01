@@ -58,42 +58,83 @@ async def auth_bind_gitlab(
     )
     return RedirectResponse(auth_url)
 
+@auth_router.get('/gitlab/login')
+async def auth_login_gitlab(request: Request):
+    """发起 GitLab OAuth 登录。
+    
+    Args:
+        request: FastAPI 请求对象。
+        
+    Returns:
+        RedirectResponse: 重定向到 GitLab 授权页面。
+        
+    Raises:
+        HTTPException: 配置错误。
+    """
+    if not settings.gitlab.client_id or not settings.gitlab.redirect_uri:
+        raise HTTPException(500, 'GitLab OAuth not configured')
+    
+    # 使用 login_flow 前缀来标识这是登录流程
+    state = "login_flow"
+    auth_url = (
+        f'{settings.gitlab.url}/oauth/authorize?'
+        f'client_id={settings.gitlab.client_id}&'
+        f'redirect_uri={settings.gitlab.redirect_uri}&'
+        f'response_type=code&scope=api read_user&state={state}'
+    )
+    return RedirectResponse(auth_url)
+
+
 @auth_router.get('/gitlab/callback')
 async def auth_gitlab_callback(code: str, state: str = None, db: Session = Depends(get_auth_db)):
     """GitLab OAuth 回调处理。
     
-    Args:
-        code: GitLab 返回的授权码。
-        state: 传递的 global_user_id。
-        db: 数据库会话。
-        
-    Returns:
-        RedirectResponse: 绑定成功后的重定向。
-        
-    Raises:
-        HTTPException: GitLab 认证失败或状态异常。
+    支持两种模式：
+    1. 登录模式 (state == 'login_flow'): 自动寻找/创建用户并返回 JWT。
+    2. 绑定模式 (state == user_id): 为存量用户绑定 GitLab Token。
     """
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            f'{settings.gitlab.url}/oauth/token', 
-            data={
-                'client_id': settings.gitlab.client_id, 
-                'client_secret': settings.gitlab.client_secret, 
-                'code': code, 
-                'grant_type': 'authorization_code', 
-                'redirect_uri': settings.gitlab.redirect_uri
-            }
+    if not state:
+        return RedirectResponse(url='/index.html?auth_error=invalid_state')
+
+    # 处理登录流程
+    if state == 'login_flow':
+        result = await auth_service.auth_process_gitlab_callback(db, code)
+        
+        if "error" in result:
+            return RedirectResponse(url=f'/index.html?auth_error={result["error"]}')
+        
+        if result.get("state") == "pending":
+            return RedirectResponse(url='/index.html?auth_state=pending')
+            
+        access_token = result.get("access_token")
+        return RedirectResponse(
+            url=f'/index.html?access_token={access_token}&token_type=bearer#login_success'
         )
-        if resp.status_code != 200:
-            raise HTTPException(400, f'GitLab Auth Failed: {resp.text}')
-        token_data = resp.json()
-    
-    user_id = state
-    if not user_id:
-        raise HTTPException(400, 'Invalid State')
-    
-    auth_service.auth_upsert_gitlab_token(db, user_id, token_data)
-    return RedirectResponse(url='/iteration_plan.html?bind_success=true')
+
+    # 处理绑定流程 (此时 state 是 user_id)
+    try:
+        # 先换取 Token
+        async with httpx.AsyncClient(verify=settings.gitlab.verify_ssl) as client:
+            resp = await client.post(
+                f'{settings.gitlab.url}/oauth/token', 
+                data={
+                    'client_id': settings.gitlab.client_id, 
+                    'client_secret': settings.gitlab.client_secret, 
+                    'code': code, 
+                    'grant_type': 'authorization_code', 
+                    'redirect_uri': settings.gitlab.redirect_uri
+                }
+            )
+            if resp.status_code != 200:
+                logger.error(f"GitLab Bind Token Exchange Failed: {resp.text}")
+                return RedirectResponse(url='/iteration_plan.html?bind_error=token_failed')
+            token_data = resp.json()
+
+        auth_service.auth_upsert_gitlab_token(db, state, token_data)
+        return RedirectResponse(url='/iteration_plan.html?bind_success=true')
+    except Exception as e:
+        logger.error(f"GitLab Bind Error: {str(e)}")
+        return RedirectResponse(url='/iteration_plan.html?bind_error=unknown')
 
 @auth_router.post('/register', response_model=auth_schema.AuthUserResponse)
 def auth_register(user: auth_schema.AuthRegisterRequest, db: Session = Depends(get_auth_db)):
