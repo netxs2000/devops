@@ -1,7 +1,7 @@
-"""TODO: Add module description."""
 from typing import List, Optional
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, File, UploadFile
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload, selectinload
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.models.base_models import (
@@ -14,11 +14,93 @@ from devops_portal.dependencies import get_current_user, RoleRequired, Permissio
 from devops_portal.schemas import (
     TeamCreate, TeamView, TeamMemberCreate, UserFullProfile,
     ProductView, ProductCreate, ProjectProductRelationView, ProjectProductRelationCreate,
-    IdentityMappingView, IdentityMappingCreate, IdentityMappingUpdateStatus
+    IdentityMappingView, IdentityMappingCreate, IdentityMappingUpdateStatus,
+    OrganizationCreate, OrganizationView, ImportSummary
 )
 from pydantic import BaseModel
 import uuid
+import io
+import csv
+
+def get_admin_service(db: Session = Depends(get_auth_db)):
+    """获取 AdminService 实例的依赖项。"""
+    return AdminService(db)
+
 router = APIRouter(prefix='/admin', tags=['administration'])
+@router.get('/export/organizations')
+async def export_organizations(
+    db: Session = Depends(get_auth_db),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """导出所有组织机构为 CSV。"""
+    orgs = db.query(Organization).options(joinedload(Organization.manager)).filter(Organization.is_current == True).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['org_id', 'org_name', 'org_level', 'parent_org_id', '负责人'])
+    for o in orgs:
+        writer.writerow([o.org_id, o.org_name, o.org_level, o.parent_org_id, o.manager.full_name if o.manager else ''])
+    
+    output.seek(0)
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8-sig')),
+        media_type='text/csv',
+        headers={"Content-Disposition": "attachment; filename=orgs_export.csv"}
+    )
+
+@router.get('/organizations', response_model=List[OrganizationView])
+async def list_organizations(service: AdminService = Depends(get_admin_service)):
+    """获取详细组织机构列表。"""
+    return service.list_all_organizations()
+
+@router.post('/organizations', response_model=OrganizationView)
+async def create_organization(
+    payload: OrganizationCreate,
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """创建新组织。"""
+    org = service.create_organization(payload)
+    return OrganizationView.model_validate(org)
+
+@router.post('/import/users', response_model=ImportSummary)
+async def import_users(
+    file: UploadFile = File(...),
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """从 CSV 导入用户。"""
+    content = await file.read()
+    return service.import_users(content.decode('utf-8'))
+
+@router.post('/import/organizations', response_model=ImportSummary)
+async def import_organizations(
+    file: UploadFile = File(...),
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """从 CSV 导入组织机构。"""
+    content = await file.read()
+    return service.import_organizations(content.decode('utf-8'))
+
+@router.get('/export/users')
+async def export_users(
+    db: Session = Depends(get_auth_db),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """导出所有用户为 CSV。"""
+    users = db.query(User).filter(User.is_current == True).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['global_user_id', 'employee_id', 'full_name', 'email', 'department_id', '人事关系'])
+    for u in users:
+        writer.writerow([str(u.global_user_id), u.employee_id, u.full_name, u.primary_email, u.department_id, u.hr_relationship])
+    
+    output.seek(0)
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8-sig')),
+        media_type='text/csv',
+        headers={"Content-Disposition": "attachment; filename=users_export.csv"}
+    )
 
 def get_admin_service(db: Session = Depends(get_auth_db)) -> AdminService:
     """获取系统管理服务实例。"""
@@ -54,6 +136,7 @@ async def list_identity_mappings(db: Session=Depends(get_auth_db)):
     for m in mappings:
         view = IdentityMappingView.from_orm(m)
         view.user_name = m.user.full_name if m.user else "Unknown"
+        view.hr_relationship = m.user.hr_relationship if m.user else None
         results.append(view)
     return results
 

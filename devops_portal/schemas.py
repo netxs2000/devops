@@ -238,6 +238,7 @@ class IdentityMappingView(IdentityMappingCreate):
     model_config = ConfigDict(from_attributes=True)
     id: int
     user_name: Optional[str] = None
+    hr_relationship: Optional[str] = None
     mapping_status: str
     confidence_score: float
     last_active_at: Optional[datetime] = None
@@ -291,6 +292,7 @@ class UserFullProfile(BaseModel):
     employee_id: Optional[str]
     department_name: Optional[str]
     is_active: bool
+    hr_relationship: Optional[str] = None
     identities: List[IdentityMappingView] = []
     teams: List[Dict[str, Any]] = []
 
@@ -331,3 +333,27 @@ class ProjectProductRelationCreate(BaseModel):
     product_id: str
     relation_type: str = 'PRIMARY'
     allocation_ratio: float = 1.0
+
+class OrganizationCreate(BaseModel):
+    """创建组织的请求模型"""
+    org_id: str
+    org_name: str
+    org_level: Optional[int] = 1
+    parent_org_id: Optional[str] = None
+    manager_user_id: Optional[uuid.UUID] = None
+    is_active: Optional[bool] = True
+    cost_center: Optional[str] = None
+
+class OrganizationView(OrganizationCreate):
+    """组织视图模型"""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    manager_name: Optional[str] = None
+    parent_name: Optional[str] = None
+
+class ImportSummary(BaseModel):
+    """导入结果汇总模型"""
+    total_processed: int
+    success_count: int
+    failure_count: int
+    errors: List[Dict[str, Any]] = []

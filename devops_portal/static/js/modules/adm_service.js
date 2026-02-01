@@ -97,5 +97,37 @@ export const AdmService = {
 
         const queryStr = new URLSearchParams(params).toString();
         return await Api.post(`/service-desk/admin/approve-user?${queryStr}`, {});
+    },
+
+    /**
+     * 获取组织架构列表
+     */
+    async getOrganizations() {
+        return await Api.get('/admin/organizations');
+    },
+
+    /**
+     * 创建组织
+     */
+    async createOrganization(data) {
+        return await Api.post('/admin/organizations', data);
+    },
+
+    /**
+     * 导入用户
+     */
+    async importUsers(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return await Api.upload('/admin/import/users', formData);
+    },
+
+    /**
+     * 导入组织
+     */
+    async importOrganizations(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return await Api.upload('/admin/import/organizations', formData);
     }
 };

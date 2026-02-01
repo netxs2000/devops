@@ -516,19 +516,36 @@
                 <div class="adm-panel">
                     <div class="adm-header">
                         <div>
-                            <h2 class="adm-title">人员身份校准中心 (User Mapping)</h2>
-                            <p class="adm-title-desc">建立员工全局 ID 与外部系统 (GitLab/Jira) 账号的强关联。</p>
+                            <h2 class="adm-title">身份校准与主数据 (Identity & Master Data)</h2>
+                            <p class="adm-title-desc">管理员工全局 ID 映射及批量导入导出主身份数据。</p>
                         </div>
-                        <button class="btn-primary btn-icon-text js-btn-add-identity-mapping">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="8.5" cy="7" r="4"></circle>
-                                <line x1="20" y1="8" x2="20" y2="14"></line>
-                                <line x1="17" y1="11" x2="23" y2="11"></line>
-                            </svg>
-                            添加身份绑定
-                        </button>
+                        <div class="u-flex u-gap-10">
+                            <button class="btn-ghost btn-icon-text js-btn-import-users">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                                </svg>
+                                导入
+                            </button>
+                            <input type="file" id="userImportInput" class="u-hide js-user-import-file" accept=".csv">
+                            <button class="btn-ghost btn-icon-text js-btn-export-users">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                                </svg>
+                                导出
+                            </button>
+                            <button class="btn-primary btn-icon-text js-btn-add-identity-mapping">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="8.5" cy="7" r="4" />
+                                    <line x1="20" y1="8" x2="20" y2="14" />
+                                    <line x1="17" y1="11" x2="23" y2="11" />
+                                </svg>
+                                绑定
+                            </button>
+                        </div>
                     </div>
 
                     <div class="adm-table-container">
@@ -536,6 +553,7 @@
                             <thead>
                                 <tr>
                                     <th>员工姓名</th>
+                                    <th>人事关系</th>
                                     <th>系统来源</th>
                                     <th>外部 UID</th>
                                     <th>外部用户名</th>
@@ -544,6 +562,60 @@
                                 </tr>
                             </thead>
                             <tbody class="js-user-mappings-tbody">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="adm-orgs-view" class="u-hide">
+                <div class="adm-panel">
+                    <div class="adm-header">
+                        <div>
+                            <h2 class="adm-title">建议组织架构 (Organization Structure)</h2>
+                            <p class="adm-title-desc">维护三级组织架构（体系/中心/部门）及其负责人。</p>
+                        </div>
+                        <div class="u-flex u-gap-10">
+                            <button class="btn-ghost btn-icon-text js-btn-import-orgs">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                                </svg>
+                                导入
+                            </button>
+                            <input type="file" id="orgImportInput" class="u-hide js-org-import-file" accept=".csv">
+                            <button class="btn-ghost btn-icon-text js-btn-export-orgs">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                                </svg>
+                                导出
+                            </button>
+                            <button class="btn-primary btn-icon-text js-btn-create-org">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                新增组织
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="adm-table-container">
+                        <table class="adm-data-table">
+                            <thead>
+                                <tr>
+                                    <th>组织 ID</th>
+                                    <th>名称</th>
+                                    <th>层级</th>
+                                    <th>上级组织</th>
+                                    <th>负责人</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody class="js-orgs-tbody">
                                 <!-- Dynamic -->
                             </tbody>
                         </table>
@@ -816,6 +888,54 @@
                 <div class="u-flex u-gap-12 u-flex-end">
                     <button class="btn-ghost u-p-10-20 u-radius-md js-btn-close-project-modal">取消</button>
                     <button class="btn-primary u-p-10-20 u-radius-md js-btn-submit-project">确认创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Organization Modal -->
+    <div class="modal-overlay u-hide" id="createOrgModal">
+        <div class="sys-auth-card u-max-w-600">
+            <div class="auth-glass-panel">
+                <div class="sys-auth-header u-mb-24">
+                    <h3 class="sys-auth-title u-text-h2">新增组织节点</h3>
+                    <p class="sys-auth-subtitle">在 MDM 架构中建立新的组织实体（体系/中心/部门）</p>
+                </div>
+
+                <div class="adm-grid-form u-mb-24">
+                    <div class="u-span-2">
+                        <label class="u-label-caps u-mb-8 u-block">组织名称</label>
+                        <input type="text" class="form-control js-org-name-input" placeholder="例如：软件研发中心">
+                    </div>
+                    <div>
+                        <label class="u-label-caps u-mb-8 u-block">组织 ID (Code)</label>
+                        <input type="text" class="form-control js-org-id-input" placeholder="E.g. SOFT_DEV_CENTER">
+                    </div>
+                    <div>
+                        <label class="u-label-caps u-mb-8 u-block">层级</label>
+                        <select class="form-control js-org-level-select">
+                            <option value="1">一级 (体系/体系部)</option>
+                            <option value="2" selected>二级 (中心)</option>
+                            <option value="3">三级 (部门)</option>
+                        </select>
+                    </div>
+                    <div class="u-span-2">
+                        <label class="u-label-caps u-mb-8 u-block">上级组织</label>
+                        <select class="form-control js-org-parent-select">
+                            <option value="">(根节点)</option>
+                        </select>
+                    </div>
+                    <div class="u-span-2">
+                        <label class="u-label-caps u-mb-8 u-block">委派负责人</label>
+                        <select class="form-control js-org-manager-select">
+                            <option value="">(未委派)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="u-flex u-gap-12 u-flex-end">
+                    <button class="btn-ghost u-p-10-20 u-radius-md js-btn-close-org-modal">取消</button>
+                    <button class="btn-primary u-p-10-20 u-radius-md js-btn-submit-org">同步主数据</button>
                 </div>
             </div>
         </div>

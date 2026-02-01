@@ -39,6 +39,7 @@ const AdmManageHandler = {
             if (target.closest('.js-btn-close-mapping-modal')) UI.hideModal('createMappingModal');
             if (target.closest('.js-btn-close-reject-modal')) UI.hideModal('rejectModal');
             if (target.closest('.js-btn-close-approve-modal')) UI.hideModal('approveModal');
+            if (target.closest('.js-btn-close-org-modal')) UI.hideModal('createOrgModal');
 
             // 3. 提交动作
             if (target.closest('.js-btn-submit-product')) this.submitProduct();
@@ -47,6 +48,7 @@ const AdmManageHandler = {
             if (target.closest('.js-btn-link-product-project')) this.linkProductProject();
             if (target.closest('.js-btn-submit-reject')) this.submitReject();
             if (target.closest('.js-btn-submit-approve')) this.submitApprove();
+            if (target.closest('.js-btn-submit-org')) this.submitOrg();
 
             // 4. 列表项删除
             if (target.closest('.js-user-delete')) {
@@ -62,6 +64,13 @@ const AdmManageHandler = {
                 this.state.currentRegTab = tab.dataset.status;
                 this.loadApprovals();
             }
+
+            // 6. 导入导出按钮触发
+            if (target.closest('.js-btn-import-users')) document.querySelector('.js-user-import-file')?.click();
+            if (target.closest('.js-btn-import-orgs')) document.querySelector('.js-org-import-file')?.click();
+            if (target.closest('.js-btn-export-users')) this.handleExportUsers();
+            if (target.closest('.js-btn-export-orgs')) this.handleExportOrgs();
+            if (target.closest('.js-btn-create-org')) this.openOrgModal();
         });
 
         // 监听组件事件 (CustomEvent Bubbling)
@@ -127,6 +136,38 @@ const AdmManageHandler = {
             UI.showToast("目录同步失败", "error");
         } finally {
             UI.toggleLoading("", false);
+        }
+    },
+
+    initUserView() {
+        const input = document.querySelector('.js-user-import-file');
+        if (input && !input.dataset.bound) {
+            input.addEventListener('change', (e) => this.handleUserImport(e));
+            input.dataset.bound = 'true';
+        }
+    },
+
+    /**
+     * 【子视图 05】组织架构
+     */
+    async loadOrganizations() {
+        this.init();
+        UI.toggleLoading("加载组织架构...", true);
+        try {
+            const orgs = await AdmService.getOrganizations();
+            this.renderOrgsTable(orgs);
+        } catch (e) {
+            UI.showToast("组织架构同步失败", "error");
+        } finally {
+            UI.toggleLoading("", false);
+        }
+    },
+
+    initOrgView() {
+        const input = document.querySelector('.js-org-import-file');
+        if (input && !input.dataset.bound) {
+            input.addEventListener('change', (e) => this.handleOrgImport(e));
+            input.dataset.bound = 'true';
         }
     },
 
@@ -196,13 +237,29 @@ const AdmManageHandler = {
         tbody.innerHTML = this.state.mappings.map(m => `
             <tr data-mapping-id="${m.id}">
                 <td><span class="u-weight-600 u-text-primary">${m.user_name || 'Sys User'}</span></td>
+                <td><span class="adm-badge">${m.hr_relationship || '正式'}</span></td>
                 <td><span class="adm-badge sys-tag--admin">${m.source_system}</span></td>
                 <td><code>${m.external_user_id}</code></td>
                 <td>${m.external_username || '-'}</td>
                 <td>${m.external_email || '-'}</td>
                 <td><button class="btn-ghost btn--small u-text-error js-user-delete">解除</button></td>
             </tr>
-        `).join('') || '<tr><td colspan="6" class="u-p-40 u-text-center u-text-dim">暂无身份关联记录</td></tr>';
+        `).join('') || '<tr><td colspan="7" class="u-p-40 u-text-center u-text-dim">暂无身份关联记录</td></tr>';
+    },
+
+    renderOrgsTable(orgs) {
+        const tbody = document.querySelector('.js-orgs-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = orgs.map(o => `
+            <tr>
+                <td><code>${o.org_id}</code></td>
+                <td><span class="u-weight-600">${o.org_name}</span></td>
+                <td><span class="adm-badge">${o.org_level}级</span></td>
+                <td>${o.parent_name || '<span class="u-text-dim">无</span>'}</td>
+                <td><span class="u-text-primary">${o.manager_name || '未委派'}</span></td>
+                <td><button class="btn-ghost btn--small" onclick="UI.showToast('Edit Org coming soon', 'info')">编辑</button></td>
+            </tr>
+        `).join('') || '<tr><td colspan="6" class="u-p-40 u-text-center u-text-dim">暂无组织机构记录</td></tr>';
     },
 
     renderProductProjectTable() {
@@ -366,6 +423,100 @@ const AdmManageHandler = {
             UI.showToast("关联成功", "success");
             this.loadProducts();
         } catch (e) { UI.showToast("关联异常", "error"); }
+    },
+
+    async openOrgModal() {
+        UI.showModal('createOrgModal');
+        const parentS = document.querySelector('.js-org-parent-select');
+        const managerS = document.querySelector('.js-org-manager-select');
+        if (!parentS || !managerS) return;
+
+        try {
+            const [orgs, users] = await Promise.all([
+                AdmService.getOrganizations(),
+                AdmService.getUsers()
+            ]);
+
+            parentS.innerHTML = '<option value="">(根节点)</option>' +
+                orgs.map(o => `<option value="${o.org_id}">${o.org_name} (${o.org_id})</option>`).join('');
+
+            managerS.innerHTML = '<option value="">(未委派)</option>' +
+                users.map(u => `<option value="${u.user_id}">${u.full_name} (${u.email})</option>`).join('');
+        } catch (e) {
+            UI.showToast("辅助数据加载失败", "error");
+        }
+    },
+
+    async submitOrg() {
+        const body = {
+            org_id: document.querySelector('.js-org-id-input').value,
+            org_name: document.querySelector('.js-org-name-input').value,
+            org_level: parseInt(document.querySelector('.js-org-level-select').value),
+            parent_org_id: document.querySelector('.js-org-parent-select').value || null,
+            manager_user_id: document.querySelector('.js-org-manager-select').value || null,
+            is_active: true
+        };
+
+        if (!body.org_id || !body.org_name) {
+            return UI.showToast("名称和代码必填", "warning");
+        }
+
+        try {
+            await AdmService.createOrganization(body);
+            UI.showToast("组织主数据已同步", "success");
+            UI.hideModal('createOrgModal');
+            this.loadOrganizations();
+        } catch (e) {
+            UI.showToast("同步失败: " + e.message, "error");
+        }
+    },
+
+    // --- Import / Export Handlers ---
+    async handleUserImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        UI.toggleLoading("正在导入用户数据...", true);
+        try {
+            const summary = await AdmService.importUsers(file);
+            UI.showToast(`导入成功: ${summary.success_count}, 失败: ${summary.failure_count}`, summary.failure_count > 0 ? 'warning' : 'success');
+            if (summary.failure_count > 0) {
+                console.error("Import Errors:", summary.errors);
+            }
+            this.loadUsers();
+        } catch (err) {
+            UI.showToast(err.message || "用户导入失败", "error");
+        } finally {
+            UI.toggleLoading("", false);
+            e.target.value = ''; // Reset input
+        }
+    },
+
+    async handleOrgImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        UI.toggleLoading("正在导入组织架构...", true);
+        try {
+            const summary = await AdmService.importOrganizations(file);
+            UI.showToast(`导入成功: ${summary.success_count}, 失败: ${summary.failure_count}`, summary.failure_count > 0 ? 'warning' : 'success');
+            this.loadOrganizations();
+        } catch (err) {
+            UI.showToast(err.message || "组织导入失败", "error");
+        } finally {
+            UI.toggleLoading("", false);
+            e.target.value = '';
+        }
+    },
+
+    handleExportUsers() {
+        const token = localStorage.getItem('sd_token');
+        window.open(`/admin/export/users?token=${token}`, '_blank');
+    },
+
+    handleExportOrgs() {
+        const token = localStorage.getItem('sd_token');
+        window.open(`/admin/export/organizations?token=${token}`, '_blank');
     }
 };
 

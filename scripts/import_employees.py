@@ -61,6 +61,7 @@ def import_employees():
             center = row.get('中心', '').strip()
             dept = row.get('部门', '').strip()
             position = row.get('职位', '').strip()
+            hr_relationship = row.get('人事关系', '').strip() or row.get('hr_relationship', '').strip()
             csv_email = row.get('邮箱', '').strip()
             
             if not name or not employee_id:
@@ -101,6 +102,7 @@ def import_employees():
                     primary_email=email,
                     department_id=final_org_id,
                     position=position,
+                    hr_relationship=hr_relationship,
                     is_active=True,
                     is_survivor=True,
                     sync_version=1,
@@ -115,6 +117,7 @@ def import_employees():
                 user.primary_email = email
                 user.department_id = final_org_id
                 user.position = position
+                user.hr_relationship = hr_relationship
                 user.is_active = True
                 user.is_current = True
                 logger.debug(f"更新员工信息: {name} ({employee_id})")

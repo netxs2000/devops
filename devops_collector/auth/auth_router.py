@@ -127,14 +127,14 @@ async def auth_gitlab_callback(code: str, state: str = None, db: Session = Depen
             )
             if resp.status_code != 200:
                 logger.error(f"GitLab Bind Token Exchange Failed: {resp.text}")
-                return RedirectResponse(url='/iteration_plan.html?bind_error=token_failed')
+                return RedirectResponse(url='/index.html?bind_error=token_failed#iteration_plan')
             token_data = resp.json()
 
         auth_service.auth_upsert_gitlab_token(db, state, token_data)
-        return RedirectResponse(url='/iteration_plan.html?bind_success=true')
+        return RedirectResponse(url='/index.html?bind_success=true#iteration_plan')
     except Exception as e:
         logger.error(f"GitLab Bind Error: {str(e)}")
-        return RedirectResponse(url='/iteration_plan.html?bind_error=unknown')
+        return RedirectResponse(url='/index.html?bind_error=unknown#iteration_plan')
 
 @auth_router.post('/register', response_model=auth_schema.AuthUserResponse)
 def auth_register(user: auth_schema.AuthRegisterRequest, db: Session = Depends(get_auth_db)):

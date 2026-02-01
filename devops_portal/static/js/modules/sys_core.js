@@ -157,7 +157,23 @@ export const Api = {
     },
 
     get(path) { return this.request(path, { method: 'GET' }); },
-    post(path, data) { return this.request(path, { method: 'POST', body: JSON.stringify(data) }); }
+    post(path, data) { return this.request(path, { method: 'POST', body: JSON.stringify(data) }); },
+
+    async upload(path, formData) {
+        const token = Auth.getToken();
+        const headers = { 'Accept': 'application/json' };
+        if (token) { headers['Authorization'] = `Bearer ${token}`; }
+
+        try {
+            const response = await fetch(path, { method: 'POST', headers, body: formData });
+            if (response.status === 401) { Auth.logout(); throw { status: 401, message: 'Expired' }; }
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw { status: response.status, message: errorData.detail || 'Upload failed' };
+            }
+            return await response.json();
+        } catch (error) { throw error; }
+    }
 };
 
 /**

@@ -48,6 +48,7 @@ const SysAppHandler = {
                 expanded: true,
                 items: [
                     { id: "nav-admin-approvals", label: "用户注册审批", href: "#admin_approvals", view: "admin_approvals", icon: "M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2; circle cx=8.5 cy=7 r=4; polyline points=17 11 19 13 23 9" },
+                    { id: "nav-admin-orgs", label: "研发组织管理", href: "#admin_orgs", view: "admin_orgs", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
                     { id: "nav-admin-products", label: "产品体系管理", href: "#admin_products", view: "admin_products", icon: "rect x=2 y=3 width=20 height=14 rx=2 ry=2; line x1=8 y1=21 x2=16 y2=21; line x1=12 y1=17 x2=12 y2=21" },
                     { id: "nav-admin-projects", label: "项目映射配置", href: "#admin_projects", view: "admin_projects", icon: "polyline points=4 7 4 4 20 4 20 7; line x1=9 y1=20 x2=15 y2=20; line x1=12 y1=4 x2=12 y2=20" },
                     { id: "nav-admin-users", label: "员工身份目录", href: "#admin_users", view: "admin_users", icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2; circle cx=9 cy=7 r=4; path d=M23 21v-2a4 4 0 0 0-3-3.87; path d=M16 3.13a4 4 0 0 1 0 7.75" }
@@ -108,14 +109,74 @@ const SysAppHandler = {
         }
     },
 
+    async handleLocalLogin() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        const errorEl = document.getElementById('login-error');
+        const btn = document.getElementById('login-submit');
+
+        if (!email || !password) {
+            if (errorEl) {
+                errorEl.textContent = '请输入邮箱和密码';
+                errorEl.classList.remove('u-hide');
+            }
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+        }
+        if (errorEl) errorEl.classList.add('u-hide');
+
+        try {
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                Auth.setToken(result.access_token);
+                UI.showToast('登录成功', 'success');
+                location.reload();
+            } else {
+                if (errorEl) {
+                    errorEl.textContent = result.detail || '登录失败，请检查账号密码';
+                    errorEl.classList.remove('u-hide');
+                }
+            }
+        } catch (err) {
+            if (errorEl) {
+                errorEl.textContent = '连接服务器失败';
+                errorEl.classList.remove('u-hide');
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '登录';
+            }
+        }
+    },
+
     /**
      * 检查并提示 GitLab 绑定状态
      */
     async checkGitLabStatus() {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('bind_success')) {
-            window.history.replaceState({}, document.title, window.location.pathname);
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
             UI.showToast('GitLab Account Linked Successfully!', 'success');
+        } else if (urlParams.get('bind_error')) {
+            const error = urlParams.get('bind_error');
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+            UI.showToast(`GitLab Binding Failed: ${error}`, 'error');
         }
     },
 
@@ -201,6 +262,8 @@ const SysAppHandler = {
         this.bindAction('#gitlab-login', () => {
             window.location.href = '/auth/gitlab/login';
         });
+
+        this.bindAction('#login-submit', () => this.handleLocalLogin());
 
         // 模态框关闭及通用动作委派
         document.addEventListener('click', (e) => {
@@ -293,13 +356,18 @@ const SysAppHandler = {
 
         const isAdmin = Auth.isAdmin();
         const hasUserManage = Auth.hasPermission('USER:MANAGE');
+        console.log(`RenderSidebar: isAdmin=${isAdmin}, hasUserManage=${hasUserManage}`);
 
         container.innerHTML = '';
         const groupTemplate = document.getElementById('sys-nav-group-tpl');
         const linkTemplate = document.getElementById('sys-nav-link-tpl');
 
-        this.state.navConfig.forEach(group => {
-            if (group.adminOnly && !isAdmin && !hasUserManage) return;
+        this.state.navConfig.forEach((group, idx) => {
+            console.log(`Processing group ${idx}: ${group.title}, adminOnly=${group.adminOnly}`);
+            if (group.adminOnly && !isAdmin && !hasUserManage) {
+                console.log(`Skipping group ${group.title} due to missing permissions`);
+                return;
+            }
 
             const groupClone = groupTemplate.content.cloneNode(true);
             const groupEl = groupClone.querySelector('.js-nav-group');
@@ -371,14 +439,14 @@ const SysAppHandler = {
             'nav-dashboard', 'nav-tests', 'nav-test-execution', 'nav-defects', 'nav-reqs',
             'nav-matrix', 'nav-reports', 'nav-governance', 'nav-pulse', 'nav-support',
             'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-approvals',
-            'nav-admin-products', 'nav-admin-projects', 'nav-admin-users'
+            'nav-admin-products', 'nav-admin-projects', 'nav-admin-users', 'nav-admin-orgs'
         ];
 
         const viewItems = [
             'qa-dashboard-view', 'qa-test-results', 'qa-stats-grid', 'qa-execution-view', 'qa-defect-view', 'pm-matrix-view',
             'pm-requirements-view', 'pm-iteration-view', 'rpt-insights-view', 'sd-support-view',
             'sd-submit-view', 'sd-my-view', 'sd-portal-view', 'sys-decision-hub-view', 'sys-governance-view', 'sys-pulse-view',
-            'adm-approvals-view', 'adm-products-view', 'adm-projects-view', 'adm-users-view'
+            'adm-approvals-view', 'adm-products-view', 'adm-projects-view', 'adm-users-view', 'adm-orgs-view'
         ];
 
         navItems.forEach(id => {
@@ -498,7 +566,13 @@ const SysAppHandler = {
                 break;
             case 'admin_users':
                 show('adm-users-view');
+                AdmManageHandler.initUserView();
                 AdmManageHandler.loadUsers();
+                break;
+            case 'admin_orgs':
+                show('adm-orgs-view');
+                AdmManageHandler.initOrgView();
+                AdmManageHandler.loadOrganizations();
                 break;
         }
     },
