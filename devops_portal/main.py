@@ -14,7 +14,7 @@ from pathlib import Path
 import uvicorn
 import httpx
 from fastapi import FastAPI, Depends, Request, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -60,9 +60,12 @@ app.include_router(devex_pulse_router.router)
 
 @app.get('/callback')
 async def login_callback_compat(request: Request):
-    """兼容性重定向：将旧的根路径回调重定向到 API 路由。"""
+    """兼容性重定向：将旧的根路径回调重定向到 API 路由。
+
+    修复: 之前导向 `/api/auth/gitlab/callback`，但路由注册在 `/auth` 下。将其改为转到 `/auth/gitlab/callback`，以匹配当前 API 路由并避免 404。
+    """
     query_params = str(request.query_params)
-    return RedirectResponse(url=f'/api/auth/gitlab/callback?{query_params}')
+    return RedirectResponse(url=f'/auth/gitlab/callback?{query_params}')
 
 
 @app.get("/health")

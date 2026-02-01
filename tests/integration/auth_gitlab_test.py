@@ -60,6 +60,16 @@ def test_gitlab_login_redirect(client):
     assert "redirect_uri=" in location
     assert "state=login_flow" in location
 
+
+def test_callback_compat_redirect(client):
+    """验证外部回调 `/callback` 被正确重定向到 `/auth/gitlab/callback` 并保留查询参数。"""
+    response = client.get('/callback?code=abc123&state=login_flow', follow_redirects=False)
+    assert response.status_code == 307
+    location = response.headers['location']
+    assert location.startswith('/auth/gitlab/callback')
+    assert 'code=abc123' in location
+    assert 'state=login_flow' in location
+
 @patch("httpx.AsyncClient.post")
 @patch("httpx.AsyncClient.get")
 def test_gitlab_callback_new_user(mock_get, mock_post, client, db_session):

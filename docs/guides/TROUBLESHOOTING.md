@@ -278,14 +278,14 @@ The redirect_uri is missing or invalid
 
 1. 检查 GitLab OAuth Application 配置:
    - Redirect URI 必须精确匹配
-   - 格式: `http://localhost:8000/auth/callback`
+Format: `http://localhost:8000/callback`
 
 2. 检查 `.env` 配置:
 
 ```bash
 GITLAB__CLIENT_ID=your_client_id
 GITLAB__CLIENT_SECRET=your_client_secret
-GITLAB__REDIRECT_URI=http://localhost:8000/auth/callback
+GITLAB__REDIRECT_URI=http://localhost:8000/callback
 ```
 
 ---
