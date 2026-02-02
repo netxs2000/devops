@@ -16,12 +16,17 @@ from devops_collector.core import security
 from devops_collector.auth.auth_database import AuthSessionLocal, get_auth_db
 from devops_collector.models.base_models import Location, User
 
+from fastapi.security import OAuth2PasswordBearer
+
 logger = logging.getLogger(__name__)
+
+# 定义一个不强制报错的 OAuth2 方案，用于同时支持 Header 和 Query Token
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login', auto_error=False)
 
 
 async def get_current_user(
     token: Optional[str] = Query(None),
-    auth_header: str = Depends(auth_service.auth_oauth2_scheme),
+    auth_header: Optional[str] = Depends(optional_oauth2_scheme),
     db: Session = Depends(get_auth_db)
 ) -> User:
     """获取并校验当前已登录用户。
@@ -59,10 +64,15 @@ def RoleRequired(allowed_roles: List[str]):
         依赖注入函数
     """
     async def role_checker(
-        auth_header: str = Depends(auth_service.auth_oauth2_scheme),
+        token: Optional[str] = Query(None),
+        auth_header: Optional[str] = Depends(optional_oauth2_scheme),
         db: Session = Depends(get_auth_db)
     ) -> User:
-        payload = auth_service.auth_decode_access_token(auth_header)
+        final_token = token or auth_header
+        if not final_token:
+            raise HTTPException(status_code=401, detail='Not authenticated')
+
+        payload = auth_service.auth_decode_access_token(final_token)
         if not payload:
             raise HTTPException(status_code=401, detail='Invalid or expired token')
 
@@ -70,7 +80,7 @@ def RoleRequired(allowed_roles: List[str]):
 
         # 超管直接放行
         if security.ADMIN_ROLE_KEY in user_roles:
-            return auth_service.auth_get_current_user(db, auth_header)
+            return auth_service.auth_get_current_user(db, final_token)
 
         if not any(role in allowed_roles for role in user_roles):
             logger.warning(f"Role Denied: User {payload.get('sub')} lacks required roles {allowed_roles}")
@@ -79,7 +89,7 @@ def RoleRequired(allowed_roles: List[str]):
                 detail=f'Permission Denied: Required roles: {allowed_roles}'
             )
 
-        return auth_service.auth_get_current_user(db, auth_header)
+        return auth_service.auth_get_current_user(db, final_token)
 
     return role_checker
 
@@ -96,10 +106,15 @@ def PermissionRequired(required_perms: List[str]):
         依赖注入函数
     """
     async def permission_checker(
-        auth_header: str = Depends(auth_service.auth_oauth2_scheme),
+        token: Optional[str] = Query(None),
+        auth_header: Optional[str] = Depends(optional_oauth2_scheme),
         db: Session = Depends(get_auth_db)
     ) -> User:
-        payload = auth_service.auth_decode_access_token(auth_header)
+        final_token = token or auth_header
+        if not final_token:
+            raise HTTPException(status_code=401, detail='Not authenticated')
+
+        payload = auth_service.auth_decode_access_token(final_token)
         if not payload:
             raise HTTPException(status_code=401, detail='Invalid or expired token')
 
@@ -108,10 +123,10 @@ def PermissionRequired(required_perms: List[str]):
 
         # 超管通配符放行
         if security.ADMIN_ROLE_KEY in user_roles:
-            return auth_service.auth_get_current_user(db, auth_header)
+            return auth_service.auth_get_current_user(db, final_token)
 
         if security.ADMIN_PERMISSION_WILDCARD in user_perms:
-            return auth_service.auth_get_current_user(db, auth_header)
+            return auth_service.auth_get_current_user(db, final_token)
 
         # 检查是否满足任一权限
         if not any(perm in user_perms for perm in required_perms):
@@ -123,7 +138,7 @@ def PermissionRequired(required_perms: List[str]):
                 detail=f'Permission Denied: Missing permissions {required_perms}'
             )
 
-        return auth_service.auth_get_current_user(db, auth_header)
+        return auth_service.auth_get_current_user(db, final_token)
 
     return permission_checker
 

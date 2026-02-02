@@ -22,7 +22,7 @@ import uuid
 from typing import List, Dict, Any, Optional
 
 from passlib.context import CryptContext
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 # 添加项目根目录到路径
@@ -496,6 +496,46 @@ def validate_role_hierarchy(session: Session) -> bool:
     return True
 
 
+def fix_legacy_schema(session: Session) -> None:
+    """[自动修复] 修正 sys_user_roles 表指向旧表 rbac_roles 的外键约束。"""
+    try:
+        # 检查外键约束是否存在且指向 rbac_roles
+        # 注意: 这是一个针对 PostgreSQL 的特定查询
+        check_sql = text("""
+            SELECT 1
+            FROM information_schema.constraint_column_usage ccu
+            JOIN information_schema.referential_constraints rc
+              ON ccu.constraint_name = rc.constraint_name
+            JOIN information_schema.key_column_usage kcu
+              ON kcu.constraint_name = rc.constraint_name
+            WHERE kcu.table_name = 'sys_user_roles' 
+              AND kcu.column_name = 'role_id'
+              AND ccu.table_name = 'rbac_roles';
+        """)
+        result = session.execute(check_sql).fetchone()
+        
+        if result:
+            logger.info("检测到旧版 Schema 及其外键约束 (sys_user_roles -> rbac_roles)，正在执行热修复...")
+            
+            # 1. 删除指向旧表的约束
+            session.execute(text("ALTER TABLE sys_user_roles DROP CONSTRAINT IF EXISTS sys_user_roles_role_id_fkey"))
+            
+            # 2. 确保新表引用 ID 存在 (通过 metadata.create_all 已保证 sys_role 存在，但需确认有数据)
+            # 此时 init_roles 已执行，sys_role 应该有数据
+            
+            # 3. 添加指向新表的约束
+            session.execute(text("ALTER TABLE sys_user_roles ADD CONSTRAINT sys_user_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES sys_role(id)"))
+            
+            session.commit()
+            logger.info("Schema 热修复成功: 外键约束已重定向至 sys_role 表。")
+        else:
+            logger.debug("Schema 检查通过: 未发现残留的旧版约束。")
+            
+    except Exception as e:
+        logger.warning(f"Schema 热修复尝试失败 (可能不影响由 create_all 建立的新环境): {e}")
+        session.rollback()
+
+
 def main():
     """RBAC 初始化脚本主入口。"""
     logger.info('=' * 60)
@@ -514,6 +554,10 @@ def main():
 
         # Step 2: 初始化角色
         init_roles(session)
+
+        # Step 1.5: [新增] 修复旧版 Schema 残留
+        # 必须在 init_roles 之后执行，因为添加外键需要 sys_role 表已存在
+        fix_legacy_schema(session)
 
         # Step 3: 验证角色继承层级
         if not validate_role_hierarchy(session):
