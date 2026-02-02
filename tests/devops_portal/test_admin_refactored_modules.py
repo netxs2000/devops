@@ -72,7 +72,7 @@ def test_product_lifecycle(admin_client, db_session):
     # 1. Create Product
     payload = {
         "product_id": "PROD-001",
-        "product_code": "PROD-001",  # Added required field
+
         "product_name": "Core Banking",
         "category": "CORE",
         "lifecycle_status": "ACTIVE",

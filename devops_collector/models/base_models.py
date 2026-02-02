@@ -292,7 +292,6 @@ class Product(Base, TimestampMixin, SCDMixin):
     """
     __tablename__ = 'mdm_product'
     product_id = Column(String(100), primary_key=True, comment='产品唯一标识')
-    product_code = Column(String(25), nullable=False, index=True, comment='产品编码')
     product_name = Column(String(255), nullable=False, comment='产品名称')
     product_description = Column(Text, nullable=False, comment='产品描述')
     category = Column(String(100), comment='产品分类 (平台/应用/组件)')
@@ -324,7 +323,7 @@ class Product(Base, TimestampMixin, SCDMixin):
     
     def __repr__(self) -> str:
         """返回产品的字符串表示。"""
-        return f"<Product(code='{self.product_code}', name='{self.product_name}', version={self.sync_version})>"
+        return f"<Product(id='{self.product_id}', name='{self.product_name}', version={self.sync_version})>"
 
 class ProjectProductRelation(Base, TimestampMixin):
     """项目与产品的关联权重表。"""

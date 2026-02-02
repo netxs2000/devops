@@ -32,7 +32,7 @@ def test_list_business_projects(authenticated_client, db_session):
     )
     product = Product(
         product_id=prod_id,
-        product_code=generate_id("P"),
+
         product_name="Core Product",
         product_description="Desc",
         is_current=True,
@@ -101,7 +101,7 @@ async def test_submit_bug(authenticated_client, db_session, mock_gitlab_client):
     )
     product = Product(
         product_id=product_id,
-        product_code=generate_id("PB"),
+
         product_name="Product Bug",
         product_description="Desc",
         is_current=True,
@@ -153,7 +153,7 @@ async def test_submit_requirement(authenticated_client, db_session, mock_gitlab_
     )
     product = Product(
         product_id=product_id,
-        product_code=generate_id("PR"),
+
         product_name="Product Req",
         product_description="Desc",
         is_current=True,

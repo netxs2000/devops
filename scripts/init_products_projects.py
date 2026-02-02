@@ -188,7 +188,7 @@ def init_products(session: Session) -> Dict[str, str]:
         if not product:
             product = Product(
                 product_id=prod_id,
-                product_code=prod_id.replace('PRD-', 'P'),
+
                 product_name=name,
                 product_description=f"{name} 业务产品线",
                 owner_team_id=org_id,

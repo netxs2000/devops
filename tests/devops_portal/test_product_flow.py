@@ -42,7 +42,7 @@ def test_product_management_flow(client, db_session):
     # 1. 创建产品
     product_data = {
         "product_id": "P-BIZ-01",
-        "product_code": "BIZ_CORE",
+
         "product_name": "Business Core Platform",
         "product_description": "Core platform for business services",
         "category": "Core",

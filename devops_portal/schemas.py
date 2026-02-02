@@ -300,7 +300,6 @@ class ProductView(BaseModel):
     """产品视图模型"""
     model_config = ConfigDict(from_attributes=True)
     product_id: str
-    product_code: str
     product_name: str
     product_description: str
     category: Optional[str] = None
@@ -309,7 +308,6 @@ class ProductView(BaseModel):
 class ProductCreate(BaseModel):
     """创建产品的请求模型"""
     product_id: str
-    product_code: str
     product_name: str
     product_description: str
     category: Optional[str] = None

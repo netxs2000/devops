@@ -87,7 +87,7 @@ def run_integration_test():
         assert len(saved_user.requirements) == 1
         print('  - Plugin, Test Management and Cross-model bidirectional relations verified.')
         print('Scenario 4: JSON Data Integrity & Product Relations...')
-        test_product = Product(product_id='PROD_01', product_name='Cloud Platform', product_code='CP01', product_description='Desc', version_schema='1.0', owner_team_id='ORG_ROOT', product_manager_id=user_uuid)
+        test_product = Product(product_id='PROD_01', product_name='Cloud Platform', product_description='Desc', version_schema='1.0', owner_team_id='ORG_ROOT', product_manager_id=user_uuid)
         session.add(test_product)
         session.commit()
         saved_product = session.query(Product).filter_by(product_name='Cloud Platform').one()

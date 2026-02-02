@@ -100,7 +100,7 @@ def init_products():
             if not existing:
                 product = Product(
                     product_id=p_id,
-                    product_code=p_id,
+
                     product_name=p_name,
                     product_description=f"华青 {p_name} 核心产品",
                     category='Core Product',

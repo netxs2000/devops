@@ -1,6 +1,6 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-02-01 17:51:32  
+> **生成时间**: 2026-02-02 10:45:12  
 > **版本**: v2.2 (企业级标准版)  
 > **状态**: 有效 (Active)
 
@@ -603,7 +603,6 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `product_id` | String(100) | PK | 否 | - | 产品唯一标识 |
-| `product_code` | String(25) | INDEX | 否 | - | 产品编码 |
 | `product_name` | String(255) | - | 否 | - | 产品名称 |
 | `product_description` | Text | - | 否 | - | 产品描述 |
 | `category` | String(100) | - | 是 | - | 产品分类 (平台/应用/组件) |
@@ -619,6 +618,8 @@
 | `dev_lead_id` | UUID | FK | 是 | - | 开发负责人ID |
 | `qa_lead_id` | UUID | FK | 是 | - | 测试负责人ID |
 | `release_lead_id` | UUID | FK | 是 | - | 发布负责人ID |
+| `parent_product_id` | String(100) | FK | 是 | - | 上级产品ID |
+| `node_type` | String(20) | - | 是 | APP | 节点类型 (LINE=产品线 / APP=应用) |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `sync_version` | Integer | - | 否 | 1 | - |
@@ -629,12 +630,14 @@
 
 #### 关系映射
 
+- **parent**: many-to-one -> `Product`
 - **owner_team**: many-to-one -> `Organization`
 - **product_manager**: many-to-one -> `User`
 - **dev_lead**: many-to-one -> `User`
 - **qa_lead**: many-to-one -> `User`
 - **release_lead**: many-to-one -> `User`
 - **project_relations**: one-to-many -> `ProjectProductRelation`
+- **children**: one-to-many -> `Product`
 
 ---
 

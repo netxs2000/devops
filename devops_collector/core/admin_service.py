@@ -122,7 +122,6 @@ class AdminService:
         """创建新产品。"""
         new_product = Product(
             product_id=data.product_id,
-            product_code=data.product_code,
             product_name=data.product_name,
             product_description=data.product_description,
             category=data.category,
@@ -327,13 +326,13 @@ class AdminService:
         
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['product_id', 'product_code', 'product_name', 'node_type', 'parent_product_id', 
+        writer.writerow(['product_id', 'product_name', 'node_type', 'parent_product_id', 
                          'category', 'version_schema', 'owner_team_id', 'pm_email'])
         
         for p in products:
             pm_email = p.product_manager.primary_email if p.product_manager else ''
             writer.writerow([
-                p.product_id, p.product_code, p.product_name, p.node_type, p.parent_product_id,
+                p.product_id, p.product_name, p.node_type, p.parent_product_id,
                 p.category, p.version_schema, p.owner_team_id, pm_email
             ])
         return output.getvalue()
@@ -373,7 +372,7 @@ class AdminService:
                         pm_uid = user_map.get(pm_email).global_user_id if pm_email and pm_email in user_map else None
                         
                         if not product:
-                            product = Product(product_id=pid, product_code=row.get('product_code', pid))
+                            product = Product(product_id=pid)
                             self.session.add(product)
                         
                         product.product_name = name

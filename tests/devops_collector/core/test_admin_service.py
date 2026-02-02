@@ -13,7 +13,7 @@ def test_create_product(admin_service, db_session):
     """单元测试：验证产品主数据创建控制。"""
     payload = schemas.ProductCreate(
         product_id="PD-001",
-        product_code="MOBILE_APP",
+
         product_name="Mobile Application",
         product_description="Test Description",
         category="Software"
@@ -43,7 +43,7 @@ def test_link_product_to_project(admin_service, db_session):
     product = Product(
         product_id="PROD-001", 
         product_name="Test Product", 
-        product_code="P1",
+
         product_description="Desc", # Required
         version_schema="semver" # Required
     )
