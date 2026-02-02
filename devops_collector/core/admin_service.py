@@ -317,3 +317,155 @@ class AdminService:
 
         self.session.commit()
         return summary
+
+    def export_products(self) -> str:
+        """导出所有产品数据为 CSV（包含层级与负责人映射）。"""
+        products = self.session.query(Product).options(
+            joinedload(Product.product_manager),
+            joinedload(Product.parent)
+        ).all()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['product_id', 'product_code', 'product_name', 'node_type', 'parent_product_id', 
+                         'category', 'version_schema', 'owner_team_id', 'pm_email'])
+        
+        for p in products:
+            pm_email = p.product_manager.primary_email if p.product_manager else ''
+            writer.writerow([
+                p.product_id, p.product_code, p.product_name, p.node_type, p.parent_product_id,
+                p.category, p.version_schema, p.owner_team_id, pm_email
+            ])
+        return output.getvalue()
+
+    def import_products(self, csv_content: str) -> schemas.ImportSummary:
+        """从 CSV 导入产品树。支持两阶段提交以解决层级依赖。"""
+        f = io.StringIO(csv_content)
+        reader = list(csv.DictReader(f))
+        summary = schemas.ImportSummary(total_processed=0, success_count=0, failure_count=0)
+        
+        # 阶段1：先创建所有节点（暂不设 parent_id），确保 ID 存在
+        # 阶段2：更新 parent_id 关系
+        
+        # 预加载所有用户邮箱映射以减少查询
+        user_map = {u.primary_email: u for u in self.session.query(User).filter(User.is_current == True).all()}
+        
+        for phase in [1, 2]:
+            for row in reader:
+                if phase == 1:
+                    summary.total_processed += 1
+                    
+                pid = row.get('product_id')
+                name = row.get('product_name')
+                
+                if not pid or not name:
+                    if phase == 1:
+                        summary.failure_count += 1
+                        summary.errors.append({"row": summary.total_processed, "error": "Missing product_id or product_name"})
+                    continue
+
+                try:
+                    product = self.session.query(Product).filter(Product.product_id == pid).first()
+                    
+                    if phase == 1:
+                        # 基础信息 Upsert
+                        pm_email = row.get('pm_email')
+                        pm_uid = user_map.get(pm_email).global_user_id if pm_email and pm_email in user_map else None
+                        
+                        if not product:
+                            product = Product(product_id=pid, product_code=row.get('product_code', pid))
+                            self.session.add(product)
+                        
+                        product.product_name = name
+                        product.node_type = row.get('node_type', 'APP')
+                        product.category = row.get('category')
+                        product.version_schema = row.get('version_schema', 'SemVer')
+                        product.owner_team_id = row.get('owner_team_id')
+                        product.product_manager_id = pm_uid
+                        product.updated_at = datetime.now(timezone.utc)
+                        
+                    elif phase == 2 and product:
+                        # 关系链接
+                        parent_id = row.get('parent_product_id')
+                        if parent_id:
+                            # 校验父节点是否存在
+                            if self.session.query(Product).filter(Product.product_id == parent_id).count() > 0:
+                                product.parent_product_id = parent_id
+                
+                except Exception as e:
+                    if phase == 1:
+                        summary.failure_count += 1
+                        summary.errors.append({"row": summary.total_processed, "error": str(e)})
+
+            # 阶段提交
+            self.session.flush()
+        
+        self.session.commit()
+        # 修正计数逻辑：phase 2 不累计
+        summary.success_count = summary.total_processed - summary.failure_count
+        return summary
+
+    def export_product_mappings(self) -> str:
+        """导出产品-项目关联矩阵。"""
+        relations = self.session.query(ProjectProductRelation).options(
+            joinedload(ProjectProductRelation.project),
+            joinedload(ProjectProductRelation.product)
+        ).all()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['project_id', 'project_name', 'product_id', 'product_name', 'relation_type', 'allocation_ratio'])
+        
+        for r in relations:
+            writer.writerow([
+                r.project_id, 
+                r.project.project_name if r.project else 'Unknown',
+                r.product_id, 
+                r.product.product_name if r.product else 'Unknown',
+                r.relation_type, 
+                r.allocation_ratio
+            ])
+        return output.getvalue()
+
+    def import_product_mappings(self, csv_content: str) -> schemas.ImportSummary:
+        """从 CSV 导入项目-产品关联。"""
+        f = io.StringIO(csv_content)
+        reader = csv.DictReader(f)
+        summary = schemas.ImportSummary(total_processed=0, success_count=0, failure_count=0)
+        
+        for row in reader:
+            summary.total_processed += 1
+            proj_id = row.get('project_id')
+            prod_id = row.get('product_id')
+            
+            if not proj_id or not prod_id:
+                summary.failure_count += 1
+                continue
+                
+            try:
+                # 校验实体存在性
+                project = self.session.query(ProjectMaster).filter(ProjectMaster.project_id == proj_id).first()
+                if not project:
+                    raise ValueError(f"Project {proj_id} not found")
+                    
+                # 查找或创建关联
+                rel = self.session.query(ProjectProductRelation).filter(
+                    ProjectProductRelation.project_id == proj_id,
+                    ProjectProductRelation.product_id == prod_id
+                ).first()
+                
+                if not rel:
+                    rel = ProjectProductRelation(project_id=proj_id, product_id=prod_id)
+                    self.session.add(rel)
+                
+                rel.relation_type = row.get('relation_type', 'PRIMARY')
+                rel.allocation_ratio = float(row.get('allocation_ratio', 1.0))
+                rel.org_id = project.org_id  # 继承项目组织
+                
+                summary.success_count += 1
+            except Exception as e:
+                summary.failure_count += 1
+                summary.errors.append({"row": summary.total_processed, "error": str(e)})
+
+        self.session.commit()
+        return summary

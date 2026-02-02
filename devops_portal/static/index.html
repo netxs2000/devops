@@ -478,14 +478,28 @@
 
                     <div class="adm-grid-equal-2-cols">
                         <div class="adm-table-container">
-                            <h4 class="adm-section-title">01. 产品体系矩阵 (Cards)</h4>
+                            <div class="u-flex u-flex-between u-align-center">
+                                <h4 class="adm-section-title">01. 产品体系矩阵 (Cards)</h4>
+                                <div class="u-flex u-gap-10">
+                                    <button class="btn-ghost btn--small js-btn-import-products">📥 导入</button>
+                                    <input type="file" class="u-hide js-product-import-file" accept=".csv">
+                                    <button class="btn-ghost btn--small js-btn-export-products">📤 导出</button>
+                                </div>
+                            </div>
                             <div class="adm-cards-grid u-mt-16 js-products-grid">
                                 <!-- <adm-product-card> components injected here -->
                             </div>
                         </div>
 
                         <div class="adm-table-container">
-                            <h4 class="adm-section-title">02. 产品-项目关联映射</h4>
+                            <div class="u-flex u-flex-between u-align-center">
+                                <h4 class="adm-section-title">02. 产品-项目关联映射</h4>
+                                <div class="u-flex u-gap-10">
+                                    <button class="btn-ghost btn--small js-btn-import-mappings">📥 导入</button>
+                                    <input type="file" class="u-hide js-mapping-import-file" accept=".csv">
+                                    <button class="btn-ghost btn--small js-btn-export-mappings">📤 导出</button>
+                                </div>
+                            </div>
                             <div class="adm-form-group-compact">
                                 <p class="adm-form-label-small">建立关联绑定：</p>
                                 <div class="u-flex u-gap-10">

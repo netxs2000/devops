@@ -307,8 +307,14 @@ class Product(Base, TimestampMixin, SCDMixin):
     product_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='产品经理ID')
     dev_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='开发负责人ID')
     qa_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='测试负责人ID')
+    qa_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='测试负责人ID')
     release_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='发布负责人ID')
+    
+    # [新增] 产品线层级支持 (Scheme A)
+    parent_product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True, comment='上级产品ID')
+    node_type = Column(String(20), default='APP', comment='节点类型 (LINE=产品线 / APP=应用)')
 
+    parent = relationship('Product', remote_side=[product_id], backref=backref('children', cascade='all'))
     owner_team = relationship('Organization', back_populates='products')
     product_manager = relationship('User', foreign_keys=[product_manager_id], back_populates='managed_products_as_pm')
     dev_lead = relationship('User', foreign_keys=[dev_lead_id], back_populates='managed_products_as_dev', overlaps="managed_products_as_dev")

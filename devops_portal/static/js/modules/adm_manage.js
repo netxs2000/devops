@@ -65,11 +65,16 @@ const AdmManageHandler = {
                 this.loadApprovals();
             }
 
-            // 6. 导入导出按钮触发
             if (target.closest('.js-btn-import-users')) document.querySelector('.js-user-import-file')?.click();
             if (target.closest('.js-btn-import-orgs')) document.querySelector('.js-org-import-file')?.click();
+            if (target.closest('.js-btn-import-products')) document.querySelector('.js-product-import-file')?.click();
+            if (target.closest('.js-btn-import-mappings')) document.querySelector('.js-mapping-import-file')?.click();
+
             if (target.closest('.js-btn-export-users')) this.handleExportUsers();
             if (target.closest('.js-btn-export-orgs')) this.handleExportOrgs();
+            if (target.closest('.js-btn-export-products')) this.handleExportProducts();
+            if (target.closest('.js-btn-export-mappings')) this.handleExportMappings();
+
             if (target.closest('.js-btn-create-org')) this.openOrgModal();
         });
 
@@ -100,6 +105,21 @@ const AdmManageHandler = {
             UI.showToast("架构同步失败", "error");
         } finally {
             UI.toggleLoading("", false);
+            this.initProductImportView();
+        }
+    },
+
+    initProductImportView() {
+        const pInput = document.querySelector('.js-product-import-file');
+        const mInput = document.querySelector('.js-mapping-import-file');
+
+        if (pInput && !pInput.dataset.bound) {
+            pInput.addEventListener('change', (e) => this.handleProductImport(e));
+            pInput.dataset.bound = 'true';
+        }
+        if (mInput && !mInput.dataset.bound) {
+            mInput.addEventListener('change', (e) => this.handleMappingImport(e));
+            mInput.dataset.bound = 'true';
         }
     },
 
@@ -517,6 +537,50 @@ const AdmManageHandler = {
     handleExportOrgs() {
         const token = localStorage.getItem('sd_token');
         window.open(`/admin/export/organizations?token=${token}`, '_blank');
+    },
+
+    handleExportProducts() {
+        const token = localStorage.getItem('sd_token');
+        window.open(`/admin/export/products?token=${token}`, '_blank');
+    },
+
+    handleExportMappings() {
+        const token = localStorage.getItem('sd_token');
+        window.open(`/admin/export/product-mappings?token=${token}`, '_blank');
+    },
+
+    async handleProductImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        UI.toggleLoading("正在导入产品数据...", true);
+        try {
+            const summary = await AdmService.importProducts(file);
+            UI.showToast(`导入成功: ${summary.success_count}, 失败: ${summary.failure_count}`, summary.failure_count > 0 ? 'warning' : 'success');
+            this.loadProducts();
+        } catch (err) {
+            UI.showToast(err.message || "产品导入失败", "error");
+        } finally {
+            UI.toggleLoading("", false);
+            e.target.value = '';
+        }
+    },
+
+    async handleMappingImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        UI.toggleLoading("正在导入映射关系...", true);
+        try {
+            const summary = await AdmService.importProductMappings(file);
+            UI.showToast(`导入成功: ${summary.success_count}, 失败: ${summary.failure_count}`, summary.failure_count > 0 ? 'warning' : 'success');
+            this.loadProducts();
+        } catch (err) {
+            UI.showToast(err.message || "映射导入失败", "error");
+        } finally {
+            UI.toggleLoading("", false);
+            e.target.value = '';
+        }
     }
 };
 

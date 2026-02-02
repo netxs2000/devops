@@ -129,5 +129,23 @@ export const AdmService = {
         const formData = new FormData();
         formData.append('file', file);
         return await Api.upload('/admin/import/organizations', formData);
+    },
+
+    /**
+     * 导入产品
+     */
+    async importProducts(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return await Api.upload('/admin/import/products', formData);
+    },
+
+    /**
+     * 导入产品关联
+     */
+    async importProductMappings(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return await Api.upload('/admin/import/product-mappings', formData);
     }
 };

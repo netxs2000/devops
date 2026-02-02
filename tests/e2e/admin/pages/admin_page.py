@@ -20,6 +20,8 @@ class AdminPage(BasePage):
         self.org_level_select = ".js-org-level-select"
         self.user_table = "#adm-users-view table"
         self.org_table = "#adm-orgs-view table"
+        self.btn_import_products = ".js-product-import-file"  # The input element
+        self.btn_import_mappings = ".js-mapping-import-file"  # The input element
 
     def wait_for_sidebar(self):
         """等待侧边栏加载完成"""
@@ -69,3 +71,24 @@ class AdminPage(BasePage):
     def get_org_list_count(self) -> int:
         """获取组织列表行数"""
         return self.page.locator(f"{self.org_table} tbody tr").count()
+
+    def navigate_to_products(self):
+        """导航到产品体系管理"""
+        self.click_sidebar_link("产品体系管理")
+        expect(self.page.locator("#adm-products-view")).to_be_visible()
+        # Wait for data loading to complete to ensure event listeners are bound
+        expect(self.page.locator("#sys-loading-overlay")).to_be_hidden()
+
+    def upload_products(self, file_path: str):
+        """上传产品 CSV"""
+        with self.page.expect_file_chooser() as fc_info:
+            self.page.click(".js-btn-import-products")
+        file_chooser = fc_info.value
+        file_chooser.set_files(file_path)
+
+    def upload_mappings(self, file_path: str):
+        """上传产品映射 CSV"""
+        with self.page.expect_file_chooser() as fc_info:
+            self.page.click(".js-btn-import-mappings")
+        file_chooser = fc_info.value
+        file_chooser.set_files(file_path)

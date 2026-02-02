@@ -395,3 +395,52 @@ async def list_organizations(db: Session=Depends(get_auth_db)):
     """获取组织机构列表。"""
     orgs = db.query(Organization).filter(Organization.is_current == True).all()
     return [{'org_id': o.org_id, 'org_name': o.org_name} for o in orgs]
+
+
+# --- Product Import/Export ---
+
+@router.get('/export/products')
+async def export_products(
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """导出产品数据为 CSV。"""
+    csv_data = service.export_products()
+    return StreamingResponse(
+        io.BytesIO(csv_data.encode('utf-8-sig')),
+        media_type='text/csv',
+        headers={"Content-Disposition": "attachment; filename=products_export.csv"}
+    )
+
+@router.post('/import/products', response_model=ImportSummary)
+async def import_products(
+    file: UploadFile = File(...),
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """从 CSV 导入产品数据 (支持层级)。"""
+    content = await file.read()
+    return service.import_products(content.decode('utf-8'))
+
+@router.get('/export/product-mappings')
+async def export_product_mappings(
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """导出产品-项目关联矩阵为 CSV。"""
+    csv_data = service.export_product_mappings()
+    return StreamingResponse(
+        io.BytesIO(csv_data.encode('utf-8-sig')),
+        media_type='text/csv',
+        headers={"Content-Disposition": "attachment; filename=product_mappings_export.csv"}
+    )
+
+@router.post('/import/product-mappings', response_model=ImportSummary)
+async def import_product_mappings(
+    file: UploadFile = File(...),
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """从 CSV 导入产品-项目关联矩阵。"""
+    content = await file.read()
+    return service.import_product_mappings(content.decode('utf-8'))
