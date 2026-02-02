@@ -66,7 +66,7 @@ lock: ## [工具] 将 pyproject.toml 的依赖锁定到 requirements.txt
 package: ## [本地构建] 构建并打包镜像为 tar 文件 (devops-platform.tar)
 	@echo "$(GREEN)Building Docker images...$(RESET)"
 	docker build -t devops-platform:latest .
-	# docker build -t devops-platform-datahub:latest datahub/
+# docker build -t devops-platform-datahub:latest datahub/
 	@echo "$(GREEN)Saving images to devops-platform.tar...$(RESET)"
 	docker save -o devops-platform.tar devops-platform:latest
 	@echo "$(CYAN)Package created: devops-platform.tar$(RESET)"
@@ -82,7 +82,7 @@ endif
 	@echo "$(GREEN)Starting Offline Deployment...$(RESET)"
 	$(PROD_CMD) down --remove-orphans
 	@echo "$(GREEN)Starting services...$(RESET)"
-	# 注意：这里不执行 build，直接启动，依赖已加载的镜像
+# 注意：这里不执行 build，直接启动，依赖已加载的镜像
 	$(PROD_CMD) up -d --wait --no-build
 	@echo "$(GREEN)Initializing system data...$(RESET)"
 	$(PROD_CMD) exec -T api python -m devops_collector.utils.schema_sync
