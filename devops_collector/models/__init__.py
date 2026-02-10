@@ -20,6 +20,7 @@ from .base_models import (
 )
 from .dependency import DependencyScan, LicenseRiskRule, Dependency, DependencyCVE
 from .test_management import GTMTestCase, GTMTestCaseIssueLink, GTMRequirement, GTMTestExecutionRecord
+from .service_desk import ServiceDeskTicket
 
 # 核心插件模型导入 (用于模型注册)
 try:
@@ -48,7 +49,8 @@ __all__ = [
     'SysRole', 'SysMenu', 'SysRoleMenu', 'SysRoleDept', 'OwnableMixin',
     'UserRole', 'LaborRateConfig', 'CostCode', 'ProjectProductRelation',
     'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE',
-    'GTMTestCase', 'GTMTestCaseIssueLink', 'GTMRequirement', 'GTMTestExecutionRecord'
+    'GTMTestCase', 'GTMTestCaseIssueLink', 'GTMRequirement', 'GTMTestExecutionRecord',
+    'ServiceDeskTicket'
 ]
 
 from . import events

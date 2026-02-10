@@ -27,7 +27,9 @@ class ServiceDeskService:
             description: str,
             issue_type: str,
             requester: Any,
-            attachments: List[str] = None
+            attachments: List[str] = None,
+            bug_category: str = None,
+            req_type: str = None
     ) -> Optional[ServiceDeskTicket]:
         """创建工单（同步到 GitLab Issue）。
         
@@ -39,6 +41,8 @@ class ServiceDeskService:
             issue_type: 类型 (bug/requirement)。
             requester: 请求用户对象。
             attachments: 附件列表。
+            bug_category: 缺陷分类。
+            req_type: 需求类型。
             
         Returns:
             ServiceDeskTicket: 创建成功的工单对象，失败返回 None。
@@ -54,10 +58,16 @@ class ServiceDeskService:
             if attachments:
                 full_description += "\n\n**Attachments**:\n" + "\n".join(attachments)
 
+            labels = f'type::{issue_type},service-desk'
+            if bug_category:
+                labels += f',bug-category::{bug_category}'
+            if req_type:
+                labels += f',requirement-type::{req_type}'
+
             issue_data = {
                 'title': title,
                 'description': full_description,
-                'labels': f'type::{issue_type},service-desk'
+                'labels': labels
             }
             gitlab_issue = self.client.create_issue(project_id, issue_data)
             
@@ -73,6 +83,8 @@ class ServiceDeskService:
                 title=title,
                 description=description,
                 issue_type=issue_type,
+                bug_category=bug_category,
+                req_type=req_type,
                 status='opened',
                 requester_id=requester.global_user_id,
                 requester_email=requester.primary_email,

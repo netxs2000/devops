@@ -81,9 +81,9 @@ class SdRequestForm extends HTMLElement {
                 </div>
                 <div class="body">
                     <div class="form-group">
-                        <label class="label required">涉及业务系统</label>
+                        <label class="label required">所属产品</label>
                         <select class="select" id="product_id" required>
-                            <option value="" disabled selected>请选择系统...</option>
+                            <option value="" disabled selected>请选择产品...</option>
                             ${this.state.products.map(p =>
             `<option value="${p.id}">${p.name}</option>`
         ).join('')}
@@ -105,6 +105,19 @@ class SdRequestForm extends HTMLElement {
                             </select>
                         </div>
                         <div class="form-group">
+                            <label class="label required">缺陷类型</label>
+                            <select class="select" id="bug_category">
+                                <option value="code-error" selected>代码错误 (功能逻辑出错)</option>
+                                <option value="standard">界面优化 (样式/体验问题)</option>
+                                <option value="configuration">配置相关 (环境/参数问题)</option>
+                                <option value="design-defect">设计缺陷 (业务逻辑闭环问题)</option>
+                                <option value="performance">性能问题 (响应慢/卡顿)</option>
+                                <option value="security">安全相关 (漏洞/权限问题)</option>
+                                <option value="deployment">安装部署 (发布/环境问题)</option>
+                                <option value="other">其他</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label class="label">复现步骤</label>
                             <textarea class="textarea" id="steps" placeholder="1. 打开页面...\n2. 点击按钮...\n3. 报错信息..."></textarea>
                         </div>
@@ -113,6 +126,19 @@ class SdRequestForm extends HTMLElement {
                             <textarea class="textarea" id="actual" placeholder="实际看到了什么错误，期望应该是什么结果..." required></textarea>
                         </div>
                     ` : `
+                        <div class="form-group">
+                            <label class="label required">需求类型</label>
+                            <select class="select" id="req_type">
+                                <option value="feature" selected>功能开发 (新增业务逻辑)</option>
+                                <option value="config">配置调整 (参数修改/环境变量)</option>
+                                <option value="interface">接口变更 (API/数据格式)</option>
+                                <option value="performance">性能优化 (速度/容量提升)</option>
+                                <option value="safe">安全加固 (权限/漏洞修复)</option>
+                                <option value="experience">用户体验 (交互改进/美化)</option>
+                                <option value="improve">现有改进 (细节完善/重构)</option>
+                                <option value="other">其他任务</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label class="label required">需求描述</label>
                             <textarea class="textarea" id="description" placeholder="请详细描述业务场景、目标用户及期望的功能行为..." required style="min-height: 200px;"></textarea>
@@ -156,6 +182,7 @@ class SdRequestForm extends HTMLElement {
             const data = this.state.type === 'bug' ? {
                 title: title,
                 severity: this.shadowRoot.getElementById('severity').value,
+                bug_category: this.shadowRoot.getElementById('bug_category').value,
                 environment: 'Production',
                 province: 'nationwide',
                 steps_to_repro: this.shadowRoot.getElementById('steps').value || '-',
@@ -166,7 +193,7 @@ class SdRequestForm extends HTMLElement {
                 title: title,
                 description: this.shadowRoot.getElementById('description').value,
                 priority: 'P2',
-                req_type: 'feature',
+                req_type: this.shadowRoot.getElementById('req_type').value,
                 province: 'nationwide',
                 expected_delivery: this.shadowRoot.getElementById('expected_date').value
             };

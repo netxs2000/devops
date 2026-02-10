@@ -73,6 +73,12 @@ const SysAppHandler = {
         console.log("Sys App Handler Initialized.");
         this.handleOAuthCallback();
         this.bindEvents();
+
+        // 初始化核心模块处理器
+        QaTestCaseHandler.init();
+        QaDefectHandler.init();
+        PmRequirementHandler.init();
+
         await this.initUser();
         NotificationSystem.startSSE();
         this.checkGitLabStatus();
@@ -199,6 +205,12 @@ const SysAppHandler = {
             }
         });
 
+        // 全局导航事件监听 (支持 Web Components 触发)
+        document.addEventListener('navigate', (e) => {
+            const view = e.detail.view;
+            if (view) this.switchView(view);
+        });
+
         // 侧边栏折叠委派
         const sidebar = document.getElementById('sidebar-nav-container');
         if (sidebar) {
@@ -214,6 +226,10 @@ const SysAppHandler = {
         // --- Header & Global Actions ---
         this.bindAction('.js-btn-load-repo', () => {
             QaTestCaseHandler.load();
+        });
+
+        this.bindAction('.js-btn-open-create-modal', () => {
+            QaTestCaseHandler.openModal();
         });
 
         this.bindAction('.js-btn-create-req', () => {
@@ -443,7 +459,7 @@ const SysAppHandler = {
         ];
 
         const viewItems = [
-            'qa-dashboard-view', 'qa-test-results', 'qa-stats-grid', 'qa-execution-view', 'qa-defect-view', 'pm-matrix-view',
+            'qa-dashboard-view', 'qa-case-form-view', 'qa-test-results', 'qa-stats-grid', 'qa-execution-view', 'qa-defect-view', 'pm-matrix-view',
             'pm-requirements-view', 'pm-iteration-view', 'rpt-insights-view', 'sd-support-view',
             'sd-submit-view', 'sd-my-view', 'sd-portal-view', 'sys-decision-hub-view', 'sys-governance-view', 'sys-pulse-view',
             'adm-approvals-view', 'adm-products-view', 'adm-projects-view', 'adm-users-view', 'adm-orgs-view'
@@ -511,6 +527,13 @@ const SysAppHandler = {
                 show('qa-stats-grid', 'grid');
                 QaTestCaseHandler.load();
                 SysUtilsHandler.loadExtraData();
+                break;
+            case 'test-case-form':
+                show('qa-case-form-view');
+                const formView = document.getElementById('qa-case-form-view');
+                if (formView && !formView.querySelector('qa-test-case-form')) {
+                    formView.innerHTML = '<qa-test-case-form></qa-test-case-form>';
+                }
                 break;
             case 'test-execution':
                 show('qa-execution-view');

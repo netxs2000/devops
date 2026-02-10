@@ -45,6 +45,8 @@ class TestCaseCreate(BaseModel):
     pre_conditions: str
     steps: List[Dict[str, str]]
     requirement_iid: Optional[int] = None
+    product_id: Optional[str] = None
+    org_id: Optional[str] = None
 
 class RequirementSummary(BaseModel):
     """需求简要信息"""
@@ -129,6 +131,7 @@ class ServiceDeskBugSubmit(BaseModel):
     steps_to_repro: str
     actual_result: str
     expected_result: str
+    bug_category: Optional[str] = 'code-error'
     attachments: Optional[List[str]] = []
 
 class ServiceDeskRequirementSubmit(BaseModel):

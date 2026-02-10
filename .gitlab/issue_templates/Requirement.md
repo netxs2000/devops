@@ -62,6 +62,7 @@
 ### ⭐ 需求类型 (Requirement Type) - 必选
 请根据需求性质选择类型标签:
 - [ ] `requirement-type::feature` - 功能: 新业务功能需求
+- [ ] `requirement-type::config` - 配置: 系统参数设置、环境变量等变更
 - [ ] `requirement-type::interface` - 接口: 接口定义或变更需求
 - [ ] `requirement-type::performance` - 性能: 系统性能提升需求
 - [ ] `requirement-type::safe` - 安全: 安全性加固及漏洞修复

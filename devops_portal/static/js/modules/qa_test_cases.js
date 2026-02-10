@@ -10,6 +10,7 @@ import SysUtilsHandler from './sys_utils.js';
 // Import CSS for Components (if needed globally) or rely on shadow DOM styles
 import '../components/qa_test_case_card.component.js';
 import '../components/adm_product_selector.component.js';
+import '../components/qa_test_case_form.component.js';
 
 const QaTestCaseHandler = {
     projectId: null,
@@ -171,8 +172,8 @@ const QaTestCaseHandler = {
     // --- Create Modal Logic (Simplified) ---
 
     openModal() {
-        UI.showModal('modalOverlay');
-        this.resetForm();
+        // 跳转至独立的任务录入页面，替代旧的 Modal 弹窗
+        window.location.hash = 'test-case-form';
     },
 
     closeModal() {

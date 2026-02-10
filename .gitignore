@@ -41,6 +41,9 @@ env/
 *.swo
 *~
 .DS_Store
+.claude/
+.cursor/
+.github-copilot/
 
 # Testing
 .tox/
@@ -119,4 +122,4 @@ docs/employees.csv
 docs/gitlab-user.csv
 docs/zentao-user.csv
 *.csv
-devops-platform.tar
+*.tar

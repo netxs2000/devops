@@ -79,8 +79,10 @@ async def create_test_case(
             priority=data.priority, 
             test_type=data.test_type, 
             pre_conditions=data.pre_conditions.split('\n') if isinstance(data.pre_conditions, str) else data.pre_conditions, 
-            steps=[s.dict() for s in data.steps], 
+            steps=data.steps, 
             requirement_id=str(data.requirement_iid) if data.requirement_iid else None, 
+            product_id=data.product_id,
+            org_id=data.org_id,
             creator=current_user.full_name
         )
         return {'status': 'success', 'issue': issue}

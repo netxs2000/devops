@@ -106,7 +106,8 @@ async def submit_bug_via_service_desk(
             description=data.actual_result, 
             issue_type='bug', 
             requester=current_user, 
-            attachments=data.attachments
+            attachments=data.attachments,
+            bug_category=data.bug_category
         )
         if not ticket:
             raise HTTPException(status_code=500, detail='Failed to create ticket')
@@ -152,7 +153,8 @@ async def submit_requirement_via_service_desk(
             description=data.description, 
             issue_type='requirement', 
             requester=current_user, 
-            attachments=data.attachments
+            attachments=data.attachments,
+            req_type=data.req_type
         )
         if not ticket:
             raise HTTPException(status_code=500, detail='Failed to create requirement')

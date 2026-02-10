@@ -1,6 +1,6 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-02-02 10:45:12  
+> **生成时间**: 2026-02-10 23:13:02  
 > **版本**: v2.2 (企业级标准版)  
 > **状态**: 有效 (Active)
 
@@ -26,7 +26,7 @@
 
 ## 数据表清单
 
-本系统共包含 **72 个数据表**，分为以下几个业务域：
+本系统共包含 **73 个数据表**，分为以下几个业务域：
 
 
 ### 核心主数据域
@@ -99,6 +99,7 @@
 - `jira_projects` - JiraProject
 - `jira_sprints` - JiraSprint
 - `license_risk_rules` - LicenseRiskRule
+- `service_desk_tickets` - ServiceDeskTicket
 - `sonar_issues` - SonarIssue
 - `sonar_measures` - SonarMeasure
 - `sonar_projects` - SonarProject
@@ -1902,6 +1903,34 @@
 | `description` | Text | - | 是 | - | - |
 | `policy_notes` | Text | - | 是 | - | - |
 | `is_active` | Boolean | - | 是 | True | - |
+| `created_at` | DateTime | - | 是 | - | - |
+| `updated_at` | DateTime | - | 是 | - | - |
+
+---
+
+### ServiceDeskTicket (`service_desk_tickets`)
+
+**业务描述**: 服务台工单表 (service_desk_tickets)。 实现工单的持久化存储，支持跨部门标签审计与状态追溯。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `id` | Integer | PK | 否 | - | - |
+| `gitlab_project_id` | Integer | INDEX | 否 | - | - |
+| `gitlab_issue_iid` | Integer | - | 否 | - | - |
+| `title` | String(255) | - | 否 | - | - |
+| `description` | Text | - | 是 | - | - |
+| `issue_type` | String(50) | INDEX | 是 | - | - |
+| `status` | String(50) | INDEX | 是 | opened | - |
+| `origin_dept_id` | Integer | INDEX | 是 | - | - |
+| `origin_dept_name` | String(100) | - | 是 | - | - |
+| `target_dept_id` | Integer | INDEX | 是 | - | - |
+| `target_dept_name` | String(100) | - | 是 | - | - |
+| `requester_id` | UUID | FK | 是 | - | - |
+| `requester_email` | String(100) | INDEX | 是 | - | - |
+| `bug_category` | String(50) | - | 是 | - | 缺陷分类 (code-error/configuration/performance等) |
+| `req_type` | String(50) | - | 是 | - | 需求类型 (feature/config/interface等) |
 | `created_at` | DateTime | - | 是 | - | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 

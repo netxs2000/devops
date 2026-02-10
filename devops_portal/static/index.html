@@ -250,6 +250,10 @@
                 </div>
             </div> <!-- End of qa-dashboard-view -->
 
+            <div id="qa-case-form-view" class="u-hide u-h-auto-fill u-p-40 u-scroll-y">
+                <!-- <qa-test-case-form> injected here -->
+            </div>
+
             <div id="qa-execution-view" class="u-hide">
                 <div class="g-glass-panel u-p-40 u-text-center u-bg-primary-light">
                     <div class="u-text-h1 u-mb-20 u-mx-auto u-text-48">⚡</div>
@@ -641,61 +645,82 @@
     </div>
 
     <!-- Create Case Modal -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal">
-            <h2 class="u-mb-20">New Test Case</h2>
-            <div class="u-flex u-gap-20">
+    <div class="modal-overlay u-hide" id="modalOverlay">
+        <div class="modal u-w-700 modal--accent-top">
+            <div class="page-info u-mb-24">
+                <h2 class="u-text-h2">建立测试用例 (New Test Case)</h2>
+                <p class="u-text-dim">请遵循 TestCase.md 规范录入，支持 AI 从需求验收标准自动生成步骤。</p>
+            </div>
+
+            <div class="u-mb-24">
+                <label class="u-label-caps u-mb-10">归属产品/部门 (Scope)</label>
+                <adm-product-selector id="new-case-selector"></adm-product-selector>
+            </div>
+
+            <div class="u-grid-2 u-grid-gap-20">
                 <div class="form-group">
-                    <label>Case Title</label>
-                    <input type="text" id="new_title" placeholder="e.g. User Login Validation" class="u-w-full">
+                    <label class="u-label-caps">用例标题 (Title)</label>
+                    <input type="text" id="new_title" placeholder="例如：验证用户登录功能" class="form-control">
                 </div>
                 <div class="form-group">
-                    <label>Requirement IID</label>
+                    <label class="u-label-caps">关联需求 (Req ID)</label>
                     <div class="u-flex u-gap-10">
-                        <input type="number" id="new_req_iid" placeholder="Associated ID" class="u-flex-1">
-                        <button class="btn-primary u-text-tiny u-p-4 u-bg-accent js-btn-ai-generate"
-                            title="AI Generative Steps from AC">AI Generate</button>
+                        <input type="number" id="new_req_iid" placeholder="GitLab Issue IID"
+                            class="form-control u-flex-1">
+                        <button class="btn-primary u-text-tiny js-btn-ai-generate"
+                            style="padding: 0 12px; background: var(--sys-primary-light); color: var(--sys-primary);"
+                            title="AI 从关联需求的验收标准自动生成执行步骤">
+                            ✨ AI 生成
+                        </button>
                     </div>
                 </div>
             </div>
-            <div class="u-grid-2">
+
+            <div class="u-grid-2 u-grid-gap-20">
                 <div class="form-group">
-                    <label>Priority</label>
+                    <label class="u-label-caps">优先级 (Priority)</label>
                     <select id="new_priority" class="form-control">
-                        <option value="P0">P0 (Critical)</option>
-                        <option value="P1">P1 (High)</option>
-                        <option value="P2" selected>P2 (Normal)</option>
-                        <option value="P3">P3 (Minor)</option>
+                        <option value="P0">P0 - 紧急 (Blocker)</option>
+                        <option value="P1">P1 - 高 (Critical)</option>
+                        <option value="P2" selected>P2 - 中 (Normal)</option>
+                        <option value="P3">P3 - 低 (Minor)</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Test Type</label>
+                    <label class="u-label-caps">测试类型 (Type)</label>
                     <select id="new_type" class="form-control">
-                        <option value="Functional">Functional</option>
-                        <option value="Performance">Performance</option>
-                        <option value="Security">Security</option>
-                        <option value="Regression">Regression</option>
+                        <option value="功能测试" selected>功能测试</option>
+                        <option value="兼容性测试">兼容性测试</option>
+                        <option value="性能测试">性能测试</option>
+                        <option value="安全测试">安全测试</option>
+                        <option value="UI/体验测试">UI/体验测试</option>
+                        <option value="回归测试">回归测试</option>
                     </select>
                 </div>
             </div>
+
             <div class="form-group">
-                <label>Pre-conditions</label>
-                <textarea id="new_pre" class="form-control" rows="2"
-                    placeholder="System must be in state X..."></textarea>
+                <label class="u-label-caps">前置条件 (Pre-conditions)</label>
+                <textarea id="new_pre" class="form-control" rows="2" placeholder="例如：系统已切换至生产环境，且测试账号已激活..."></textarea>
             </div>
-            <div class="form-group">
-                <label>Test Steps</label>
-                <div id="stepsContainer">
-                    <div class="step-row u-flex u-gap-10 u-mb-8">
-                        <input type="text" placeholder="Action" class="form-control step-action u-span-2 u-flex-2">
-                        <input type="text" placeholder="Expected" class="form-control step-expected u-flex-1">
-                    </div>
+
+            <div class="form-group u-mt-10">
+                <label class="u-label-caps u-flex u-flex-between">
+                    执行步骤与预期 (Steps & Expected)
+                    <span class="u-text-tiny u-weight-400 u-text-dim">支持多步骤录入</span>
+                </label>
+                <div id="stepsContainer" class="u-mt-10">
+                    <!-- Steps injected via JS -->
                 </div>
-                <button class="btn-add-step js-btn-add-step">+ Add Step</button>
+                <button class="btn-ghost u-w-full u-p-8 u-mt-10 u-radius-md js-btn-add-step"
+                    style="border: 1px dashed var(--sys-border-strong);">
+                    + 添加新步骤
+                </button>
             </div>
+
             <div class="u-flex u-flex-end u-gap-12 u-mt-32">
-                <button class="btn-primary btn-outline js-btn-close-modal">Cancel</button>
-                <button class="btn-primary js-btn-submit-case">Create Case</button>
+                <button class="btn-ghost js-btn-close-modal">取消</button>
+                <button class="btn-primary js-btn-submit-case">保存并同步至 GitLab</button>
             </div>
         </div>
     </div>

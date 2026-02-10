@@ -139,33 +139,69 @@ class TestManagementService:
 
     async def create_test_case(self, project_id: int, title: str, priority: str, test_type: str, 
                                pre_conditions: List[str], steps: List[Dict], 
-                               requirement_id: Optional[str] = None, creator: str = "System") -> Dict:
-        """在 GitLab 中创建结构化的测试用例 Issue。"""
-        # 构建 Markdown 描述
-        description = f"## 📝 测试用例详情\n\n"
+                               requirement_id: Optional[str] = None, 
+                               product_id: Optional[str] = None,
+                               org_id: Optional[str] = None,
+                               creator: str = "System") -> Dict:
+        # 构建符合 TestCase.md 模板规范的 Markdown 描述
+        description = f"# 🧪 测试用例: {title}\n\n"
+        description += "---\n\n"
+        
+        description += "## ℹ️ 基本信息\n"
         description += f"- **用例优先级**: [{priority}]\n"
         description += f"- **测试类型**: [{test_type}]\n"
         if requirement_id:
             description += f"- **关联需求**: # {requirement_id}\n"
+        if product_id:
+            description += f"- **归属业务产品**: {product_id}\n"
+        if org_id:
+            description += f"- **所属产品线/部门**: {org_id}\n"
         description += f"- **创建者**: {creator}\n\n"
         
-        description += f"## 🛠️ 前置条件\n"
-        for pre in pre_conditions:
-            description += f"- [ ] {pre}\n"
-        description += "\n---\n\n"
+        description += "---\n\n"
+        description += "## 🛠️ 前置条件\n"
+        if pre_conditions:
+            for pre in pre_conditions:
+                description += f"- [ ] {pre}\n"
+        else:
+            description += "- [ ] 无\n"
         
-        description += f"## 🚀 执行步骤\n\n"
+        description += "\n---\n\n"
+        description += "## 📝 测试步骤\n"
         for i, step in enumerate(steps):
             num = i + 1
             action = step.get('action', '无')
-            expected = step.get('expected', '无')
             description += f"{num}. **操作描述**: {action}\n"
-            description += f"   **反馈**: {expected}\n"
+            
+        description += "\n---\n\n"
+        description += "## ✅ 预期结果\n"
+        for i, step in enumerate(steps):
+            num = i + 1
+            expected = step.get('expected', '无')
+            description += f"{num}. **反馈**: {expected}\n"
+
+        description += "\n---\n\n"
+        description += "## 🚀 执行记录 (Execution Result)\n"
+        description += "> **操作说明**: 测试执行完成后，请在下方勾选结论，并**复制对应指令到评论区执行**。\n\n"
+        description += "- [ ] **✅ 通过 (Pass)**: `/label ~\"test-result::passed\" /close` \n"
+        description += "  - (说明: 验证通过，自动标记并关闭该用例)\n"
+        description += "- [ ] **❌ 失败 (Fail)**: `/label ~\"test-result::failed\"` \n"
+        description += "  - (说明: 发现缺陷，请同步创建 Bug 并关联本用例 #)\n"
+        description += "- [ ] **⚠️ 阻塞 (Blocked)**: `/label ~\"test-result::blocked\"` \n"
+        description += "  - (说明: 环境或前置功能问题导致无法执行)\n\n"
+        description += "---\n\n"
+        description += "## 📎 测试附件\n[在此上传或粘贴执行截图]\n\n"
         
+        labels = 'type::test,status::todo'
+        if product_id:
+            labels += f',product::{product_id}'
+        if org_id:
+            labels += f',org::{org_id}'
+
         data = {
             'title': title,
             'description': description,
-            'labels': 'type::test,status::pending'
+            'labels': labels
         }
         
         try:
