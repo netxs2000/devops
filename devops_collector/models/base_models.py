@@ -234,6 +234,10 @@ class UserRole(Base):
     # 指向新的 sys_role 表
     role_id = Column(Integer, ForeignKey('sys_role.id'), primary_key=True, comment='角色ID')
 
+    __table_args__ = (
+        UniqueConstraint('user_id', 'role_id', name='uq_sys_user_role'),
+    )
+
 class IdentityMapping(Base, TimestampMixin):
     """外部身份映射表，连接 MDM 用户与第三方系统账号。"""
     __tablename__ = 'mdm_identity_mappings'
@@ -246,6 +250,12 @@ class IdentityMapping(Base, TimestampMixin):
     mapping_status = Column(String(20), default='VERIFIED', comment='映射状态 (VERIFIED/PENDING/REJECTED)')
     confidence_score = Column(Float, default=1.0, comment='匹配置信度 (0.0-1.0)')
     last_active_at = Column(DateTime(timezone=True), comment='最后活跃时间')
+
+    __table_args__ = (
+        UniqueConstraint('source_system', 'external_user_id', name='uq_source_external_user'),
+        UniqueConstraint('source_system', 'global_user_id', name='uq_source_global_user'),
+    )
+
     user = relationship('User', back_populates='identities')
 
 class Team(Base, TimestampMixin, SCDMixin):
@@ -278,6 +288,11 @@ class TeamMember(Base, TimestampMixin):
     user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=False, comment='成员用户ID')
     role_code = Column(String(50), default='MEMBER', comment='团队角色 (LEADER/MEMBER/CONSULTANT)')
     allocation_ratio = Column(Float, default=1.0, comment='工作量分配比例 (0.0-1.0)')
+    
+    __table_args__ = (
+        UniqueConstraint('team_id', 'user_id', name='uq_team_user_membership'),
+    )
+
     team = relationship('Team', back_populates='members')
     user = relationship('User', back_populates='team_memberships')
 
@@ -643,6 +658,10 @@ class TraceabilityLink(Base, TimestampMixin):
     target_id = Column(String(100), index=True, comment='目标实体ID')
     link_type = Column(String(50), comment='链路类型 (implements/tests/deploys)')
     raw_data = Column(JSON, comment='原始关联数据 (JSON)')
+
+    __table_args__ = (
+        UniqueConstraint('source_id', 'target_id', 'link_type', name='uq_traceability_link'),
+    )
 
 class JenkinsTestExecution(Base, TimestampMixin):
     """Jenkins 测试执行汇总记录表。

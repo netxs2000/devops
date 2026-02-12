@@ -1,41 +1,63 @@
-# Project Contexts
+# DevOps Platform Project Contexts (Development Constitution)
 
-## Overview
-**DevOps Data Application Platform** is an enterprise-grade R&D efficiency data collection and analysis platform. It aggregates data from GitLab, SonarQube, Jenkins, etc., to provide actionable insights.
+## 1. 项目概览 (Overview)
+**DevOps Data Application Platform** 是一套企业级研发效能数据底座。它通过插件化架构采集 GitLab, SonarQube, Jenkins, Zentao 等工具链数据，并利用 dbt 进行指标建模，最终通过 Apple Style 的原生前端界面提供看板与追溯能力。
 
-## Core Architecture
-- **Tech Stack**: Python 3.12 (Backend), PostgreSQL (DB), dbt (Transformation), Native Portal (Vanilla JS/CSS, Apple Style), Streamlit (Internal BI/Reporting).
-- **Component Model**: 
-    - **Backend**: Micro-kernel + Plugin Factory pattern (`devops_collector/plugins/`).
-    - **Frontend**: Component-based architecture using Browser-native Web Components (Shadow DOM).
-- **Data Flow**: Airbyte (Extract) -> PostgreSQL (Load) -> dbt (Transform) -> FastAPI/SQL -> Native Portal / Streamlit.
-- **Dependency Management**: `pyproject.toml` (Source) -> `requirements.txt` (Lock via `pip-compile`).
-- **Deployment**: Docker Compose (Dev/Prod/Offline modes).
+## 2. 核心技术栈 (Technology Stack)
+- **后端 (Backend)**: Python 3.12, FastAPI (Router-Service 模式), SQLAlchemy 2.0 (Typed).
+- **数据层 (Data)**: PostgreSQL 15, dbt (数据转换层), RabbitMQ (任务分发控制).
+- **前端 (Frontend)**: Native JS/CSS (Apple Style Edition), Web Components, 全局变量约束通信.
+- **运维 (DevOps)**: Docker Compose, 多阶段镜像构建, 离线 Tar 包部署支持.
 
-## Key Principles & Rules
-1.  **First Principles**: Analyze problems from the ground up using existing tools.
-2.  **Fact-Based**: Correct errors immediately; assume "Minimum Viable Changes".
-3.  **Environment**: 
-    - Windows (Local Dev) / Linux (Container).
-    - Config via `.env` (12-Factor App).
-    - Cross-platform compatibility (Pathlib, etc.).
-4.  **Naming & Consistency**: 
-    - Align names across DB -> Model -> API -> Frontend.
-    - **Domain Prefixes**: Mandatory application of prefixes (e.g., `qa_` for Test Management, `sd_` for Service Desk).
-    - Strict Google Style for Python.
-    - **Frontend Convention**: Follow `docs/frontend/CONVENTIONS.md` for Native CSS & JS standards (Apple Style).
-5.  **Validation**: `make deploy` triggers full containerized deployment & initialization.
+## 3. 开发环境与兼容性 (Environment)
+- **本地环境**: Windows + Python 3.12 (调试使用 PowerShell `Select-String` 替代 `grep`).
+- **容器环境**: Linux + Python 3.9-3.11 (生产镜像基于 Alpine/Debian Slim).
+- **路径处理**: 强制使用 `pathlib` 确保跨平台路径兼容。
+- **配置一致性**: 所有敏感配置统一通过 `.env` 注入，严禁硬编码 API 地址。
 
-## Directory Structure
-- `devops_collector/`: Core Python application logic and data collection.
-- `devops_portal/`: FastAPI backend and Native Frontend (HTML/JS/CSS).
-    - `static/js/components/`: Web Component implementations.
-    - `static/js/modules/`: Domain-specific business logic (e.g., `qa_test_cases.js`).
-- `dbt_project/`: Data transformation models.
-- `docs/`: Documentation.
-- `scripts/`: Initialization and utility scripts.
-- `Makefile`: Operation automation.
+## 4. 核心架构与插件开发 (Architecture)
+- **Plugin Factory**: 插件位于 `devops_collector/plugins/`，结构必须包含 `client.py` (API 封装), `worker.py` (异步逻辑), `models.py` (表定义)。
+- **Router-Service 模式**: 
+    - **Router 层**: 函数申明必须带 `response_model`，严禁直接返回 SQLAlchemy 对象。命名规则：`{Action}{Resource}Request`。
+    - **Service 层**: 业务逻辑承载者，多表操作强制使用 `with db.begin():` 包裹。
+- **身份治理映射**: 全球唯一 `global_user_id` 连接各系统账号，置信度通过 `IdentityResolver` 算法动态计算。
 
-## Critical Workflows
-- **New Feature**: Plan -> Review -> Task -> Confirm -> Execute.
-- **SSL/Connectivity**: `BaseClient` supports `verify_ssl` config via `GITLAB__VERIFY_SSL`.
+## 5. 数据库开发规范 (Database & SCD)
+- **审计字段**: 业务模型强制包含 `created_at`, `updated_at`, `created_by`, `is_deleted` (软删除)。
+- **数据一致性**: 
+    - 关联表必须定义 `UniqueConstraint` 复合索引防重复。
+    - 指标结果表必须建立针对时间维度的索引。
+- **SCD Type 2**: 组织、产品、团队主数据采用慢变维，追踪“历史时刻的负责人”及“当时的组织归属”。
+
+## 6. 前端设计与组件化 (Frontend Design)
+- **Apple Style 规范**: 严格遵循 `docs/frontend/CONVENTIONS.md`，强制使用 CSS 变量（`--primary`, `--radius`）。
+- **组件工程**: 优先使用 Web Components (Shadow DOM) 实现高内聚组件（如搜索框、卡片）。
+- **通信机制**: 跨组件通信通过 `CustomEvent` 实现，严禁随意污染全局 `window` 命名空间。
+
+## 7. 数据建模与 dbt (Data Transformation)
+- **分层逻辑**: 
+    - `Staging (stg_)`: 1:1 原始映射，仅字段重命名与类型强制。
+    - `Intermediate (int_)`: 跨系统关联与过滤。
+    - `Marts (dim_/fct_)`: 业务指标与维度表，直接对接报表层。
+- **质量哨兵**: 所有模型在 `schema.yml` 必须定义 `unique` 和 `not_null` 测试，关键指标使用 Singular SQL Tests 校验。
+
+## 8. 运维流程与生命周期 (DevOps Ops)
+- **部署模式**: 
+    - `make deploy`: 本地快速验证部署。
+    - `make package`: 生成镜像存档 `devops-platform.tar`。
+    - `make deploy-offline`: 生产/隔离环境一键镜像加载并启动。
+- **健康检查**: 所有容器定义 `healthcheck`，容器间依赖依赖 `service_healthy` 状态。
+
+## 9. 测试与质量门禁 (Testing)
+- **伴生测试**: 新增功能必须同步提交对应的 `pytest` 脚本。
+- **E2E 规范**: 新模块强制使用 Playwright，且必须录制失败时的 Trace (可在 `test-results/` 查看)。
+- **视觉锚定**: 涉及可视化大屏或核心 UI 组件，必要时使用 `expect(page).to_have_screenshot()`。
+
+## 10. 命名全链路对齐 (Naming Alignment)
+- **业务域前缀**: 强制使用 `sd_` (工单), `adm_` (管理), `pm_` (需求), `qa_` (质量), `ops_` (流水线)。
+- **错误码**: 返回 JSON 错误必须包含领域前缀（如 `PM_REQUIREMENT_NOT_FOUND`）。
+
+## 11. AI 辅助开发准则 (AI & Autogen)
+- **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
+- **代码自查**: 提交前使用 `make lint` 确保符合 Google Python Style 且无死循环依赖。
+- **AI 交互**: Agent 在修改核心 `core/` 代码后，必须主动执行相关模块的集成测试。

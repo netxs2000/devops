@@ -7,11 +7,7 @@ FROM docker.m.daocloud.io/library/python:3.11-slim-bookworm AS builder
 
 WORKDIR /app
 
-# 替换为国内镜像源以加速构建
-RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources \
-    || sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
-
-# 安装编译依赖
+# 鉴于已启用 VPN TUN 模式，还原并使用官方源，避免镜像源签名冲突
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -29,11 +25,7 @@ FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
-# 替换为国内镜像源
-RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources \
-    || sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
-
-# 安装运行时系统依赖
+# 还原官方源
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     netcat-openbsd \
