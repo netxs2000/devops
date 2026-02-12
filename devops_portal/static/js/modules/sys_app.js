@@ -4,6 +4,7 @@ import QaDefectHandler from './qa_defects.js';
 import PmRequirementHandler from './pm_requirements.js';
 import SdServiceDeskHandler from './sd_service_desk.js';
 import SDPortalHandler from './sd_portal.js';
+import PmMatrixHandler from './pm_matrix.js';
 import RptOverviewHandler from './rpt_overview.js';
 import SysUtilsHandler from './sys_utils.js';
 import AdmManageHandler from './adm_manage.js';
@@ -77,7 +78,9 @@ const SysAppHandler = {
         // 初始化核心模块处理器
         QaTestCaseHandler.init();
         QaDefectHandler.init();
+        QaDefectHandler.init();
         PmRequirementHandler.init();
+        PmMatrixHandler.init();
 
         await this.initUser();
         NotificationSystem.startSSE();
@@ -485,7 +488,7 @@ const SysAppHandler = {
         }
 
         const headerEl = document.getElementById('sys-header');
-        const headerViews = ['dashboard', 'tests', 'test-cases', 'defects', 'requirements', 'matrix', 'reports'];
+        const headerViews = ['dashboard', 'tests', 'test-cases'];
 
         if (headerEl) {
             if (headerViews.includes(view) || view === 'dashboard') {
@@ -544,7 +547,7 @@ const SysAppHandler = {
                 break;
             case 'requirements':
                 show('pm-requirements-view');
-                PmRequirementHandler.load();
+                PmRequirementHandler.init();
                 break;
             case 'support':
                 show('sd-support-view');

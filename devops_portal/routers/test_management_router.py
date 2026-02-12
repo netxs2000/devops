@@ -64,6 +64,24 @@ async def list_aggregated_test_cases(
         logger.error(f'Failed to fetch aggregated test cases: {e}')
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get('/aggregated/requirements', response_model=List[schemas.TraceabilityMatrixItem])
+async def list_aggregated_requirements(
+    product_id: Optional[str] = None,
+    org_id: Optional[str] = None,
+    current_user=Depends(get_current_user),
+    db: Session=Depends(get_auth_db),
+    service: TestManagementService = Depends(get_test_management_service)
+):
+    """跨项目聚合获取需求及其追溯矩阵信息（支持按产品或部门过滤）。"""
+    if not product_id and not org_id:
+        raise HTTPException(status_code=400, detail="Either product_id or org_id must be provided")
+    
+    try:
+        return await service.get_aggregated_requirements(db, current_user, product_id=product_id, org_id=org_id)
+    except Exception as e:
+        logger.error(f'Failed to fetch aggregated traceability matrix: {e}')
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post('/projects/{project_id}/test-cases')
 async def create_test_case(
     project_id: int, 

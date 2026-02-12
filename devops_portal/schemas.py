@@ -358,3 +358,11 @@ class ImportSummary(BaseModel):
     success_count: int
     failure_count: int
     errors: List[Dict[str, Any]] = []
+
+class TraceabilityMatrixItem(BaseModel):
+    """追溯矩阵行数据模型"""
+    requirement: RequirementSummary
+    test_cases: List[TestCase] = []
+    defects: List[BugDetail] = []
+    merge_requests: List[Dict[str, Any]] = []
+    commits: List[Dict[str, Any]] = []

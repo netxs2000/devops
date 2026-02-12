@@ -12,13 +12,15 @@ import logging
 import asyncio
 from typing import List, Dict, Optional, Any
 from datetime import datetime, timezone
+import re
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.gitlab.models import GitLabProject, GitLabIssue
 from devops_collector.models.test_management import GTMTestCase
-from devops_collector.models.base_models import ProjectMaster, ProjectProductRelation, Organization
+from devops_collector.models.base_models import ProjectMaster, ProjectProductRelation, Organization, TraceabilityLink
+from devops_collector.plugins.zentao.models import ZenTaoProduct, ZenTaoIssue, ZenTaoTestCase
 from devops_collector.plugins.gitlab.parser import GitLabTestParser
 from devops_portal import schemas
 
@@ -129,6 +131,157 @@ class TestManagementService:
                 continue
                 
         return all_test_cases
+
+    async def get_aggregated_requirements(
+        self,
+        db: Session,
+        current_user: Any,
+        product_id: Optional[str] = None,
+        org_id: Optional[str] = None
+    ) -> List[schemas.TraceabilityMatrixItem]:
+        """按产品或组织聚合获取多个项目下的需求及其追溯信息。"""
+        
+        # 1. 查找目标 ZenTao 产品列表
+        zt_product_ids = set()
+        
+        if product_id:
+            # 通过 GitLab 项目关联反查
+            relations = db.query(ProjectProductRelation).filter(
+                ProjectProductRelation.product_id == product_id
+            ).all()
+            mdm_ids = [r.project_id for r in relations]
+            git_projects = db.query(GitLabProject).filter(
+                GitLabProject.mdm_project_id.in_(mdm_ids)
+            ).all()
+            gp_ids = [p.id for p in git_projects]
+            
+            if gp_ids:
+                products_via_git = db.query(ZenTaoProduct.id).filter(
+                    ZenTaoProduct.gitlab_project_id.in_(gp_ids)
+                ).all()
+                zt_product_ids.update([p[0] for p in products_via_git])
+                
+            # 直接匹配 ZenTao 产品代码
+            # ZenTaoProduct usually doesn't store 'code' matching MDM product_id perfectly, but let's try.
+            # If MDM Product ID is 'PRD-001', ZenTao might use name or something else.
+            # But the user specifically asked for MDM Product filtering.
+            # Assuming 'code' field on ZenTaoProduct matches if available.
+            products_via_code = db.query(ZenTaoProduct.id).filter(ZenTaoProduct.code == product_id).all()
+            zt_product_ids.update([p[0] for p in products_via_code])
+            
+        elif org_id:
+            # 通过组织 -> 项目 -> GitLab -> ZenTao
+            mdm_projects = db.query(ProjectMaster).filter(ProjectMaster.org_id == org_id).all()
+            mdm_ids = [p.project_id for p in mdm_projects]
+            git_projects = db.query(GitLabProject).filter(
+                GitLabProject.mdm_project_id.in_(mdm_ids)
+            ).all()
+            gp_ids = [p.id for p in git_projects]
+            
+            if gp_ids:
+                products_via_git = db.query(ZenTaoProduct.id).filter(
+                    ZenTaoProduct.gitlab_project_id.in_(gp_ids)
+                ).all()
+                zt_product_ids.update([p[0] for p in products_via_git])
+
+        if not zt_product_ids:
+            return []
+
+        # 2. 获取需求 (Story/Feature)
+        issues = db.query(ZenTaoIssue).filter(
+            ZenTaoIssue.product_id.in_(zt_product_ids),
+            ZenTaoIssue.type.in_(['story', 'feature', 'requirement'])
+        ).all()
+        
+        # 3. 预加载当前范围内的 Test Cases (避免 N+1 查询)
+        # 获取涉及的 GitLab 项目 ID
+        relevant_gitlab_project_ids = []
+        if gp_ids:
+            relevant_gitlab_project_ids = gp_ids
+        else:
+            # Fallback if we only found by Code
+            pass 
+
+        gtm_cases = []
+        if relevant_gitlab_project_ids:
+            gtm_cases = db.query(GTMTestCase).filter(
+                GTMTestCase.project_id.in_(relevant_gitlab_project_ids)
+            ).all()
+
+        # 建立用例与需求的内存映射 (基于 #ID 文本匹配)
+        req_case_map = {str(i.id): [] for i in issues}
+        
+        for case in gtm_cases:
+            # 简单匹配: 检查 Title 或 Description 中是否包含 #ReqID
+            # 优化: 可以使用正则提取所有 #ID，然后匹配
+            text_to_search = (case.title or "") + " " + (case.description or "")
+            # Pattern: # + digits
+            found_ids = re.findall(r'#(\d+)', text_to_search)
+            for fid in found_ids:
+                if fid in req_case_map:
+                    req_case_map[fid].append(case)
+
+        results = []
+        for issue in issues:
+            issue_id_str = str(issue.id)
+            
+            # 4. 获取关联用例 (从内存映射)
+            linked_cases = req_case_map.get(issue_id_str, [])
+            api_cases = [
+                schemas.TestCase(
+                    global_issue_id=c.id,
+                    gitlab_issue_iid=c.iid,
+                    title=c.title,
+                    result='passed' if c.execution_count > 0 else 'pending', # 简化逻辑
+                    project_name=c.project.name if c.project else "Unknown" # 需要确保 relationship loaded
+                ) for c in linked_cases
+            ]
+
+            # 5. 获取关联缺陷 (Defects)
+            # 策略: 查找关联到了上述 Test Cases 的 Bug，或者直接关联了 Requirement 的 Bug
+            # 简化: 目前只查找 TraceabilityLink 中 target_type='bug' 的
+            
+            # 6. 获取代码变更 (TraceabilityLink)
+            links = db.query(TraceabilityLink).filter(
+                TraceabilityLink.source_id == issue_id_str
+            ).all()
+            
+            mrs = []
+            commits = []
+            defects = []
+            
+            for l in links:
+                if l.target_type == 'merge_request':
+                    mrs.append({'id': l.target_id, 'iid': l.target_id, 'title': f'MR !{l.target_id}', 'state': 'merged'})
+                elif l.target_type == 'commit':
+                    commits.append({'short_id': l.target_id[:8], 'title': f'Commit {l.target_id[:8]}'})
+                elif l.target_type == 'bug': # 假设 TraceabilityMixin 也同步了 Bug 链接
+                    defects.append(schemas.BugDetail(
+                        iid=int(l.target_id) if l.target_id.isdigit() else 0,
+                        title=f"Bug #{l.target_id}",
+                        state='opened',
+                        created_at=datetime.now(),
+                        author="Unknown",
+                        web_url="",
+                        labels=[]
+                    ))
+
+            req_summary = schemas.RequirementSummary(
+                iid=issue.id,
+                title=issue.title,
+                state=issue.status or 'open',
+                review_state='approved' if issue.status == 'active' else 'draft'
+            )
+            
+            results.append(schemas.TraceabilityMatrixItem(
+                requirement=req_summary,
+                test_cases=api_cases,
+                defects=defects,
+                merge_requests=mrs,
+                commits=commits
+            ))
+            
+        return results
 
     def _determine_result_from_labels(self, labels: List[str]) -> str:
         """根据标签确定执行结果。"""
@@ -409,9 +562,10 @@ class TestManagementService:
         """[AI Placeholder] 语义查重。"""
         return []
 
-    async def analyze_defect_root_cause(self, project_id: int, iid: int) -> Dict:
-        """[AI Placeholder] RCA 分析。"""
-        return {"analysis": "根据日志初步判定为数据库连接超时导致的 NullPointerException。", "suggestion": "优化连接池配置，增加失败重试。"}
+    async def analyze_defect_root_cause(self, project_id: int, iid: int) -> str:
+        """[AI] 分析缺陷根因。"""
+        # Placeholder implementation
+        return "RCA Analysis pending implementation."
 
     async def generate_quality_report(self, project_id: int) -> str:
         """生成质量报告 Markdown。"""

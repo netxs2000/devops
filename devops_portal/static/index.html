@@ -250,6 +250,69 @@
                 </div>
             </div> <!-- End of qa-dashboard-view -->
 
+            <!-- Traceability Matrix View -->
+            <div id="pm-matrix-view" class="u-hide u-p-24">
+                <div class="u-flex u-flex-between u-align-center u-mb-24">
+                    <div>
+                        <h2 class="u-text-h2 u-mb-8">全链路追溯矩阵 (RTM)</h2>
+                        <p class="u-text-dim">实时关联 ZenTao 需求、GitLab 用例与代码变更。</p>
+                    </div>
+                </div>
+
+                <!-- Shared Filter Component -->
+                <div class="u-mb-24">
+                    <adm-product-selector id="matrix-product-selector"></adm-product-selector>
+                </div>
+
+                <!-- Matrix Toolbar -->
+                <div class="u-flex u-flex-wrap u-gap-16 u-align-center u-mb-16 g-glass-panel u-p-16">
+                    <!-- 搜索框 -->
+                    <div class="search-input-group" style="width: 300px;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="matrix-search" class="form-control" placeholder="搜索 ID、标题、MR...">
+                    </div>
+
+                    <div class="u-border-l-subtle u-h-24"></div>
+
+                    <!-- 筛选下拉 -->
+                    <select id="matrix-filter-status" class="form-control" style="width: 120px;">
+                        <option value="all">所有状态</option>
+                        <option value="active">🟢 进行中</option>
+                        <option value="draft">⚪ 草稿/待定</option>
+                        <option value="closed">⚫ 已关闭</option>
+                    </select>
+
+                    <select id="matrix-filter-coverage" class="form-control" style="width: 150px;">
+                        <option value="all">所有覆盖率</option>
+                        <option value="missing">⚠️ 无用例 (Risky)</option>
+                        <option value="covered">✅ 已覆盖</option>
+                    </select>
+
+                    <div class="u-ml-auto u-text-dim u-text-small">
+                        显示 <strong id="matrix-count-display">0</strong> 条记录
+                    </div>
+                </div>
+
+                <div class="adm-table-container u-overflow-x-auto">
+                    <table class="adm-data-table js-matrix-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 25%">需求 (Requirement)</th>
+                                <th style="width: 20%">关联用例 (Test Cases)</th>
+                                <th style="width: 20%">关联缺陷 (Defects)</th>
+                                <th style="width: 25%">代码变更 (Code Changes)</th>
+                                <th style="width: 10%">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody class="js-matrix-tbody">
+                            <tr>
+                                <td colspan="5" class="u-text-center u-p-24 u-text-dim">请先选择业务产品或组织架构以加载矩阵...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div id="qa-case-form-view" class="u-hide u-h-auto-fill u-p-40 u-scroll-y">
                 <!-- <qa-test-case-form> injected here -->
             </div>
@@ -284,8 +347,50 @@
                 </div>
             </div>
 
-            <div id="pm-requirements-view" class="u-hide">
-                <div class="stats-grid" id="reqStatsGrid" class="u-mb-20">
+            <div id="pm-requirements-view" class="u-hide u-p-24">
+                <!-- 页面标题区 -->
+                <div class="u-flex u-flex-between u-align-center u-mb-24">
+                    <div>
+                        <h2 class="u-text-h2 u-mb-8">需求管理 (Requirements)</h2>
+                        <p class="u-text-dim">管理需求生命周期，跟踪评审状态与测试覆盖率。</p>
+                    </div>
+                </div>
+
+                <!-- 产品/部门选择器 -->
+                <div class="u-mb-24">
+                    <adm-product-selector id="req-product-selector"></adm-product-selector>
+                </div>
+
+                <!-- 搜索/筛选工具栏 -->
+                <div class="u-flex u-flex-wrap u-gap-16 u-align-center u-mb-16 g-glass-panel u-p-16">
+                    <div class="search-input-group" style="width: 300px;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="req-search" class="form-control" placeholder="搜索 ID、标题...">
+                    </div>
+
+                    <div class="u-border-l-subtle u-h-24"></div>
+
+                    <select id="req-filter-status" class="form-control" style="width: 140px;">
+                        <option value="all">所有状态</option>
+                        <option value="draft">⚪ Draft</option>
+                        <option value="under-review">🟡 Reviewing</option>
+                        <option value="approved">🟢 Approved</option>
+                        <option value="rejected">🔴 Rejected</option>
+                    </select>
+
+                    <select id="req-filter-risk" class="form-control" style="width: 140px;">
+                        <option value="all">所有风险</option>
+                        <option value="at-risk">⚠️ At Risk</option>
+                        <option value="safe">✅ 已覆盖</option>
+                    </select>
+
+                    <div class="u-ml-auto u-text-dim u-text-small">
+                        显示 <strong id="req-count-display">0</strong> 条记录
+                    </div>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="stats-grid u-mb-20" id="reqStatsGrid">
                     <div class="stat-card u-p-24">
                         <span class="stat-title">Requirement Coverage</span>
                         <div class="stat-value u-text-primary" id="req-coverage-rate">0%</div>
@@ -303,8 +408,10 @@
                         <div class="stat-value" id="req-approved-total">0</div>
                     </div>
                 </div>
+
+                <!-- 需求列表 -->
                 <div class="test-list" id="reqResults">
-                    <!-- Requirements for review here -->
+                    <div class="empty-state u-p-24 u-text-dim">请先选择业务产品或组织架构以加载需求列表...</div>
                 </div>
             </div>
 
