@@ -16,8 +16,10 @@ from .base_models import (
     MetricDefinition, SystemRegistry, EntityTopology, Company, Vendor, EpicMaster, 
     ComplianceIssue, CommitMetrics, DailyDevStats, Team, TeamMember, 
     SysRole, SysMenu, SysRoleMenu, SysRoleDept, OwnableMixin,
-    UserRole, LaborRateConfig, CostCode, ProjectProductRelation
+    UserRole, LaborRateConfig, CostCode, ProjectProductRelation,
+    BusinessSystem
 )
+
 from .dependency import DependencyScan, LicenseRiskRule, Dependency, DependencyCVE
 from .test_management import GTMTestCase, GTMTestCaseIssueLink, GTMRequirement, GTMTestExecutionRecord
 from .service_desk import ServiceDeskTicket
@@ -48,6 +50,7 @@ __all__ = [
     'ComplianceIssue', 'CommitMetrics', 'DailyDevStats', 'Team', 'TeamMember', 
     'SysRole', 'SysMenu', 'SysRoleMenu', 'SysRoleDept', 'OwnableMixin',
     'UserRole', 'LaborRateConfig', 'CostCode', 'ProjectProductRelation',
+    'BusinessSystem',
     'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE',
     'GTMTestCase', 'GTMTestCaseIssueLink', 'GTMRequirement', 'GTMTestExecutionRecord',
     'ServiceDeskTicket'

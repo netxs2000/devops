@@ -41,6 +41,9 @@
 - [x] **[P1] 外部映射**：对接 GitLab Group/Project 角色到动态授权引擎。
 - [x] **[P1] 规范更新**：在 `contexts.md` 中记录 CSV 编码强制规范。
 - [x] **[P2] 文档维护**：运行 `make docs` 更新数据字典并清理冗余脚本。
+- [x] **[P2] 基础数据补充**：补全 `docs/locations.csv` 中的所有省份/直辖市/自治区数据 (GB/T 2260, UTF-8-SIG)。
+- [x] **[P1] 目录初始化**：新增 `init_catalog.py`，支持从 CSV 模板初始化系统注册表 (`sys_registry`) 和服务目录 (`services`)。
+- [x] **[P1] 数据治理**：规范化 `docs/mdm_systems_registry.csv` 和 `docs/mdm_services.csv` 模板。
 
 ## 📝 阶段性回顾 (Retrospective)
 - **构建内容**：构建了全套 CSV 导入引擎和动态权限解析器。

@@ -46,6 +46,8 @@ def init_products(session: Session):
     orgs = {o.org_name: o.org_id for o in session.query(Organization).filter_by(is_current=True).all()}
     email_idx, name_idx = build_user_indexes(session)
 
+    # 第一遍：创建产品并构建名称映射 (First Pass: Create Products & Build Map)
+    product_rows = []
     with open(PRD_CSV, mode='r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -53,19 +55,10 @@ def init_products(session: Session):
             if not name: continue
             
             prod_id = row.get('PRODUCT_ID', '').strip()
-            node_type = row.get('节点类型', row.get('node_type', 'APP')).strip().upper()
-            parent_id = row.get('上级产品ID', row.get('parent_product_id', '')).strip()
-            category = row.get('产品分类', row.get('category', '')).strip()
-            
-            # 使用中文表头匹配 (支持邮箱或姓名)
-            pm_val = row.get('产品经理', row.get('pm_email', '')).strip()
-            dev_val = row.get('开发经理', '').strip()
-            qa_val = row.get('测试经理', '').strip()
-            rel_val = row.get('发布经理', '').strip()
-            team_name = row.get('负责团队', row.get('owner_team_id', '')).strip()
-
+            # 自动生成ID逻辑
             final_id = prod_id if prod_id else f"PRD-{uuid.uuid5(uuid.NAMESPACE_DNS, name).hex[:8].upper()}"
             
+            # 创建/更新产品对象
             product = session.query(Product).filter_by(product_name=name).first()
             if not product:
                 product = Product(
@@ -76,28 +69,57 @@ def init_products(session: Session):
                 )
                 session.add(product)
             
-            # 更新属性
-            product.node_type = node_type
-            product.category = category
-            product.parent_product_id = parent_id if parent_id else None
+            # 更新属性 (Update Attributes)
+            product.node_type = row.get('节点类型', row.get('node_type', 'APP')).strip().upper()
+            product.category = row.get('产品分类', row.get('category', '')).strip()
             
-            # 关联团队
+            # 处理关联团队和人员
+            team_name = row.get('负责团队', row.get('owner_team_id', '')).strip()
             if team_name in orgs:
                 product.owner_team_id = orgs[team_name]
             
-            # 关联人员 (邮箱优先，姓名降级)
+            # 人员解析
+            pm_val = row.get('产品经理', row.get('pm_email', '')).strip()
             uid = resolve_user(pm_val, email_idx, name_idx, '产品经理')
             if uid: product.product_manager_id = uid
+            
+            dev_val = row.get('开发经理', '').strip()
             uid = resolve_user(dev_val, email_idx, name_idx, '开发经理')
             if uid: product.dev_lead_id = uid
+            
+            qa_val = row.get('测试经理', '').strip()
             uid = resolve_user(qa_val, email_idx, name_idx, '测试经理')
             if uid: product.qa_lead_id = uid
+            
+            rel_val = row.get('发布经理', '').strip()
             uid = resolve_user(rel_val, email_idx, name_idx, '发布经理')
             if uid: product.release_lead_id = uid
 
             session.flush()
+            # 记录到映射表 (Name -> ID) 和 (ID -> ID)
             prod_map[name] = product.product_id
+            prod_map[product.product_id] = product.product_id
             
+            # 暂存行数据以便第二遍处理父级关系
+            product_rows.append((product, row))
+
+    # 第二遍：解析父级关系 (Second Pass: Resolve Parent Relationships)
+    for product, row in product_rows:
+        parent_ref = row.get('上级产品ID', row.get('parent_product_id', '')).strip()
+        if parent_ref:
+            # 尝试通过 名称 或 ID 查找父级 ID
+            parent_id = prod_map.get(parent_ref)
+            if parent_id:
+                # 防止自引用循环
+                if parent_id != product.product_id:
+                    product.parent_product_id = parent_id
+                else:
+                    logger.warning(f"Product {product.product_name} cannot set itself as parent.")
+            else:
+                 logger.warning(f"Parent product '{parent_ref}' not found for product '{product.product_name}'. Ignoring.")
+        else:
+            product.parent_product_id = None
+
     session.commit()
     return prod_map
 

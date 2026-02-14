@@ -78,8 +78,15 @@ PUR-2026-001,阿里云续费合同,阿里云,VEND-001,500000,2026-01-01,2026-12-
     "docs/revenue_contracts.csv": """合同编号,合同标题,客户名称,总价值,签约日期,所属产品
 REV-2026-001,某大型银行效能提升项目,某大型银行,1200000,2026-01-15,天极DevOps平台""",
 
-    "docs/service_catalog.csv": """服务名称,所属组织,服务分级,描述,负责人邮箱,关联项目路径
-代码托管服务,研发一部,P1,企业级极速代码托管,lisi@tjhq.com,DEVOPS-2026""",
+    "docs/mdm_systems_registry.csv": """system_code,system_name,system_type,env_tag,base_url,api_version,auth_type,is_active,remarks
+gitlab-corp,企业版GitLab,VCS,PROD,https://gitlab.example.com,v4,OAuth2,TRUE,核心代码托管
+jenkins-prod,生产环境Jenkins,CI,PROD,https://jenkins.example.com,,Token,TRUE,生产部署流水线
+sonarqube-corp,代码质量平台,SONAR,PROD,https://sonar.example.com,,Token,TRUE,代码静态分析""",
+
+    "docs/mdm_services.csv": """服务名称,服务分级,负责组织,描述,组件类型,生命周期,所属业务系统代码
+Payment Service,T0,交易中台研发部,核心支付网关,service,production,trade-center
+User Center,T1,用户中心研发部,统一用户认证服务,service,production,user-center
+Log Library,T2,基础架构部,通用日志组件,library,stable,common-libs""",
 
     "docs/zentao-user.csv": """工号,姓名,邮箱,禅道账号
 1001,系统管理员,admin@tjhq.com,admin
