@@ -14,6 +14,7 @@ sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
 from devops_collector.models import Base, User, Organization, OKRObjective, OKRKeyResult
+from scripts.utils import build_user_indexes, resolve_user
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('InitOKR')
@@ -38,12 +39,17 @@ def init_okrs():
             reader = csv.DictReader(f)
             # 记录已处理的 Objective，避免重复创建
             processed_objectives = {}
+            
+            # 预加载用户索引 (邮箱 + 姓名)
+            email_idx, name_idx = build_user_indexes(session)
+            # 同时建立 user_id -> User 对象索引 (用于后续取 global_user_id)
+            all_users_map = {u.global_user_id: u for u in session.query(User).filter_by(is_current=True).all()}
 
             for row in reader:
                 o_title = row['目标标题'].strip()
                 o_desc = row['目标描述'].strip()
                 org_name = row['组织名称'].strip()
-                owner_name = row['负责人姓名'].strip()
+                owner_val = row.get('负责人', row.get('负责人邮箱', '')).strip()
                 period = row['周期'].strip()
                 kr_title = row['关键结果标题'].strip()
                 target = float(row['目标值'])
@@ -52,10 +58,10 @@ def init_okrs():
 
                 # 1. 查找组织和负责人
                 org = session.query(Organization).filter(Organization.org_name == org_name).first()
-                owner = session.query(User).filter(User.full_name == owner_name).first()
+                owner_id = resolve_user(owner_val, email_idx, name_idx, '负责人')
                 
-                if not org or not owner:
-                    logger.warning(f"跳过 KR '{kr_title}'：未找到组织 {org_name} 或负责人 {owner_name}")
+                if not org or not owner_id:
+                    logger.warning(f"跳过 KR '{kr_title}'：未找到组织 {org_name} 或负责人 {owner_val}")
                     continue
                 
                 # 2. 获取或创建 Objective
@@ -68,7 +74,7 @@ def init_okrs():
                             title=o_title,
                             description=o_desc,
                             period=period,
-                            owner_id=owner.global_user_id,
+                            owner_id=owner_id,
                             org_id=org.org_id,
                             status='ACTIVE'
                         )
@@ -89,7 +95,7 @@ def init_okrs():
                         target_value=target,
                         current_value=current,
                         unit=unit,
-                        owner_id=owner.global_user_id,
+                        owner_id=owner_id,
                         progress=progress
                     )
                     session.add(kr)

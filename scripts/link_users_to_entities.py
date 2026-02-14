@@ -59,15 +59,15 @@ def sync_manager_roles(session: Session):
     with open(ORG_CSV, mode='r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            m_name = row.get('负责人', '').strip()
-            if not m_name: continue
+            m_email = row.get('负责人邮箱', '').strip().lower()
+            if not m_email: continue
             
-            user = session.query(User).filter(User.full_name == m_name, User.is_current == True).first()
+            user = session.query(User).filter(User.primary_email == m_email, User.is_current == True).first()
             if user:
                 # 检查是否已有关联
                 if not session.query(UserRole).filter_by(user_id=user.global_user_id, role_id=role_dept_mgr.id).first():
                     session.add(UserRole(user_id=user.global_user_id, role_id=role_dept_mgr.id))
-                    logger.info(f"提升 [{m_name}] 为部门经理角色")
+                    logger.info(f"提升 [{m_email}] 为部门经理角色")
 
 def sync_employee_roles(session: Session):
     """基于职位关键词自动授权。"""

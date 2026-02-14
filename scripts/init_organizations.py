@@ -17,6 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
 from devops_collector.models import Base, Organization, User
+from scripts.utils import build_user_indexes, resolve_user
 
 # 日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,44 +32,62 @@ def init_organizations_from_csv(session: Session):
         return
 
     logger.info(f'开始从 {CSV_FILE} 同步组织架构...')
-    
+
+    # 预加载用户索引 (邮箱 + 姓名)
+    email_idx, name_idx = build_user_indexes(session)
+
+    # 创建公司根节点 (L1)
+    root_id = 'ORG-HQ'
+    root_org = session.query(Organization).filter_by(org_id=root_id).first()
+    if not root_org:
+        root_org = Organization(org_id=root_id, org_name='HQ', org_level=1)
+        session.add(root_org)
+        session.flush()
+        logger.info(f"创建公司根节点: {root_id}")
+
     with open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             system = row.get('体系', '').strip()
             center = row.get('中心', '').strip()
             dept = row.get('部门', '').strip()
-            manager_name = row.get('负责人', '').strip()
+            manager_val = row.get('负责人', row.get('负责人邮箱', '')).strip()
 
-            # 逻辑：逐级建立组织
-            parent_id = None
-            
-            # 1. 体系层级 (L1)
-            if system:
-                org_id_l1 = f"SYS-{system}"
-                org_l1 = session.query(Organization).filter_by(org_id=org_id_l1).first()
-                if not org_l1:
-                    org_l1 = Organization(org_id=org_id_l1, org_name=system, org_level=1)
-                    session.add(org_l1)
-                parent_id = org_id_l1
-            
-            # 2. 中心层级 (L2)
+            manager_id = resolve_user(manager_val, email_idx, name_idx, '负责人')
+
+            parent_id = root_id
+
+            # 1. 中心层级 (L2) - 挂在公司根节点下
             if center:
                 org_id_l2 = f"CTR-{center}"
                 org_l2 = session.query(Organization).filter_by(org_id=org_id_l2).first()
                 if not org_l2:
-                    org_l2 = Organization(org_id=org_id_l2, org_name=center, org_level=2, parent_org_id=parent_id)
+                    org_l2 = Organization(
+                        org_id=org_id_l2, org_name=center, org_level=2,
+                        parent_org_id=root_id, business_line=system
+                    )
                     session.add(org_l2)
+
+                # 中心级负责人 (无部门的行)
+                if manager_id and not dept:
+                    org_l2.manager_user_id = manager_id
+
                 parent_id = org_id_l2
-                
-            # 3. 部门层级 (L3)
+
+            # 2. 部门层级 (L3) - 挂在中心下
             if dept:
                 org_id_l3 = f"DEP-{dept}"
                 org_l3 = session.query(Organization).filter_by(org_id=org_id_l3).first()
                 if not org_l3:
-                    org_l3 = Organization(org_id=org_id_l3, org_name=dept, org_level=3, parent_org_id=parent_id)
+                    org_l3 = Organization(
+                        org_id=org_id_l3, org_name=dept, org_level=3,
+                        parent_org_id=parent_id, business_line=system
+                    )
                     session.add(org_l3)
-    
+
+                if manager_id:
+                    org_l3.manager_user_id = manager_id
+
     session.commit()
     logger.info("组织架构同步完成！")
 

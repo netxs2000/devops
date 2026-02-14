@@ -25,9 +25,10 @@ help: ## 显示帮助信息
 deploy: down build up init docs ## [一键部署] 重建镜像 -> 启动服务 -> 初始化数据 -> 更新文档
 	@echo "$(CYAN)DevOps Platform deployed successfully!$(RESET)"
 
-init: ## [初始化] 在容器内安装依赖并初始化数据库数据
+init: ## [初始化] 在容器内安装依赖并重置并初始化数据库数据
 	@echo "$(GREEN)Initializing data inside container...$(RESET)"
 	$(MAKE) install
+	$(EXEC_CMD) python scripts/reset_database.py
 	$(EXEC_CMD) python -m devops_collector.utils.schema_sync
 	$(EXEC_CMD) python scripts/init_rbac.py
 	$(EXEC_CMD) python scripts/init_organizations.py
@@ -44,6 +45,7 @@ init: ## [初始化] 在容器内安装依赖并初始化数据库数据
 	$(EXEC_CMD) python scripts/init_service_catalog.py
 	$(EXEC_CMD) python scripts/init_discovery.py
 	$(EXEC_CMD) python scripts/init_gitlab_mappings.py
+	$(EXEC_CMD) python scripts/init_zentao_mappings.py
 
 install: ## [内用] 安装生产环境或开发环境依赖
 	@echo "$(GREEN)Installing dependencies (using Aliyun mirror)...$(RESET)"

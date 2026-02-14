@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy.exc import IntegrityError
 from devops_collector.models.base_models import (
-    BusinessSystem, Service, SystemRegistry, EntityTopology, User
+    BusinessSystem, Service, SystemRegistry, EntityTopology, User, ProjectMaster
 )
 import uuid
 
@@ -141,3 +141,40 @@ def test_topology_integrity_constraint(db_session):
     # Expect IntegrityError due to FK constraint
     with pytest.raises(IntegrityError):
         db_session.commit()
+
+def test_entity_topology_project_link(db_session):
+    """Test EntityTopology linked to ProjectMaster (without service_id)."""
+    # 1. Create SystemRegistry
+    tool = SystemRegistry(system_code="GITLAB_PROJ", system_name="GitLab for Projects")
+    db_session.add(tool)
+    db_session.flush()
+
+    # 2. Create ProjectMaster
+    project = ProjectMaster(
+        project_id="PROJ-TEST-001",
+        project_name="Test Project",
+        status="ACTIVE",
+        is_current=True
+    )
+    db_session.add(project)
+    db_session.flush()
+
+    # 3. Create Topology with project_id only (no service_id)
+    topo = EntityTopology(
+        project_id=project.project_id,
+        service_id=None,
+        system_code=tool.system_code,
+        external_resource_id="https://gitlab.example.com/test/repo.git",
+        resource_name="repo",
+        element_type="source-code",
+        is_active=True
+    )
+    db_session.add(topo)
+    db_session.commit()
+    db_session.refresh(topo)
+
+    # 4. Verify linkage
+    assert topo.project_id == "PROJ-TEST-001"
+    assert topo.service_id is None
+    assert topo.project.project_name == "Test Project"
+    assert topo.element_type == "source-code"

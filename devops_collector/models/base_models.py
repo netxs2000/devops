@@ -49,9 +49,10 @@ class Organization(Base, TimestampMixin, SCDMixin):
     org_name = Column(String(200), nullable=False, comment='组织名称')
     org_level = Column(Integer, default=1, comment='组织层级 (1=公司, 2=部门, 3=团队)')
     parent_org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True, comment='上级组织ID')
-    manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='部门负责人用户ID')
+    manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='部门负责人')
     is_active = Column(Boolean, default=True, comment='是否启用')
     cost_center = Column(String(100), nullable=True, comment='成本中心编码')
+    business_line = Column(String(50), nullable=True, comment='所属业务线/体系 (如 研发体系/交付体系/营销体系)')
     parent = relationship('Organization', remote_side=[org_id], primaryjoin='Organization.parent_org_id == Organization.org_id', backref=backref('children', cascade='all'))
     manager = relationship('User', foreign_keys=[manager_user_id], back_populates='managed_organizations')
     users = relationship('User', foreign_keys='User.department_id', primaryjoin='and_(User.department_id==Organization.org_id, User.is_current==True)', back_populates='department')
@@ -271,7 +272,7 @@ class Team(Base, TimestampMixin, SCDMixin):
     description = Column(Text, comment='团队描述')
     parent_id = Column(Integer, ForeignKey('sys_teams.id'), nullable=True, comment='上级团队ID')
     org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), nullable=True, comment='所属组织ID')
-    leader_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='团队负责人ID')
+    leader_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='团队负责人')
     parent = relationship('Team', remote_side=[id], backref=backref('children', cascade='all, delete-orphan'))
     leader = relationship('User', foreign_keys=[leader_id])
     members = relationship('TeamMember', back_populates='team', cascade='all, delete-orphan')
@@ -318,11 +319,10 @@ class Product(Base, TimestampMixin, SCDMixin):
     repo_url = Column(String(255), comment='主代码仓库URL')
     artifact_path = Column(String(255), comment='制品存储路径')
     owner_team_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment='负责团队ID')
-    product_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='产品经理ID')
-    dev_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='开发负责人ID')
-    qa_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='测试负责人ID')
-    qa_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='测试负责人ID')
-    release_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='发布负责人ID')
+    product_manager_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='产品经理')
+    dev_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='开发经理')
+    qa_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='测试经理')
+    release_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='发布经理')
     
     # [新增] 产品线层级支持 (Scheme A)
     parent_product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True, comment='上级产品ID')
@@ -377,8 +377,8 @@ class BusinessSystem(Base, TimestampMixin):
     dr_level = Column(String(50), comment='容灾等级要求 (双活/冷备/单点)')
     
     # 3. 人员维度
-    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='技术负责人 (Architect)')
-    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='业务负责人 (PDM)')
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='技术负责人')
+    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='业务负责人')
     
     # Relationships
     services = relationship('Service', back_populates='system')
@@ -472,7 +472,7 @@ class MetricDefinition(Base, TimestampMixin):
     is_standard = Column(Boolean, default=True, comment='是否集团标准指标 (True: 锁定口径, 不允许随意修改)')
     
     # 4. 治理与归属
-    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='指标业务负责人ID (PDM/Data Owner)')
+    business_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='业务负责人')
     
     # 5. 时效性
     time_grain = Column(String(50), comment='统计时间粒度 (Daily, Weekly, Monthly)')
@@ -519,7 +519,7 @@ class SystemRegistry(Base, TimestampMixin, SCDMixin):
     # 数据治理与安全
     data_sensitivity = Column(String(20), comment='数据敏感级 (L1-L4)')
     sla_level = Column(String(20), comment='服务等级 (P0-Critical / P1-High)')
-    technical_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='技术负责人ID')
+    technical_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='技术负责人')
     
     # 状态监控
     is_active = Column(Boolean, default=True, comment='是否启用采集')
@@ -541,7 +541,9 @@ class EntityTopology(Base, TimestampMixin, SCDMixin):
     id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
     
     # 1. 逻辑侧 (Who) - 指向业务服务
-    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=False, index=True, comment='所属业务服务ID')
+    # 1. 逻辑侧 (Who) - 指向业务服务 OR 项目
+    service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=True, index=True, comment='所属业务服务ID')
+    project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True, index=True, comment='所属项目ID')
     
     # 2. 物理侧 (Where) - 指向外部工具资源
     # 明确指出是哪个系统实例 (e.g. gitlab-corp) 下的哪个资源 ID (e.g. project-1024)
@@ -561,6 +563,7 @@ class EntityTopology(Base, TimestampMixin, SCDMixin):
 
     # Relationships
     service = relationship('Service', back_populates='resources')
+    project = relationship('ProjectMaster')
     target_system = relationship('SystemRegistry')
 
 class SyncLog(Base, TimestampMixin):
@@ -583,7 +586,7 @@ class Location(Base, TimestampMixin):
     parent_id = Column(String(50), comment='上级位置ID')
     region = Column(String(50), comment='区域 (华北/华东/华南)')
     is_active = Column(Boolean, default=True, comment='是否启用')
-    manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='负责人ID')
+    manager_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='负责人')
 
 class Calendar(Base, TimestampMixin):
     """公共日历/节假日参考表。"""
@@ -621,7 +624,7 @@ class OKRObjective(Base, TimestampMixin):
     title = Column(String(255), nullable=False, comment='目标标题')
     description = Column(Text, comment='目标描述')
     period = Column(String(20), index=True, comment='周期 (2024-Q1/2024-H1)')
-    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='负责人ID')
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='负责人')
     org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment='所属组织ID')
     status = Column(String(20), default='ACTIVE', comment='状态 (ACTIVE/COMPLETED/ABANDONED)')
     progress = Column(Float, default=0.0, comment='进度 (0.0-1.0)')
@@ -640,7 +643,7 @@ class OKRKeyResult(Base, TimestampMixin):
     current_value = Column(Float, default=0.0, comment='当前值')
     unit = Column(String(20), comment='单位 (%/天/个)')
     weight = Column(Float, default=1.0, comment='权重')
-    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='负责人ID')
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='负责人')
     progress = Column(Float, default=0.0, comment='进度 (0.0-1.0)')
     
     objective = relationship('OKRObjective', back_populates='key_results')
@@ -726,7 +729,7 @@ class Incident(Base, TimestampMixin, OwnableMixin):
     financial_loss = Column(Float, default=0.0, comment='预估经济损失金额 (CNY)')
     
     # 责任归属
-    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='主责任人ID (On-call)')
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='主责任人')
     project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True, comment='关联项目ID')
     service_id = Column(Integer, ForeignKey('mdm_services.id'), nullable=True, comment='故障服务ID')
 
@@ -778,11 +781,11 @@ class ProjectMaster(Base, TimestampMixin, SCDMixin, OwnableMixin):
     project_type = Column(String(50), comment='项目类型 (研发项目/运维项目/POC)')
     status = Column(String(50), default='PLAN', comment='项目状态 (PLAN/ACTIVE/SUSPENDED/CLOSED)')
     is_active = Column(Boolean, default=True, comment='是否启用')
-    pm_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='项目经理ID')
-    product_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='产品负责人ID')
-    dev_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='开发负责人ID')
-    qa_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='测试负责人ID')
-    release_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='发布负责人ID')
+    pm_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='项目经理')
+    product_owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='产品经理')
+    dev_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='开发经理')
+    qa_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='测试经理')
+    release_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='发布经理')
     org_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment='负责部门ID')
     location_id = Column(String(50), ForeignKey('mdm_locations.location_id'), nullable=True, comment='项目所属/实施地点ID')
     plan_start_date = Column(Date, comment='计划开始日期')
@@ -976,7 +979,7 @@ class EpicMaster(Base, TimestampMixin):
     budget_cap = Column(Float, comment='预算上限 (人天或金额)')
     
     # 规划与进度
-    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='史诗负责人ID (Epic Owner)')
+    owner_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), comment='史诗负责人')
     group_id = Column(String(100), ForeignKey('mdm_organizations.org_id'), comment='所属群组/组织ID (GitLab Group)')
     
     # 时间规划 (对齐 GitLab Date Inheritance)

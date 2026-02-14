@@ -19,8 +19,9 @@ import logging
 from typing import List, Any, Set, Optional
 from sqlalchemy.orm import Session, Query
 from devops_collector.models.base_models import (
-    Organization, User, Product, SysRole, SysRoleDept, SysRoleMenu, SysMenu
+    Organization, User, Product, SysRole, SysRoleDept, SysRoleMenu, SysMenu, ProjectMaster
 )
+from devops_collector.core import business_auth
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,19 @@ def get_user_org_scope_ids(db: Session, user: User) -> List[str]:
             collect_children_orgs(child_id, db_session)
 
     collect_children_orgs(user_dept_id, db)
+    
+    # --- [核心增强] 业务关联数据范围 ---
+    # 额外加入该用户作为 manager 的所有组织及其下级项
+    managed_orgs = db.query(Organization.org_id).filter_by(
+        manager_user_id=user.global_user_id, is_current=True
+    ).all()
+    for m_row in managed_orgs:
+        m_id = m_row[0]
+        if m_id not in scope_ids:
+            scope_ids.append(m_id)
+            collect_children_orgs(m_id, db)
+    # ---------------------------
+
     return list(set(scope_ids))
 
 
@@ -129,6 +143,14 @@ def get_user_effective_data_scope(db: Session, user: User) -> int:
         for r in role_chain:
             if r.data_scope and r.data_scope < min_scope:
                 min_scope = r.data_scope
+
+    # --- [核心增强] 业务管理层自动提升 ---
+    # 如果是部门负责人及以上，数据范围至少提升到“本部门及以下”
+    dynamic_roles = business_auth.get_business_linked_roles(db, user.global_user_id)
+    if 'DEPT_MANAGER' in dynamic_roles or 'EXECUTIVE_MANAGER' in dynamic_roles:
+        if min_scope > DATA_SCOPE_DEPT_BELOW:
+            min_scope = DATA_SCOPE_DEPT_BELOW
+    # ---------------------------
 
     return min_scope
 
@@ -193,6 +215,12 @@ def get_user_permissions(db: Session, user: User) -> List[str]:
             for menu in role_menus:
                 if menu[0]:
                     permissions.add(menu[0])
+
+    # --- [核心增强] 业务关联授权 ---
+    # 如果用户是某个部门、产品或项目的负责人，动态注入相应的管理权限
+    dynamic_perms = business_auth.get_dynamic_permissions(db, user.global_user_id)
+    permissions.update(dynamic_perms)
+    # ---------------------------
 
     return list(permissions)
 

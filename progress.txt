@@ -1,0 +1,54 @@
+# DevOps 平台项目进展跟踪 (Project Progress Tracker)
+
+## 📋 已完成 (Completed)
+...
+3. **业务关联动态授权 (Business-Linked Auth)**
+   - 构建了 `IdentityResolver` 逻辑。
+   - 实现“身份随事走”：部门/产品/项目负责人自动获得对应的动态管理权限和数据范围。
+   - 权限卫兵支持实时数据库校验，解决 JWT 令牌权限滞后问题。
+4. **[P0] 数据库重置与部署验证**
+   - 实现了 `scripts/reset_database.py`，支持开发环境一键清空并重建数据。
+   - 修复了 `init_rbac.py` 的外键约束和 Autoflush 冲突。
+   - 验证了全量 `make deploy` 链路，系统能够从零开始加载负载。
+5. **[P1] CSV 模板标准化与编码对齐**
+   - 恢复并补全了所有核心业务 CSV 模板（ organizations, products, projects, rbac, zentao, gitlab 等）。
+   - **编码对齐**：所有 CSV 文件统一采用 `utf-8-sig` 编码，确保在 Windows Office/Excel 下打开无乱码。
+
+6. **[P1] 外部映射与权限闭环**
+   - 实现了 GitLab 群组/项目角色（Maintainer/Owner）到平台管理权限的动态转换。
+   - 解决了单元测试中的 SQLite 外键冲突问题，目前 8 个测试用例全绿通过。
+7. **[P1] 架构规范正式化与语义对齐**
+   - **语义分层对齐 (Semantic Alignment)**：确立“技术侧英文、业务侧中文”原则。
+   - 更新数据库模型 `comment` 为专业业务术语（项目经理、发布经理等）。
+   - 重构全量初始化脚本及 CSV 模版，支持中文表头和邮箱自动映射。
+   - 在 `contexts.md` 中增加了强制使用 `utf-8-sig` 编码处理 CSV 的规定，解决跨平台汉字乱码问题。
+8. **[P1] 项目-代码仓库关联 (Project-Repo Linkage)**
+    - 扩展 `EntityTopology` 模型，新增 `project_id` 列，`service_id` 改为 `nullable`，支持项目直接关联代码仓库。
+    - 增强 `init_products_projects.py`，CSV 导入时自动创建 `EntityTopology` 条目。
+    - 补全 `projects.csv` 模板（增加"负责部门"和"主代码仓库URL"列）。
+    - 修复 `ProjectProductRelation` 缺少 `org_id` 的插入错误。
+    - 新增单元测试 `test_entity_topology_project_link`，全部 7 个测试通过。
+9. **[P1] CSV 人员字段双格式支持 & 组织架构重构**
+    - 所有 init 脚本统一使用 `resolve_user()` 工具函数，CSV 人员字段同时支持邮箱和汉字全名。
+    - `init_rbac.py` 用户角色关联匹配从纯邮箱改为邮箱+姓名双格式，匹配失败输出 WARNING 日志。
+    - 组织架构层级重构：移除 `SYS-体系` 层级节点，新增 `ORG-HQ` 公司根节点，层级改为 公司→中心→部门。
+    - `Organization` 模型新增 `business_line` 字段，"体系" 作为中心/部门的标签属性而非层级。
+
+## 🏗️ 进行中 (In Progress)
+- (无)
+
+## 📅 接下来的任务 (Backlog)
+- [x] **[P1] 外部映射**：对接 GitLab Group/Project 角色到动态授权引擎。
+- [x] **[P1] 规范更新**：在 `contexts.md` 中记录 CSV 编码强制规范。
+- [x] **[P2] 文档维护**：运行 `make docs` 更新数据字典并清理冗余脚本。
+
+## 📝 阶段性回顾 (Retrospective)
+- **构建内容**：构建了全套 CSV 导入引擎和动态权限解析器。
+- **验证有效**：CSV 导入机制能正确处理层级组织架构；动态权限注入避免了频繁修改权限表的麻烦。
+- **遇到的问题**：
+  - RabbitMQ 在 Windows Docker 下启动时偶尔退出（已通过健康检查和 Makefile 依赖顺序优化缓解）。
+  - JWT 令牌无法感知刚发生的业务变更（已通过在 API 卫兵中加入实时数据库兜底校验解决）。
+- **经验总结**：在处理权限时，"管理常识"（如负责人即经理）的硬编码到逻辑中，比单纯手动配置表要高效得多。
+
+---
+*最后更新时间：2026-02-14 16:48 (Antigravity)*

@@ -1,6 +1,6 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-02-10 23:13:02  
+> **生成时间**: 2026-02-14 07:32:09  
 > **版本**: v2.2 (企业级标准版)  
 > **状态**: 有效 (Active)
 
@@ -249,7 +249,8 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `service_id` | Integer | FK, INDEX | 否 | - | 所属业务服务ID |
+| `service_id` | Integer | FK, INDEX | 是 | - | 所属业务服务ID |
+| `project_id` | String(100) | FK, INDEX | 是 | - | 所属项目ID |
 | `system_code` | String(50) | FK | 否 | - | 来源系统代码 (如 gitlab-corp) |
 | `external_resource_id` | String(100) | - | 否 | - | 外部资源唯一标识 (如 Project ID, Repo URL) |
 | `resource_name` | String(200) | - | 是 | - | 资源显示名称快照 (如 backend/payment-service) |
@@ -269,6 +270,7 @@
 #### 关系映射
 
 - **service**: many-to-one -> `Service`
+- **project**: many-to-one -> `ProjectMaster`
 - **target_system**: many-to-one -> `SystemRegistry`
 
 ---
@@ -291,7 +293,7 @@
 | `okr_objective_id` | Integer | FK | 是 | - | 关联战略目标ID |
 | `investment_theme` | String(100) | - | 是 | - | 投资主题 (如 技术债/新业务/合规/客户体验) |
 | `budget_cap` | Numeric | - | 是 | - | 预算上限 (人天或金额) |
-| `owner_id` | UUID | FK | 是 | - | 史诗负责人ID (Epic Owner) |
+| `owner_id` | UUID | FK | 是 | - | 史诗负责人 |
 | `group_id` | String(100) | FK | 是 | - | 所属群组/组织ID (GitLab Group) |
 | `start_date_is_fixed` | Boolean | - | 是 | False | 是否固定开始时间 (False则自动继承子任务) |
 | `due_date_is_fixed` | Boolean | - | 是 | False | 是否固定结束时间 |
@@ -414,7 +416,7 @@
 | `post_mortem_url` | String(255) | - | 是 | - | 复盘报告链接 (Confluence/Doc URL) |
 | `affected_users` | Integer | - | 是 | - | 受影响用户数量预估 |
 | `financial_loss` | Numeric | - | 是 | 0.0 | 预估经济损失金额 (CNY) |
-| `owner_id` | UUID | FK | 是 | - | 主责任人ID (On-call) |
+| `owner_id` | UUID | FK | 是 | - | 主责任人 |
 | `project_id` | String(100) | FK | 是 | - | 关联项目ID |
 | `service_id` | Integer | FK | 是 | - | 故障服务ID |
 | `created_at` | DateTime | - | 是 | (auto) | - |
@@ -466,7 +468,7 @@
 | `parent_id` | String(50) | - | 是 | - | 上级位置ID |
 | `region` | String(50) | - | 是 | - | 区域 (华北/华东/华南) |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
-| `manager_user_id` | UUID | FK | 是 | - | 负责人ID |
+| `manager_user_id` | UUID | FK | 是 | - | 负责人 |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
@@ -490,7 +492,7 @@
 | `source_model` | String(200) | - | 是 | - | 来源数据模型 (关联 dbt 模型或数据库表名) |
 | `dimension_scope` | JSON | - | 是 | - | 允许下钻的维度列表 (JSON List, 如 ["dept", "application", "priority"]) |
 | `is_standard` | Boolean | - | 是 | True | 是否集团标准指标 (True: 锁定口径, 不允许随意修改) |
-| `business_owner_id` | UUID | FK | 是 | - | 指标业务负责人ID (PDM/Data Owner) |
+| `business_owner_id` | UUID | FK | 是 | - | 业务负责人 |
 | `time_grain` | String(50) | - | 是 | - | 统计时间粒度 (Daily, Weekly, Monthly) |
 | `update_cycle` | String(50) | - | 是 | - | 数据刷新周期 (Realtime, T+1, Hourly) |
 | `status` | String(50) | - | 是 | RELEASED | 生命周期状态 (DRAFT:草稿 / RELEASED:已发布 / DEPRECATED:已废弃) |
@@ -519,7 +521,7 @@
 | `current_value` | Numeric | - | 是 | 0.0 | 当前值 |
 | `unit` | String(20) | - | 是 | - | 单位 (%/天/个) |
 | `weight` | Numeric | - | 是 | 1.0 | 权重 |
-| `owner_id` | UUID | FK | 是 | - | 负责人ID |
+| `owner_id` | UUID | FK | 是 | - | 负责人 |
 | `progress` | Numeric | - | 是 | 0.0 | 进度 (0.0-1.0) |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
@@ -544,7 +546,7 @@
 | `title` | String(255) | - | 否 | - | 目标标题 |
 | `description` | Text | - | 是 | - | 目标描述 |
 | `period` | String(20) | INDEX | 是 | - | 周期 (2024-Q1/2024-H1) |
-| `owner_id` | UUID | FK | 是 | - | 负责人ID |
+| `owner_id` | UUID | FK | 是 | - | 负责人 |
 | `org_id` | String(100) | FK | 是 | - | 所属组织ID |
 | `status` | String(20) | - | 是 | ACTIVE | 状态 (ACTIVE/COMPLETED/ABANDONED) |
 | `progress` | Numeric | - | 是 | 0.0 | 进度 (0.0-1.0) |
@@ -572,7 +574,7 @@
 | `org_name` | String(200) | - | 否 | - | 组织名称 |
 | `org_level` | Integer | - | 是 | 1 | 组织层级 (1=公司, 2=部门, 3=团队) |
 | `parent_org_id` | String(100) | FK | 是 | - | 上级组织ID |
-| `manager_user_id` | UUID | FK | 是 | - | 部门负责人用户ID |
+| `manager_user_id` | UUID | FK | 是 | - | 部门负责人 |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
 | `cost_center` | String(100) | - | 是 | - | 成本中心编码 |
 | `created_at` | DateTime | - | 是 | (auto) | - |
@@ -615,10 +617,10 @@
 | `repo_url` | String(255) | - | 是 | - | 主代码仓库URL |
 | `artifact_path` | String(255) | - | 是 | - | 制品存储路径 |
 | `owner_team_id` | String(100) | FK | 是 | - | 负责团队ID |
-| `product_manager_id` | UUID | FK | 是 | - | 产品经理ID |
-| `dev_lead_id` | UUID | FK | 是 | - | 开发负责人ID |
-| `qa_lead_id` | UUID | FK | 是 | - | 测试负责人ID |
-| `release_lead_id` | UUID | FK | 是 | - | 发布负责人ID |
+| `product_manager_id` | UUID | FK | 是 | - | 产品经理 |
+| `dev_lead_id` | UUID | FK | 是 | - | 开发经理 |
+| `qa_lead_id` | UUID | FK | 是 | - | 测试经理 |
+| `release_lead_id` | UUID | FK | 是 | - | 发布经理 |
 | `parent_product_id` | String(100) | FK | 是 | - | 上级产品ID |
 | `node_type` | String(20) | - | 是 | APP | 节点类型 (LINE=产品线 / APP=应用) |
 | `created_at` | DateTime | - | 是 | (auto) | - |
@@ -655,11 +657,11 @@
 | `project_type` | String(50) | - | 是 | - | 项目类型 (研发项目/运维项目/POC) |
 | `status` | String(50) | - | 是 | PLAN | 项目状态 (PLAN/ACTIVE/SUSPENDED/CLOSED) |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
-| `pm_user_id` | UUID | FK | 是 | - | 项目经理ID |
-| `product_owner_id` | UUID | FK | 是 | - | 产品负责人ID |
-| `dev_lead_id` | UUID | FK | 是 | - | 开发负责人ID |
-| `qa_lead_id` | UUID | FK | 是 | - | 测试负责人ID |
-| `release_lead_id` | UUID | FK | 是 | - | 发布负责人ID |
+| `pm_user_id` | UUID | FK | 是 | - | 项目经理 |
+| `product_owner_id` | UUID | FK | 是 | - | 产品经理 |
+| `dev_lead_id` | UUID | FK | 是 | - | 开发经理 |
+| `qa_lead_id` | UUID | FK | 是 | - | 测试经理 |
+| `release_lead_id` | UUID | FK | 是 | - | 发布经理 |
 | `org_id` | String(100) | FK | 是 | - | 负责部门ID |
 | `location_id` | String(50) | FK | 是 | - | 项目所属/实施地点ID |
 | `plan_start_date` | Date | - | 是 | - | 计划开始日期 |
@@ -876,7 +878,7 @@
 | `enabled_plugins` | String(255) | - | 是 | - | 启用的采集插件列表 (逗号分隔) |
 | `data_sensitivity` | String(20) | - | 是 | - | 数据敏感级 (L1-L4) |
 | `sla_level` | String(20) | - | 是 | - | 服务等级 (P0-Critical / P1-High) |
-| `technical_owner_id` | UUID | FK | 是 | - | 技术负责人ID |
+| `technical_owner_id` | UUID | FK | 是 | - | 技术负责人 |
 | `is_active` | Boolean | - | 是 | True | 是否启用采集 |
 | `last_heartbeat` | DateTime | - | 是 | - | 最后连通性检查时间 |
 | `last_sync_at` | DateTime | - | 是 | - | 最后一次数据同步时间 |
@@ -2215,7 +2217,7 @@
 | `description` | Text | - | 是 | - | 团队描述 |
 | `parent_id` | Integer | FK | 是 | - | 上级团队ID |
 | `org_id` | String(100) | FK | 是 | - | 所属组织ID |
-| `leader_id` | UUID | FK | 是 | - | 团队负责人ID |
+| `leader_id` | UUID | FK | 是 | - | 团队负责人 |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `sync_version` | Integer | - | 否 | 1 | - |

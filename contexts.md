@@ -13,6 +13,11 @@
 - **本地环境**: Windows + Python 3.12 (调试使用 PowerShell `Select-String` 替代 `grep`).
 - **容器环境**: Linux + Python 3.9-3.11 (生产镜像基于 Alpine/Debian Slim).
 - **路径处理**: 强制使用 `pathlib` 确保跨平台路径兼容。
+- **CSV 编码**: 所有 CSV 文件的生成、读取及模版任务强制使用 `utf-8-sig` 编码，确保在 Windows Office/Excel 环境下打开不出现汉字乱码。
+- **语义分层规范 (Semantic Alignment)**:
+    - **技术侧用英文**: 数据库字段名、API Schema、核心代码变量必须使用标准英文命名（如 `pm_user_id`）。
+    - **业务侧用中文**: 数据库 `comment`、CSV 导入/导出表头、UI 界面显示、报表评估指标必须使用专业业务中文术语（如：项目经理、负责人邮箱、交付周期、ELOC等）。
+    - **高度自适应映射**: 脚本层应实现“业务 -> 技术”的自动解析（如通过邮箱自动匹配 ID，通过中文表头自动匹配字段），确保护业务维护的低成本。
 - **配置一致性**: 所有敏感配置统一通过 `.env` 注入，严禁硬编码 API 地址。
 
 ## 4. 核心架构与插件开发 (Architecture)
@@ -28,6 +33,9 @@
     - 关联表必须定义 `UniqueConstraint` 复合索引防重复。
     - 指标结果表必须建立针对时间维度的索引。
 - **SCD Type 2**: 组织、产品、团队主数据采用慢变维，追踪“历史时刻的负责人”及“当时的组织归属”。
+- **组织架构模式**:
+    - **层级 (Hierarchy)**: 公司(Root) -> 中心(Center) -> 部门(Dept)，不再使用 `SYS-` 体系节点。
+    - **属性 (Attribute)**: 体系 (Business Line) 作为 `Organization` 的 `business_line` 字段存储，支持跨体系的部门归属。
 
 ## 6. 前端设计与组件化 (Frontend Design)
 - **Apple Style 规范**: 严格遵循 `docs/frontend/CONVENTIONS.md`，强制使用 CSS 变量（`--primary`, `--radius`）。

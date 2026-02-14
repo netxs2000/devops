@@ -130,13 +130,20 @@ def PermissionRequired(required_perms: List[str]):
 
         # 检查是否满足任一权限
         if not any(perm in user_perms for perm in required_perms):
-            logger.warning(
-                f"Permission Denied: User {payload.get('sub')} lacks permissions {required_perms}"
-            )
-            raise HTTPException(
-                status_code=403,
-                detail=f'Permission Denied: Missing permissions {required_perms}'
-            )
+            # --- [核心增强] 实时数据库校验 ---
+            # 如果 JWT 中没有，实时查库以处理刚发生的业务授权（如刚被任命为负责人）
+            real_perms = security.get_user_permissions(db, auth_service.auth_get_current_user(db, final_token))
+            if not any(perm in real_perms for perm in required_perms):
+                logger.warning(
+                    f"Permission Denied: User {payload.get('sub')} lacks permissions {required_perms}"
+                )
+                raise HTTPException(
+                    status_code=403,
+                    detail=f'Permission Denied: Missing permissions {required_perms}'
+                )
+            # ---------------------------
+
+        return auth_service.auth_get_current_user(db, final_token)
 
         return auth_service.auth_get_current_user(db, final_token)
 
