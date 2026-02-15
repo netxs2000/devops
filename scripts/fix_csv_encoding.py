@@ -1,82 +1,28 @@
 import os
+import argparse
+import sys
 
-def create_csv(filename, content):
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(filename), exist_ok=True)
-    with open(filename, 'w', encoding='utf-8-sig') as f:
-        f.write(content)
-    print(f"Created/Updated {filename} with size {os.path.getsize(filename)}")
-
-data = {
+# 模板数据字典
+TEMPLATES = {
     "docs/sys_menus.csv": """ID,父ID,菜单名称,路由路径,菜单类型,图标,权限标识
 1,0,平台管理,/admin,M,setting,sys:admin:view
 101,1,组织架构,/admin/org,C,tree,sys:org:view
 102,1,用户管理,/admin/user,C,user,sys:user:view
-103,1,角色权限,/admin/role,C,lock,sys:role:view
-104,1,菜单管理,/admin/menu,C,menu,sys:menu:view
-2,0,基础服务,/service,M,appstore,sys:service:view
-201,2,服务台,/service/desk,C,customer-service,sd:ticket:view
-202,2,知识库,/service/kb,C,book,sd:kb:view
-3,0,研发管理,/devops,M,code,sys:devops:view
-301,3,产品纵览,/devops/prod,C,project,pm:product:view
-302,3,项目管理,/devops/proj,C,deployment-unit,pm:project:view
-303,3,质量中心,/devops/qa,C,check-circle,qa:report:view
-4,0,效能分析,/analytics,M,line-chart,sys:analytics:view
-401,4,DORA指标,/analytics/dora,C,thunderbolt,ana:dora:view
-402,4,成本看板,/analytics/cost,C,account-book,ana:cost:view""",
-    
-    "docs/sys_roles.csv": """ID,角色名称,角色键,数据范围
-1,系统管理员,SYSTEM_ADMIN,1
-2,管理层,EXECUTIVE_MANAGER,2
-3,部门经理,DEPT_MANAGER,3
-4,项目经理,PROJECT_MANAGER,4
-5,普通员工,REGULAR_USER,5""",
-
-    "docs/organizations.csv": """体系,中心,部门,负责人邮箱
-天极体系,研发中心,研发一部,zhangsan@tjhq.com
-天极体系,研发中心,研发二部,lisi@tjhq.com
-天极体系,销售中心,销售一部,wangwu@tjhq.com""",
-
-    "docs/products.csv": """PRODUCT_ID,产品名称,节点类型,parent_product_id,产品分类,version_schema,负责团队,产品经理,开发经理,测试经理,发布经理
-PL001,天极DevOps产品线,LINE,,平台,SemVer,研发中心,zhangsan@tjhq.com,lisi@tjhq.com,admin@tjhq.com,admin@tjhq.com
-DEVOPS-APP,天极DevOps平台,APP,PL001,应用,SemVer,研发一部,lisi@tjhq.com,admin@tjhq.com,admin@tjhq.com,admin@tjhq.com""",
-
-    "docs/projects.csv": """项目代号,项目名称,所属产品,负责部门,主代码仓库URL,项目经理,产品经理,开发经理,测试经理,发布经理
-DEVOPS-2026,DevOps 2.0 升级项目,天极DevOps平台,研发一部,https://gitlab.example.com/devops/devops-platform.git,zhangsan@tjhq.com,lisi@tjhq.com,admin@tjhq.com,admin@tjhq.com,admin@tjhq.com
-RISK-AI,风控模型 AI 增强,智能风控系统,研发二部,https://gitlab.example.com/risk/risk-engine.git,lisi@tjhq.com,zhangsan@tjhq.com,admin@tjhq.com,admin@tjhq.com,admin@tjhq.com""",
-
-    "docs/employees.csv": """姓名,工号,中心,部门,职位,人事关系,邮箱
-系统管理员,1001,研发中心,研发一部,架构师,正式,admin@tjhq.com
-张三,1002,研发中心,研发一部,高级经理,正式,zhangsan@tjhq.com
-李四,1003,研发中心,研发二部,部门负责人,正式,lisi@tjhq.com
-王五,1004,销售中心,销售一部,销售总监,正式,wangwu@tjhq.com""",
-
-    "docs/okrs.csv": """目标标题,目标描述,组织名称,负责人邮箱,周期,关键结果标题,目标值,当前值,单位
-提升系统可用性,确保核心业务系统全年可用性,研发一部,zhangsan@tjhq.com,2026-Q1,全链路压测完成次数,10,8,次
-提升研发效能,降低平均交付周期,研发中心,lisi@tjhq.com,2026-Q1,交付周期减低率,20,15,%""",
-
-    "docs/locations.csv": """ID,全称,名称,大区,编码
-000000,全国,总部,集团,HQ
-110000,北京市,北京,华北,BJ
-310000,上海市,上海,华东,SH
-440000,广东省,广东,华南,GD""",
-
-    "docs/cost_codes.csv": """科目代码,科目名称,分类,支出类型,描述,父级代码
-CAPEX-SVR,服务器采购,硬件,CAPEX,生产服务器采购费用,
-OPEX-BW,带宽租赁,云资源,OPEX,公网带宽月租费用,
-LABOR-DEV,研发人工,人力,OPEX,研发人员工资成本,""",
-
-    "docs/labor_rates.csv": """职级,日费率
-P5,1500
-P6,2000
-P7,3000
-M1,3500""",
-
-    "docs/purchase_contracts.csv": """合同编号,合同标题,供应商名称,供应商ID,总金额,开始日期,结束日期,科目代码,支出类型
-PUR-2026-001,阿里云续费合同,阿里云,VEND-001,500000,2026-01-01,2026-12-31,OPEX-BW,OPEX""",
-
-    "docs/revenue_contracts.csv": """合同编号,合同标题,客户名称,总价值,签约日期,所属产品
-REV-2026-001,某大型银行效能提升项目,某大型银行,1200000,2026-01-15,天极DevOps平台""",
+103,1,产品定义,/admin/product,C,shopping-cart,sys:product:view
+104,1,项目主表,/admin/project,C,project,sys:project:view
+2,0,研发协同,/devops,M,rocket,sys:devops:view
+201,2,需求池,/devops/backlog,C,unordered-list,pm:backlog:view
+202,2,迭代看板,/devops/iteration,C,dashboard,pm:iteration:view
+203,2,质量门禁,/devops/quality,C,safety-certificate,qa:gate:view
+3,0,测试管理,/test,M,experiment,sys:test:view
+301,3,测试用例,/test/cases,C,container,qa:test:view
+302,3,追溯矩阵,/test/rtm,C,deployment-unit,qa:rtm:view
+4,0,服务支持,/service,M,customer-service,sys:service:view
+401,4,反馈中心,/service/desk,C,message,sd:ticket:view
+402,4,知识库,/service/kb,C,read,sd:kb:view
+5,0,效能看板,/analytics,M,line-chart,sys:analytics:view
+501,5,DORA指标,/analytics/dora,C,thunderbolt,ana:dora:view
+502,5,成本分析,/analytics/cost,C,account-book,ana:cost:view""",
 
     "docs/mdm_systems_registry.csv": """system_code,system_name,system_type,env_tag,base_url,api_version,auth_type,is_active,remarks
 gitlab-corp,企业版GitLab,VCS,PROD,https://gitlab.example.com,v4,OAuth2,TRUE,核心代码托管
@@ -86,21 +32,70 @@ sonarqube-corp,代码质量平台,SONAR,PROD,https://sonar.example.com,,Token,TR
     "docs/mdm_services.csv": """服务名称,服务分级,负责组织,描述,组件类型,生命周期,所属业务系统代码
 Payment Service,T0,交易中台研发部,核心支付网关,service,production,trade-center
 User Center,T1,用户中心研发部,统一用户认证服务,service,production,user-center
-Log Library,T2,基础架构部,通用日志组件,library,stable,common-libs""",
-
-    "docs/zentao-user.csv": """工号,姓名,邮箱,禅道账号
-1001,系统管理员,admin@tjhq.com,admin
-1002,张三,zhangsan@tjhq.com,zhangsan
-1003,李四,lisi@tjhq.com,lisi""",
-
-    "docs/gitlab-user.csv": """GitLab用户ID,用户名,全名,Email
-101,admin,系统管理员,admin@tjhq.com
-102,zhangsan,张三,zhangsan@tjhq.com
-103,lisi,李四,lisi@tjhq.com""",
-
-    "docs/sys_role_menus.csv": "role_id,menu_id\n1,1\n1,101\n1,102\n1,103\n1,104",
-    "docs/sys_user_roles.csv": "user_id,role_id\nadmin@tjhq.com,1"
+Log Library,T2,基础架构部,通用日志组件,library,stable,common-libs"""
 }
 
-for path, content in data.items():
-    create_csv(path, content)
+def fix_encoding(filename):
+    """仅修复文件编码为 utf-8-sig，不改变内容。"""
+    try:
+        with open(filename, 'rb') as f:
+            raw_data = f.read()
+        
+        # 尝试使用各种编码读取
+        content = None
+        for enc in ['utf-8-sig', 'utf-8', 'gbk', 'gb18030']:
+            try:
+                content = raw_data.decode(enc)
+                break
+            except:
+                continue
+        
+        if content is not None:
+            with open(filename, 'w', encoding='utf-8-sig') as f:
+                f.write(content)
+            print(f" [Fixed Encoding] {filename}")
+        else:
+            print(f" [Error] Could not decode {filename}")
+    except Exception as e:
+        print(f" [Error] Failed to process {filename}: {e}")
+
+def main():
+    parser = argparse.ArgumentParser(description="CSV 编码修复与模板管理工具 (安全模式)")
+    parser.add_argument("--file", help="指定要处理的文件路径")
+    parser.add_argument("--force-template", action="store_true", help="强制使用内置模板覆盖内容")
+    parser.add_argument("--all-encoding", action="store_true", help="修复 docs 目录下所有 CSV 的编码，不改变内容")
+    
+    args = parser.parse_args()
+
+    # 处理单个文件请求（强制刷新）
+    if args.file and args.force_template:
+        filename = args.file
+        if filename in TEMPLATES:
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            with open(filename, "w", encoding="utf-8-sig") as f:
+                f.write(TEMPLATES[filename])
+            print(f" [Success] Overwritten {filename} with latest template.")
+            return
+
+    # 全局编码修复（不改内容）
+    if args.all_encoding:
+        for root, dirs, files in os.walk("docs"):
+            for file in files:
+                if file.endswith(".csv"):
+                    fix_encoding(os.path.join(root, file))
+        return
+
+    # 默认逻辑：只初始化缺失的文件
+    print("Checking for missing CSV templates...")
+    for path, content in TEMPLATES.items():
+        if not os.path.exists(path):
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8-sig") as f:
+                f.write(content)
+            print(f" [Initialized] {path}")
+        else:
+            # 文件已存在，仅修复编码
+            fix_encoding(path)
+
+if __name__ == "__main__":
+    main()

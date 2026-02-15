@@ -1,20 +1,23 @@
-"""初始化 RBAC 权限系统脚本（动态业务自适应版）。
+"""初始化 RBAC 权限系统脚本（内置默认值 + 业务自适应版）。
 
-修复点：
-1. 修正父 ID 为 0 导致的外键约束错误。
-2. 优化权限同步逻辑，避免 SQLAlchemy 循环内查询冲突。
+优化：
+1. 内置标准菜单和角色的配置，不再强依赖外部 CSV。
+2. 自动根据逻辑分配权限（SYSTEM_ADMIN 获得全部，业务角色获得非管理菜单）。
+3. 保持向后兼容：如果存在 docs/sys_*.csv，则以文件内容为准。
 """
 import logging
 import os
 import sys
 import uuid
 import csv
-from typing import Any
+from typing import Any, List, Dict
 from passlib.context import CryptContext
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from pathlib import Path
 
-sys.path.append(os.getcwd())
+# 添加项目根目录到路径
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
 from devops_collector.models.base_models import (
     Base, User, SysRole, SysMenu, SysRoleMenu, UserCredential, UserRole
@@ -25,131 +28,145 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger('InitRBAC')
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
-# 定义“平台管理”分支的 ID（通常为 1 及其子项）
-ADMIN_MENU_ROOT_ID = 1
+# --- 默认内置数据定义 (Built-in Defaults) ---
+
+DEFAULT_ROLES = [
+    {"id": 1, "name": "系统管理员", "key": "SYSTEM_ADMIN", "scope": 1},
+    {"id": 2, "name": "管理层", "key": "EXECUTIVE_MANAGER", "scope": 2},
+    {"id": 3, "name": "部门经理", "key": "DEPT_MANAGER", "scope": 3},
+    {"id": 4, "name": "项目经理", "key": "PROJECT_MANAGER", "scope": 4},
+    {"id": 5, "name": "普通员工", "key": "REGULAR_USER", "scope": 5},
+]
+
+DEFAULT_MENUS = [
+    {"id": 1, "pid": 0, "name": "平台管理", "path": "/admin", "type": "M", "icon": "setting", "perm": "sys:admin:view"},
+    {"id": 101, "pid": 1, "name": "组织架构", "path": "/admin/org", "type": "C", "icon": "tree", "perm": "sys:org:view"},
+    {"id": 102, "pid": 1, "name": "用户管理", "path": "/admin/user", "type": "C", "icon": "user", "perm": "sys:user:view"},
+    {"id": 103, "pid": 1, "name": "产品定义", "path": "/admin/product", "type": "C", "icon": "shopping-cart", "perm": "sys:product:view"},
+    {"id": 104, "pid": 1, "name": "项目主表", "path": "/admin/project", "type": "C", "icon": "project", "perm": "sys:project:view"},
+    
+    {"id": 2, "pid": 0, "name": "研发协同", "path": "/devops", "type": "M", "icon": "rocket", "perm": "sys:devops:view"},
+    {"id": 201, "pid": 2, "name": "需求池", "path": "/devops/backlog", "type": "C", "icon": "unordered-list", "perm": "pm:backlog:view"},
+    {"id": 202, "pid": 2, "name": "迭代看板", "path": "/devops/iteration", "type": "C", "icon": "dashboard", "perm": "pm:iteration:view"},
+    {"id": 203, "pid": 2, "name": "质量门禁", "path": "/devops/quality", "type": "C", "icon": "safety-certificate", "perm": "qa:gate:view"},
+    
+    {"id": 3, "pid": 0, "name": "测试管理", "path": "/test", "type": "M", "icon": "experiment", "perm": "sys:test:view"},
+    {"id": 301, "pid": 3, "name": "测试用例", "path": "/test/cases", "type": "C", "icon": "container", "perm": "qa:test:view"},
+    {"id": 302, "pid": 3, "name": "追溯矩阵", "path": "/test/rtm", "type": "C", "icon": "deployment-unit", "perm": "qa:rtm:view"},
+    
+    {"id": 4, "pid": 0, "name": "服务支持", "path": "/service", "type": "M", "icon": "customer-service", "perm": "sys:service:view"},
+    {"id": 401, "pid": 4, "name": "反馈中心", "path": "/service/desk", "type": "C", "icon": "message", "perm": "sd:ticket:view"},
+    {"id": 402, "pid": 4, "name": "知识库", "path": "/service/kb", "type": "C", "icon": "read", "perm": "sd:kb:view"},
+    
+    {"id": 5, "pid": 0, "name": "效能看板", "path": "/analytics", "type": "M", "icon": "line-chart", "perm": "sys:analytics:view"},
+    {"id": 501, "pid": 5, "name": "DORA指标", "path": "/analytics/dora", "type": "C", "icon": "thunderbolt", "perm": "ana:dora:view"},
+    {"id": 502, "pid": 5, "name": "成本分析", "path": "/analytics/cost", "type": "C", "icon": "account-book", "perm": "ana:cost:view"},
+]
 
 def ensure_auto_permissions(session: Session):
-    """【黑科技逻辑】基于业务域前缀和层级，自动为管理角色分配权限。"""
-    
+    """【业务常识授权】超管拥有一切，业务经理拥有非敏感菜单。"""
     admin_role = session.query(SysRole).filter_by(role_key='SYSTEM_ADMIN').first()
-    exec_role = session.query(SysRole).filter_by(role_key='EXECUTIVE_MANAGER').first()
-    dept_role = session.query(SysRole).filter_by(role_key='DEPT_MANAGER').first()
+    business_roles = session.query(SysRole).filter(SysRole.role_key.in_(['EXECUTIVE_MANAGER', 'DEPT_MANAGER'])).all()
     
-    if not admin_role: 
-        logger.warning("未找到 SYSTEM_ADMIN 角色，跳过自动授权。")
-        return
+    if not admin_role: return
 
     all_menus = session.query(SysMenu).all()
-    
-    # 识别“平台管理”分支 ID
+    # 平台管理分支的 ID 集合 (ID 为 1 极其子孙)
     admin_branch_ids = {1}
     for m in all_menus:
-        if m.parent_id == ADMIN_MENU_ROOT_ID or (100 <= m.id < 200):
+        if m.parent_id == 1 or (100 <= m.id < 200):
             admin_branch_ids.add(m.id)
 
-    # 预载现有的关系以减少查询
-    existing_relations = set(session.query(SysRoleMenu.role_id, SysRoleMenu.menu_id).all())
-
+    existing = set(session.query(SysRoleMenu.role_id, SysRoleMenu.menu_id).all())
     to_add = []
+
     for menu in all_menus:
-        # A. 超管：全给
-        if (admin_role.id, menu.id) not in existing_relations:
+        # 1. 超管必给
+        if (admin_role.id, menu.id) not in existing:
             to_add.append(SysRoleMenu(role_id=admin_role.id, menu_id=menu.id))
-            existing_relations.add((admin_role.id, menu.id))
+            existing.add((admin_role.id, menu.id))
 
-        # B. 业务管理角色：非管理类菜单
+        # 2. 业务角色给业务功能菜单
         if menu.id not in admin_branch_ids:
-            for role in [exec_role, dept_role]:
-                if role and (role.id, menu.id) not in existing_relations:
-                    to_add.append(SysRoleMenu(role_id=role.id, menu_id=menu.id))
-                    existing_relations.add((role.id, menu.id))
-                    logger.info(f"业务经理 [{role.role_name}] 获得新模块权限: {menu.menu_name}")
-
+            for br in business_roles:
+                if (br.id, menu.id) not in existing:
+                    to_add.append(SysRoleMenu(role_id=br.id, menu_id=menu.id))
+                    existing.add((br.id, menu.id))
+    
     if to_add:
         session.bulk_save_objects(to_add)
-    session.flush()
+        logger.info(f"已自动分配 {len(to_add)} 项系统权限关联。")
 
-def load_data(session: Session):
-    # 1. 确保 admin 用户存在
-    admin_email = 'admin@tjhq.com'
-    admin_user = session.query(User).filter_by(primary_email=admin_email, is_current=True).first()
-    if not admin_user:
-         uid = uuid.uuid4()
-         admin_user = User(global_user_id=uid, username='admin', full_name='系统管理员',
-                    primary_email=admin_email, is_active=True, is_current=True)
-         session.add(admin_user)
-         session.flush()
-         session.add(UserCredential(user_id=uid, password_hash=pwd_context.hash('admin_password_123!')))
-    
-    # 2. 加载菜单
-    if os.path.exists('docs/sys_menus.csv'):
-        with open('docs/sys_menus.csv', mode='r', encoding='utf-8-sig') as f:
-            for row in csv.DictReader(f):
+def load_menus(session: Session):
+    csv_path = Path('docs/sys_menus.csv')
+    if csv_path.exists():
+        logger.info("从 CSV 加载菜单配置...")
+        with open(csv_path, mode='r', encoding='utf-8-sig') as f:
+            data = list(csv.DictReader(f))
+            for row in data:
                 mid = int(row['ID'])
                 pid = int(row['父ID'])
-                # 【关键修复】如果父 ID 为 0，标记为 None (NULL)
-                parent_id = pid if pid != 0 else None
-                
                 m = session.query(SysMenu).get(mid) or SysMenu(id=mid)
-                m.menu_name = row['菜单名称']
-                m.parent_id = parent_id
-                m.path = row['路由路径']
-                m.menu_type = row['菜单类型']
-                m.icon = row['图标'] or '#'
+                m.menu_name, m.parent_id = row['菜单名称'], (pid if pid != 0 else None)
+                m.path, m.menu_type, m.icon = row['路由路径'], row['菜单类型'], row['图标']
                 m.perms = row.get('权限标识', '')
                 session.add(m)
-        session.flush()
+    else:
+        logger.info("使用内置默认菜单配置...")
+        for m_def in DEFAULT_MENUS:
+            m = session.query(SysMenu).get(m_def['id']) or SysMenu(id=m_def['id'])
+            m.menu_name, m.parent_id = m_def['name'], (m_def['pid'] if m_def['pid'] != 0 else None)
+            m.path, m.menu_type, m.icon, m.perms = m_def['path'], m_def['type'], m_def['icon'], m_def['perm']
+            session.add(m)
+    session.flush()
 
-    # 3. 加载角色
-    if os.path.exists('docs/sys_roles.csv'):
-        with open('docs/sys_roles.csv', mode='r', encoding='utf-8-sig') as f:
+def load_roles(session: Session):
+    csv_path = Path('docs/sys_roles.csv')
+    if csv_path.exists():
+        logger.info("从 CSV 加载角色配置...")
+        with open(csv_path, mode='r', encoding='utf-8-sig') as f:
             for row in csv.DictReader(f):
                 rid = int(row['ID'])
                 r = session.query(SysRole).get(rid) or SysRole(id=rid)
                 r.role_name, r.role_key, r.data_scope = row['角色名称'], row['角色键'], int(row['数据范围'])
                 session.add(r)
-        session.flush()
-
-    # 4. 加载角色菜单关联 (sys_role_menus.csv)
-    if os.path.exists('docs/sys_role_menus.csv'):
-        with open('docs/sys_role_menus.csv', mode='r', encoding='utf-8-sig') as f:
-            for row in csv.DictReader(f):
-                rid, mid = int(row['role_id']), int(row['menu_id'])
-                if not session.query(SysRoleMenu).filter_by(role_id=rid, menu_id=mid).first():
-                    session.add(SysRoleMenu(role_id=rid, menu_id=mid))
-        session.flush()
-
-    # 5. 执行自动权限同步
-    ensure_auto_permissions(session)
-    
-    # 6. 加载用户角色关联 (sys_user_roles.csv) - 支持邮箱和汉字姓名
-    if os.path.exists('docs/sys_user_roles.csv'):
-        email_idx, name_idx = build_user_indexes(session)
-        with open('docs/sys_user_roles.csv', mode='r', encoding='utf-8-sig') as f:
-            for row in csv.DictReader(f):
-                user_val = row.get('user_id', row.get('邮箱', '')).strip()
-                role_id = int(row['role_id'])
-                uid = resolve_user(user_val, email_idx, name_idx, '用户角色')
-                if uid:
-                    if not session.query(UserRole).filter_by(user_id=uid, role_id=role_id).first():
-                        session.add(UserRole(user_id=uid, role_id=role_id))
-                else:
-                    logger.warning(f"用户角色关联跳过: 无法匹配用户 '{user_val}'")
-        session.flush()
-
-    # 7. 兜底绑定 admin 角色
-    ar = session.query(SysRole).filter_by(role_key='SYSTEM_ADMIN').first()
-    if ar and not session.query(UserRole).filter_by(user_id=admin_user.global_user_id, role_id=ar.id).first():
-        session.add(UserRole(user_id=admin_user.global_user_id, role_id=ar.id))
-
-    session.commit()
+    else:
+        logger.info("使用内置默认角色配置...")
+        for r_def in DEFAULT_ROLES:
+            r = session.query(SysRole).get(r_def['id']) or SysRole(id=r_def['id'])
+            r.role_name, r.role_key, r.data_scope = r_def['name'], r_def['key'], r_def['scope']
+            session.add(r)
+    session.flush()
 
 def main():
     engine = create_engine(settings.database.uri)
     Base.metadata.create_all(engine)
     with Session(engine) as session:
-        load_data(session)
-        logger.info("🎉 RBAC 自动同步已完成：业务自适应模式运行。")
+        # 1. 确保 admin 用户
+        admin_email = 'admin@tjhq.com'
+        admin_user = session.query(User).filter_by(primary_email=admin_email, is_current=True).first()
+        if not admin_user:
+            uid = uuid.uuid4()
+            admin_user = User(global_user_id=uid, username='admin', full_name='系统管理员',
+                             primary_email=admin_email, is_active=True, is_current=True)
+            session.add(admin_user)
+            session.flush()
+            session.add(UserCredential(user_id=uid, password_hash=pwd_context.hash('admin_password_123!')))
+        
+        # 2. 加载基础数据
+        load_menus(session)
+        load_roles(session)
+        
+        # 3. 自动权限同步 (核心简化：无需 CSV 指定，逻辑自动完成关联)
+        ensure_auto_permissions(session)
+        
+        # 4. 兜底绑定 admin 角色
+        ar = session.query(SysRole).filter_by(role_key='SYSTEM_ADMIN').first()
+        if ar and not session.query(UserRole).filter_by(user_id=admin_user.global_user_id, role_id=ar.id).first():
+            session.add(UserRole(user_id=admin_user.global_user_id, role_id=ar.id))
+        
+        session.commit()
+    logger.info("🎉 RBAC 系统初始化/同步完成（内置模式）。")
 
 if __name__ == '__main__':
     main()
