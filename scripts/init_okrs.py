@@ -86,7 +86,8 @@ def init_okrs():
 
                 # 3. 创建/更新 Key Results
                 kr = session.query(OKRKeyResult).filter_by(objective_id=obj.id, title=kr_title).first()
-                progress = round((current / target) * 100, 2) if target > 0 else 0
+                # 进度对齐模型定义 (0.0 - 1.0)
+                progress = round(current / target, 4) if target > 0 else 0.0
                 
                 if not kr:
                     kr = OKRKeyResult(

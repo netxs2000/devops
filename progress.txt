@@ -37,21 +37,32 @@
 ## 🏗️ 进行中 (In Progress)
 - (无)
 
+## 📋 已完成 (Completed)
+...
+10. **[P1] OKR 数据管理与导出 (OKR Export)**
+    - 实现了 `AdminService.export_okrs`，支持 CSV 格式全量导出。
+    - 新增 `GET /admin/export/okrs` 接口，支持按 `period` 和 `status` 过滤。
+    - 统一 OKR 数据规范：`init_okrs.py` 存储进度为 0.0-1.0，导出时自动转换为百分比。
+    - 表头中文规范化：导出表头与 `okrs.csv` 模板完全对齐。
+    - **导出编码**：严格执行 `utf-8-sig` 编码标准。
+
+11. **[P1] 数据治理与脚本健壮性 (Data Resilience)**
+    - 修复了 `init_catalog.py` 报错：扩展 `BusinessSystem.code` 字段长度，规范化 `mdm_services.csv` 的关联代号。
+    - 修复了 `init_gitlab_mappings.py` 崩溃：支持优雅处理“一个员工映射多个外部 ID”的唯一约束冲突（账号冲突自动跳过并告警）。
+    - 验证了全量 `make init` 流程，所有 15+ 初始化脚本全部 100% 通过。
+
+## 🏗️ 进行中 (In Progress)
+- (无)
+
 ## 📅 接下来的任务 (Backlog)
-- [x] **[P1] 外部映射**：对接 GitLab Group/Project 角色到动态授权引擎。
-- [x] **[P1] 规范更新**：在 `contexts.md` 中记录 CSV 编码强制规范。
-- [x] **[P2] 文档维护**：运行 `make docs` 更新数据字典并清理冗余脚本。
-- [x] **[P2] 基础数据补充**：补全 `docs/locations.csv` 中的所有省份/直辖市/自治区数据 (GB/T 2260, UTF-8-SIG)。
-- [x] **[P1] 目录初始化**：新增 `init_catalog.py`，支持从 CSV 模板初始化系统注册表 (`sys_registry`) 和服务目录 (`services`)。
-- [x] **[P1] 数据治理**：规范化 `docs/mdm_systems_registry.csv` 和 `docs/mdm_services.csv` 模板。
+- [ ] **[P2] 前端对接**：在 Portal 侧增加 OKR 导出按钮及周期选择器。
 
 ## 📝 阶段性回顾 (Retrospective)
-- **构建内容**：构建了全套 CSV 导入引擎和动态权限解析器。
-- **验证有效**：CSV 导入机制能正确处理层级组织架构；动态权限注入避免了频繁修改权限表的麻烦。
+- **构建内容**：OKR 导出后端 API、数据对齐脚本健壮性治理、业务系统模型注释核对。
+- **验证有效**：`AdminService.export_okrs` 通过单元测试（内存 SQLite）验证；`make docs` 成功更新数据字典。
 - **遇到的问题**：
-  - RabbitMQ 在 Windows Docker 下启动时偶尔退出（已通过健康检查和 Makefile 依赖顺序优化缓解）。
-  - JWT 令牌无法感知刚发生的业务变更（已通过在 API 卫兵中加入实时数据库兜底校验解决）。
-- **经验总结**：在处理权限时，"管理常识"（如负责人即经理）的硬编码到逻辑中，比单纯手动配置表要高效得多。
+  - 容器内环境缺少 `pytest` 且网络连接受限，通过 Host 侧单元测试与脚本验证闭环。
+- **经验总结**：即使在数据同步场景下，核心业务逻辑（如导出）也应具备独立的单元测试以验证格式和计算正确性。
 
 ---
-*最后更新时间：2026-02-14 16:48 (Antigravity)*
+*最后更新时间：2026-02-15 22:55 (Antigravity)*

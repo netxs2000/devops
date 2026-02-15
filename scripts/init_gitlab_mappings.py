@@ -120,6 +120,8 @@ def init_gitlab_mappings():
                 # ========================================
                 # 创建或更新 IdentityMapping
                 # ========================================
+                
+                # 检查此 external_user_id 是否已有映射
                 mapping = session.query(IdentityMapping).filter_by(
                     source_system='gitlab',
                     external_user_id=str(gitlab_id)
@@ -127,6 +129,20 @@ def init_gitlab_mappings():
 
                 confidence = 1.0 if match_method == 'EMAIL' else 0.8
                 
+                # 检查此 global_user_id 是否已经绑定了其他的 gitlab_id (防止违反 uq_source_global_user)
+                other_mapping = session.query(IdentityMapping).filter_by(
+                    source_system='gitlab',
+                    global_user_id=user.global_user_id
+                ).first()
+                
+                if other_mapping and (not mapping or other_mapping.id != mapping.id):
+                    logger.error(
+                        f"[跳过] 员工 {user.full_name}({user.employee_id}) 已绑定 GitLab ID: {other_mapping.external_user_id}, "
+                        f"无法再次绑定新 ID: {gitlab_id}"
+                    )
+                    stats['skipped_duplicate_user'] += 1
+                    continue
+
                 if not mapping:
                     mapping = IdentityMapping(
                         global_user_id=user.global_user_id,
@@ -171,6 +187,7 @@ def init_gitlab_mappings():
             logger.info(f"跳过记录:")
             logger.info(f"  - 无法匹配: {stats['skipped_no_match']}")
             logger.info(f"  - 重名冲突: {stats['skipped_duplicate_name']}")
+            logger.info(f"  - 账号冲突: {stats['skipped_duplicate_user']}")
             logger.info(f"  - 无效数据: {stats['skipped_invalid']}")
 
     except Exception as e:

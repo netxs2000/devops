@@ -31,9 +31,9 @@ init: ## [初始化] 在容器内安装依赖并重置并初始化数据库数�
 	$(EXEC_CMD) python scripts/reset_database.py
 	$(EXEC_CMD) python -m devops_collector.utils.schema_sync
 	$(EXEC_CMD) python scripts/init_rbac.py
+	$(EXEC_CMD) python scripts/import_employees.py
 	$(EXEC_CMD) python scripts/init_organizations.py
 	$(EXEC_CMD) python scripts/init_products_projects.py
-	$(EXEC_CMD) python scripts/import_employees.py
 	$(EXEC_CMD) python scripts/link_users_to_entities.py
 	$(EXEC_CMD) python scripts/init_okrs.py
 	$(EXEC_CMD) python scripts/init_calendar.py

@@ -444,3 +444,17 @@ async def import_product_mappings(
     """从 CSV 导入产品-项目关联矩阵。"""
     content = await file.read()
     return service.import_product_mappings(content.decode('utf-8'))
+@router.get('/export/okrs')
+async def export_okrs(
+    period: Optional[str] = None,
+    status: Optional[str] = None,
+    service: AdminService = Depends(get_admin_service),
+    admin_user: User = Depends(RoleRequired(['SYSTEM_ADMIN']))
+):
+    """导出 OKR 全量数据为 CSV。"""
+    csv_data = service.export_okrs(period=period, status=status)
+    return StreamingResponse(
+        io.BytesIO(csv_data.encode('utf-8-sig')),
+        media_type='text/csv',
+        headers={"Content-Disposition": "attachment; filename=okr_export.csv"}
+    )

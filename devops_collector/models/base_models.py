@@ -362,7 +362,7 @@ class BusinessSystem(Base, TimestampMixin):
     __tablename__ = 'mdm_business_systems'
     
     id = Column(Integer, primary_key=True, autoincrement=True, comment='自增主键')
-    code = Column(String(50), unique=True, nullable=False, index=True, comment='系统标准代号 (如 trade-center)')
+    code = Column(String(255), unique=True, nullable=False, index=True, comment='系统标准代号 (如 trade-center)')
     name = Column(String(100), nullable=False, comment='系统中文名称')
     description = Column(Text, comment='系统业务描述与边界定义')
     

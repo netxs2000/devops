@@ -1,6 +1,6 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-02-14 07:32:09  
+> **生成时间**: 2026-02-15 14:55:05  
 > **版本**: v2.2 (企业级标准版)  
 > **状态**: 有效 (Active)
 
@@ -26,10 +26,11 @@
 
 ## 数据表清单
 
-本系统共包含 **73 个数据表**，分为以下几个业务域：
+本系统共包含 **74 个数据表**，分为以下几个业务域：
 
 
 ### 核心主数据域
+- `mdm_business_systems` - BusinessSystem
 - `mdm_calendar` - Calendar
 - `mdm_company` - Company
 - `mdm_compliance_issues` - ComplianceIssue
@@ -115,6 +116,37 @@
 ---
 
 ## 核心主数据域
+
+### BusinessSystem (`mdm_business_systems`)
+
+**业务描述**: 业务系统模型 (Backstage System Concept). 代表一组协作提供业务能力的组件集合 (如: 交易系统, 用户中心)。 它是微服务(Service)的聚合层级，用于界定架构边界和治理粒度。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `code` | String(255) | UNIQUE, INDEX | 否 | - | 系统标准代号 (如 trade-center) |
+| `name` | String(100) | - | 否 | - | 系统中文名称 |
+| `description` | Text | - | 是 | - | 系统业务描述与边界定义 |
+| `domain` | String(50) | INDEX | 是 | - | 所属业务域 (如 电商/供应链/财务) |
+| `status` | String(20) | - | 是 | PRODUCTION | 生命周期状态 (PLANNING/DEV/PRODUCTION/DEPRECATED) |
+| `rank` | String(10) | - | 是 | T1 | 重要性分级 (T0/T1/T2/T3) |
+| `architecture_type` | String(50) | - | 是 | - | 架构类型 (Microservices/Monolith/Serverless) |
+| `primary_tech_stack` | String(100) | - | 是 | - | 主要技术栈 (如 Java/SpringCloud) |
+| `dr_level` | String(50) | - | 是 | - | 容灾等级要求 (双活/冷备/单点) |
+| `owner_id` | UUID | FK | 是 | - | 技术负责人 |
+| `business_owner_id` | UUID | FK | 是 | - | 业务负责人 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
+
+#### 关系映射
+
+- **services**: one-to-many -> `Service`
+- **owner**: many-to-one -> `User`
+- **business_owner**: many-to-one -> `User`
+
+---
 
 ### Calendar (`mdm_calendar`)
 
@@ -577,6 +609,7 @@
 | `manager_user_id` | UUID | FK | 是 | - | 部门负责人 |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
 | `cost_center` | String(100) | - | 是 | - | 成本中心编码 |
+| `business_line` | String(50) | - | 是 | - | 所属业务线/体系 (如 研发体系/交付体系/营销体系) |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `sync_version` | Integer | - | 否 | 1 | - |

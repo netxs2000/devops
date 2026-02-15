@@ -69,3 +69,18 @@
 - **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
 - **代码自查**: 提交前使用 `make lint` 确保符合 Google Python Style 且无死循环依赖。
 - **AI 交互**: Agent 在修改核心 `core/` 代码后，必须主动执行相关模块的集成测试。
+
+## 12. 分支开发与版本控制规范 (Branching & Versioning)
+- **命名公约 (Naming Convention)**:
+    - 功能开发: `feat/{domain}-{feature_name}` (例: `feat/sd-export-csv`)
+    - 缺陷修复: `fix/{domain}-{issue_description}` (例: `fix/adm-user-sync`)
+    - 架构重构: `refactor/{module}-{target}`
+    - 文档同步: `docs/{topic}`
+- **短寿命原则**: 分支生命周期建议不超过 3 天，任务完成后立即合入 `main` 并清理分支。
+- **提交质量**: 
+    - **原子提交**: 每次 Commit 仅包含一个逻辑变动。
+    - **语义化信息**: 提交消息必须包含业务域和动作（例: `feat(sd): 实现工单异步导出`）。
+- **合并前置要求**:
+    - 合并前必须执行 `git rebase origin/main` 保持历史线性。
+    - **强制容器内验证**: 合入前必须执行 `make test` 和 `make deploy` 通过验证。
+- **合并策略**: 推荐使用 **Squash Merge**，保持主分支历史简洁业务。

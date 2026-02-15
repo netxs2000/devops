@@ -12,7 +12,7 @@ import io
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session, joinedload
-from devops_collector.models.base_models import Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember, UserRole, Product, ProjectProductRelation
+from devops_collector.models.base_models import Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember, UserRole, Product, ProjectProductRelation, OKRObjective, OKRKeyResult
 from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_portal import schemas
 
@@ -468,3 +468,63 @@ class AdminService:
 
         self.session.commit()
         return summary
+    def export_okrs(self, period: Optional[str] = None, status: Optional[str] = None) -> str:
+        """导出全量 OKR 数据为 CSV (支持周期与状态过滤)。"""
+        query = self.session.query(OKRObjective).options(
+            joinedload(OKRObjective.owner),
+            joinedload(OKRObjective.organization),
+            joinedload(OKRObjective.key_results)
+        )
+        
+        if period:
+            query = query.filter(OKRObjective.period == period)
+        if status:
+            query = query.filter(OKRObjective.status == status)
+            
+        objectives = query.all()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        # 表头对齐 okrs.csv 并增加进度展示
+        writer.writerow([
+            '目标标题', '目标描述', '组织名称', '负责人', '周期', '目标进度%',
+            '关键结果标题', '目标值', '当前值', '单位', 'KR进度%'
+        ])
+        
+        for obj in objectives:
+            org_name = obj.organization.org_name if obj.organization else 'Unknown'
+            owner_name = obj.owner.full_name if obj.owner else 'Unknown'
+            
+            # 目标进度: 优先使用冗余字段，若为0则动态计算 KR 平均值
+            obj_progress = 0
+            if obj.progress:
+                obj_progress = round(obj.progress * 100, 2)
+            elif obj.key_results:
+                # KR progress 存储的是 0.0-1.0，计算平均值后需 * 100
+                obj_progress = round((sum(kr.progress or 0.0 for kr in obj.key_results) / len(obj.key_results)) * 100, 2)
+            
+            # 如果没有 KR，导出一行 Objective
+            if not obj.key_results:
+                writer.writerow([
+                    obj.title, obj.description or '', org_name, owner_name, obj.period, 
+                    f"{obj_progress}%", '', '', '', '', ''
+                ])
+                continue
+                
+            for kr in obj.key_results:
+                kr_progress = round((kr.progress or 0.0) * 100, 2)
+                writer.writerow([
+                    obj.title,
+                    obj.description or '',
+                    org_name,
+                    owner_name,
+                    obj.period,
+                    f"{obj_progress}%",
+                    kr.title,
+                    kr.target_value,
+                    kr.current_value,
+                    kr.unit or '',
+                    f"{kr_progress}%"
+                ])
+                
+        return output.getvalue()
