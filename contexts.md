@@ -145,13 +145,16 @@
 - **语义清晰**：前缀后应紧跟具体的资源名。例如，Service Desk 的聚合视图文件应命名为 `sd_support.py`，而具体的单一工单逻辑应为 `sd_ticket_service.py`。
 - **去内联化**：前端样式必须使用带前缀的 Class（如 `.sd-search-bar`），配合 CSS 变量（`var(--primary)`）实现风格统一。
 
-## 12. AI 辅助开发准则 (AI & Autogen)
-### 12.1 核心交互原则 (Interaction Principles)
-- **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
-- **代码自查**: 提交前使用 `make lint` 确保符合 Google Python Style 且无死循环依赖。
-- **AI 交互**: Agent 在修改核心 `core/` 代码后，必须主动执行相关模块的集成测试。
+## 12. AI 原生协作与共创 (AI-Native Collaboration & Co-Creation)
 
-### 12.2 反向交互与澄清 (Reverse Interaction & Discovery)
+### 12.1 核心哲学原理 (Core Philosophy)
+- **显性上下文 (Explicit Context)**: AI 没有“默会知识”。所有的业务规则、术语、架构决策必须沉淀在 `contexts.md` 或代码注释中。文档即代码，是预加载给 AI 的“系统提示词”。
+- **认知局限与分形架构 (Cognitive Locality)**: AI 的推理注意力有限。保持高内聚，严格遵守 **300行物理定律**（文件长度限制）。避免跨文件碎片化逻辑，物理邻近性等于认知效率。
+- **类型即护栏 (Types as Guardrails)**: 自然语言是模糊的，类型是确定的。强制使用 Type Hints (Pydantic)。遵循 **Schema-First** 开发，先定义数据结构模型，再让 AI 填充业务逻辑。
+- **可验证性闭环 (Verifiable Loops)**: AI 代码生成是概率性的。人类定义标准，AI 执行验证。提倡 **Test-Driven Intent**，在编码前通过测试用例精准化需求；利用集成测试、Lint 报错作为 AI 自我修正的闭环反馈。
+- **反向对齐 (Reverse Alignment)**: 意图对齐优于代码产出。通过“采访-选项-决策”流程将模糊意图工程化，严禁 AI 在模糊状态下进行单方面“猜想”。
+
+### 12.2 反向交互机制 (Reverse Interaction & Discovery)
 **核心原则**：不仅在开始前提问，更在过程中遇到模糊地带时主动“刹车”并反向确认。
 
 1. **前置采访 (Pre-implementation Interview)**
@@ -165,9 +168,8 @@
 2. **运行时决策卡点 (Runtime Decision Checkpoints)**
     - **触发条件**：在编码或执行过程中，遇到以下情况必须**立即暂停**并调用反向交互：
         - **不确定性**：发现现有代码逻辑与新需求存在 20% 以上的模糊冲突。
-        - **多路径选择**：存在两种以上技术实现方案（例如：用递归 vs 迭代，引入新库 vs 手写）。
+        - **多路径选择**：存在两种以上技术实现方案。
         - **破坏性风险**：涉及删除核心表、不兼容的 API 变更或不可逆的数据清洗。
-    - **禁止行为**：严禁使用“我假设”、“通常情况下”来进行单方面决策。
 
 3. **结构化选项提问 (Structured Options)**
     - **提问规范**：严禁抛出开放式问题。必须提供**结构化选项**供用户做选择题：
@@ -175,6 +177,12 @@
         - **[选项 B] 替代方案**：简述做法 + 理由 + 风险（如：性能好但改动大）。
         - **[选项 C] 保持现状/不做**：说明后果。
     - **默认推荐**：Agent 必须明确标识出它认为的最佳选项（Recommended）。
+
+### 12.3 核心交互准则 (Operational Guidelines)
+- **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
+- **代码自查**: 提交前使用 `make lint` 确保符合 Google Python Style 且无死循环依赖。
+- **验证驱动测试**: Agent 在修改核心 `core/` 或 `models/` 代码后，必须主动执行相关模块的集成测试。
+
 
 ## 13. 分支开发与版本控制规范 (Branching & Versioning)
 - **命名公约 (Naming Convention)**:
@@ -190,3 +198,29 @@
     - 合并前必须执行 `git rebase origin/main` 保持历史线性。
     - **强制容器内验证**: 合入前必须执行 `make test` 和 `make deploy` 通过验证。
 - **合并策略**: 推荐使用 **Squash Merge**，保持主分支历史简洁业务。
+
+## 14. 软件交付生命周期 (Software Delivery Lifecycle)
+
+### 14.1 需求工程与追踪 (Requirements Engineering)
+- **状态流转**: 需求必须经历 `Draft` (草稿) -> `Review` (评审) -> `Approved` (批准) -> `In Progress` (开发中) -> `Verified` (已验证) -> `Closed` (关闭) 的完整生命周期。
+- **可追溯性 (Traceability)**: 所有代码提交 (Commit) 必须在 Message 中关联需求 ID (如 `Ref: #123`)；测试用例必须在注释或装饰器中标注对应的需求点。
+
+### 14.2 设计决策门禁 (Design Gates)
+- **RFC 机制**: P0/P1 级重大功能或架构变更，**严禁直接编码**。必须先产出 RFC (Request for Comments) 文档存入 `docs/design/`，经用户评审通过后方可实施。
+- **Schema 评审**: 任何数据库 Schema 变更（特别是涉及数据迁移的）必须经过独立评审，重点审查**向后兼容性 (Backward Compatibility)**。
+
+### 14.3 安全架构与权限 (Security Architecture)
+- **RBAC 模型**: 严格遵循基于角色的访问控制。默认策略为 `Deny All`，仅按需授予最小权限。
+- **安全左移**:
+    - **SAST**: 代码提交前必须通过 Lint 与静态分析。
+    - **依赖扫描**: 定期检查 `requirements.txt` / `package.json` 中的第三方库是否存在已知 CVE 漏洞。
+
+### 14.4 发布与版本管理 (Release Strategy)
+- **语义化版本 (SemVer)**: 严格遵循 `Major.Minor.Patch` 格式。
+- **Changelog**: 每次发布前必须更新 `CHANGELOG.md`，基于 Keep a Changelog 标准记录 `Added`, `Changed`, `Deprecated`, `Fixed`, `Security`。
+
+### 14.5 完工标准 (Definition of Done - DoD)
+- **代码层面**: 通过所有 Lint 检查，无死代码，注释清晰且无拼写错误。
+- **测试层面**: 单元测试覆盖率达标，相关功能的 E2E 测试通过。
+- **文档层面**: `contexts.md`, `project_summary.md` 及 API 文档 (如有变更) 已同步更新。
+- **部署层面**: `make deploy` 在容器环境中验证通过，无回滚风险。
