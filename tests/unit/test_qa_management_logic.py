@@ -101,8 +101,10 @@ async def test_execute_test_case_should_update_labels_and_add_note(service, mock
     # 验证是否调用了更新接口，且移除了之前的 status 标签
     mock_client.update_issue.assert_called_once()
     args, kwargs = mock_client.update_issue.call_args
-    assert 'status::passed' in kwargs['data']['labels']
-    assert 'status::pending' not in kwargs['data']['labels']
+    # update_issue(project_id, issue_iid, data) -> data is args[2]
+    update_data = args[2] if len(args) > 2 else kwargs.get('data', {})
+    assert 'status::passed' in update_data['labels']
+    assert 'status::pending' not in update_data['labels']
     
     # 验证是否添加了记录
     mock_client.add_issue_note.assert_called_once()

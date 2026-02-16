@@ -194,10 +194,26 @@
 - **提交质量**: 
     - **原子提交**: 每次 Commit 仅包含一个逻辑变动。
     - **语义化信息**: 提交消息必须包含业务域和动作（例: `feat(sd): 实现工单异步导出`）。
-- **合并前置要求**:
-    - 合并前必须执行 `git rebase origin/main` 保持历史线性。
-    - **强制容器内验证**: 合入前必须执行 `make test` 和 `make deploy` 通过验证。
-- **合并策略**: 推荐使用 **Squash Merge**，保持主分支历史简洁业务。
+- **合并前检查清单 (Pre-merge Checklist)**:
+    > ⚠️ 以下步骤按顺序执行，任一步骤 FAIL 即中止合并。详细可执行步骤见 `.agent/workflows/merge.md`。
+
+    | 序号 | 检查项 | 命令/动作 | 阻断级别 |
+    | :--: | :----- | :-------- | :------: |
+    | 1 | **Rebase 同步** | `git rebase origin/main` 解决冲突并保持线性历史 | 🔴 BLOCK |
+    | 2 | **代码质量 (Lint)** | `make lint` 通过，无格式问题或死代码 | 🔴 BLOCK |
+    | 3 | **单元测试** | `make test-local` 全部通过 (本地快速验证) | 🔴 BLOCK |
+    | 4 | **容器内测试** | `make test` 在 Docker 内通过 (环境一致性保证) | 🔴 BLOCK |
+    | 5 | **容器部署验证** | `make deploy` 通过，健康检查无异常 | 🔴 BLOCK |
+    | 6 | **文档同步** | `progress.txt` 已更新；若涉及架构/技术栈变更则同步 `contexts.md` | 🟡 WARN |
+    | 7 | **安全自检** | 无硬编码 Secrets；新增依赖无已知 CVE (手动或工具扫描) | 🟡 WARN |
+    | 8 | **数据库兼容** | Schema 变更向后兼容 (Add Column → Deploy Code → Drop Old Column) | 🔴 BLOCK |
+
+    **降级策略**: 当外部环境阻塞（如 Docker 网络不通、外部服务器离线）导致步骤 4/5 无法执行时，必须：
+    - 在 `progress.txt` 中明确记录阻塞原因和已完成的替代验证。
+    - 至少通过步骤 1-3 (Rebase + Lint + 本地单元测试) 后方可有条件合入。
+    - 合入后标记为 **待补验证 (Pending Verification)**，后续环境恢复后补执行步骤 4/5。
+
+- **合并策略**: 推荐使用 **Squash Merge**，保持主分支历史简洁。
 
 ## 14. 软件交付生命周期 (Software Delivery Lifecycle)
 
@@ -224,3 +240,26 @@
 - **测试层面**: 单元测试覆盖率达标，相关功能的 E2E 测试通过。
 - **文档层面**: `contexts.md`, `project_summary.md` 及 API 文档 (如有变更) 已同步更新。
 - **部署层面**: `make deploy` 在容器环境中验证通过，无回滚风险。
+
+## 15. 禅道集成规范与元数据对齐 (ZenTao Integration & Metadata)
+
+### 15.1 实体映射策略 (Entity Strategy)
+为了解决禅道不同版本间（特别是 20.0+）的层级差异，采用以下映射逻辑：
+- **扁平化兼容**: 需求(Story)、缺陷(Bug) 和 任务(Task) 统一映射至 `ZenTaoIssue` 模型。
+- **联合主键机制**: 由于禅道内部 ID 空间非全局唯一，主键强制定义为 `(id, type)`，防止不同实体间的 ID 碰撞。
+- **层级穿透**: 
+    - 禅道的项目集(Program)、项目(Project) 和 执行(Execution) 统一映射至 `ZenTaoExecution` 表。
+    - 强制保存 `parent_id` 和 `path` (如 `,1,5,10,`)，支持基于路径的向上汇总（Roll-up）统计。
+
+### 15.2 FinOps 与效能元数据 (FinOps & Metrics)
+为支撑成本分摊与流动效率分析，必须完整采集以下元数据：
+- **核心工时 (Man-hours)**:
+    - `estimate`: 初始预计工时。
+    - `consumed`: 累计消耗工时。
+    - `left`: 剩余工时。
+- **人员对齐 (Identity)**:
+    - 采集原始账号的同时，必须通过 `id_mapping` 逻辑回填 `global_user_id`，确保工时能准确归因到部门成本中心。
+
+### 15.3 拓扑关联规范 (Topology Rules)
+- **ISSUE_TRACKER**: 通过 `mdm_entity_topology` 将 DevOps 项目关联至禅道的 **Execution (执行)** ID。
+- **继承原则**: 支持基于 `path` 的物理继承。若关联了父级项目，其下属所有未单独定义的子执行将自动继承该业务项目归属。

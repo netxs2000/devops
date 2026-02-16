@@ -1,23 +1,30 @@
-
-with source as (
-    select * from {{ source('raw', 'sonar_measures') }}
+-- stg_sonar_measures.sql
+WITH source AS (
+    SELECT * FROM {{ source('raw', 'sonar_measures') }}
 ),
 
-renamed as (
-    select
-        project_id as sonar_project_id,
+renamed AS (
+    SELECT
+        id AS measure_id,
+        project_id,
         analysis_date,
-        -- Core Metrics
-        ncloc,
-        complexity,
-        cognitive_complexity,
+        -- 核心存量指标
+        ncloc AS lines_of_code,
+        coverage,
         bugs,
         vulnerabilities,
         code_smells,
-        coverage,
-        sqale_index as technical_debt_minutes,
-        quality_gate_status
-    from source
+        complexity,
+        cognitive_complexity,
+        -- 核心增量指标 (New Code)
+        new_coverage,
+        new_bugs,
+        new_vulnerabilities,
+        new_reliability_rating,
+        new_security_rating,
+        quality_gate_status,
+        created_at
+    FROM source
 )
 
-select * from renamed
+SELECT * FROM renamed

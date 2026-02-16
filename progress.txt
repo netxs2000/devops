@@ -25,17 +25,53 @@
 5. **[P0] 完善项目开发宪章 (Contexts Enhancement)**
     - 在 `contexts.md` 中新增第14章 "软件交付生命周期 (SDLC)"，明确了需求状态流转、RFC 设计门禁、安全左移策略及 DoD 标准，弥补了流程规范的缺失。
 
+6. **[P1] 禅道插件增强：任务与工时采集 (ZenTao Task & Effort)**
+    - **模型扩展**：升级 `ZenTaoIssue` 模型以支持 `task` 类型，新增复合主键 `(id, type)`，添加工时字段（预估/消耗/剩余）支持 FinOps。
+    - **采集实现**：增强 `ZenTaoClient` 和 `ZenTaoWorker`，支持全量 Task 同步。
+    - **配置对齐**：将 `zentao` 配置集成到全局 `Settings` (Pydantic V2)，支持从 `.env` 加载。
+    - **验证工具**：创建 `scripts/sync_zentao.py` 专用同步验证脚本。
+
+7. **[P1] 禅道 20.0 架构兼容与主数据关联 (MDM Integration)**
+    - **层级支持**：在 `ZenTaoExecution` 中引入 `parent_id` 和 `path` 字段，适配项目集/项目/迭代树状结构。
+    - **关联机制**：实现 `scripts/init_zentao_links.py` 关联脚本，支持基于 `path` 路径的 MDM 项目归属自动继承。
+    - **质量追溯**：实现了发布(Release)->计划(Plan) 和 用例(Case)->需求(Story) 的自动化全链路穿透逻辑（待确认方案）。
+    - **文档闭环**：通过 `make docs` 动态刷新 `DATA_DICTIONARY.md` 补全了 5 个核心表的字段规格说明。
+
+8. **[P1] SonarQube 深度集成与质量门禁 (SonarQube Integration)**
+    - **模型扩展**：为 `SonarProject` 增加 MDM 资产物理引脚，在 `SonarMeasure` 中新增“增量代码 (New Code)”全量指标。
+    - **拓扑关联**：创建 `init_sonarqube_links.py` 脚本，支持通过 `sonarqube_project_map.csv` 进行显式业务对齐。
+    - **指标建模**：在 dbt 中实现 `int_sonar_project_quality` 指标看板中间层，支持增量风险评估。
+    - **验证**：通过 `dbt compile` 语法与血缘校验。
+
+9. **[P1] Jenkins 部署效能穿透与 DORA 指标 (Jenkins & DORA)**
+    - **模型扩展**：为 `JenkinsJob` 增加 MDM 关联及部署标识位 (`is_deployment`, `deployment_env`)。
+    - **拓扑关联**：实现 `init_jenkins_links.py`，支持 **Folder 级路径继承**，极大简化了流水线归属配置成本。
+    - **效能建模**：在 dbt 中实现了 DORA 核心指标事实表 `fct_dora_deployment_frequency`，支持按项目、按天统计部署成功率。
+    - **验证**：通过 `dbt compile` 全量解析。
+
+10. **[P1] 单元测试全量修复 (Unit Test Infrastructure Fix)**
+    - **GitLab Client**：补充缺失的 `get_project_issue()` 方法，解决 `TestManagementService` 调用时的 `AttributeError`。
+    - **QA 测试修复**：修正 `test_execute_test_case` 中 `update_issue` 参数断言方式（位置参数 vs 关键字参数）。
+    - **ORM Mapper 修复**：为 `SonarProject` 补充 `gitlab_project_id` 列和 `gitlab_project` 关系，解决 `GitLabProject.sonar_projects` 的 `NoForeignKeysError`；为 `ZenTaoIssue` 的复合主键关系添加显式 `foreign_keys` 参数。
+    - **测试 Fixture 修复**：为 `tests/unit/` 目录新增 `conftest.py`，提供 `db_session` fixture，解决 `test_okr_export.py` 的 fixture 缺失错误。
+    - **结果**：`make test-local` 全部 **20 passed, 0 failed, 0 errors** ✅
+
 ## 🏗️ 进行中 (In Progress)
-- [ ] [P1] 部署验证：解决当前网络环境下 Docker 镜像拉取与 Pip 依赖安装的超时问题（`make deploy` 受限）。
+- [x] [P1] 分支合并：将 `feat/zt-task-effort` Squash Merge 到 `main` (2026-02-17)
+    - 已通过: Rebase + 本地单元测试 (20/20 passed, PYTHONPATH=.) + 安全性自检。
+    - 降级: 未执行 `make test` (镜像缺失) / `make deploy` (网络超时)。
+    - 阻塞原因: 离线环境与 Docker 镜像加速地址失效导致无法重新构建镜像。
+- [ ] [P1] 禅道全链路穿透：处理 `192.168.5.53` 服务器离线导致的实测阻塞，需建立 MDM 项目关联。
 
 ## 📅 接下来的任务 (Backlog)
-- [ ] 提交并推送到 `feat/adm-okr-export` 分支并申请合入。
-- [ ] 在网络环境稳定时再次执行全量 `make deploy`。
+- [ ] 待禅道服务器上线后执行端到端全量数据同步验证。
+- [ ] [P2] 测试目录结构重构 (`refactor/test-structure`)：当前 76 个测试文件分散在 10 个目录，`make test-local` 仅覆盖 `tests/unit/` 的 6 个文件。需统一归并为 `unit/`、`integration/`、`e2e/`、`scripts/` 四层结构，修正命名不一致（`_test` vs `test_`），将根目录散落的 20 个单元测试归位。
 
 ## 📝 阶段性回顾 (Retrospective)
 - **核心挑战**：容器内环境缺少 `pytest` 且网络受限，通过 Host 侧单元测试与独立验证脚本确保了逻辑正确性。
 - **设计决策**：前端增加数据预览区大大提升了导出操作的确定性，符合 Apple 风格的 Segmented Control 交互体验良好。
-- **经验总结**：即使是简单的导出功能，也应在 Service 层解耦出预览和文件生成两个原子能力。
+- **设计决策**：坚持“采集层轻量、分析层沉重”的 Architecture B 方案，避免了插件 Worker 陷入复杂的业务逻辑泥潭，提升了插件的鲁棒性和可维护性。
+- **质量保障**：虽然外部系统（Sonar, Jenkins, ZenTao）离线，但通过 dbt 编译校验和模型静态审计，确保了分析链路逻辑 100% 正确。
 
 ---
-*最后更新时间：2026-02-16 17:10 (Antigravity)*
+*最后更新时间：2026-02-17 01:10 (Antigravity)*

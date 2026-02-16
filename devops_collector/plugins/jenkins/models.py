@@ -2,17 +2,29 @@
 
 定义 Jenkins 相关的 SQLAlchemy ORM 模型，包括 Job 和 Build 详情。
 """
+
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, Boolean, BigInteger
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    Text,
+    JSON,
+    Boolean,
+    BigInteger,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from devops_collector.models.base_models import Base
 
+
 class JenkinsJob(Base):
     """Jenkins 任务(Job)模型 (jenkins_jobs)。
-    
+
     存储 Jenkins Job 的基本信息。
-    
+
     Attributes:
         id (int): 自增主键。
         name (str): Job 名称。
@@ -24,40 +36,59 @@ class JenkinsJob(Base):
         sync_status (str): 同步状态 (PENDING, SUCCESS, FAILED)。
         builds (List[JenkinsBuild]): 关联的构建列表。
     """
-    __tablename__ = 'jenkins_jobs'
+
+    __tablename__ = "jenkins_jobs"
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
     full_name = Column(String(500), unique=True, nullable=False)
     url = Column(String(500))
     description = Column(Text)
     color = Column(String(50))
-    gitlab_project_id = Column(Integer, ForeignKey('gitlab_projects.id'), nullable=True)
+    gitlab_project_id = Column(Integer, ForeignKey("gitlab_projects.id"), nullable=True)
+
+    # MDM 拓扑关联与部署属性
+    mdm_project_id = Column(
+        String(100),
+        ForeignKey("mdm_projects.project_id"),
+        nullable=True,
+        comment="关联的 MDM 项目 ID",
+    )
+    mdm_product_id = Column(
+        String(100),
+        ForeignKey("mdm_product.product_id"),
+        nullable=True,
+        comment="关联的 MDM 产品 ID",
+    )
+    is_deployment = Column(Boolean, default=False, comment="是否为生产/测试环境部署 Job")
+    deployment_env = Column(String(50), comment="部署环境标识 (prod/test/staging)")
+
     last_synced_at = Column(DateTime(timezone=True))
-    sync_status = Column(String(20), default='PENDING')
+    sync_status = Column(String(20), default="PENDING")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     raw_data = Column(JSON)
-    builds = relationship('JenkinsBuild', back_populates='job', cascade='all, delete-orphan')
+    builds = relationship("JenkinsBuild", back_populates="job", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JenkinsJob(full_name='{self.full_name}')>"
+
 
 class JenkinsBuild(Base):
     """Jenkins 构建(Build)详情模型 (jenkins_builds)。
-    
+
     记录每次构建的具体信息。
-    
+
     Attributes:
         id (int): 自增主键。
         job_id (int): 所属 Job ID。
@@ -76,9 +107,10 @@ class JenkinsBuild(Base):
         artifact_type (str): 产物类型 (docker_image, jar 等)。
         job (JenkinsJob): 关联的 Job 对象。
     """
-    __tablename__ = 'jenkins_builds'
+
+    __tablename__ = "jenkins_builds"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    job_id = Column(Integer, ForeignKey('jenkins_jobs.id'), nullable=False)
+    job_id = Column(Integer, ForeignKey("jenkins_jobs.id"), nullable=False)
     number = Column(Integer, nullable=False)
     queue_id = Column(BigInteger)
     url = Column(String(500))
@@ -89,25 +121,27 @@ class JenkinsBuild(Base):
     executor = Column(String(255))
     trigger_type = Column(String(50))
     trigger_user = Column(String(100))
-    trigger_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
+    trigger_user_id = Column(
+        UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True
+    )
     commit_sha = Column(String(100))
     raw_data = Column(JSON)
     gitlab_mr_iid = Column(Integer)
     artifact_id = Column(String(200))
     artifact_type = Column(String(50))
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    job = relationship('JenkinsJob', back_populates='builds')
+    job = relationship("JenkinsJob", back_populates="builds")
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JenkinsBuild(job_id={self.job_id}, number={self.number}, result='{self.result}')>"

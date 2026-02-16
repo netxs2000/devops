@@ -54,9 +54,9 @@ sources:
 
       # 4. SonarQube 原始数据 (Code Quality)
       - name: sonar_projects
-        description: "SonarQube 项目表"
+        description: "SonarQube 项目主表（含 MDM 关联）"
       - name: sonar_measures
-        description: "SonarQube 质量指标快照表"
+        description: "SonarQube 指标快照表（含增量代码指标）"
       - name: sonar_issues
         description: "SonarQube 代码缺陷明细表"
 
@@ -72,3 +72,29 @@ sources:
         description: "资源与人力费率快照表"
       - name: satisfaction_records
         description: "SPACE 框架满意度调查记录表 (Satisfaction)"
+
+      # 6. 禅道原始数据 (Project & Quality Management)
+      - name: zentao_products
+        description: "禅道产品主表"
+      - name: zentao_executions
+        description: "禅道执行/迭代表 (含项目集、项目、执行)"
+      - name: zentao_issues
+        description: "禅道需求、任务、缺陷合表"
+      - name: zentao_product_plans
+        description: "禅道产品计划表"
+      - name: zentao_builds
+        description: "禅道构建/版本表"
+      - name: zentao_releases
+        description: "禅道发布/上线记录表"
+      - name: zentao_actions
+        description: "禅道审计日志与状态流转表"
+      - name: zentao_test_cases
+        description: "禅道测试用例表"
+      - name: zentao_test_results
+        description: "禅道测试执行结果表"
+
+      # 7. Jenkins 原始数据 (CI/CD)
+      - name: jenkins_jobs
+        description: "Jenkins 任务定义表"
+      - name: jenkins_builds
+        description: "Jenkins 构建详细记录表"

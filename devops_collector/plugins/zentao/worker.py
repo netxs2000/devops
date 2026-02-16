@@ -58,9 +58,15 @@ class ZenTaoWorker(BaseWorker):
                 self._sync_release(product.id, rel_data)
             product_executions = self.session.query(ZenTaoExecution).filter_by(product_id=product.id).all()
             for exec_item in product_executions:
+                # 同步构建
                 builds = self.client.get_builds(exec_item.id)
                 for b_data in builds:
                     self._sync_build(product.id, exec_item.id, b_data)
+                # 同步任务 (Task) 及工时
+                tasks = self.client.get_tasks(exec_item.id)
+                for t_data in tasks:
+                    self._sync_task(product.id, exec_item.id, t_data)
+            
             actions = self.client.get_actions(product.id)
             for a_data in actions:
                 self._sync_action(product.id, a_data)
@@ -157,10 +163,16 @@ class ZenTaoWorker(BaseWorker):
 
     def _transform_issue(self, product_id: int, data: dict, issue_type: str) -> ZenTaoIssue:
         """核心解析逻辑：将原始禅道 JSON 转换为 ZenTaoIssue 模型。"""
+        # 注意：现在使用 (id, type) 作为复合主键进行查询
         issue = self.session.query(ZenTaoIssue).filter_by(id=data['id'], type=issue_type).first()
         if not issue:
             issue = ZenTaoIssue(id=data['id'], product_id=product_id, type=issue_type)
             self.session.add(issue)
+        
+        # 统一处理工时数据 (Story/Task 有所不同)
+        if issue_type == 'feature':
+            issue.estimate = data.get('estimate')  # Story 的预计工时
+        
         issue.plan_id = data.get('plan')
         issue.title = data.get('title') or data.get('name')
         issue.status = data.get('status')
@@ -193,6 +205,53 @@ class ZenTaoWorker(BaseWorker):
         self.session.flush()
         return issue
 
+    def _sync_task(self, product_id: int, execution_id: int, data: dict) -> ZenTaoIssue:
+        """同步禅道任务：基于统一 Issue 模型存储。"""
+        self.save_to_staging(source='zentao', entity_type='task', external_id=data['id'], payload=data, schema_version=self.SCHEMA_VERSION)
+        return self._transform_task(product_id, execution_id, data)
+
+    def _transform_task(self, product_id: int, execution_id: int, data: dict) -> ZenTaoIssue:
+        """将禅道 Task 转换为 ZenTaoIssue(type='task')。"""
+        issue = self.session.query(ZenTaoIssue).filter_by(id=data['id'], type='task').first()
+        if not issue:
+            issue = ZenTaoIssue(id=data['id'], product_id=product_id, execution_id=execution_id, type='task')
+            self.session.add(issue)
+        
+        issue.title = data.get('name')
+        issue.status = data.get('status')
+        issue.priority = data.get('pri')
+        issue.task_type = data.get('type')  # devel, design 等
+        
+        # 工时数据 (FinOps 核心)
+        issue.estimate = data.get('estimate')
+        issue.consumed = data.get('consumed')
+        issue.left = data.get('left')
+        
+        # 人员映射
+        issue.opened_by = data.get('openedBy')
+        if issue.opened_by:
+            u = IdentityManager.get_or_create_user(self.session, 'zentao', issue.opened_by)
+            issue.opened_by_user_id = u.global_user_id
+        
+        issue.assigned_to = data.get('assignedTo')
+        if issue.assigned_to:
+            u = IdentityManager.get_or_create_user(self.session, 'zentao', issue.assigned_to)
+            issue.assigned_to_user_id = u.global_user_id
+            
+        # 时间映射
+        if data.get('openedDate'):
+            try:
+                issue.created_at = datetime.fromisoformat(data['openedDate'].replace(' ', 'T'))
+            except: pass
+        if data.get('finishedDate'):
+            try:
+                issue.closed_at = datetime.fromisoformat(data['finishedDate'].replace(' ', 'T'))
+            except: pass
+            
+        issue.raw_data = data
+        self.session.flush()
+        return issue
+
     def _sync_test_case(self, product_id: int, data: dict) -> ZenTaoTestCase:
         """同步禅道测试用例记录。
         
@@ -211,6 +270,8 @@ class ZenTaoWorker(BaseWorker):
         tc.title = data.get('title')
         tc.type = data.get('type')
         tc.status = data.get('status')
+        # 自动化关联：提取关联的需求 ID (Story ID)
+        tc.story_id = data.get('story')
         tc.last_run_result = data.get('lastRunResult')
         tc.opened_by = data.get('openedBy')
         if tc.opened_by:
@@ -297,20 +358,27 @@ class ZenTaoWorker(BaseWorker):
         return self._transform_release(product_id, data)
 
     def _transform_release(self, product_id: int, data: dict) -> ZenTaoRelease:
-        """从原始数据转换并加载 Release。"""
+        """从原始数据转换并加载 Release。不再在此处尝试自动推导计划。"""
         rel = self.session.query(ZenTaoRelease).filter_by(id=data['id']).first()
         if not rel:
             rel = ZenTaoRelease(id=data['id'], product_id=product_id)
             self.session.add(rel)
+        
         rel.name = data.get('name')
         if data.get('date'):
             rel.date = datetime.fromisoformat(data['date'].replace(' ', 'T'))
         rel.status = data.get('status')
         rel.build_id = data.get('build')
+        
+        # 仅同步 API 直接提供的计划关联 (如有)
+        if data.get('plan'):
+            rel.plan_id = data.get('plan')
+        
         rel.opened_by = data.get('openedBy')
         if rel.opened_by:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', rel.opened_by)
             rel.opened_by_user_id = u.global_user_id
+        
         rel.raw_data = data
         self.session.flush()
         return rel

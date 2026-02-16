@@ -98,6 +98,11 @@ class ZenTaoClient(BaseClient):
         response = self._get(f'/products/{product_id}/actions')
         return response.json().get('actions', [])
 
+    def get_tasks(self, execution_id: int) -> List[Dict[str, Any]]:
+        """获取执行 (迭代) 下的任务。"""
+        response = self._get(f'/executions/{execution_id}/tasks')
+        return response.json().get('tasks', [])
+
     def get_departments(self) -> List[Dict[str, Any]]:
         """获取组织架构部门列表。"""
         response = self._get('/departments')

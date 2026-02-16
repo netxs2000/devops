@@ -33,13 +33,16 @@ class SonarProject(Base):
     name = Column(String(255))
     qualifier = Column(String(10))
     gitlab_project_id = Column(Integer, ForeignKey('gitlab_projects.id'), nullable=True)
-    # 使用字符串引用 'GitLabProject' 替代直接引用类对象，以解除循环导入依赖
-    gitlab_project = relationship('GitLabProject', back_populates='sonar_projects')
+    # MDM 拓扑关联
+    mdm_project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True, comment='关联的 MDM 项目 ID')
+    mdm_product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True, comment='关联的 MDM 产品 ID')
+    
     last_analysis_date = Column(DateTime(timezone=True))
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default='PENDING')
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+    gitlab_project = relationship('GitLabProject', back_populates='sonar_projects')
     measures = relationship('SonarMeasure', back_populates='project', cascade='all, delete-orphan')
     issues = relationship('SonarIssue', back_populates='project', cascade='all, delete-orphan')
     latest_measure = relationship('SonarMeasure', primaryjoin='and_(SonarProject.id==SonarMeasure.project_id)', order_by='desc(SonarMeasure.analysis_date)', viewonly=True, uselist=False)
@@ -185,6 +188,14 @@ class SonarMeasure(Base):
     reliability_rating = Column(String(1))
     security_rating = Column(String(1))
     sqale_rating = Column(String(1))
+    
+    # --- 增量代码 (New Code) 指标，用于流水线质量门禁 ---
+    new_coverage = Column(Float, comment='新增代码覆盖率')
+    new_bugs = Column(Integer, comment='新增 Bug 数')
+    new_vulnerabilities = Column(Integer, comment='新增漏洞数')
+    new_reliability_rating = Column(String(1), comment='新增可靠性评级')
+    new_security_rating = Column(String(1), comment='新增安全性评级')
+    
     quality_gate_status = Column(String(10))
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     project = relationship('SonarProject', back_populates='measures')

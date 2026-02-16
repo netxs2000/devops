@@ -39,9 +39,11 @@ class ZenTaoProduct(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
     raw_data = Column(JSON)
+    # MDM 关联字段
+    mdm_product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True, comment='关联的 MDM 产品 ID')
     executions = relationship('ZenTaoExecution', back_populates='product', cascade='all, delete-orphan')
     plans = relationship('ZenTaoProductPlan', back_populates='product', cascade='all, delete-orphan')
-    issues = relationship('ZenTaoIssue', back_populates='product', cascade='all, delete-orphan')
+    issues = relationship('ZenTaoIssue', back_populates='product', cascade='all, delete-orphan', foreign_keys='ZenTaoIssue.product_id')
     test_cases = relationship('ZenTaoTestCase', back_populates='product', cascade='all, delete-orphan')
     builds = relationship('ZenTaoBuild', back_populates='product', cascade='all, delete-orphan')
     releases = relationship('ZenTaoRelease', back_populates='product', cascade='all, delete-orphan')
@@ -101,12 +103,16 @@ class ZenTaoExecution(Base):
     product_id = Column(Integer, ForeignKey('zentao_products.id'), nullable=False)
     name = Column(String(255))
     code = Column(String(100))
-    type = Column(String(20))
+    type = Column(String(20), comment='实体类型: program, project, execution')
     status = Column(String(20))
+    parent_id = Column(Integer, comment='父级节点 ID (zt_project.parent)')
+    path = Column(String(255), comment='层级路径 (zt_project.path)')
     begin = Column(DateTime)
     end = Column(DateTime)
     real_began = Column(DateTime)
     real_end = Column(DateTime)
+    # MDM 关联字段
+    mdm_project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True, comment='关联的 MDM 项目 ID')
     product = relationship('ZenTaoProduct', back_populates='executions')
     raw_data = Column(JSON)
 
@@ -115,31 +121,40 @@ class ZenTaoExecution(Base):
         return f"<ZenTaoExecution(id={self.id}, name='{self.name}')>"
 
 class ZenTaoIssue(Base):
-    """禅道 Issue 模型 (zentao_issues)，包含需求 (Story) 和 缺陷 (Bug)。
+    """禅道 Issue 模型 (zentao_issues)，包含需求 (Story)、缺陷 (Bug) 和 任务 (Task)。
 
     Attributes:
         id (int): 禅道原始 ID。
+        type (str): 类型 (feature, bug, task)。
         product_id (int): 所属产品 ID。
-        execution_id (int): 所属执行 ID。
+        execution_id (int): 所属执行 ID (对于 Task 是必填的)。
         plan_id (int): 关联计划 ID。
         title (str): 标题。
-        type (str): 类型 (feature, bug)。
         status (str): 状态。
         priority (int): 优先级。
+        estimate (float): 最初预计工时 (仅 Task/Story)。
+        consumed (float): 已消耗工时 (仅 Task)。
+        left (float): 剩余工时 (仅 Task)。
         opened_by_user_id (UUID): 创建人 OneID。
         assigned_to_user_id (UUID): 目前处理人 OneID。
         closed_at (datetime): 关闭时间。
         first_commit_sha (str): 关联的代码提交。
     """
     __tablename__ = 'zentao_issues'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=False)
+    type = Column(String(50), primary_key=True)  # feature, bug, task
     product_id = Column(Integer, ForeignKey('zentao_products.id'), nullable=False)
     execution_id = Column(Integer, ForeignKey('zentao_executions.id'), nullable=True)
     plan_id = Column(Integer, ForeignKey('zentao_product_plans.id'), nullable=True)
     title = Column(String(500), nullable=False)
-    type = Column(String(50))
     status = Column(String(50))
     priority = Column(Integer)
+    # 工时数据 (支持 FinOps)
+    estimate = Column(JSON)  # Story 可能有多个阶段预计，Task 是单值，统一存 JSON 或使用 Float
+    consumed = Column(JSON)
+    left = Column(JSON)
+    # 辅助字段
+    task_type = Column(String(50))  # devel, test, design 等
     opened_by = Column(String(100))
     assigned_to = Column(String(100))
     opened_by_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
@@ -150,12 +165,12 @@ class ZenTaoIssue(Base):
     raw_data = Column(JSON)
     first_commit_sha = Column(String(100))
     first_fix_date = Column(DateTime(timezone=True))
-    product = relationship('ZenTaoProduct', back_populates='issues')
-    plan = relationship('ZenTaoProductPlan', back_populates='issues')
+    product = relationship('ZenTaoProduct', back_populates='issues', foreign_keys=[product_id])
+    plan = relationship('ZenTaoProductPlan', back_populates='issues', foreign_keys=[plan_id])
 
     def __repr__(self) -> str:
         """返回问题的字符串表示。"""
-        return f"<ZenTaoIssue(id={self.id}, title='{self.title[:20]}...', type='{self.type}')>"
+        return f"<ZenTaoIssue(id={self.id}, type='{self.type}', title='{self.title[:20]}...')>"
 
 class ZenTaoTestCase(Base):
     """禅道测试用例模型 (zentao_test_cases)。
@@ -171,6 +186,7 @@ class ZenTaoTestCase(Base):
     __tablename__ = 'zentao_test_cases'
     id = Column(Integer, primary_key=True)
     product_id = Column(Integer, ForeignKey('zentao_products.id'), nullable=False)
+    story_id = Column(Integer, comment='关联的需求 (Story) ID')
     title = Column(String(500))
     type = Column(String(50))
     status = Column(String(20))
@@ -244,6 +260,7 @@ class ZenTaoRelease(Base):
         id (int): 发布 ID。
         product_id (int): 产品 ID。
         name (str): 发布名称。
+        plan_id (int): 关联产品计划 ID。
         date (datetime): 发布时间。
         status (str): 状态。
     """
@@ -251,6 +268,7 @@ class ZenTaoRelease(Base):
     id = Column(Integer, primary_key=True)
     product_id = Column(Integer, ForeignKey('zentao_products.id'), nullable=False)
     build_id = Column(Integer, ForeignKey('zentao_builds.id'), nullable=True)
+    plan_id = Column(Integer, ForeignKey('zentao_product_plans.id'), nullable=True, comment='自动探测关联的产品计划 ID')
     name = Column(String(255))
     date = Column(DateTime)
     status = Column(String(50))

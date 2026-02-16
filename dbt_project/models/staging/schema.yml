@@ -238,3 +238,64 @@ models:
         description: "指标值"
       - name: collected_at
         description: "采集时间"
+
+  # --- ZenTao 相关 ---
+  - name: stg_zentao_products
+    description: "禅道产品清洗层"
+    columns:
+      - name: product_id
+        description: "禅道产品唯一 ID"
+        tests:
+          - not_null
+          - unique
+      - name: mdm_product_id
+        description: "关联的 MDM 产品 ID"
+
+  - name: stg_zentao_executions
+    description: "禅道层级（项目集/项目/迭代）清洗层"
+    columns:
+      - name: execution_id
+        description: "执行/项目唯一 ID"
+        tests:
+          - not_null
+          - unique
+      - name: parent_id
+        description: "父级 ID"
+      - name: type
+        description: "类型 (program/project/execution)"
+      - name: mdm_project_id
+        description: "关联的 MDM 项目 ID"
+
+  - name: stg_zentao_issues
+    description: "禅道需求、任务、缺陷清洗层"
+    columns:
+      - name: issue_unique_id
+        description: "全局唯一 ID (复合 ID)"
+        tests:
+          - not_null
+          - unique
+      - name: raw_id
+        description: "禅道原始 ID"
+      - name: type
+        description: "实体类型 (feature/task/bug)"
+      - name: plan_id
+        description: "关联计划 ID"
+      - name: execution_id
+        description: "关联执行 ID"
+      - name: estimate
+        description: "预计工时 (JSON)"
+      - name: consumed
+        description: "消耗工时 (JSON)"
+
+  - name: stg_zentao_releases
+    description: "禅道发布清洗层"
+    columns:
+      - name: release_id
+        description: "发布唯一 ID"
+        tests:
+          - not_null
+          - unique
+      - name: build_id
+        description: "关联构建 ID"
+      - name: inferred_plan_id
+        description: "推导出的计划 ID (逻辑关联点)"
