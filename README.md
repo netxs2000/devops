@@ -4,6 +4,20 @@
 ![Python](https://img.shields.io/badge/python-3.9+-green)
 ![PostgreSQL](https://img.shields.io/badge/postgres-13+-blue)
 
+> **Developer Notice**: Before contributing, please read the core guidelines below.
+
+## 📚 关键文档索引 (Key Documentation)
+
+### 1. 开发规范 (Guidelines)
+*   **全局工作流**: `~/.gemini/GEMINI.md` (Workflow & Principles)
+*   **项目架构**: [`contexts.md`](./contexts.md) (Tech Stack & Architecture)
+*   **前端规范**: [`docs/frontend/CONVENTIONS.md`](docs/frontend/CONVENTIONS.md) (Apple Style Guide)
+*   **API/DB**: [`docs/api/DATA_DICTIONARY.md`](docs/api/DATA_DICTIONARY.md) (Data Models)
+
+### 2. 进度与变更 (Tracking)
+*   **当前状态**: [`progress.txt`](./progress.txt) (Tasks & Backlog)
+*   **变更日志**: [`docs/CHANGELOG.md`](docs/CHANGELOG.md) (Release Notes)
+
 ## 📖 项目简介 (Introduction)
 
 **DevOps Data Application Platform** 是一个企业级研发效能数据采集与分析平台。它旨在打破研发工具链（GitLab, SonarQube, Jenkins 等）之间的数据孤岛，将分散的研发数据聚合为有价值的资产。

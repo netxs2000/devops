@@ -19,34 +19,58 @@
     - **业务侧用中文**: 数据库 `comment`、CSV 导入/导出表头、UI 界面显示、报表评估指标必须使用专业业务中文术语（如：项目经理、负责人邮箱、交付周期、ELOC等）。
     - **高度自适应映射**: 脚本层应实现“业务 -> 技术”的自动解析（如通过邮箱自动匹配 ID，通过中文表头自动匹配字段），确保护业务维护的低成本。
 - **配置一致性**: 所有敏感配置统一通过 `.env` 注入，严禁硬编码 API 地址。
+    - **Pydantic 规范**: 使用双下划线 (`__`) 分隔嵌套配置（如 `GITLAB__URL` 映射到 `config.gitlab.url`）。
+    - **脱敏**: Logger 必须屏蔽任何包含 `token`, `password`, `key` 的字段。
 
 ## 4. 核心架构与插件开发 (Architecture)
-- **Plugin Factory**: 插件位于 `devops_collector/plugins/`，结构必须包含 `client.py` (API 封装), `worker.py` (异步逻辑), `models.py` (表定义)。
+- **Plugin Factory**: 插件位于 `devops_collector/plugins/`，结构必须遵循以下标准：
+    ```
+    plugins/{plugin_name}/
+        __init__.py      # 必须包含 register() 函数
+        client.py        # API 客户端，继承 BaseClient
+        worker.py        # 任务处理器，继承 BaseWorker
+        models.py        # SQLAlchemy 模型定义
+        schemas.py       # Pydantic 请求/响应模型 (可选)
+    ```
 - **Router-Service 模式**: 
-    - **Router 层**: 函数申明必须带 `response_model`，严禁直接返回 SQLAlchemy 对象。命名规则：`{Action}{Resource}Request`。
-    - **Service 层**: 业务逻辑承载者，多表操作强制使用 `with db.begin():` 包裹。
+    - **Router 层**: 仅负责路由定义、参数校验（Pydantic）、权限控制、依赖注入及调用 Service。严禁在 Router 中编写业务逻辑或直接操作多表数据库。必须定义 `response_model`，严禁直接返回 SQLAlchemy 对象。
+    - **Service 层**: 承载核心业务逻辑、复杂计算、跨表事务。Service 函数应具备原子性，方便被多个 Router 或定时任务复用。多表操作强制使用 `with db.begin():` 包裹。
 - **身份治理映射**: 全球唯一 `global_user_id` 连接各系统账号，置信度通过 `IdentityResolver` 算法动态计算。
 
 ## 5. 数据库开发规范 (Database & SCD)
-- **审计字段**: 业务模型强制包含 `created_at`, `updated_at`, `created_by`, `is_deleted` (软删除)。
-- **数据一致性**: 
+- **审计与安全性**:
+    - **强制字段**: 所有业务模型必须包含审计字段：`created_at` (创建时间), `updated_at` (最后更新), `created_by` (创建人), `is_deleted` (软删除标记)。
+    - **软删除**: 严禁物理删除生产数据。所有删除操作必须通过逻辑删除（`is_deleted=True`）实现。
+- **数据一致性与性能**: 
     - 关联表必须定义 `UniqueConstraint` 复合索引防重复。
     - 指标结果表必须建立针对时间维度的索引。
+    - **N+1 问题**: 查询关联对象时必须显式使用 `.options(joinedload(...))`。
+    - **批量处理**: 
+        - **读**: 大数据集查询必须使用 `yield_per(1000)` 或分页游标。
+        - **写**: 插件同步逻辑强制使用 `bulk_insert_mappings`，严禁循环单条 `db.add()`。
 - **SCD Type 2**: 组织、产品、团队主数据采用慢变维，追踪“历史时刻的负责人”及“当时的组织归属”。
 - **组织架构模式**:
     - **层级 (Hierarchy)**: 公司(Root) -> 中心(Center) -> 部门(Dept)，不再使用 `SYS-` 体系节点。
     - **属性 (Attribute)**: 体系 (Business Line) 作为 `Organization` 的 `business_line` 字段存储，支持跨体系的部门归属。
 
 ## 6. 前端设计与组件化 (Frontend Design)
-- **Apple Style 规范**: 严格遵循 `docs/frontend/CONVENTIONS.md`，强制使用 CSS 变量（`--primary`, `--radius`）。
+> 🎨 **最高行动指令**：所有前端样式与组件开发，必须严格遵循 [`docs/frontend/CONVENTIONS.md`](docs/frontend/CONVENTIONS.md)。任何与该文档冲突的 UI 实现均视为 Bug。
+
+- **Apple Style 规范**: 强制使用预定义的 CSS 变量（如 `--glass-bg`, `--primary-color`），严禁硬编码 Hex 颜色值。
 - **组件工程**: 优先使用 Web Components (Shadow DOM) 实现高内聚组件（如搜索框、卡片）。
 - **通信机制**: 跨组件通信通过 `CustomEvent` 实现，严禁随意污染全局 `window` 命名空间。
 
 ## 7. 数据建模与 dbt (Data Transformation)
 - **分层逻辑**: 
-    - `Staging (stg_)`: 1:1 原始映射，仅字段重命名与类型强制。
-    - `Intermediate (int_)`: 跨系统关联与过滤。
-    - `Marts (dim_/fct_)`: 业务指标与维度表，直接对接报表层。
+    | 层级 | 前缀 | 说明 |
+    | :--- | :--- | :--- |
+    | **Staging** | `stg_` | 原始数据清洗，1:1 映射源表，仅字段重命名与类型强制。 |
+    | **Intermediate** | `int_` | 中间转换，跨源关联与过滤。 |
+    | **Marts (维度)** | `dim_` | 业务维度表，描述性属性。 |
+    | **Marts (事实)** | `fct_` | 业务事实表，度量指标，直接对接报表层。 |
+- **源表管理**: 所有原始表必须在 `sources.yml` 中声明，包含 database, schema, table 完整路径。
+    - **新鲜度 (Freshness)**: 核心 Source 表必须配置 `freshness` 检查（如:warn_after: {count: 24, period: hour}）。
+- **元数据 (Metadata)**: 核心 Marts 模型必须在 `meta` 字段中标记 `owner` 和 `domain`，以便 DataHub 采集。
 - **质量哨兵**: 所有模型在 `schema.yml` 必须定义 `unique` 和 `not_null` 测试，关键指标使用 Singular SQL Tests 校验。
 
 ## 8. 运维流程与生命周期 (DevOps Ops)
@@ -55,22 +79,104 @@
     - `make package`: 生成镜像存档 `devops-platform.tar`。
     - `make deploy-offline`: 生产/隔离环境一键镜像加载并启动。
 - **健康检查**: 所有容器定义 `healthcheck`，容器间依赖依赖 `service_healthy` 状态。
+- **异步任务 (RabbitMQ)**:
+    - **幂等性**: `BaseWorker.process` 方法必须实现幂等，处理前校验资源状态，防止重复消费产生脏数据。
+    - **失败补偿**: 关键任务配置死信队列 (DLQ)，异步调用通过 `try-except` 捕获异常并记录详细上下文。
 
 ## 9. 测试与质量门禁 (Testing)
+- **覆盖率目标**: 核心模块 (`core/`, `models/`) >= 80%，插件模块 >= 60%。
+- **测试分类**:
+    | 类型 | 目录 | 说明 |
+    | :--- | :--- | :--- |
+    | **单元测试** | `tests/{module}/` | 隔离测试单个函数/类，外部依赖必须 Mock。 |
+    | **集成测试** | `tests/integration/` | 验证模块间交互与数据库状态。 |
+    | **E2E 测试** | `tests/e2e/` | 端到端功能验证，强制使用 Playwright。 |
+- **Mock 策略**: 外部 API 调用 (GitLab, SonarQube) 必须使用 `requests-mock` 或 `pytest-httpx` 隔离。
+- **E2E 规范**: 
+    - **框架选型**: 新功能模块强制使用 **Playwright** (更快的执行速度、Trace Viewer 调试)。
+    - **失败诊断**: CI/自动化运行失败时，必须保存 Trace Viewer 档案 (`test-results/`) 及截图。
+    - **视觉锚定**: 涉及可视化大屏或核心 UI 组件，必要时使用 `expect(page).to_have_screenshot()`。
 - **伴生测试**: 新增功能必须同步提交对应的 `pytest` 脚本。
-- **E2E 规范**: 新模块强制使用 Playwright，且必须录制失败时的 Trace (可在 `test-results/` 查看)。
-- **视觉锚定**: 涉及可视化大屏或核心 UI 组件，必要时使用 `expect(page).to_have_screenshot()`。
 
-## 10. 命名全链路对齐 (Naming Alignment)
-- **业务域前缀**: 强制使用 `sd_` (工单), `adm_` (管理), `pm_` (需求), `qa_` (质量), `ops_` (流水线)。
-- **错误码**: 返回 JSON 错误必须包含领域前缀（如 `PM_REQUIREMENT_NOT_FOUND`）。
+## 10. 异常处理与日志规范 (Error Handling & Logging)
+- **统一异常体系**: 
+    - **业务异常**: 所有业务逻辑错误必须抛出自定义异常（继承 `BusinessException`），严禁在 Service 层直接抛出 `HTTPException`。
+    - **API 错误契约**: 全局拦截器按以下格式返回 JSON：
+        ```json
+        {
+            "code": "业务域_错误标识",     // 如: SD_TICKET_NOT_FOUND
+            "message": "用户友好的语义说明", // 如: "未找到ID为123的工单"
+            "detail": {"field": "..."}      // 可选排查明细
+        }
+        ```
+- **日志级别准则**:
+    - `INFO`: 关键业务流转（如：工单流转、审批通过）。
+    - `WARNING`: 可恢复的异常（如：外部 API 重试）。
+    - `ERROR`: 系统不可恢复错误，必须包含 Trigger 上下文及完整 Traceback。
+- **命名空间关联**: 日志内容必须包含业务域前缀（如 `[SD]`, `[ADM]`），以便在日志系统中快速过滤。
 
-## 11. AI 辅助开发准则 (AI & Autogen)
+## 11. 命名全链路对齐 (Naming Alignment)
+
+### 11.1 业务域前缀注册表 (Domain Prefix Registry)
+| 业务域 | 前缀 | 说明 |
+| :--- | :--- | :--- |
+| **Service Desk** | `sd_` | 工单、支持、SLA、知识库 |
+| **Administration** | `adm_` | 平台管理、权限、审计、系统配置 |
+| **Project Management** | `pm_` | 项目管理、需求、计划、风险 |
+| **Testing / Quality** | `qa_` | 测试用例、缺陷预测、质量报告 |
+| **Maintenance** | `ops_` | 运维自动化、资源监控、部署流水线 |
+
+### 11.2 全链路对齐规范 (以 Service Desk 为例)
+所有命名遵循：`前缀_资源名_类型` 或 `前缀-资源名-类型` 结构。确保以下层级在命名空间上保持一致，严禁使用 generic (通用) 的名称（如 ticket, user）。
+
+| 层级 | 命名规范 | 示例 |
+| :--- | :--- | :--- |
+| **数据库表** | `{prefix}_{resource}s` | `sd_tickets` |
+| **SQLAlchemy Model** | `{Prefix}{Resource}` | `SdTicket` |
+| **dbt 模型** | `stg_{prefix}_{resource}s` | `stg_sd_tickets` |
+| **API 路由** | `/api/{prefix}/{resource}` | `/api/sd/tickets` |
+| **后端文件 (Router)** | `{prefix}_{resource}_router.py` | `sd_ticket_router.py` |
+| **后端文件 (Service)** | `{prefix}_{resource}_service.py` | `sd_ticket_service.py` |
+| **前端 CSS Class** | `.{prefix}-{component}` | `.sd-ticket-card` |
+| **错误码** | `{PREFIX}_{ERROR_KEY}` | `PM_REQUIREMENT_NOT_FOUND` |
+
+### 11.3 执行原则
+- **强制前缀**：所有新功能模块的开发必须先从上表中选取/注册前缀，确保全链路识别度。
+- **语义清晰**：前缀后应紧跟具体的资源名。例如，Service Desk 的聚合视图文件应命名为 `sd_support.py`，而具体的单一工单逻辑应为 `sd_ticket_service.py`。
+- **去内联化**：前端样式必须使用带前缀的 Class（如 `.sd-search-bar`），配合 CSS 变量（`var(--primary)`）实现风格统一。
+
+## 12. AI 辅助开发准则 (AI & Autogen)
+### 12.1 核心交互原则 (Interaction Principles)
 - **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
 - **代码自查**: 提交前使用 `make lint` 确保符合 Google Python Style 且无死循环依赖。
 - **AI 交互**: Agent 在修改核心 `core/` 代码后，必须主动执行相关模块的集成测试。
 
-## 12. 分支开发与版本控制规范 (Branching & Versioning)
+### 12.2 反向交互与澄清 (Reverse Interaction & Discovery)
+**核心原则**：不仅在开始前提问，更在过程中遇到模糊地带时主动“刹车”并反向确认。
+
+1. **前置采访 (Pre-implementation Interview)**
+    - **触发条件**：所有中/大型功能开发、重构或架构调整。
+    - **执行方式**：Agent 不直接生成代码，而是先扮演“产品经理/架构师”角色，向用户发起“采访”。
+    - **采访清单**：
+        - **意图对齐**：“您的核心目标是解决 X 问题，还是实现 Y 功能？”
+        - **边界确认**：“是否需要兼容旧数据？是否涉及移动端适配？”
+        - **风格偏好**：“在 A（保守稳健）和 B（激进现代）方案中，您倾向于哪种？”
+
+2. **运行时决策卡点 (Runtime Decision Checkpoints)**
+    - **触发条件**：在编码或执行过程中，遇到以下情况必须**立即暂停**并调用反向交互：
+        - **不确定性**：发现现有代码逻辑与新需求存在 20% 以上的模糊冲突。
+        - **多路径选择**：存在两种以上技术实现方案（例如：用递归 vs 迭代，引入新库 vs 手写）。
+        - **破坏性风险**：涉及删除核心表、不兼容的 API 变更或不可逆的数据清洗。
+    - **禁止行为**：严禁使用“我假设”、“通常情况下”来进行单方面决策。
+
+3. **结构化选项提问 (Structured Options)**
+    - **提问规范**：严禁抛出开放式问题。必须提供**结构化选项**供用户做选择题：
+        - **[选项 A] 推荐方案**：简述做法 + 理由 + 风险（如：开发快但性能一般）。
+        - **[选项 B] 替代方案**：简述做法 + 理由 + 风险（如：性能好但改动大）。
+        - **[选项 C] 保持现状/不做**：说明后果。
+    - **默认推荐**：Agent 必须明确标识出它认为的最佳选项（Recommended）。
+
+## 13. 分支开发与版本控制规范 (Branching & Versioning)
 - **命名公约 (Naming Convention)**:
     - 功能开发: `feat/{domain}-{feature_name}` (例: `feat/sd-export-csv`)
     - 缺陷修复: `fix/{domain}-{issue_description}` (例: `fix/adm-user-sync`)
