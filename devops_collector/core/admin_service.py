@@ -528,3 +528,31 @@ class AdminService:
                 ])
                 
         return output.getvalue()
+
+    def list_okrs(self, period: Optional[str] = None, status: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """获取 OKR 列表用于前端预览。"""
+        query = self.session.query(OKRObjective).options(
+            joinedload(OKRObjective.owner),
+            joinedload(OKRObjective.key_results)
+        )
+        if period:
+            query = query.filter(OKRObjective.period == period)
+        if status:
+            query = query.filter(OKRObjective.status == status)
+            
+        objectives = query.limit(limit).all()
+        results = []
+        for obj in objectives:
+            # 简化版数据结构
+            results.append({
+                "id": obj.id,
+                "title": obj.title,
+                "owner_name": obj.owner.full_name if obj.owner else "Unknown",
+                "period": obj.period,
+                "status": obj.status,
+                "progress": obj.progress,
+                "key_results": [
+                    {"title": kr.title, "progress": kr.progress} for kr in obj.key_results
+                ]
+            })
+        return results

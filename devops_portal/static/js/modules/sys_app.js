@@ -51,6 +51,7 @@ const SysAppHandler = {
                     { id: "nav-admin-approvals", label: "用户注册审批", href: "#admin_approvals", view: "admin_approvals", icon: "M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2; circle cx=8.5 cy=7 r=4; polyline points=17 11 19 13 23 9" },
                     { id: "nav-admin-orgs", label: "研发组织管理", href: "#admin_orgs", view: "admin_orgs", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
                     { id: "nav-admin-products", label: "产品体系管理", href: "#admin_products", view: "admin_products", icon: "rect x=2 y=3 width=20 height=14 rx=2 ry=2; line x1=8 y1=21 x2=16 y2=21; line x1=12 y1=17 x2=12 y2=21" },
+                    { id: "nav-admin-okrs", label: "OKR 治理中心", href: "#admin_okrs", view: "admin_okrs", icon: "circle cx=12 cy=12 r=10; circle cx=12 cy=12 r=6; circle cx=12 cy=12 r=2" },
                     { id: "nav-admin-projects", label: "项目映射配置", href: "#admin_projects", view: "admin_projects", icon: "polyline points=4 7 4 4 20 4 20 7; line x1=9 y1=20 x2=15 y2=20; line x1=12 y1=4 x2=12 y2=20" },
                     { id: "nav-admin-users", label: "员工身份目录", href: "#admin_users", view: "admin_users", icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2; circle cx=9 cy=7 r=4; path d=M23 21v-2a4 4 0 0 0-3-3.87; path d=M16 3.13a4 4 0 0 1 0 7.75" }
                 ]
@@ -458,14 +459,14 @@ const SysAppHandler = {
             'nav-dashboard', 'nav-tests', 'nav-test-execution', 'nav-defects', 'nav-reqs',
             'nav-matrix', 'nav-reports', 'nav-governance', 'nav-pulse', 'nav-support',
             'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-approvals',
-            'nav-admin-products', 'nav-admin-projects', 'nav-admin-users', 'nav-admin-orgs'
+            'nav-admin-products', 'nav-admin-okrs', 'nav-admin-projects', 'nav-admin-users', 'nav-admin-orgs'
         ];
 
         const viewItems = [
             'qa-dashboard-view', 'qa-case-form-view', 'qa-test-results', 'qa-stats-grid', 'qa-execution-view', 'qa-defect-view', 'pm-matrix-view',
             'pm-requirements-view', 'pm-iteration-view', 'rpt-insights-view', 'sd-support-view',
             'sd-submit-view', 'sd-my-view', 'sd-portal-view', 'sys-decision-hub-view', 'sys-governance-view', 'sys-pulse-view',
-            'adm-approvals-view', 'adm-products-view', 'adm-projects-view', 'adm-users-view', 'adm-orgs-view'
+            'adm-approvals-view', 'adm-products-view', 'adm-okrs-view', 'adm-projects-view', 'adm-users-view', 'adm-orgs-view'
         ];
 
         navItems.forEach(id => {
@@ -585,6 +586,10 @@ const SysAppHandler = {
             case 'admin_products':
                 show('adm-products-view');
                 AdmManageHandler.loadProducts();
+                break;
+            case 'admin_okrs':
+                show('adm-okrs-view');
+                AdmManageHandler.loadOkrs();
                 break;
             case 'admin_projects':
                 show('adm-projects-view');

@@ -1,68 +1,38 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
 
 ## 📋 已完成 (Completed)
-...
-3. **业务关联动态授权 (Business-Linked Auth)**
-   - 构建了 `IdentityResolver` 逻辑。
-   - 实现“身份随事走”：部门/产品/项目负责人自动获得对应的动态管理权限和数据范围。
-   - 权限卫兵支持实时数据库校验，解决 JWT 令牌权限滞后问题。
-4. **[P0] 数据库重置与部署验证**
-   - 实现了 `scripts/reset_database.py`，支持开发环境一键清空并重建数据。
-   - 修复了 `init_rbac.py` 的外键约束和 Autoflush 冲突。
-   - 验证了全量 `make deploy` 链路，系统能够从零开始加载负载。
-5. **[P1] CSV 模板标准化与编码对齐**
-   - 恢复并补全了所有核心业务 CSV 模板（ organizations, products, projects, rbac, zentao, gitlab 等）。
-   - **编码对齐**：所有 CSV 文件统一采用 `utf-8-sig` 编码，确保在 Windows Office/Excel 下打开无乱码。
 
-6. **[P1] 外部映射与权限闭环**
-   - 实现了 GitLab 群组/项目角色（Maintainer/Owner）到平台管理权限的动态转换。
-   - 解决了单元测试中的 SQLite 外键冲突问题，目前 8 个测试用例全绿通过。
-7. **[P1] 架构规范正式化与语义对齐**
-   - **语义分层对齐 (Semantic Alignment)**：确立“技术侧英文、业务侧中文”原则。
-   - 更新数据库模型 `comment` 为专业业务术语（项目经理、发布经理等）。
-   - 重构全量初始化脚本及 CSV 模版，支持中文表头和邮箱自动映射。
-   - 在 `contexts.md` 中增加了强制使用 `utf-8-sig` 编码处理 CSV 的规定，解决跨平台汉字乱码问题。
-8. **[P1] 项目-代码仓库关联 (Project-Repo Linkage)**
-    - 扩展 `EntityTopology` 模型，新增 `project_id` 列，`service_id` 改为 `nullable`，支持项目直接关联代码仓库。
-    - 增强 `init_products_projects.py`，CSV 导入时自动创建 `EntityTopology` 条目。
-    - 补全 `projects.csv` 模板（增加"负责部门"和"主代码仓库URL"列）。
-    - 修复 `ProjectProductRelation` 缺少 `org_id` 的插入错误。
-    - 新增单元测试 `test_entity_topology_project_link`，全部 7 个测试通过。
-9. **[P1] CSV 人员字段双格式支持 & 组织架构重构**
-    - 所有 init 脚本统一使用 `resolve_user()` 工具函数，CSV 人员字段同时支持邮箱和汉字全名。
-    - `init_rbac.py` 用户角色关联匹配从纯邮箱改为邮箱+姓名双格式，匹配失败输出 WARNING 日志。
-    - 组织架构层级重构：移除 `SYS-体系` 层级节点，新增 `ORG-HQ` 公司根节点，层级改为 公司→中心→部门。
-    - `Organization` 模型新增 `business_line` 字段，"体系" 作为中心/部门的标签属性而非层级。
-
-## 🏗️ 进行中 (In Progress)
-- (无)
-
-## 📋 已完成 (Completed)
-...
-10. **[P1] OKR 数据管理与导出 (OKR Export)**
+1. **[P1] OKR 数据管理与导出 (OKR Export)**
     - 实现了 `AdminService.export_okrs`，支持 CSV 格式全量导出。
-    - 新增 `GET /admin/export/okrs` 接口，支持按 `period` 和 `status` 过滤。
-    - 统一 OKR 数据规范：`init_okrs.py` 存储进度为 0.0-1.0，导出时自动转换为百分比。
-    - 表头中文规范化：导出表头与 `okrs.csv` 模板完全对齐。
-    - **导出编码**：严格执行 `utf-8-sig` 编码标准。
+    - **后端实现**：新增 `GET /admin/export/okrs` 和 `GET /admin/okrs` (预览) 接口，支持按 `period` 和 `status` 过滤。
+    - **前端对接**：在 Platform Management 下新增 "OKR 治理中心"，实现 Apple Style 毛玻璃工具栏、周期/状态筛选器及数据预览表格。
+    - **数据规范**：导出表头与 `okrs.csv` 模板对齐，进度自动转换为百分比，统一使用 `utf-8-sig` 编码。
+    - **验证**：通过单元测试、独立验证脚本及 Playwright E2E 测试（`test_okr_governance.py`）闭环。修复了 E2E 测试中导出按钮弹出窗口被路由拦截以及 `about:blank` 状态等待的问题。
 
-11. **[P1] 数据治理与脚本健壮性 (Data Resilience)**
+2. **[P1] 数据治理与脚本健壮性 (Data Resilience)**
     - 修复了 `init_catalog.py` 报错：扩展 `BusinessSystem.code` 字段长度，规范化 `mdm_services.csv` 的关联代号。
     - 修复了 `init_gitlab_mappings.py` 崩溃：支持优雅处理“一个员工映射多个外部 ID”的唯一约束冲突（账号冲突自动跳过并告警）。
     - 验证了全量 `make init` 流程，所有 15+ 初始化脚本全部 100% 通过。
 
+3. **[P1] CSV 人员字段双格式支持 & 组织架构重构**
+    - 所有 init 脚本统一使用 `resolve_user()` 工具函数，CSV 人员字段同时支持邮箱和汉字全名。
+    - 组织架构层级重构：移除 `SYS-体系` 层级节点，层级改为 公司→中心→部门。
+
+4. **[P0] 数据库重置与部署验证**
+    - 实现了 `scripts/reset_database.py`，支持开发环境一键清空并重建数据。
+    - 已验证手动重启容器后的功能一致性。
+
 ## 🏗️ 进行中 (In Progress)
-- (无)
+- [ ] [P1] 部署验证：解决当前网络环境下 Docker 镜像拉取与 Pip 依赖安装的超时问题（`make deploy` 受限）。
 
 ## 📅 接下来的任务 (Backlog)
-- [ ] **[P2] 前端对接**：在 Portal 侧增加 OKR 导出按钮及周期选择器。
+- [ ] 提交并推送到 `feat/adm-okr-export` 分支并申请合入。
+- [ ] 在网络环境稳定时再次执行全量 `make deploy`。
 
 ## 📝 阶段性回顾 (Retrospective)
-- **构建内容**：OKR 导出后端 API、数据对齐脚本健壮性治理、业务系统模型注释核对。
-- **验证有效**：`AdminService.export_okrs` 通过单元测试（内存 SQLite）验证；`make docs` 成功更新数据字典。
-- **遇到的问题**：
-  - 容器内环境缺少 `pytest` 且网络连接受限，通过 Host 侧单元测试与脚本验证闭环。
-- **经验总结**：即使在数据同步场景下，核心业务逻辑（如导出）也应具备独立的单元测试以验证格式和计算正确性。
+- **核心挑战**：容器内环境缺少 `pytest` 且网络受限，通过 Host 侧单元测试与独立验证脚本确保了逻辑正确性。
+- **设计决策**：前端增加数据预览区大大提升了导出操作的确定性，符合 Apple 风格的 Segmented Control 交互体验良好。
+- **经验总结**：即使是简单的导出功能，也应在 Service 层解耦出预览和文件生成两个原子能力。
 
 ---
-*最后更新时间：2026-02-15 22:55 (Antigravity)*
+*最后更新时间：2026-02-16 13:30 (Antigravity)*

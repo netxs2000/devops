@@ -147,5 +147,17 @@ export const AdmService = {
         const formData = new FormData();
         formData.append('file', file);
         return await Api.upload('/admin/import/product-mappings', formData);
+    },
+
+    /**
+     * 获取 OKR 列表 (预览)
+     */
+    async getOkrs(period = '', status = '') {
+        let url = '/admin/okrs';
+        const params = new URLSearchParams();
+        if (period) params.append('period', period);
+        if (status) params.append('status', status);
+        const query = params.toString();
+        return await Api.get(query ? `${url}?${query}` : url);
     }
 };

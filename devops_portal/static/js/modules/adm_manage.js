@@ -76,6 +76,16 @@ const AdmManageHandler = {
             if (target.closest('.js-btn-export-mappings')) this.handleExportMappings();
 
             if (target.closest('.js-btn-create-org')) this.openOrgModal();
+
+            if (target.closest('.js-btn-export-okrs')) this.handleExportOkrs();
+        });
+
+        // 监听 OKR 筛选变动
+        document.addEventListener('change', (e) => {
+            const target = e.target;
+            if (target.closest('.js-okr-period-select') || target.closest('.js-okr-status-select')) {
+                this.loadOkrs();
+            }
         });
 
         // 监听组件事件 (CustomEvent Bubbling)
@@ -208,6 +218,25 @@ const AdmManageHandler = {
         }
     },
 
+    /**
+     * 【子视图 06】OKR 治理
+     */
+    async loadOkrs() {
+        this.init();
+        const period = document.querySelector('.js-okr-period-select')?.value || '';
+        const status = document.querySelector('.js-okr-status-select')?.value || '';
+
+        UI.toggleLoading("检索 OKR 数据...", true);
+        try {
+            const okrs = await AdmService.getOkrs(period, status);
+            this.renderOkrsTable(okrs);
+        } catch (e) {
+            UI.showToast("OKR 加载失败", "error");
+        } finally {
+            UI.toggleLoading("", false);
+        }
+    },
+
     // --- 渲染逻辑 (Rendering) ---
 
     renderProductsGrid() {
@@ -325,6 +354,30 @@ const AdmManageHandler = {
             if (u.gitlab_user_id) card.setAttribute('gitlab-id', u.gitlab_user_id);
             container.appendChild(card);
         });
+    },
+
+    renderOkrsTable(okrs) {
+        const tbody = document.querySelector('.js-okr-preview-tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = okrs.map(o => {
+            const krHtml = o.key_results.map(kr => `<li>• ${kr.title} (${Math.round(kr.progress * 100)}%)</li>`).join('');
+            const krProgress = o.key_results.length > 0
+                ? `${Math.round((o.key_results.reduce((acc, kr) => acc + (kr.progress || 0), 0) / o.key_results.length) * 100)}%`
+                : '-';
+
+            return `
+                <tr>
+                    <td class="u-p-12"><span class="u-weight-600">${o.title}</span></td>
+                    <td>${o.owner_name}</td>
+                    <td><span class="adm-badge sys-tag--admin">${o.period}</span></td>
+                    <td><span class="adm-badge ${o.status === 'ACTIVE' ? 'u-bg-success-light u-text-success' : ''}">${o.status}</span></td>
+                    <td class="u-weight-700">${Math.round((o.progress || 0) * 100)}%</td>
+                    <td class="u-text-tiny"><ul class="u-p-0 u-m-0" style="list-style: none;">${krHtml || '<span class="u-text-dim">无 KR</span>'}</ul></td>
+                    <td>${krProgress}</td>
+                </tr>
+            `;
+        }).join('') || '<tr><td colspan="7" class="u-p-40 u-text-center u-text-dim">未找到符合条件的 OKR 数据</td></tr>';
     },
 
     // --- 业务操作逻辑 (Logic) ---
@@ -581,6 +634,19 @@ const AdmManageHandler = {
             UI.toggleLoading("", false);
             e.target.value = '';
         }
+    },
+
+    handleExportOkrs() {
+        const period = document.querySelector('.js-okr-period-select')?.value || '';
+        const status = document.querySelector('.js-okr-status-select')?.value || '';
+        const token = localStorage.getItem('sd_token');
+
+        let url = `/admin/export/okrs?token=${token}`;
+        if (period) url += `&period=${period}`;
+        if (status) url += `&status=${status}`;
+
+        window.open(url, '_blank');
+        UI.showToast("正在准备 OKR 导出文件...", "success");
     }
 };
 

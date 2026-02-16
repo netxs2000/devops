@@ -2,6 +2,27 @@
 
 所有对 DevOps Data Application Platform 的重要更改都将记录在此文件中。
 
+## [4.3.0] - 2026-02-16
+
+### 新增 (Added) - v4.3.0
+
+* **OKR 治理中心 (Governance Hub)**:
+  * **异步导出全量数据**: 实现 `AdminService.export_okrs`，支持按周期 (`period`) 和状态 (`status`) 过滤，统一使用 `utf-8-sig` 编码适配 Office。
+  * **Apple Style 数据预览**: 前端新增 OKR 治理子视图，集成毛玻璃效果工具栏、数据筛选器及 Top 50 实时预览表格。
+  * **自动化测试闭环**: 交付完整的 Playwright E2E 测试 (`test_okr_governance.py`)，覆盖从视图导航到下载触发的全流程。
+* **数据建模与初始化增强**:
+  * **一键数据库重置**: 新增 `scripts/reset_database.py`，显著提升本地开发环境的迭代效率。
+  * **人员字段双格式支持**: 所有 CSV 初始化脚本统一接入 `resolve_user()`，支持邮箱与汉字全名并行解析。
+
+### 优化 (Improved) - v4.3.0
+
+* **组织架构扁平化**: 彻底移除 `SYS-` 体系中转节点，层级精简为 `公司 -> 中心 -> 部门`，优化了查询树的解析深度。
+* **脚本健壮性修复**:
+  * 修复了 `init_catalog.py` 中 `BusinessSystem.code` 字段长度溢出问题。
+  * 优化了 `init_gitlab_mappings.py` 的唯一约束冲突处理，实现账号冲突的自动跳过与预警。
+* **E2E 测试架构**: 优化了 `conftest.py` 的路由拦截策略，支持管理员路径的动态下载监测，解决了 `about:blank` 状态导致的断言竞态问题。
+* **构建环境适配**: 优化了 `Dockerfile` 的多阶段构建镜像源，增强了在受限网络环境下的构建稳定性。
+
 ## [4.2.0] - 2026-01-18
 
 ### 新增 (Added) - v4.2.0

@@ -10,7 +10,7 @@ from typing import Generator
 
 import pytest
 import httpx
-from playwright.sync_api import Page, Browser, BrowserContext
+from playwright.sync_api import Page, Browser, BrowserContext, expect
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -90,7 +90,20 @@ def authenticated_page(
     test_user_credentials: dict
 ) -> Generator[Page, None, None]:
     page.on("console", lambda msg: print(f"  [BROWSER CONSOLE] {msg.type}: {msg.text}"))
-    page.goto(f"{app_server}/static/index.html")
+    
+    # 拦截外部网络请求，防止 Google Fonts 等超时阻塞测试
+    def handle_route(route):
+        url = route.request.url
+        # 允许本地请求和核心 API 路径
+        if "127.0.0.1" in url or "localhost" in url:
+            route.continue_()
+        elif "static" in url or "/api/" in url or "/auth/" in url or "/admin/" in url:
+            route.continue_()
+        else:
+            route.abort()
+    
+    page.route("**/*", handle_route)
+    page.goto(f"{app_server}/static/index.html", wait_until="commit")
     login_modal = page.locator("#loginModal")
     
     try:
@@ -98,12 +111,17 @@ def authenticated_page(
         if user_name.is_visible() and user_name.inner_text() != "Loading...":
             pass
         else:
+            print(f"Attempting login for {test_user_credentials['email']}...")
             login_modal.wait_for(state="visible", timeout=10000)
             page.fill("#login-email", test_user_credentials["email"])
             page.fill("#login-password", test_user_credentials["password"])
             page.click("#login-submit")
-            page.wait_for_selector("#user-display-name", state="visible", timeout=15000)
+            print("Waiting for login to complete (display name change)...")
+            # 等待用户名显示（不再是 Loading...）
+            expect(page.locator("#user-display-name")).not_to_have_text("Loading...", timeout=20000)
+            print("Login successful.")
     except Exception as e:
+        print(f"Login failed: {str(e)}")
         if not os.path.exists("test-results"):
             os.makedirs("test-results")
         page.screenshot(path="test-results/auth_failure.png")

@@ -492,6 +492,59 @@
                 <!-- sys-pulse component injected dynamically -->
             </div>
 
+            <div id="adm-okrs-view" class="u-hide">
+                <div class="adm-panel">
+                    <div class="adm-header">
+                        <div>
+                            <h2 class="adm-title">OKR 治理中心 (Governance)</h2>
+                            <p class="adm-title-desc">全量导出员工目标与关键结果数据，支持周期筛选与合规审计。</p>
+                        </div>
+                        <div class="u-flex u-gap-15">
+                            <select class="form-control js-okr-period-select" style="width: 140px;">
+                                <option value="">所有周期</option>
+                                <option value="2024-Q1">2024-Q1</option>
+                                <option value="2024-Q2">2024-Q2</option>
+                                <option value="2024-Q3">2024-Q3</option>
+                                <option value="2024-Q4">2024-Q4</option>
+                                <option value="2025-Q1">2025-Q1</option>
+                                <option value="2025-Q2">2025-Q2</option>
+                            </select>
+                            <select class="form-control js-okr-status-select" style="width: 120px;">
+                                <option value="">所有状态</option>
+                                <option value="ACTIVE">活跃中</option>
+                                <option value="CLOSED">已关闭</option>
+                            </select>
+                            <button class="btn-primary btn-icon-text js-btn-export-okrs">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                </svg>
+                                导出全量 OKR
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="adm-table-container">
+                        <h4 class="adm-section-title u-mb-16">数据预览 (Preview - Top 50)</h4>
+                        <table class="adm-data-table">
+                            <thead>
+                                <tr>
+                                    <th>目标标题</th>
+                                    <th>负责人</th>
+                                    <th>周期</th>
+                                    <th>状态</th>
+                                    <th>目标进度</th>
+                                    <th>关键结果 (KR)</th>
+                                    <th>KR 进度</th>
+                                </tr>
+                            </thead>
+                            <tbody class="js-okr-preview-tbody">
+                                <!-- Dynamic -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <div id="adm-projects-view" class="u-hide">
                 <div class="adm-panel">
                     <div class="adm-header">
