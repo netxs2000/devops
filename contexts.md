@@ -85,12 +85,43 @@
 
 ## 9. 测试与质量门禁 (Testing)
 - **覆盖率目标**: 核心模块 (`core/`, `models/`) >= 80%，插件模块 >= 60%。
-- **测试分类**:
-    | 类型 | 目录 | 说明 |
-    | :--- | :--- | :--- |
-    | **单元测试** | `tests/{module}/` | 隔离测试单个函数/类，外部依赖必须 Mock。 |
-    | **集成测试** | `tests/integration/` | 验证模块间交互与数据库状态。 |
-    | **E2E 测试** | `tests/e2e/` | 端到端功能验证，强制使用 Playwright。 |
+
+### 9.1 测试目录分层规范 (Test Directory & Hierarchy)
+为防止测试代码腐化，严格遵循以下四层物理结构。禁止在 `tests/` 根目录或业务代码目录中直接存放测试文件。
+
+| 层级 | 目录路径 | 职责定义 | 外部依赖 | 运行频率 |
+| :--- | :--- | :--- | :--- | :--- |
+| **Unit** | `tests/unit/` | 验证单一函数/类/模块的逻辑正确性。 | **严禁**。必须 Mock 所有 DB、网络、文件系统 IO。 | **每次 Commit** (秒级) |
+| **Integration** | `tests/integration/` | 验证多模块交互、数据库约束、API 契约。 | **允许**。可使用 `sqlite:///:memory:` 或本地 Docker 服务的 DB/Redis。 | **合并前 (PR Check)** (分级) |
+| **E2E** | `tests/e2e/` | 验证端到端业务流程、UI 交互。 | **必须**。需启动完整后端 + 前端服务 (Playwright)。 | **发布前 (Release)** (小时级) |
+| **Scripts** | `tests/scripts/` | 辅助性手工验证脚本、造数工具。 | 任意。不计入自动测试覆盖率。 | 按需执行 |
+
+- **命名规范**：所有测试文件必须以 `test_` 开头 (如 `test_auth_service.py`)，确保 `pytest` 自动发现。
+
+### 9.2 测试原子性与准入原则 (Atomicity & Criteria)
+测试代码必须视为生产代码同等对待，严格遵守以下原则：
+
+1.  **独立性 (Independence)**: 
+    - 每个测试用例 (Test Case) 必须是**自包含**的。
+    - **严禁** Test B 依赖 Test A 产生的数据或状态。
+    - **严禁** 依赖测试执行顺序 (pytest-randomly 应能随意打乱执行)。
+
+2.  **无状态 (Statelessness)**:
+    - **Setup/Teardown**: 必须在 `fixture` 中完成数据准备与清理。
+    - **Global State**: 严禁修改全局变量 (Global Variables) 或单例状态而不复原。
+    - **DB Isolation**: 集成测试必须通过 Transaction Rollback 或 `sqlite:///:memory:` 保证每个 Case 拥有干净的数据库环境。
+
+3.  **确定性 (Determinism)**:
+    - 消除 "Flaky Tests" (时而通过时而失败)。
+    - 避免使用 `sleep()` 等待异步操作，必须使用轮询断言 (`wait_for`)。
+    - 固定时间/随机种子：涉及时间计算的测试，必须 Mock `datetime.now()`。
+
+4.  **准入标准 (Gate Criteria)**:
+    - **Unit Test**: 必须在 **100ms** 内完成单个文件执行。
+    - **Integration Test**: 必须兼容 Windows/Linux 双平台路径。
+    - **Coverage**: 新增代码必须包含对应的 Unit Test，否则 PR 不予合并。
+
+### 9.3 Mock 策略与 E2E 规范
 - **Mock 策略**: 外部 API 调用 (GitLab, SonarQube) 必须使用 `requests-mock` 或 `pytest-httpx` 隔离。
 - **E2E 规范**: 
     - **框架选型**: 新功能模块强制使用 **Playwright** (更快的执行速度、Trace Viewer 调试)。
