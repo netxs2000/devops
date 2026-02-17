@@ -393,13 +393,9 @@ class NexusComponentSummary(BaseModel):
     name: str
     version: Optional[str]
 
-class DependencyScanSummary(BaseModel):
-    """依赖扫描摘要"""
-    model_config = ConfigDict(from_attributes=True)
-    id: int
+class DependencyScanResult(BaseModel):
+    """依赖扫描结果返回"""
+    scan_id: int
     project_id: int
-    scan_date: datetime
-    scanner_name: str
-    total_dependencies: int
-    vulnerable_dependencies: int
-    scan_status: str
+    status: str
+    summary: Dict[str, int]

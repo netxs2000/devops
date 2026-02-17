@@ -36,6 +36,7 @@ from devops_portal.routers import test_management_router as test_management_rout
 from devops_portal.routers import iteration_plan_router as iteration_plan_router
 from devops_portal.routers import admin_router as admin_router
 from devops_portal.routers import devex_pulse_router as devex_pulse_router
+from devops_portal.routers import security_router as security_router
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ app.include_router(test_management_router.router)
 app.include_router(iteration_plan_router.router)
 app.include_router(admin_router.router)
 app.include_router(devex_pulse_router.router)
+app.include_router(security_router.router)
 
 
 
@@ -232,17 +234,6 @@ async def list_nexus_components(current_user: User=Depends(get_current_user), db
     query = security.apply_plugin_privacy_filter(db, query, NexusComponent, current_user)
     return query.all()
 
-@app.get('/security/dependency-scans', response_model=List[schemas.DependencyScanSummary])
-async def list_dependency_scans(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_auth_db)):
-
-    """[P5] 获取 Dependency Check 扫描结果（支持组织隔离）。"""
-    from devops_collector.models.dependency import DependencyScan
-    from devops_collector.plugins.gitlab.models import GitLabProject
-    query = db.query(DependencyScan).join(GitLabProject)
-    if current_user.role != security.ADMIN_ROLE_KEY:
-        scope_ids = security.get_user_org_scope_ids(db, current_user)
-        query = query.filter(GitLabProject.organization_id.in_(scope_ids))
-    return query.all()
 
 # Mount static files explicitly to /static to support frontend paths (e.g. LOGIN_PAGE in sys_core.js)
 app.mount("/static", StaticFiles(directory="devops_portal/static", html=True), name="static-assets")

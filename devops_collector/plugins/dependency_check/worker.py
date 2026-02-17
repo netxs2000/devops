@@ -20,7 +20,7 @@ class DependencyCheckWorker(BaseWorker):
     SCHEMA_VERSION = '1.0.0'
     LICENSE_SPDX_MAPPING = {'Apache License 2.0': 'Apache-2.0', 'Apache License, Version 2.0': 'Apache-2.0', 'Apache 2.0': 'Apache-2.0', 'MIT License': 'MIT', 'The MIT License': 'MIT', 'BSD 3-Clause': 'BSD-3-Clause', 'BSD 2-Clause': 'BSD-2-Clause', 'GPL-3.0': 'GPL-3.0', 'GPL-2.0': 'GPL-2.0', 'LGPL-3.0': 'LGPL-3.0', 'LGPL-2.1': 'LGPL-2.1', 'AGPL-3.0': 'AGPL-3.0', 'MPL-2.0': 'MPL-2.0', 'EPL-2.0': 'EPL-2.0'}
 
-    def __init__(self, session: Session, client: Any, report_dir: str = '/var/lib/devops/dependency-reports', keep_reports: bool = True, retention_days: int = 90):
+    def __init__(self, session: Session, client: Any = None, report_dir: str = '/var/lib/devops/dependency-reports', keep_reports: bool = True, retention_days: int = 90):
         """初始化"""
         super().__init__(session, client)
         self.report_base_dir = report_dir
@@ -28,7 +28,7 @@ class DependencyCheckWorker(BaseWorker):
         self.report_retention_days = retention_days
         Path(self.report_base_dir).mkdir(parents=True, exist_ok=True)
         self.license_rules = self._load_license_rules()
-        self.scanner_version = self.client.get_version()
+        self.scanner_version = self.client.get_version() if self.client else 'unknown'
 
     def _load_license_rules(self) -> Dict[str, LicenseRiskRule]:
         """加载许可证风险规则"""

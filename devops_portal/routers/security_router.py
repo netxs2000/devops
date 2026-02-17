@@ -1,0 +1,96 @@
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from sqlalchemy.orm import Session
+from devops_collector.auth.auth_database import get_auth_db
+# 延迟导入以避免循环依赖? schemas 应该没问题
+from devops_portal import schemas
+from devops_portal.schemas import DependencyScanResult
+from devops_collector.plugins.dependency_check.worker import DependencyCheckWorker
+from devops_collector.models.dependency import DependencyScan
+from devops_collector.plugins.gitlab.models import GitLabProject
+from devops_portal.dependencies import get_current_user
+from devops_collector.models import User
+from devops_collector.core import security
+from typing import List
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix='/security', tags=['security'])
+
+@router.post('/dependency-check/upload', response_model=DependencyScanResult)
+async def upload_dependency_report(
+    project_id: int = Form(...),
+    commit_sha: str = Form(None),
+    branch: str = Form(None),
+    ci_job_id: str = Form(None),
+    ci_job_url: str = Form(None),
+    scan_duration: float = Form(None),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_auth_db)
+):
+    """
+    上传 Dependency-Check 扫描报告 (CI 集成)。
+    
+    接收 CI 流水线生成的 JSON 报告并解析入库。
+    """
+    try:
+        content = await file.read()
+        report_json = json.loads(content.decode('utf-8'))
+        
+        # 构造任务上下文
+        task = {
+            'project_id': project_id,
+            'report_json': report_json,
+            'commit_sha': commit_sha,
+            'branch': branch,
+            'ci_job_id': ci_job_id,
+            'ci_job_url': ci_job_url,
+            'duration': scan_duration
+        }
+        
+        # 同步调用 Worker
+        worker = DependencyCheckWorker(db)
+        scan_id = worker.process_task(task)
+        
+        # 查询结果
+        scan = db.query(DependencyScan).get(scan_id)
+        if not scan:
+             raise HTTPException(status_code=500, detail="Scan record creation failed")
+
+        return {
+            'scan_id': scan.id,
+            'project_id': scan.project_id,
+            'status': scan.scan_status,
+            'summary': {
+                'total': scan.total_dependencies or 0,
+                'vulnerable': scan.vulnerable_dependencies or 0,
+                'risk_licenses': scan.high_risk_licenses or 0
+            }
+        }
+        
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON file")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Upload failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get('/dependency-scans', response_model=List[schemas.DependencyScanSummary])
+async def list_dependency_scans(
+    current_user: User=Depends(get_current_user), 
+    db: Session=Depends(get_auth_db)
+):
+    """[P5] 获取 Dependency Check 扫描结果（支持组织隔离）。"""
+    
+    # 动态构建查询
+    query = db.query(DependencyScan).join(GitLabProject)
+    
+    # 应用安全策略 (RLS)
+    if current_user.role != security.ADMIN_ROLE_KEY:
+        # 获取用户所属组织范围
+        scope_ids = security.get_user_org_scope_ids(db, current_user)
+        # 仅显示该组织下的项目扫描记录
+        query = query.filter(GitLabProject.organization_id.in_(scope_ids))
+        
+    return query.all()
