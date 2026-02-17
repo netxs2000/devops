@@ -38,7 +38,12 @@ class DependencyScan(Base):
     vulnerable_dependencies = Column(Integer, default=0)
     high_risk_licenses = Column(Integer, default=0)
     scan_status = Column(String(20), default='completed')
-    report_path = Column(Text)
+    ci_job_id = Column(String(50), comment="CI Job ID")
+    ci_job_url = Column(String(500), comment="CI Job URL")
+    commit_sha = Column(String(40), comment="Commit SHA")
+    branch = Column(String(100), comment="Branch Name")
+    report_url = Column(String(500), comment="Report Storage URL")
+    scan_duration_seconds = Column(Float, comment="Scan Duration (Seconds)")
     raw_json = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -104,6 +109,10 @@ class Dependency(Base):
         has_vulnerabilities (bool): 是否存在 CVE 漏洞。
         highest_cvss_score (float): 最高 CVSS 评分。
         critical_cve_count (int): 严重 CVE 数量。
+        is_ignored (bool): 是否标记为误报/忽略。
+        ignore_reason (str): 忽略原因。
+        ignore_by (str): 操作人。
+        ignore_at (datetime): 操作时间。
         scan (DependencyScan): 关联的扫描任务。
         project (Project): 关联的项目对象。
         cves (List[DependencyCVE]): 关联的漏洞列表。
@@ -127,6 +136,13 @@ class Dependency(Base):
     high_cve_count = Column(Integer, default=0)
     medium_cve_count = Column(Integer, default=0)
     low_cve_count = Column(Integer, default=0)
+    
+    # [新增] 误报管理
+    is_ignored = Column(Boolean, default=False)
+    ignore_reason = Column(Text)
+    ignore_by = Column(String(50))
+    ignore_at = Column(DateTime(timezone=True))
+
     file_path = Column(Text)
     description = Column(Text)
     homepage_url = Column(Text)
@@ -152,6 +168,8 @@ class DependencyCVE(Base):
         cvss_vector (str): CVSS 向量。
         severity (str): 严重等级 (CRITICAL, HIGH, MEDIUM, LOW)。
         fixed_version (str): 建议修复版本。
+        is_ignored (bool): 是否标记为误报/忽略。
+        ignore_reason (str): 忽略原因。
         dependency (Dependency): 关联的依赖对象。
     """
     __tablename__ = 'dependency_cves'
@@ -168,6 +186,11 @@ class DependencyCVE(Base):
     fixed_version = Column(String(100))
     remediation = Column(Text)
     references = Column(JSONB)
+    
+    # [新增] 误报管理
+    is_ignored = Column(Boolean, default=False)
+    ignore_reason = Column(Text)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     dependency = relationship('Dependency', back_populates='cves')
 

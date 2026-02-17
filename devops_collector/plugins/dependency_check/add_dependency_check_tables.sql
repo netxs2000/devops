@@ -14,7 +14,15 @@ CREATE TABLE IF NOT EXISTS dependency_scans (
     vulnerable_dependencies INTEGER DEFAULT 0,
     high_risk_licenses INTEGER DEFAULT 0,
     scan_status VARCHAR(20) DEFAULT 'completed',  -- completed, failed, in_progress
-    report_path TEXT,
+    
+    -- [新增] CI/CD 上下文
+    ci_job_id VARCHAR(50),
+    ci_job_url VARCHAR(500),
+    commit_sha VARCHAR(40),
+    branch VARCHAR(100),
+    report_url VARCHAR(500),
+    scan_duration_seconds FLOAT,
+    
     raw_json JSONB,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -23,6 +31,7 @@ CREATE TABLE IF NOT EXISTS dependency_scans (
 CREATE INDEX IF NOT EXISTS idx_dependency_scans_project ON dependency_scans(project_id);
 CREATE INDEX IF NOT EXISTS idx_dependency_scans_date ON dependency_scans(scan_date);
 CREATE INDEX IF NOT EXISTS idx_dependency_scans_status ON dependency_scans(scan_status);
+CREATE INDEX IF NOT EXISTS idx_dependency_scans_commit ON dependency_scans(commit_sha);
 
 COMMENT ON TABLE dependency_scans IS '依赖扫描记录表，存储每次 OWASP Dependency-Check 扫描的元数据';
 COMMENT ON COLUMN dependency_scans.scan_status IS '扫描状态: completed(完成), failed(失败), in_progress(进行中)';
@@ -78,6 +87,12 @@ CREATE TABLE IF NOT EXISTS dependencies (
     high_cve_count INTEGER DEFAULT 0,
     medium_cve_count INTEGER DEFAULT 0,
     low_cve_count INTEGER DEFAULT 0,
+
+    -- [新增] 误报管理
+    is_ignored BOOLEAN DEFAULT FALSE,
+    ignore_reason TEXT,
+    ignore_by VARCHAR(50),
+    ignore_at TIMESTAMP,
     
     -- 元数据
     file_path TEXT,
@@ -124,6 +139,10 @@ CREATE TABLE IF NOT EXISTS dependency_cves (
     -- 引用链接
     references JSONB,
     
+    -- [新增] 误报管理
+    is_ignored BOOLEAN DEFAULT FALSE,
+    ignore_reason TEXT,
+
     created_at TIMESTAMP DEFAULT NOW(),
     
     UNIQUE(dependency_id, cve_id)

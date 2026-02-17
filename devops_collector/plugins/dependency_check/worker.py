@@ -44,97 +44,76 @@ class DependencyCheckWorker(BaseWorker):
         return rules
 
     def process_task(self, task: dict) -> Any:
-        """实现标准的 Task 处理接口"""
-        project_id = task.get('project_id')
-        project_path = task.get('project_path')
-        project_name = task.get('project_name')
+        """
+        处理依赖扫描任务
         
+        仅支持 CI 报告导入模式: task 中必须包含 'report_json' 或 'report_path'
+        """
+        project_id = task.get('project_id')
         if not project_id:
             raise ValueError("Task missing 'project_id'")
-            
-        # 兼容旧逻辑，如果是 run_scan
-        return self.run_scan(project_id, project_path, project_name)
 
-    def run_scan(self, project_id: int, project_path: str, project_name: Optional[str]=None) -> Optional[int]:
+        if 'report_json' not in task and 'report_path' not in task:
+            raise ValueError("Task must contain 'report_json' or 'report_path'")
+
+        return self.process_ci_report(project_id, task)
+
+    def process_ci_report(self, project_id: int, task: dict) -> int:
         """
-        执行依赖扫描
+        处理 CI 流水线上传的报告
         """
-        logger.info(f'Starting dependency scan for project {project_id}')
-        scan = DependencyScan(project_id=project_id, scan_status='in_progress', scanner_version=self.scanner_version)
+        import json
+        
+        # 1. 获取报告内容
+        report_data = task.get('report_json')
+        report_path = task.get('report_path')
+        
+        if report_data is None and report_path:
+            logger.info(f"Loading report from file: {report_path}")
+            if not Path(report_path).exists():
+                raise FileNotFoundError(f"Report not found: {report_path}")
+            with open(report_path, 'r', encoding='utf-8') as f:
+                report_data = json.load(f)
+        
+        if not report_data:
+            raise ValueError("No report data provided")
+
+        # 2. 创建扫描记录
+        scan = DependencyScan(
+            project_id=project_id,
+            scan_status='in_progress',
+            scanner_name='OWASP Dependency-Check (CI)',
+            scanner_version=report_data.get('reportSchema', 'unknown'),
+            ci_job_id=task.get('ci_job_id'),
+            ci_job_url=task.get('ci_job_url'),
+            commit_sha=task.get('commit_sha'),
+            branch=task.get('branch'),
+            report_url=task.get('report_url'), 
+            scan_duration_seconds=task.get('duration'),
+            raw_json=report_data if task.get('save_raw', True) else None
+        )
         self.session.add(scan)
         self.session.commit()
-        scan_id = scan.id
+        
         try:
-            if project_name:
-                output_dir = f'{self.report_base_dir}/{project_name}/{scan_id}'
-            else:
-                output_dir = f'{self.report_base_dir}/project_{project_id}/{scan_id}'
-            logger.info(f'Report will be saved to: {output_dir}')
-            report_path = self.client.scan_project(project_path=project_path, output_dir=output_dir, project_name=project_name)
-            report_data = self.client.parse_report(report_path)
-            stats = self._save_dependencies(scan_id, project_id, report_data)
+            # 3. 解析并保存依赖
+            stats = self._save_dependencies(scan.id, project_id, report_data)
             
-            scan = self.session.query(DependencyScan).get(scan_id)
-            if scan:
-                scan.scan_status = 'completed'
-                scan.report_path = report_path
-                scan.raw_json = report_data
-                scan.total_dependencies = stats['total']
-                scan.vulnerable_dependencies = stats['vulnerable']
-                scan.high_risk_licenses = stats['high_risk_licenses']
-                self.session.commit()
+            # 4. 更新记录状态
+            scan.scan_status = 'completed'
+            scan.total_dependencies = stats['total']
+            scan.vulnerable_dependencies = stats['vulnerable']
+            scan.high_risk_licenses = stats['high_risk_licenses']
+            self.session.commit()
             
-            logger.info(f'Scan completed for project {project_id}, scan_id: {scan_id}')
-            logger.info(f'Report saved at: {report_path}')
-            return scan_id
+            logger.info(f"CI Report processed for project {project_id}, scan_id: {scan.id}")
+            return scan.id
+            
         except Exception as e:
-            logger.error(f'Scan failed for project {project_id}: {e}')
-            try:
-                scan = self.session.query(DependencyScan).get(scan_id)
-                if scan:
-                    scan.scan_status = 'failed'
-                    self.session.commit()
-            except:
-                pass
+            logger.error(f"Failed to process CI report: {e}")
+            scan.scan_status = 'failed'
+            self.session.commit()
             raise
-
-    def import_existing_report(self, project_id: int, report_path: str, project_name: Optional[str]=None) -> Optional[int]:
-        """
-        导入已有的 Dependency-Check 报告
-        """
-        logger.info(f'Importing existing report: {report_path}')
-        if not Path(report_path).exists():
-            raise FileNotFoundError(f'Report file not found: {report_path}')
-        scan = DependencyScan(project_id=project_id, scan_status='in_progress', scanner_version=self.scanner_version)
-        self.session.add(scan)
-        self.session.commit()
-        scan_id = scan.id
-        try:
-            report_data = self.client.parse_report(report_path)
-            stats = self._save_dependencies(scan_id, project_id, report_data)
-            
-            scan = self.session.query(DependencyScan).get(scan_id)
-            if scan:
-                scan.scan_status = 'completed'
-                scan.report_path = report_path
-                scan.raw_json = report_data
-                scan.total_dependencies = stats['total']
-                scan.vulnerable_dependencies = stats['vulnerable']
-                scan.high_risk_licenses = stats['high_risk_licenses']
-                self.session.commit()
-            logger.info(f'Import completed for project {project_id}, scan_id: {scan_id}')
-            return scan_id
-        except Exception as e:
-            logger.error(f'Import failed: {e}')
-            try:
-                scan = self.session.query(DependencyScan).get(scan_id)
-                if scan:
-                    scan.scan_status = 'failed'
-                    self.session.commit()
-            except:
-                pass
-            raise
-
     def cleanup_old_reports(self, dry_run: bool=False) -> Dict[str, int]:
         """
         清理过期的报告文件

@@ -6,48 +6,6 @@ from unittest.mock import Mock, patch, MagicMock
 import json
 from pathlib import Path
 from devops_collector.plugins.dependency_check.worker import DependencyCheckWorker
-from devops_collector.plugins.dependency_check.client import DependencyCheckClient
-
-class TestDependencyCheckClient(unittest.TestCase):
-    """测试 DependencyCheckClient"""
-
-    def setUp(self):
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
-        self.client = DependencyCheckClient(cli_path='/usr/bin/dependency-check', timeout=300)
-
-    @patch('subprocess.run')
-    def test_scan_project_success(self, mock_run):
-        """测试成功扫描项目"""
-        mock_run.return_value = Mock(returncode=0, stdout='', stderr='')
-        with patch('pathlib.Path.exists', return_value=True):
-            report_path = self.client.scan_project(project_path='/path/to/project', output_dir='/tmp/reports')
-            self.assertIsNotNone(report_path)
-            self.assertIn('dependency-check-report.json', report_path)
-
-    @patch('subprocess.run')
-    def test_scan_project_timeout(self, mock_run):
-        """测试扫描超时"""
-        import subprocess
-        mock_run.side_effect = subprocess.TimeoutExpired('cmd', 300)
-        with self.assertRaises(RuntimeError):
-            self.client.scan_project(project_path='/path/to/project', output_dir='/tmp/reports')
-
-    def test_parse_report(self):
-        """测试解析报告"""
-        test_report = {'dependencies': [{'fileName': 'test-1.0.0.jar', 'license': 'Apache-2.0', 'vulnerabilities': []}]}
-        with patch('builtins.open', unittest.mock.mock_open(read_data=json.dumps(test_report))):
-            result = self.client.parse_report('/tmp/test-report.json')
-            self.assertEqual(len(result['dependencies']), 1)
 
 class TestDependencyCheckWorker(unittest.TestCase):
     """测试 DependencyCheckWorker"""
@@ -65,7 +23,51 @@ Raises:
     TODO
 """'''
         self.config = {'dependency_check': {'cli_path': '/usr/bin/dependency-check', 'timeout': 300}}
-        self.worker = DependencyCheckWorker(self.config)
+        self.worker = DependencyCheckWorker(MagicMock(), MagicMock())
+        self.worker.session = MagicMock()
+
+    def test_process_task_routing(self):
+        """测试任务路由逻辑"""
+        # Case 1: CI Report Mode
+        with indent_mock_process_ci_report(self.worker) as mock_ci:
+            self.worker.process_task({'project_id': 1, 'report_json': {}})
+            mock_ci.assert_called_once()
+            
+        # Case 2: Invalid Input
+        with self.assertRaises(ValueError):
+            self.worker.process_task({'project_id': 1})
+
+    def test_process_ci_report_success(self):
+        """测试成功处理 CI 报告"""
+        # Mock Session and Data
+        mock_scan = MagicMock()
+        mock_scan.id = 100
+        self.worker.session.add = MagicMock()
+        self.worker.session.commit = MagicMock()
+        # Mock add() to set ID
+        def set_id(obj):
+            obj.id = 100
+        self.worker.session.add.side_effect = set_id
+        
+        # Mock _save_dependencies
+        self.worker._save_dependencies = MagicMock(return_value={
+            'total': 10, 'vulnerable': 2, 'high_risk_licenses': 1
+        })
+        
+        task = {
+            'project_id': 1,
+            'report_json': {'reportSchema': '1.0', 'dependencies': []},
+            'ci_job_id': 'job-123',
+            'commit_sha': 'abcdef',
+            'branch': 'main'
+        }
+        
+        scan_id = self.worker.process_ci_report(1, task)
+        
+        self.assertEqual(scan_id, 100)
+        self.worker.session.add.assert_called_once()
+        self.worker._save_dependencies.assert_called_once()
+        self.assertEqual(self.worker.session.commit.call_count, 2) # add + update
 
     def test_normalize_license_spdx(self):
         """测试许可证 SPDX 规范化"""
@@ -105,5 +107,16 @@ Raises:
         self.assertEqual(self.worker._extract_cvss_score(vuln_v2), 6.0)
         vuln_none = {}
         self.assertIsNone(self.worker._extract_cvss_score(vuln_none))
+
+# Helper context managers for patching methods on the instance
+from contextlib import contextmanager
+
+@contextmanager
+def indent_mock_process_ci_report(worker):
+    original = worker.process_ci_report
+    worker.process_ci_report = MagicMock()
+    yield worker.process_ci_report
+    worker.process_ci_report = original
+
 if __name__ == '__main__':
     unittest.main()
