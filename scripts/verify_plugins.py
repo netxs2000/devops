@@ -55,8 +55,12 @@ def main():
         config_dict = PluginRegistry.get_config(name)
         
         status = []
-        if client_cls: status.append("Client [OK]") 
-        else: status.append("Client [MISSING]") 
+        if client_cls: 
+            status.append("Client [OK]") 
+        elif name == 'dependency_check':
+            status.append("Client [SKIPPED]")
+        else: 
+            status.append("Client [MISSING]") 
         
         if worker_cls: status.append("Worker [OK]") 
         else: status.append("Worker [MISSING]")
@@ -66,7 +70,10 @@ def main():
 
         logger.info(f"      Status: {', '.join(status)}")
         
-        if not (client_cls and worker_cls and config_dict):
+        # dependency_check 不需要 Client (CI 驱动模式)
+        is_client_ok = bool(client_cls) or (name == 'dependency_check')
+        
+        if not (is_client_ok and worker_cls and config_dict):
             logger.error(f"      [X] Incomplete registration for {name}")
             all_passed = False
         else:

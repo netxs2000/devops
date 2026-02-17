@@ -76,8 +76,16 @@
     - **规范**: 统一 `test_*.py` 命名，更新 Makefile (`test-all`)，明确 pyproject.toml testpaths。
     - **Tech Debt**: 发现并登记 7 个既有 broken tests (Backlog P3)。
 
+
+14. **[P1] Dependency Check CI Integration (2026-02-17)**
+    - **Schema**: Enhanced `DependencyScan` with CI context (`job_url`, `commit_sha`) & False Positive support.
+    - **Worker**: Refactored to support pure JSON import via API, removed legacy local scan logic.
+    - **API**: Implemented `POST /api/security/dependency-check/upload` endpoint in Portal.
+    - **Cleanup**: Deleted unused `client.py` and old tests.
+
 ## 🏗️ 进行中 (In Progress)
 - [ ] [P1] 禅道全链路穿透：处理 `192.168.5.53` 服务器离线导致的实测阻塞，需建立 MDM 项目关联。
+
 
 ## 📅 接下来的任务 (Backlog)
 - [ ] 待禅道服务器上线后执行端到端全量数据同步验证。
