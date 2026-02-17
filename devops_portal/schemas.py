@@ -399,3 +399,19 @@ class DependencyScanResult(BaseModel):
     project_id: int
     status: str
     summary: Dict[str, int]
+
+class DependencyScanSummary(BaseModel):
+    """依赖扫描摘要模型"""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    project_id: int
+    scan_date: datetime
+    scanner_name: str
+    scanner_version: Optional[str] = None
+    total_dependencies: Optional[int] = 0
+    vulnerable_dependencies: Optional[int] = 0
+    high_risk_licenses: Optional[int] = 0
+    scan_status: str
+    ci_job_url: Optional[str] = None
+    project: Optional[Dict[str, Any]] = None
+

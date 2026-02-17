@@ -2,15 +2,30 @@
 OWASP Dependency-Check 数据模型
 存储依赖扫描、许可证信息和 CVE 漏洞数据
 """
-from sqlalchemy import Column, Integer, String, Boolean, Float, Text, DateTime, ForeignKey, UniqueConstraint, JSON
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    Float,
+    Text,
+    DateTime,
+    ForeignKey,
+    UniqueConstraint,
+    JSON,
+)
+
 JSONB = JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from .base_models import Base
+from .base_models import Base, TimestampMixin, SCDMixin
+from sqlalchemy.dialects.postgresql import UUID
 
-class DependencyScan(Base):
+
+class DependencyScan(Base, TimestampMixin, SCDMixin):
     """依赖扫描记录表 (dependency_scans)。
-    
+
     存储 OWASP Dependency-Check 等工具生成的扫描任务概览。
 
     Attributes:
@@ -28,16 +43,19 @@ class DependencyScan(Base):
         project (Project): 关联的项目对象。
         dependencies (List[Dependency]): 关联的依赖明细。
     """
-    __tablename__ = 'dependency_scans'
+
+    __tablename__ = "dependency_scans"
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('gitlab_projects.id', ondelete='CASCADE'), nullable=False)
+    project_id = Column(
+        Integer, ForeignKey("gitlab_projects.id", ondelete="CASCADE"), nullable=False
+    )
     scan_date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    scanner_name = Column(String(50), nullable=False, default='OWASP Dependency-Check')
+    scanner_name = Column(String(50), nullable=False, default="OWASP Dependency-Check")
     scanner_version = Column(String(20))
     total_dependencies = Column(Integer, default=0)
     vulnerable_dependencies = Column(Integer, default=0)
     high_risk_licenses = Column(Integer, default=0)
-    scan_status = Column(String(20), default='completed')
+    scan_status = Column(String(20), default="completed")
     ci_job_id = Column(String(50), comment="CI Job ID")
     ci_job_url = Column(String(500), comment="CI Job URL")
     commit_sha = Column(String(40), comment="Commit SHA")
@@ -45,16 +63,22 @@ class DependencyScan(Base):
     report_url = Column(String(500), comment="Report Storage URL")
     scan_duration_seconds = Column(Float, comment="Scan Duration (Seconds)")
     raw_json = Column(JSONB)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    project = relationship('GitLabProject', back_populates='dependency_scans')
-    dependencies = relationship('Dependency', back_populates='scan', cascade='all, delete-orphan')
+    created_by = Column(
+        UUID(as_uuid=True),
+        ForeignKey("mdm_identities.global_user_id"),
+        nullable=True,
+        comment="创建人",
+    )
+    project = relationship("GitLabProject", back_populates="dependency_scans")
+
+    dependencies = relationship("Dependency", back_populates="scan", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         """返回依赖扫描记录的字符串表示。"""
         return f"<DependencyScan(id={self.id}, project_id={self.project_id}, status='{self.scan_status}')>"
 
-class LicenseRiskRule(Base):
+
+class LicenseRiskRule(Base, TimestampMixin):
     """许可证风险规则配置表 (license_risk_rules)。
 
     用于定义不同开源许可证的合规性风险评级。
@@ -71,7 +95,8 @@ class LicenseRiskRule(Base):
         patent_grant (bool): 是否授予专利显式许可。
         is_active (bool): 规则是否处于启用状态。
     """
-    __tablename__ = 'license_risk_rules'
+
+    __tablename__ = "license_risk_rules"
     id = Column(Integer, primary_key=True)
     license_name = Column(String(200), nullable=False, unique=True)
     license_spdx_id = Column(String(100))
@@ -84,14 +109,13 @@ class LicenseRiskRule(Base):
     description = Column(Text)
     policy_notes = Column(Text)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     def __repr__(self) -> str:
         """返回许可证风险规则的字符串表示。"""
         return f"<LicenseRiskRule(name='{self.license_name}', risk='{self.risk_level}')>"
 
-class Dependency(Base):
+
+class Dependency(Base, TimestampMixin):
     """项目依赖清单表 (dependencies)。
 
     存储扫描发现的每一个具体的三方类库及其安全和合规状态。
@@ -117,15 +141,22 @@ class Dependency(Base):
         project (Project): 关联的项目对象。
         cves (List[DependencyCVE]): 关联的漏洞列表。
     """
-    __tablename__ = 'dependencies'
-    __table_args__ = (UniqueConstraint('scan_id', 'package_name', 'package_version', name='uq_dependency_scan_package'),)
+
+    __tablename__ = "dependencies"
+    __table_args__ = (
+        UniqueConstraint(
+            "scan_id", "package_name", "package_version", name="uq_dependency_scan_package"
+        ),
+    )
     id = Column(Integer, primary_key=True)
-    scan_id = Column(Integer, ForeignKey('dependency_scans.id', ondelete='CASCADE'), nullable=False)
-    project_id = Column(Integer, ForeignKey('gitlab_projects.id', ondelete='CASCADE'), nullable=False)
+    scan_id = Column(Integer, ForeignKey("dependency_scans.id", ondelete="CASCADE"), nullable=False)
+    project_id = Column(
+        Integer, ForeignKey("gitlab_projects.id", ondelete="CASCADE"), nullable=False
+    )
     package_name = Column(String(500), nullable=False)
     package_version = Column(String(100))
     package_manager = Column(String(50))
-    dependency_type = Column(String(20), default='direct')
+    dependency_type = Column(String(20), default="direct")
     license_name = Column(String(200))
     license_spdx_id = Column(String(100))
     license_url = Column(Text)
@@ -136,7 +167,7 @@ class Dependency(Base):
     high_cve_count = Column(Integer, default=0)
     medium_cve_count = Column(Integer, default=0)
     low_cve_count = Column(Integer, default=0)
-    
+
     # [新增] 误报管理
     is_ignored = Column(Boolean, default=False)
     ignore_reason = Column(Text)
@@ -147,17 +178,17 @@ class Dependency(Base):
     description = Column(Text)
     homepage_url = Column(Text)
     raw_data = Column(JSONB)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    scan = relationship('DependencyScan', back_populates='dependencies')
-    project = relationship('GitLabProject', back_populates='dependencies')
-    cves = relationship('DependencyCVE', back_populates='dependency', cascade='all, delete-orphan')
+    scan = relationship("DependencyScan", back_populates="dependencies")
+
+    project = relationship("GitLabProject", back_populates="dependencies")
+    cves = relationship("DependencyCVE", back_populates="dependency", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         """返回项目依赖的字符串表示。"""
         return f"<Dependency(name='{self.package_name}', version='{self.package_version}')>"
 
-class DependencyCVE(Base):
+
+class DependencyCVE(Base, TimestampMixin):
     """CVE 漏洞详情表 (dependency_cves)。
 
     Attributes:
@@ -172,10 +203,13 @@ class DependencyCVE(Base):
         ignore_reason (str): 忽略原因。
         dependency (Dependency): 关联的依赖对象。
     """
-    __tablename__ = 'dependency_cves'
-    __table_args__ = (UniqueConstraint('dependency_id', 'cve_id', name='uq_dependency_cve'),)
+
+    __tablename__ = "dependency_cves"
+    __table_args__ = (UniqueConstraint("dependency_id", "cve_id", name="uq_dependency_cve"),)
     id = Column(Integer, primary_key=True)
-    dependency_id = Column(Integer, ForeignKey('dependencies.id', ondelete='CASCADE'), nullable=False)
+    dependency_id = Column(
+        Integer, ForeignKey("dependencies.id", ondelete="CASCADE"), nullable=False
+    )
     cve_id = Column(String(50), nullable=False)
     cvss_score = Column(Float)
     cvss_vector = Column(String(200))
@@ -186,24 +220,23 @@ class DependencyCVE(Base):
     fixed_version = Column(String(100))
     remediation = Column(Text)
     references = Column(JSONB)
-    
+
     # [新增] 误报管理
     is_ignored = Column(Boolean, default=False)
     ignore_reason = Column(Text)
-    
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    dependency = relationship('Dependency', back_populates='cves')
+
+    dependency = relationship("Dependency", back_populates="cves")
 
     def __repr__(self):
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<DependencyCVE(cve_id='{self.cve_id}', severity='{self.severity}')>"

@@ -194,11 +194,14 @@ test-all: ## [本地] 运行全量测试 (单元+集成)
 	@echo "$(GREEN)Running all tests locally...$(RESET)"
 	pytest tests/unit/ tests/integration/ -v
 
-lint: ## [本地] 代码质量检查 (flake8, pylint)
+lint: ## [本地] 代码质量检查 (flake8, pylint, frontend)
 	@echo "$(GREEN)Running flake8 check...$(RESET)"
 	flake8 devops_collector/ devops_portal/
 	@echo "$(GREEN)Running pylint check...$(RESET)"
 	pylint devops_collector/ devops_portal/
+	@echo "$(GREEN)Running frontend line-limit check...$(RESET)"
+	python scripts/lint_frontend.py
+
 
 fmt: ## [本地] 代码格式化 (black)
 	@echo "$(GREEN)Formatting code with black...$(RESET)"

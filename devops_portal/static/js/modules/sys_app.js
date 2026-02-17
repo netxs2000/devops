@@ -8,6 +8,8 @@ import PmMatrixHandler from './pm_matrix.js';
 import RptOverviewHandler from './rpt_overview.js';
 import SysUtilsHandler from './sys_utils.js';
 import AdmManageHandler from './adm_manage.js';
+import SecService from './sec_service.js';
+
 
 const SysAppHandler = {
     state: {
@@ -31,6 +33,7 @@ const SysAppHandler = {
                     { id: "nav-tests", label: "测试用例", href: "#test-cases", view: "test-cases", icon: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" },
                     { id: "nav-test-execution", label: "测试执行", href: "#test-execution", view: "test-execution", icon: "M13 2L3 14h9l-1 8 10-12h-9l1-8z" },
                     { id: "nav-defects", label: "缺陷管理", href: "#defects", view: "defects", icon: "circle cx=12 cy=12 r=10; line x1=12 y1=8 x2=12 y2=12; line x1=12 y1=16 x2=12.01 y2=16", badgeId: "badge-defects" },
+                    { id: "nav-security", label: "安全扫描", href: "#security", view: "security", icon: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" },
                     { id: "nav-matrix", label: "追溯矩阵", href: "#matrix", view: "matrix", icon: "M12 2v20M2 12h20; M17 7l-5 5-5-5" }
                 ]
             },
@@ -82,6 +85,7 @@ const SysAppHandler = {
         QaDefectHandler.init();
         PmRequirementHandler.init();
         PmMatrixHandler.init();
+        SecService.init();
 
         await this.initUser();
         NotificationSystem.startSSE();
@@ -458,6 +462,7 @@ const SysAppHandler = {
         const navItems = [
             'nav-dashboard', 'nav-tests', 'nav-test-execution', 'nav-defects', 'nav-reqs',
             'nav-matrix', 'nav-reports', 'nav-governance', 'nav-pulse', 'nav-support',
+            'nav-security',
             'nav-sd-submit', 'nav-sd-my', 'nav-decision-hub', 'nav-admin-approvals',
             'nav-admin-products', 'nav-admin-okrs', 'nav-admin-projects', 'nav-admin-users', 'nav-admin-orgs'
         ];
@@ -465,6 +470,7 @@ const SysAppHandler = {
         const viewItems = [
             'qa-dashboard-view', 'qa-case-form-view', 'qa-test-results', 'qa-stats-grid', 'qa-execution-view', 'qa-defect-view', 'pm-matrix-view',
             'pm-requirements-view', 'pm-iteration-view', 'rpt-insights-view', 'sd-support-view',
+            'qa-security-view',
             'sd-submit-view', 'sd-my-view', 'sd-portal-view', 'sys-decision-hub-view', 'sys-governance-view', 'sys-pulse-view',
             'adm-approvals-view', 'adm-products-view', 'adm-okrs-view', 'adm-projects-view', 'adm-users-view', 'adm-orgs-view'
         ];
@@ -604,6 +610,10 @@ const SysAppHandler = {
                 show('adm-orgs-view');
                 AdmManageHandler.initOrgView();
                 AdmManageHandler.loadOrganizations();
+                break;
+            case 'security':
+                show('qa-security-view');
+                SecService.loadHistory();
                 break;
         }
     },

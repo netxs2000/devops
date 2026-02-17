@@ -83,6 +83,28 @@
     - **API**: Implemented `POST /api/security/dependency-check/upload` endpoint in Portal.
     - **Cleanup**: Deleted unused `client.py` and old tests.
 
+15. **[P1] Security Scan Portal Integration (2026-02-17)**
+    - **Frontend**: Added "安全扫描" (Security Scan) to Quality Assurance sidebar.
+    - **UI**: Implemented scan history table and vulnerable statistics dashboard.
+    - **Upload**: Added portal-based JSON report upload with project selection support.
+    - **Service**: Implemented `sec_service.js` for scanning life-cycle management.
+    - **Verification**: UI routing and modal triggers verified; backend connectivity aligned with `/security` router.
+
+16. **[Process] Development Process Alignment (2026-02-18)**
+    - **Guidelines**: Updated `contexts.md` (Sec 12/14) to mandate **Validation First** and **Evidence-Based Delivery**.
+    - **DoD**: Integrated "Testing Evidence" into the formal Definition of Done.
+    - **Persistence**: Cemented the rule that all verification tests must be persisted as project assets.
+    - **Workflows**: Created `.agent/workflows/lint.md` (Automated) and `.agent/workflows/code-review.md` (Context-Aware).
+    - **Utilities**: Added `scripts/lint_frontend.py` to enforce the 300-line law on JS/CSS/HTML.
+
+
+17. **[P1] Unified Exception System & Audit Persistence (2026-02-18)**
+    - **Unified Exceptions**: Implemented `BusinessException` hierarchy in `devops_collector.core.exceptions` and registered a global handler in FastAPI `main.py` for consistent JSON error responses.
+    - **Refactoring**: Migrated `security_router.py` from `HTTPException` to `BusinessException`, improving API error contract alignment with `contexts.md`.
+    - **Audit Fields**: Enhanced security models (`DependencyScan`, `Dependency`, etc.) with standard `TimestampMixin`, `SCDMixin` (for soft-delete), and `created_by` field.
+    - **Persistence**: Recreated and persisted `tests/unit/devops_portal/test_security_api.py` and `tests/e2e/test_security_ui_sanity.py`, ensuring future quality guardrails.
+    - **Validation**: All tests passed (3 files reformatted, tests 100% success).
+
 ## 🏗️ 进行中 (In Progress)
 - [ ] [P1] 禅道全链路穿透：处理 `192.168.5.53` 服务器离线导致的实测阻塞，需建立 MDM 项目关联。
 

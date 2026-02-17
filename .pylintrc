@@ -79,6 +79,9 @@ include-naming-hint=yes
 # 最大行长度
 max-line-length=100
 
+# 最大文件行数 (300行物理定律)
+max-module-lines=300
+
 # 单行的最大字符数
 single-line-if-stmt=no
 

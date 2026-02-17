@@ -347,6 +347,65 @@
                 </div>
             </div>
 
+            <!-- Security Scan View -->
+            <div id="qa-security-view" class="u-hide u-p-24">
+                <div class="u-flex u-flex-between u-align-center u-mb-24">
+                    <div>
+                        <h2 class="u-text-h2 u-mb-8">安全扫描治理 (Security)</h2>
+                        <p class="u-text-dim">管理第三方依赖风险、CVE 漏洞及许可证合规性。</p>
+                    </div>
+                    <div class="u-flex u-gap-15">
+                        <button class="btn-primary btn-icon-text js-btn-open-sec-upload">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+                            </svg>
+                            上传扫描报告
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Bar -->
+                <div class="stats-grid u-mb-24" id="sec-stats-grid">
+                    <div class="stat-card u-p-24">
+                        <span class="stat-title">发现漏洞 (Vulnerabilities)</span>
+                        <div class="stat-value u-text-error" id="sec-stat-vulnerabilities">0</div>
+                    </div>
+                    <div class="stat-card u-p-24">
+                        <span class="stat-title">致命/高危漏洞</span>
+                        <div class="stat-value u-text-error" id="sec-stat-critical">0</div>
+                    </div>
+                    <div class="stat-card u-p-24">
+                        <span class="stat-title">风险许可证</span>
+                        <div class="stat-value u-text-warning" id="sec-stat-licenses">0</div>
+                    </div>
+                    <div class="stat-card u-p-24">
+                        <span class="stat-title">已扫描项目</span>
+                        <div class="stat-value" id="sec-stat-projects">0</div>
+                    </div>
+                </div>
+
+                <div class="adm-table-container">
+                    <table class="adm-data-table">
+                        <thead>
+                            <tr>
+                                <th>项目名称</th>
+                                <th>扫描时间</th>
+                                <th>总依赖</th>
+                                <th>漏洞数</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sec-scan-history-tbody">
+                            <tr>
+                                <td colspan="6" class="u-text-center u-p-24 u-text-dim">正在加载扫描记录...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <div id="pm-requirements-view" class="u-hide u-p-24">
                 <!-- 页面标题区 -->
                 <div class="u-flex u-flex-between u-align-center u-mb-24">
@@ -515,8 +574,9 @@
                                 <option value="CLOSED">已关闭</option>
                             </select>
                             <button class="btn-primary btn-icon-text js-btn-export-okrs">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
                                 </svg>
                                 导出全量 OKR
                             </button>
@@ -1359,6 +1419,34 @@
             });
         });
     </script>
+    <!-- Security Upload Modal -->
+    <div id="securityUploadModal" class="modal-overlay u-hide">
+        <div class="modal-content g-glass-panel" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="u-text-h3">上传安全扫描报告</h3>
+                <button class="modal-close js-btn-close-sec-modal">&times;</button>
+            </div>
+            <div class="modal-body u-p-24">
+                <form id="sec-upload-form">
+                    <div class="u-mb-20">
+                        <label class="u-label-caps u-mb-8 u-block">选择 GitLab 项目</label>
+                        <select name="project_id" class="form-control js-sec-project-select" required>
+                            <option value="">载入中...</option>
+                        </select>
+                    </div>
+                    <div class="u-mb-20">
+                        <label class="u-label-caps u-mb-8 u-block">扫描报告 (JSON)</label>
+                        <input type="file" name="file" class="form-control" accept=".json" required>
+                        <p class="u-text-tiny u-text-dim u-mt-4">请上传 OWASP Dependency-Check 生成的 JSON 格式报告。</p>
+                    </div>
+                    <div class="u-flex u-gap-12 u-justify-end">
+                        <button type="button" class="btn-ghost js-btn-close-sec-modal">取消</button>
+                        <button type="submit" class="btn-primary">开始上传解析</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>

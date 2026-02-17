@@ -183,8 +183,12 @@
 - **显性上下文 (Explicit Context)**: AI 没有“默会知识”。所有的业务规则、术语、架构决策必须沉淀在 `contexts.md` 或代码注释中。文档即代码，是预加载给 AI 的“系统提示词”。
 - **认知局限与分形架构 (Cognitive Locality)**: AI 的推理注意力有限。保持高内聚，严格遵守 **300行物理定律**（文件长度限制）。避免跨文件碎片化逻辑，物理邻近性等于认知效率。
 - **类型即护栏 (Types as Guardrails)**: 自然语言是模糊的，类型是确定的。强制使用 Type Hints (Pydantic)。遵循 **Schema-First** 开发，先定义数据结构模型，再让 AI 填充业务逻辑。
-- **可验证性闭环 (Verifiable Loops)**: AI 代码生成是概率性的。人类定义标准，AI 执行验证。提倡 **Test-Driven Intent**，在编码前通过测试用例精准化需求；利用集成测试、Lint 报错作为 AI 自我修正的闭环反馈。
+- **可验证性闭环 (Verifiable Loops)**: AI 代码生成是概率性的。人类定义标准，AI 执行验证。
+    - **验证前置 (Validation First)**: 任何开发计划必须包含 `[Verification]` 环节。严禁只有开发逻辑而无测试方案的计划汇报。
+    - **伴生测试 (Companion Tests)**: 修改代码必须同步产出测试，且测试必须持久化到 `tests/` 目录，严禁在验证后删除。
+    - **Test-Driven Intent**: 在编码前通过测试用例精准化需求；利用集成测试、Lint 报错作为 AI 自我修正的闭环反馈。
 - **反向对齐 (Reverse Alignment)**: 意图对齐优于代码产出。通过“采访-选项-决策”流程将模糊意图工程化，严禁 AI 在模糊状态下进行单方面“猜想”。
+
 
 ### 12.2 反向交互机制 (Reverse Interaction & Discovery)
 **核心原则**：不仅在开始前提问，更在过程中遇到模糊地带时主动“刹车”并反向确认。
@@ -212,8 +216,10 @@
 
 ### 12.3 核心交互准则 (Operational Guidelines)
 - **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
-- **代码自查**: 提交前使用 `make lint` 确保符合 Google Python Style 且无死循环依赖。
+- **代码自查 (Self-Review Routine)**: 交付前必须运行 `/code-review` 和 `/lint` 流水线。
+- **证据交付 (Evidence-Based Delivery)**: 告知任务完成时，必须包含 `Evidence of Testing` 模块，清晰列出执行的验证脚本、命令及结果日志。
 - **验证驱动测试**: Agent 在修改核心 `core/` 或 `models/` 代码后，必须主动执行相关模块的集成测试。
+
 
 
 ## 13. 分支开发与版本控制规范 (Branching & Versioning)
@@ -269,9 +275,11 @@
 
 ### 14.5 完工标准 (Definition of Done - DoD)
 - **代码层面**: 通过所有 Lint 检查，无死代码，注释清晰且无拼写错误。
-- **测试层面**: 单元测试覆盖率达标，相关功能的 E2E 测试通过。
+- **测试层面**: 单元测试覆盖率达标，相关功能的 E2E 测试通过，且 **测试资产已入库**。
 - **文档层面**: `contexts.md`, `project_summary.md` 及 API 文档 (如有变更) 已同步更新。
 - **部署层面**: `make deploy` 在容器环境中验证通过，无回滚风险。
+- **汇报完成**: 必须附带验证证据日志。
+
 
 ## 15. 禅道集成规范与元数据对齐 (ZenTao Integration & Metadata)
 
