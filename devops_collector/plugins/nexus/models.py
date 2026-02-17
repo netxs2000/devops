@@ -1,10 +1,9 @@
-"""TODO: Add module description."""
+"""Nexus 插件数据模型。"""
 from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, BigInteger
 from sqlalchemy.orm import relationship
-from datetime import datetime
-from devops_collector.models.base_models import Base, Product
+from devops_collector.models.base_models import Base, Product, TimestampMixin, SCDMixin, OwnableMixin
 
-class NexusComponent(Base):
+class NexusComponent(Base, TimestampMixin, SCDMixin, OwnableMixin):
     """Nexus 组件模型 (nexus_components)。
     
     Attributes:
@@ -14,7 +13,7 @@ class NexusComponent(Base):
         group (str): 组织/分组。
         name (str): 组件名称。
         version (str): 版本号。
-        product_id (int): 关联的产品 ID。
+        product_id (str): 关联的产品 ID。
         product (Product): 关联的产品对象。
         assets (List[NexusAsset]): 该组件包含的资产列表。
     """
@@ -25,28 +24,16 @@ class NexusComponent(Base):
     group = Column(String(255))
     name = Column(String(255), nullable=False)
     version = Column(String(100))
-    product_id = Column(String(100), ForeignKey('mdm_product.product_id'))
+    product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True)
+    
     product = relationship('Product')
-    created_at = Column(DateTime)
-    updated_at = Column(DateTime)
     assets = relationship('NexusAsset', back_populates='component', cascade='all, delete-orphan')
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
         return f"<NexusComponent(name='{self.name}', version='{self.version}')>"
 
-class NexusAsset(Base):
+class NexusAsset(Base, TimestampMixin, SCDMixin):
     """Nexus 资产（文件）模型 (nexus_assets)。
 
     Attributes:
@@ -67,22 +54,12 @@ class NexusAsset(Base):
     checksum_sha1 = Column(String(40))
     checksum_sha256 = Column(String(64))
     checksum_md5 = Column(String(32))
-    created_at = Column(DateTime)
+    
     last_modified = Column(DateTime)
     last_downloaded = Column(DateTime)
+    
     component = relationship('NexusComponent', back_populates='assets')
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
-        '''"""TODO: Add description.
-
-Args:
-    self: TODO
-
-Returns:
-    TODO
-
-Raises:
-    TODO
-"""'''
         return f"<NexusAsset(path='{self.path}')>"

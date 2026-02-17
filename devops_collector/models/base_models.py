@@ -324,6 +324,9 @@ class Product(Base, TimestampMixin, SCDMixin):
     qa_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='测试经理')
     release_lead_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True, comment='发布经理')
     
+    # [新增] 自动识别模式 (如 com.tjhq.*, ^portal-.*)
+    matching_patterns = Column(JSON, comment='自动识别匹配模式列表 (JSON)')
+    
     # [新增] 产品线层级支持 (Scheme A)
     parent_product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True, comment='上级产品ID')
     node_type = Column(String(20), default='APP', comment='节点类型 (LINE=产品线 / APP=应用)')

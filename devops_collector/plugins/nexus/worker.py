@@ -1,11 +1,13 @@
 """Nexus 数据采集 Worker"""
 import logging
+import re
 from datetime import datetime
 from typing import Optional, Dict, List
 from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 # from .client import NexusClient
+from devops_collector.models.base_models import Product
 from .models import NexusComponent, NexusAsset
 logger = logging.getLogger(__name__)
 
@@ -21,12 +23,75 @@ class NexusWorker(BaseWorker):
         if not repository:
             raise ValueError("Nexus task missing 'repository'")
         logger.info(f'Syncing Nexus repository: {repository}')
+        
+        # 预加载产品缓存
+        self._init_product_cache()
+        
         try:
             count = self._sync_components(repository)
             self.log_success(f'Nexus repository {repository} synced: {count} components')
         except Exception as e:
             self.log_failure(f'Failed to sync Nexus repository {repository}', e)
             raise
+
+    def _init_product_cache(self):
+        """初始化产品代码缓存及匹配模式列表。"""
+        # 查询产品 ID 和匹配模式
+        products = self.session.query(
+            Product.product_id, Product.matching_patterns
+        ).filter(Product.is_current == True).all()
+        
+        self._product_map = {p.product_id.lower(): p.product_id for p in products}
+        
+        # 编译所有产品的匹配正则
+        self._pattern_rules = []
+        for p in products:
+            patterns = p.matching_patterns
+            if not patterns:
+                continue
+            if isinstance(patterns, str):
+                patterns = [patterns]
+            
+            for pat in patterns:
+                try:
+                    # 智能判断是正则还是简单通配符
+                    if pat.startswith('^') or pat.endswith('$') or '\\' in pat:
+                        regex_str = pat
+                    else:
+                        # 简单模式：将 . 替换为 \.，将 * 替换为 .*
+                        regex_str = f"^{pat.replace('.', r'\.').replace('*', '.*')}$"
+                    
+                    self._pattern_rules.append({
+                        're': re.compile(regex_str, re.I),
+                        'pid': p.product_id
+                    })
+                except Exception as e:
+                    logger.warning(f"Invalid matching pattern '{pat}' for product {p.product_id}: {e}")
+                    
+        logger.info(f"Loaded {len(self._product_map)} products and {len(self._pattern_rules)} patterns.")
+
+    def _resolve_product_id(self, group: Optional[str], name: str) -> Optional[str]:
+        """根据 Group 或 Name 智能解析所属 Product ID (优先匹配显式模式)。"""
+        target_str = f"{group or ''}:{name}"
+        
+        # 1. 优先使用显式定义的 matching_patterns (正则匹配)
+        for rule in self._pattern_rules:
+            if rule['re'].match(group or '') or rule['re'].match(name) or rule['re'].match(target_str):
+                return rule['pid']
+
+        # 2. 降级策略: 尝试通过 group 拆分匹配 (Maven 风格)
+        if group:
+            parts = group.lower().split('.')
+            for part in reversed(parts):
+                if part in self._product_map:
+                    return self._product_map[part]
+        
+        # 3. 降级策略: 尝试通过 name 精确匹配
+        name_lower = name.lower()
+        if name_lower in self._product_map:
+            return self._product_map[name_lower]
+            
+        return None
 
     def _sync_components(self, repository: str) -> int:
         """拉取并保存组件及其资产。"""
@@ -46,19 +111,33 @@ class NexusWorker(BaseWorker):
         return count
 
     def _save_batch(self, batch: List[dict]) -> None:
-        """批量保存到数据库。"""
+        """批量保存到数据库，并执行身份/产品识别。"""
         for data in batch:
             comp_id = data['id']
             comp = self.session.query(NexusComponent).filter_by(id=comp_id).first()
             if not comp:
                 comp = NexusComponent(id=comp_id)
                 self.session.add(comp)
-            self.save_to_staging(source='nexus', entity_type='component', external_id=comp_id, payload=data, schema_version=self.SCHEMA_VERSION)
+            
+            self.save_to_staging(
+                source='nexus', 
+                entity_type='component', 
+                external_id=comp_id, 
+                payload=data, 
+                schema_version=self.SCHEMA_VERSION
+            )
+            
             comp.repository = data['repository']
             comp.format = data['format']
             comp.group = data.get('group')
             comp.name = data['name']
             comp.version = data.get('version')
+            
+            # 深度集成：自动产品对齐
+            resolved_pid = self._resolve_product_id(comp.group, comp.name)
+            if resolved_pid:
+                comp.product_id = resolved_pid
+                
             comp.raw_data = data
             self._sync_assets(comp, data.get('assets', []))
         self.session.commit()

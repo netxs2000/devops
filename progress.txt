@@ -105,9 +105,15 @@
     - **Persistence**: Recreated and persisted `tests/unit/devops_portal/test_security_api.py` and `tests/e2e/test_security_ui_sanity.py`, ensuring future quality guardrails.
     - **Validation**: All tests passed (3 files reformatted, tests 100% success).
 
+18. **[P1] Nexus 深度集成与 MDM 自动对齐 (Nexus Deep Integration)** (2026-02-18)
+    - **模型增强**：对 `NexusComponent` 和 `NexusAsset` 进行了标准化改造，引入 `TimestampMixin`, `SCDMixin` (支持软删除) 和 `OwnableMixin`。
+    - **智能对齐**：在 `NexusWorker` 中实现了 `_resolve_product_id` 逻辑。在同步过程中，系统会根据组件的 `group`(Group ID) 或 `name` 自动解析并绑定所属的 MDM 产品代码 (如 `com.tjhq.devops` 自动关联至 `devops` 产品)。
+    - **批量初始化**：完善了 `scripts/init_nexus_links.py` 脚本，支持基于 **正则表达式** 的手动映射策略，并提供了 `docs/nexus_component_map.csv` 配置模板。
+    - **Schema 对齐**：更新了 Portal 层的 `schemas.py`，在 `NexusComponentSummary` 中透出了 `product_id` 字段，为前端看板提供数据支撑。
+    - **质量验证**：编写并持久化了 `tests/unit/devops_collector/plugins/nexus/test_nexus_worker.py`，模拟多种匹配场景（Group 解析、Name 解析、未匹配解析）并全部通过 ✅。
+
 ## 🏗️ 进行中 (In Progress)
 - [ ] [P1] 禅道全链路穿透：处理 `192.168.5.53` 服务器离线导致的实测阻塞，需建立 MDM 项目关联。
-
 
 ## 📅 接下来的任务 (Backlog)
 - [ ] 待禅道服务器上线后执行端到端全量数据同步验证。
@@ -122,4 +128,4 @@
     - 即使在无法运行完整 CI 的情况下，清晰的目录结构也极大地提升了本地开发体验 (`make test-local` 现在运行真正的单元测试，而不仅仅是原来的 6 个文件)。
 
 ---
-*最后更新时间：2026-02-17 21:50 (Antigravity)*
+*最后更新时间：2026-02-18 01:25 (Antigravity)*

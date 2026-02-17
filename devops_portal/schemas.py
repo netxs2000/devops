@@ -311,6 +311,7 @@ class ProductView(BaseModel):
     product_description: str
     category: Optional[str] = None
     lifecycle_status: str
+    matching_patterns: Optional[List[str]] = Field(None, description="自动识别匹配模式列表")
 
 class ProductCreate(BaseModel):
     """创建产品的请求模型"""
@@ -321,6 +322,7 @@ class ProductCreate(BaseModel):
     owner_team_id: Optional[str] = None
     product_manager_id: Optional[uuid.UUID] = None
     version_schema: str = 'semver'
+    matching_patterns: Optional[List[str]] = Field(None, description="自动识别匹配模式列表")
 
 class ProjectProductRelationView(BaseModel):
     """项目与产品关联视图模型"""
@@ -374,24 +376,25 @@ class TraceabilityMatrixItem(BaseModel):
 class JFrogArtifactSummary(BaseModel):
     """JFrog 制品摘要"""
     model_config = ConfigDict(from_attributes=True)
-    id: int
-    repo: str
-    path: str
-    name: str
-    version: Optional[str]
-    package_type: Optional[str]
-    size_bytes: Optional[int]
-    created_at: Optional[datetime]
+    id: int = Field(..., description="数据库唯一 ID")
+    repo: str = Field(..., description="仓库名称")
+    path: str = Field(..., description="制品路径")
+    name: str = Field(..., description="制品文件名")
+    version: Optional[str] = Field(None, description="版本号")
+    package_type: Optional[str] = Field(None, description="包类型 (Maven/Docker/etc)")
+    size_bytes: Optional[int] = Field(None, description="文件大小 (Bytes)")
+    created_at: Optional[datetime] = Field(None, description="创建时间")
 
 class NexusComponentSummary(BaseModel):
     """Nexus 组件摘要"""
     model_config = ConfigDict(from_attributes=True)
-    id: str
-    repository: str
-    format: Optional[str]
-    group: Optional[str]
-    name: str
-    version: Optional[str]
+    id: str = Field(..., description="Nexus 内部组件 ID")
+    repository: str = Field(..., description="仓库名称")
+    format: Optional[str] = Field(None, description="格式 (maven2/npm/docker)")
+    group: Optional[str] = Field(None, description="组织/分组 (GroupID)")
+    name: str = Field(..., description="组件名称")
+    version: Optional[str] = Field(None, description="版本号")
+    product_id: Optional[str] = Field(None, description="绑定的 MDM 产品代码")
 
 class DependencyScanResult(BaseModel):
     """依赖扫描结果返回"""
