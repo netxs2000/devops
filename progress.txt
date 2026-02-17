@@ -56,22 +56,40 @@
     - **测试 Fixture 修复**：为 `tests/unit/` 目录新增 `conftest.py`，提供 `db_session` fixture，解决 `test_okr_export.py` 的 fixture 缺失错误。
     - **结果**：`make test-local` 全部 **20 passed, 0 failed, 0 errors** ✅
 
-## 🏗️ 进行中 (In Progress)
-- [x] [P1] 分支合并：将 `feat/zt-task-effort` Squash Merge 到 `main` (2026-02-17)
+11. **[P0] 修复核心测试套件 (Core Test Suite Fixes)**
+    - **Product Flow**：修复 `test_product_flow.py` 中项目/产品关联逻辑的 404/None 错误，确保测试数据正确落库。
+    - **Main API**：修复 `test_main.py` 中 Pydantic Schema 字段不匹配导致的数据校验错误 (Pydantic V2兼容)。
+    - **Integration Tests**：
+        - 修复 `test_gitlab_sync_flow.py` 中 Mock Generator 返回类型错误 (List vs Dict)。
+        - 修复 `test_qa_test_management_api.py` 中 `TestClient` 鉴权失败 (401) 及依赖覆盖 (Dependency Overrides) 互相干扰的问题。
+    - **Refactoring**：统一了 integration 测试的 `client` fixture 实现，消除了全局状态污染。
+    - **结果**：`tests/unit/devops_portal/` (除前端) 及 `tests/integration/` 全量通过。
+
+12. **[P1] 分支合并：将 `feat/zt-task-effort` Squash Merge 到 `main` (2026-02-17)**
     - 已通过: Rebase + 本地单元测试 (20/20 passed, PYTHONPATH=.) + 安全性自检。
     - 降级: 未执行 `make test` (镜像缺失) / `make deploy` (网络超时)。
     - 阻塞原因: 离线环境与 Docker 镜像加速地址失效导致无法重新构建镜像。
+
+13. **[P2] 测试目录结构重构 (2026-02-17)**
+    - **重组**: 75 个文件归并为 `unit/`, `integration/`, `e2e/`, `scripts/` 四层结构。
+    - **清理**: 删除 `tests/simulations/` (弃用脚本) 和 `tests/analytics/` (过时 DORA 测试)。
+    - **规范**: 统一 `test_*.py` 命名，更新 Makefile (`test-all`)，明确 pyproject.toml testpaths。
+    - **Tech Debt**: 发现并登记 7 个既有 broken tests (Backlog P3)。
+
+## 🏗️ 进行中 (In Progress)
 - [ ] [P1] 禅道全链路穿透：处理 `192.168.5.53` 服务器离线导致的实测阻塞，需建立 MDM 项目关联。
 
 ## 📅 接下来的任务 (Backlog)
 - [ ] 待禅道服务器上线后执行端到端全量数据同步验证。
-- [ ] [P2] 测试目录结构重构 (`refactor/test-structure`)：当前 76 个测试文件分散在 10 个目录，`make test-local` 仅覆盖 `tests/unit/` 的 6 个文件。需统一归并为 `unit/`、`integration/`、`e2e/`、`scripts/` 四层结构，修正命名不一致（`_test` vs `test_`），将根目录散落的 20 个单元测试归位。
+- [ ] [P3] 修复 7 个 pre-existing broken test files (引用过时模块的导入错误)
 
 ## 📝 阶段性回顾 (Retrospective)
 - **核心挑战**：容器内环境缺少 `pytest` 且网络受限，通过 Host 侧单元测试与独立验证脚本确保了逻辑正确性。
-- **设计决策**：前端增加数据预览区大大提升了导出操作的确定性，符合 Apple 风格的 Segmented Control 交互体验良好。
 - **设计决策**：坚持“采集层轻量、分析层沉重”的 Architecture B 方案，避免了插件 Worker 陷入复杂的业务逻辑泥潭，提升了插件的鲁棒性和可维护性。
 - **质量保障**：虽然外部系统（Sonar, Jenkins, ZenTao）离线，但通过 dbt 编译校验和模型静态审计，确保了分析链路逻辑 100% 正确。
+- **测试重构 (2026-02-17)**：
+    - 废弃了基于 SQL View 的旧 DORA 测试，确立了以 dbt 为核心的指标计算与测试链路。
+    - 即使在无法运行完整 CI 的情况下，清晰的目录结构也极大地提升了本地开发体验 (`make test-local` 现在运行真正的单元测试，而不仅仅是原来的 6 个文件)。
 
 ---
-*最后更新时间：2026-02-17 01:10 (Antigravity)*
+*最后更新时间：2026-02-17 21:50 (Antigravity)*

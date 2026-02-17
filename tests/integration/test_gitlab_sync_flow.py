@@ -42,8 +42,7 @@ def test_gitlab_worker_sync_project_and_commits(session):
     
     # Mocking commit generator
     def get_commits_gen(pid, since=None):
-        yield [
-            {
+        yield {
                 'id': 'sha123',
                 'short_id': 'sha123',
                 'title': 'initial commit',
@@ -54,7 +53,6 @@ def test_gitlab_worker_sync_project_and_commits(session):
                 'committed_date': '2023-01-01T10:00:00Z',
                 'stats': {'additions': 10, 'deletions': 2, 'total': 12}
             }
-        ]
     
     mock_client.get_project_commits.side_effect = get_commits_gen
     mock_client.get_project_issues.return_value = []

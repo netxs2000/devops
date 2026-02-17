@@ -103,11 +103,21 @@ devops_collector = ["sql/*.sql"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --strict-markers --cov=devops_collector --cov-report=term-missing --cov-report=html"
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests/unit",
+    "tests/integration",
+    "tests/dagster_repo",
+    "tests/dbt_project",
+]
+python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "slow: 标记为慢速测试",
+    "smoke: 冒烟测试 (快速验证核心功能)",
+    "reliability: 幂等性/一致性验证测试",
+]
 
 [tool.black]
 line-length = 100

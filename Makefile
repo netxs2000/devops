@@ -4,7 +4,7 @@
 #  所有操作均在容器内部执行，确保环境一致性
 # -----------------------------------------------------------
 
-.PHONY: help deploy init test test-local lint fmt diagnose check-imports build up down logs sync-all shell clean lock install init-dev docs e2e-install e2e-test e2e-test-headed e2e-test-trace e2e-smoke e2e-show-trace
+.PHONY: help deploy init test test-local test-int-local test-all lint fmt diagnose check-imports build up down logs sync-all shell clean lock install init-dev docs e2e-install e2e-test e2e-test-headed e2e-test-trace e2e-smoke e2e-show-trace
 
 # 颜色定义
 YELLOW := \033[1;33m
@@ -178,17 +178,21 @@ shell: ## 进入 API 容器终端 (Debug 用)
 # 运维与测试工具
 # =============================================================================
 
-test: ## 运行所有测试 (容器内)
+test: ## 运行单元+集成测试 (容器内)
 	@echo "$(GREEN)Running unit and integration tests (inside container)...$(RESET)"
-	$(EXEC_CMD) pytest tests/
+	$(EXEC_CMD) pytest tests/unit/ tests/integration/ -v
 
-test-local: ## [本地] 运行单元测试 (不带负载)
+test-local: ## [本地] 运行单元测试 (快速验证)
 	@echo "$(GREEN)Running unit tests locally...$(RESET)"
 	pytest tests/unit/ -v
 
-test-integration-local: ## [本地] 运行集成测试 (如授权、同步流)
+test-int-local: ## [本地] 运行集成测试 (如授权、同步流)
 	@echo "$(GREEN)Running integration tests locally...$(RESET)"
 	pytest tests/integration/ -v
+
+test-all: ## [本地] 运行全量测试 (单元+集成)
+	@echo "$(GREEN)Running all tests locally...$(RESET)"
+	pytest tests/unit/ tests/integration/ -v
 
 lint: ## [本地] 代码质量检查 (flake8, pylint)
 	@echo "$(GREEN)Running flake8 check...$(RESET)"
