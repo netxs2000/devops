@@ -74,11 +74,6 @@ async def health_check():
     return {"status": "ok", "version": settings.version if hasattr(settings, 'version') else "unknown"}
 
 
-# Mount static files explicitly to /static to support frontend paths (e.g. LOGIN_PAGE in sys_core.js)
-app.mount("/static", StaticFiles(directory="devops_portal/static", html=True), name="static-assets")
-
-# Mount static files to root to serve index.html, css, js and other html pages directly
-app.mount("/", StaticFiles(directory="devops_portal/static", html=True), name="static")
 
 @app.get('/notifications/stream')
 async def notification_stream(current_user=Depends(get_current_user)):
@@ -221,7 +216,7 @@ async def list_jenkins_builds(job_id: int, current_user: User=Depends(get_curren
         raise HTTPException(status_code=403, detail='Access Denied to this Jenkins Job Data')
     return db.query(JenkinsBuild).filter(JenkinsBuild.job_id == job_id).order_by(JenkinsBuild.number.desc()).limit(100).all()
 
-@app.get('/artifacts/jfrog', response_model=List[Any])
+@app.get('/artifacts/jfrog', response_model=List[schemas.JFrogArtifactSummary])
 async def list_jfrog_artifacts(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_auth_db)):
     """[P5] 获取 JFrog 制品列表（支持组织隔离）。"""
     from devops_collector.plugins.jfrog.models import JFrogArtifact
@@ -229,7 +224,7 @@ async def list_jfrog_artifacts(current_user: User=Depends(get_current_user), db:
     query = security.apply_plugin_privacy_filter(db, query, JFrogArtifact, current_user)
     return query.all()
 
-@app.get('/artifacts/nexus', response_model=List[Any])
+@app.get('/artifacts/nexus', response_model=List[schemas.NexusComponentSummary])
 async def list_nexus_components(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_auth_db)):
     """[P5] 获取 Nexus 组件列表（支持组织隔离）。"""
     from devops_collector.plugins.nexus.models import NexusComponent
@@ -237,15 +232,23 @@ async def list_nexus_components(current_user: User=Depends(get_current_user), db
     query = security.apply_plugin_privacy_filter(db, query, NexusComponent, current_user)
     return query.all()
 
-@app.get('/security/dependency-scans', response_model=List[Any])
+@app.get('/security/dependency-scans', response_model=List[schemas.DependencyScanSummary])
 async def list_dependency_scans(current_user: User=Depends(get_current_user), db: Session=Depends(auth_router.get_auth_db)):
+
     """[P5] 获取 Dependency Check 扫描结果（支持组织隔离）。"""
     from devops_collector.models.dependency import DependencyScan
     from devops_collector.plugins.gitlab.models import GitLabProject
     query = db.query(DependencyScan).join(GitLabProject)
-    if current_user.role != 'admin':
+    if current_user.role != security.ADMIN_ROLE_KEY:
         scope_ids = security.get_user_org_scope_ids(db, current_user)
         query = query.filter(GitLabProject.organization_id.in_(scope_ids))
     return query.all()
+
+# Mount static files explicitly to /static to support frontend paths (e.g. LOGIN_PAGE in sys_core.js)
+app.mount("/static", StaticFiles(directory="devops_portal/static", html=True), name="static-assets")
+
+# Mount static files to root to serve index.html, css, js and other html pages directly (as fallback)
+app.mount("/", StaticFiles(directory="devops_portal/static", html=True), name="static")
+
 if __name__ == '__main__':
     uvicorn.run(app, host='0.0.0.0', port=8000)

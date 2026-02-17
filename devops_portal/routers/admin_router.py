@@ -134,7 +134,7 @@ async def list_identity_mappings(db: Session=Depends(get_auth_db)):
     mappings = db.query(IdentityMapping).options(joinedload(IdentityMapping.user)).all()
     results = []
     for m in mappings:
-        view = IdentityMappingView.from_orm(m)
+        view = IdentityMappingView.model_validate(m)
         view.user_name = m.user.full_name if m.user else "Unknown"
         view.hr_relationship = m.user.hr_relationship if m.user else None
         results.append(view)

@@ -6,12 +6,14 @@ import uuid
 
 class TestStep(BaseModel):
     """结构化测试步骤模型"""
+    __test__ = False
     step_number: int
     action: str
     expected_result: str
 
 class TestCase(BaseModel):
     """测试用例核心模型"""
+    __test__ = False
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
     id: int = Field(validation_alias='global_issue_id')
     iid: int = Field(validation_alias='gitlab_issue_iid')
@@ -39,6 +41,7 @@ class ExecutionRecord(BaseModel):
 
 class TestCaseCreate(BaseModel):
     """创建新测试用例的请求载荷"""
+    __test__ = False
     title: str
     priority: str
     test_type: str
@@ -92,6 +95,7 @@ class QualityGateStatus(BaseModel):
 
 class AssetTestCase(BaseModel):
     """基线库资产用例模型"""
+    __test__ = False
     iid: int
     title: str
     priority: str
@@ -366,3 +370,36 @@ class TraceabilityMatrixItem(BaseModel):
     defects: List[BugDetail] = []
     merge_requests: List[Dict[str, Any]] = []
     commits: List[Dict[str, Any]] = []
+
+class JFrogArtifactSummary(BaseModel):
+    """JFrog 制品摘要"""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    repo: str
+    path: str
+    name: str
+    version: Optional[str]
+    package_type: Optional[str]
+    size_bytes: Optional[int]
+    created_at: Optional[datetime]
+
+class NexusComponentSummary(BaseModel):
+    """Nexus 组件摘要"""
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    repository: str
+    format: Optional[str]
+    group: Optional[str]
+    name: str
+    version: Optional[str]
+
+class DependencyScanSummary(BaseModel):
+    """依赖扫描摘要"""
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    project_id: int
+    scan_date: datetime
+    scanner_name: str
+    total_dependencies: int
+    vulnerable_dependencies: int
+    scan_status: str
