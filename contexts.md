@@ -1,5 +1,9 @@
 # DevOps Platform Project Contexts (Development Constitution)
 
+> **Document Positioning**: This file is the project-specific constitution for **DevOps Platform**.
+> General development philosophy, AI collaboration principles, and workflow rules are defined in [`gemini.md`](c:/users/netxs/.gemini/gemini.md) (global rules).
+> `gemini.md` = cross-project universal principles. `contexts.md` = project-specific rules. When conflicts arise, this file takes precedence.
+
 ## 1. 项目概览 (Overview)
 **DevOps Data Application Platform** 是一套企业级研发效能数据底座。它通过插件化架构采集 GitLab, SonarQube, Jenkins, Zentao 等工具链数据，并利用 dbt 进行指标建模，最终通过 Apple Style 的原生前端界面提供看板与追溯能力。
 
@@ -157,6 +161,8 @@
 | **Project Management** | `pm_` | 项目管理、需求、计划、风险 |
 | **Testing / Quality** | `qa_` | 测试用例、缺陷预测、质量报告 |
 | **Maintenance** | `ops_` | 运维自动化、资源监控、部署流水线 |
+| **Report / Dashboard** | `rpt_` | 报表、看板、数据可视化 |
+| **System / Infra** | `sys_` | 系统级基础设施、全局配置、健康检查 |
 
 ### 11.2 全链路对齐规范 (以 Service Desk 为例)
 所有命名遵循：`前缀_资源名_类型` 或 `前缀-资源名-类型` 结构。确保以下层级在命名空间上保持一致，严禁使用 generic (通用) 的名称（如 ticket, user）。
@@ -179,58 +185,30 @@
 
 ## 12. AI 原生协作与共创 (AI-Native Collaboration & Co-Creation)
 
-### 12.1 核心哲学原理 (Core Philosophy)
-- **显性上下文 (Explicit Context)**: AI 没有“默会知识”。所有的业务规则、术语、架构决策必须沉淀在 `contexts.md` 或代码注释中。文档即代码，是预加载给 AI 的“系统提示词”。
-- **认知局限与分形架构 (Cognitive Locality)**: AI 的推理注意力有限。保持高内聚，严格遵守 **300行物理定律**（文件长度限制）。避免跨文件碎片化逻辑，物理邻近性等于认知效率。
-- **类型即护栏 (Types as Guardrails)**: 自然语言是模糊的，类型是确定的。强制使用 Type Hints (Pydantic)。遵循 **Schema-First** 开发，先定义数据结构模型，再让 AI 填充业务逻辑。
-- **可验证性闭环 (Verifiable Loops)**: AI 代码生成是概率性的。人类定义标准，AI 执行验证。
-    - **验证前置 (Validation First)**: 任何开发计划必须包含 `[Verification]` 环节。严禁只有开发逻辑而无测试方案的计划汇报。
-    - **伴生测试 (Companion Tests)**: 修改代码必须同步产出测试，且测试必须持久化到 `tests/` 目录，严禁在验证后删除。
-    - **Test-Driven Intent**: 在编码前通过测试用例精准化需求；利用集成测试、Lint 报错作为 AI 自我修正的闭环反馈。
-- **反向对齐 (Reverse Alignment)**: 意图对齐优于代码产出。通过“采访-选项-决策”流程将模糊意图工程化，严禁 AI 在模糊状态下进行单方面“猜想”。
-    - **零号原子步 (The Zero Step)**: 在编写第一行代码、修改第一个配置或执行第一个命令前，必须进行内部认知核对：是否已完全排除业务逻辑假设？是否已提供 A/B 方案？
+> **通用原则**：AI 原生协作的 10 大哲学原理（意图驱动、显性上下文、确定性边界、认知局部性、可验证性、反馈环密度、反向对齐、组合式架构、信任但验证、演进式设计）定义在 [`gemini.md` 第十二章](c:/users/netxs/.gemini/gemini.md)。此处仅记录 **本项目特有的** 补充规则。
 
-
-### 12.2 反向交互机制 (Reverse Interaction & Discovery)
-**核心原则**：不仅在开始前提问，更在过程中遇到模糊地带时主动“刹车”并反向确认。
-
-1. **前置采访 (Pre-implementation Interview)**
-    - **触发条件**：所有中/大型功能开发、重构或架构调整。
-    - **执行方式**：Agent 不直接生成代码，而是先扮演“产品经理/架构师”角色，向用户发起“采访”。
-    - **采访清单**：
-        - **意图对齐**：“您的核心目标是解决 X 问题，还是实现 Y 功能？”
-        - **边界确认**：“是否需要兼容旧数据？是否涉及移动端适配？”
-        - **风格偏好**：“在 A（保守稳健）和 B（激进现代）方案中，您倾向于哪种？”
-
-2. **运行时决策卡点 (Runtime Decision Checkpoints)**
-    - **触发条件**：在编码或执行过程中，遇到以下情况必须**立即暂停**并调用反向交互：
-        - **不确定性**：发现现有代码逻辑与新需求存在 20% 以上的模糊冲突。
-        - **多路径选择**：存在两种以上技术实现方案。
-        - **破坏性风险**：涉及删除核心表、不兼容的 API 变更或不可逆的数据清洗。
-        - **配置项变更**：新增、修改或删除 `settings` 配置，必须对齐“缺省行为策略”与“异常回退逻辑”。
-        - **硬编码迁移**：将既有代码中的硬编码逻辑（如白名单、阈值）迁移至配置中心。
-        - **引入新依赖**：需要引入系统未内置的库，需核对原生替代方案、安全性及镜像体积。
-        - **跨平台/环境边界**：命令或路径逻辑在宿主机(Win)与容器(Linux)可能表现不一致，需确认 Docker 内验证策略。
-        - **身份/实体“模糊带”**：自动化映射（User/Product）置信度非 1.0 时，需对齐“积极关联”还是“保守挂起”策略。
-        - **架构复杂度溢出**：拟引入缓存、消息队列等新组件解决简单问题时，需核对 KISS 原则及运维成本。
-        - **命名空间/前缀扩展**：需定义新业务域前缀或非标术语，需核对 SSOT 一致性。
-
-3. **结构化选项提问 (Structured Options)**
-    - **提问规范**：严禁抛出开放式问题。必须提供**结构化选项**供用户做选择题：
-        - **[选项 A] 推荐方案**：简述做法 + 理由 + 风险（如：开发快但性能一般）。
-        - **[选项 B] 替代方案**：简述做法 + 理由 + 风险（如：性能好但改动大）。
-        - **[选项 C] 保持现状/不做**：说明后果。
-    - **默认推荐**：Agent 必须明确标识出它认为的最佳选项（Recommended）。
-
-### 12.3 核心交互准则 (Operational Guidelines)
-- **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
-- **代码自查 (Self-Review Routine)**: 交付前必须运行 `/code-review` 和 `/lint` 流水线。
+### 12.1 本项目验证规范 (Project-Specific Verification)
+- **验证前置 (Validation First)**: 任何开发计划必须包含 `[Verification]` 环节。严禁只有开发逻辑而无测试方案的计划汇报。
+- **伴生测试 (Companion Tests)**: 修改代码必须同步产出测试，且测试必须持久化到 `tests/` 目录，严禁在验证后删除。
 - **证据交付 (Evidence-Based Delivery)**: 告知任务完成时，必须包含 `Evidence of Testing` 模块，清晰列出执行的验证脚本、命令及结果日志。
 - **验证驱动测试**: Agent 在修改核心 `core/` 或 `models/` 代码后，必须主动执行相关模块的集成测试。
 
+### 12.2 本项目决策卡点扩展 (Project-Specific Decision Checkpoints)
+> 通用决策卡点参见 `gemini.md` 四.3「反向交互与澄清」。以下为本项目特有的额外触发条件：
+
+- **身份/实体“模糊带”**：自动化映射（User/Product）置信度非 1.0 时，需对齐“积极关联”还是“保守挂起”策略。
+- **命名空间/前缀扩展**：需定义新业务域前缀或非标术语，需核对第 11 章 SSOT 一致性。
+- **硬编码迁移**：将既有代码中的硬编码逻辑（如白名单、阈值）迁移至配置中心。
+- **配置项变更**：新增、修改或删除 `settings` 配置，必须对齐“缺省行为策略”与“异常回退逻辑”。
+
+### 12.3 项目操作速查 (Project Operational Commands)
+- **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
+- **代码自查 (Self-Review Routine)**: 交付前必须运行 `/code-review` 和 `/lint` 流水线。
 
 
 ## 13. 分支开发与版本控制规范 (Branching & Versioning)
+> 基础 Git 规范（原子提交、Commit Message、Conventional Commits）参见 [`gemini.md` 第四.5 章](c:/users/netxs/.gemini/gemini.md)。以下为本项目的补充规定。
+
 - **命名公约 (Naming Convention)**:
     - 功能开发: `feat/{domain}-{feature_name}` (例: `feat/sd-export-csv`)
     - 缺陷修复: `fix/{domain}-{issue_description}` (例: `fix/adm-user-sync`)
@@ -268,7 +246,7 @@
 - **可追溯性 (Traceability)**: 所有代码提交 (Commit) 必须在 Message 中关联需求 ID (如 `Ref: #123`)；测试用例必须在注释或装饰器中标注对应的需求点。
 
 ### 14.2 设计决策门禁 (Design Gates)
-- **RFC 机制**: P0/P1 级重大功能或架构变更，**严禁直接编码**。必须先产出 RFC (Request for Comments) 文档存入 `docs/design/`，经用户评审通过后方可实施。
+- **RFC 机制** `[Planned]`: P0/P1 级重大功能或架构变更，**严禁直接编码**。必须先产出 RFC (Request for Comments) 文档存入 `docs/design/`，经用户评审通过后方可实施。
 - **Schema 评审**: 任何数据库 Schema 变更（特别是涉及数据迁移的）必须经过独立评审，重点审查**向后兼容性 (Backward Compatibility)**。
 
 ### 14.3 安全架构与权限 (Security Architecture)
@@ -279,7 +257,7 @@
 
 ### 14.4 发布与版本管理 (Release Strategy)
 - **语义化版本 (SemVer)**: 严格遵循 `Major.Minor.Patch` 格式。
-- **Changelog**: 每次发布前必须更新 `CHANGELOG.md`，基于 Keep a Changelog 标准记录 `Added`, `Changed`, `Deprecated`, `Fixed`, `Security`。
+- **Changelog** `[Planned]`: 每次发布前必须更新 `CHANGELOG.md`，基于 Keep a Changelog 标准记录 `Added`, `Changed`, `Deprecated`, `Fixed`, `Security`。
 
 ### 14.5 完工标准 (Definition of Done - DoD)
 - **代码层面**: 通过所有 Lint 检查，无死代码，注释清晰且无拼写错误。

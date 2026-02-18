@@ -1,5 +1,8 @@
 # 前端开发规范 (Native CSS & JavaScript) - Apple Style Edition
 
+> **文档定位**：本文件是 **前端实施细则**，定义 Apple Style 的具体视觉参数和编码规范。
+> 业务域前缀注册表和全链路命名规范的 **权威来源** 为 [`contexts.md` 第 11 章](../../contexts.md)。
+
 ## 一、 核心理念
 
 1. **去框架化工程化**：虽然不使用 React/Vue，但必须通过模块化、服务层分层等手段达到同等的代码复用与维护能力。
@@ -74,6 +77,15 @@
 *   **XSS 防御**: 渲染动态内容严禁 `innerHTML`，强制使用 `textContent` 或 `<template>`。
 *   **异步体感**: 必须提供骨架屏或 `is-loading` 状态。
 
+### 4. 文件大小与拆分
+*   **300 行定律**：单个 JS/CSS/HTML 文件严禁超过 300 行。超出必须拆分为独立模块。可通过 `scripts/lint_frontend.py` 自动检查。
+*   **拆分策略**：Service 层 (`*_service.js`) 和 Handler 层 (`*_handler.js`) 必须分离。当单个 Handler 超过 200 行时，按功能区域拆分为多个文件。
+
+### 5. 错误处理规范
+*   **Fetch 统一处理**：所有 `fetch()` 调用必须包含 `try-catch`，并检查 `response.ok`。严禁忽略网络错误。
+*   **用户反馈**：错误发生时必须通过 Toast 或内联提示告知用户，严禁静默失败。
+*   **控制台日志**：`catch` 块必须 `console.error()` 记录完整上下文（URL、参数、错误对象），严禁空 `catch`。
+
 ---
 
 ## 五、 Web Component 开发规约 (Web Components)
@@ -105,15 +117,15 @@
 
 ---
 
-## 六、 全链路命名对齐要求
+## 六、 前端命名对齐补充 (Frontend-Specific Naming)
+
+> 全链路命名规范（含数据库、API、后端文件）参见 [`contexts.md` 第 11.2 章](../../contexts.md)。以下为前端特有的命名规则：
 
 | 维度 | 规范格式 | 示例 |
 | :--- | :--- | :--- |
 | **JS 脚本文件名** | `{prefix}_{resource}.js` | `sd_ticket_service.js` |
 | **组件文件名** | `{prefix}_{name}.component.js` | `sd_ticket_card.component.js` |
 | **自定义 HTML 标签** | `<{prefix}-{name}>` | `<sd-priority-badge>` |
-| **API 路径** | `/api/{prefix}/{resource}` | `/api/sd/tickets` |
 | **CSS 类名** | `.prefix-component__element` | `.sd-table__cell` |
 | **DOM 逻辑钩子** | `.js-{action}-{resource}` | `.js-delete-ticket` |
 | **数据属性** | `data-{key}="{value}"` | `data-ticket-id="123"` |
-

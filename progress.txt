@@ -1,133 +1,54 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
 
-## 📋 已完成 (Completed)
+## 🎯 当前状态 (Current Focus)
 
-1. **[P1] OKR 数据管理与导出 (OKR Export)**
-    - 实现了 `AdminService.export_okrs`，支持 CSV 格式全量导出。
-    - **后端实现**：新增 `GET /admin/export/okrs` 和 `GET /admin/okrs` (预览) 接口，支持按 `period` 和 `status` 过滤。
-    - **前端对接**：在 Platform Management 下新增 "OKR 治理中心"，实现 Apple Style 毛玻璃工具栏、周期/状态筛选器及数据预览表格。
-    - **数据规范**：导出表头与 `okrs.csv` 模板对齐，进度自动转换为百分比，统一使用 `utf-8-sig` 编码。
-    - **验证**：通过单元测试、独立验证脚本及 Playwright E2E 测试（`test_okr_governance.py`）闭环。修复了 E2E 测试中导出按钮弹出窗口被路由拦截以及 `about:blank` 状态等待的问题。
-
-2. **[P1] 数据治理与脚本健壮性 (Data Resilience)**
-    - 修复了 `init_catalog.py` 报错：扩展 `BusinessSystem.code` 字段长度，规范化 `mdm_services.csv` 的关联代号。
-    - 修复了 `init_gitlab_mappings.py` 崩溃：支持优雅处理“一个员工映射多个外部 ID”的唯一约束冲突（账号冲突自动跳过并告警）。
-    - 验证了全量 `make init` 流程，所有 15+ 初始化脚本全部 100% 通过。
-
-3. **[P1] CSV 人员字段双格式支持 & 组织架构重构**
-    - 所有 init 脚本统一使用 `resolve_user()` 工具函数，CSV 人员字段同时支持邮箱和汉字全名。
-    - 组织架构层级重构：移除 `SYS-体系` 层级节点，层级改为 公司→中心→部门。
-
-4. **[P0] 数据库重置与部署验证**
-    - 实现了 `scripts/reset_database.py`，支持开发环境一键清空并重建数据。
-    - 已验证手动重启容器后的功能一致性。
-
-5. **[P0] 完善项目开发宪章 (Contexts Enhancement)**
-    - 在 `contexts.md` 中新增第14章 "软件交付生命周期 (SDLC)"，明确了需求状态流转、RFC 设计门禁、安全左移策略及 DoD 标准，弥补了流程规范的缺失。
-
-6. **[P1] 禅道插件增强：任务与工时采集 (ZenTao Task & Effort)**
-    - **模型扩展**：升级 `ZenTaoIssue` 模型以支持 `task` 类型，新增复合主键 `(id, type)`，添加工时字段（预估/消耗/剩余）支持 FinOps。
-    - **采集实现**：增强 `ZenTaoClient` 和 `ZenTaoWorker`，支持全量 Task 同步。
-    - **配置对齐**：将 `zentao` 配置集成到全局 `Settings` (Pydantic V2)，支持从 `.env` 加载。
-    - **验证工具**：创建 `scripts/sync_zentao.py` 专用同步验证脚本。
-
-7. **[P1] 禅道 20.0 架构兼容与主数据关联 (MDM Integration)**
-    - **层级支持**：在 `ZenTaoExecution` 中引入 `parent_id` 和 `path` 字段，适配项目集/项目/迭代树状结构。
-    - **关联机制**：实现 `scripts/init_zentao_links.py` 关联脚本，支持基于 `path` 路径的 MDM 项目归属自动继承。
-    - **质量追溯**：实现了发布(Release)->计划(Plan) 和 用例(Case)->需求(Story) 的自动化全链路穿透逻辑（待确认方案）。
-    - **文档闭环**：通过 `make docs` 动态刷新 `DATA_DICTIONARY.md` 补全了 5 个核心表的字段规格说明。
-
-8. **[P1] SonarQube 深度集成与质量门禁 (SonarQube Integration)**
-    - **模型扩展**：为 `SonarProject` 增加 MDM 资产物理引脚，在 `SonarMeasure` 中新增“增量代码 (New Code)”全量指标。
-    - **拓扑关联**：创建 `init_sonarqube_links.py` 脚本，支持通过 `sonarqube_project_map.csv` 进行显式业务对齐。
-    - **指标建模**：在 dbt 中实现 `int_sonar_project_quality` 指标看板中间层，支持增量风险评估。
-    - **验证**：通过 `dbt compile` 语法与血缘校验。
-
-9. **[P1] Jenkins 部署效能穿透与 DORA 指标 (Jenkins & DORA)**
-    - **模型扩展**：为 `JenkinsJob` 增加 MDM 关联及部署标识位 (`is_deployment`, `deployment_env`)。
-    - **拓扑关联**：实现 `init_jenkins_links.py`，支持 **Folder 级路径继承**，极大简化了流水线归属配置成本。
-    - **效能建模**：在 dbt 中实现了 DORA 核心指标事实表 `fct_dora_deployment_frequency`，支持按项目、按天统计部署成功率。
-    - **验证**：通过 `dbt compile` 全量解析。
-
-10. **[P1] 单元测试全量修复 (Unit Test Infrastructure Fix)**
-    - **GitLab Client**：补充缺失的 `get_project_issue()` 方法，解决 `TestManagementService` 调用时的 `AttributeError`。
-    - **QA 测试修复**：修正 `test_execute_test_case` 中 `update_issue` 参数断言方式（位置参数 vs 关键字参数）。
-    - **ORM Mapper 修复**：为 `SonarProject` 补充 `gitlab_project_id` 列和 `gitlab_project` 关系，解决 `GitLabProject.sonar_projects` 的 `NoForeignKeysError`；为 `ZenTaoIssue` 的复合主键关系添加显式 `foreign_keys` 参数。
-    - **测试 Fixture 修复**：为 `tests/unit/` 目录新增 `conftest.py`，提供 `db_session` fixture，解决 `test_okr_export.py` 的 fixture 缺失错误。
-    - **结果**：`make test-local` 全部 **20 passed, 0 failed, 0 errors** ✅
-
-11. **[P0] 修复核心测试套件 (Core Test Suite Fixes)**
-    - **Product Flow**：修复 `test_product_flow.py` 中项目/产品关联逻辑的 404/None 错误，确保测试数据正确落库。
-    - **Main API**：修复 `test_main.py` 中 Pydantic Schema 字段不匹配导致的数据校验错误 (Pydantic V2兼容)。
-    - **Integration Tests**：
-        - 修复 `test_gitlab_sync_flow.py` 中 Mock Generator 返回类型错误 (List vs Dict)。
-        - 修复 `test_qa_test_management_api.py` 中 `TestClient` 鉴权失败 (401) 及依赖覆盖 (Dependency Overrides) 互相干扰的问题。
-    - **Refactoring**：统一了 integration 测试的 `client` fixture 实现，消除了全局状态污染。
-    - **结果**：`tests/unit/devops_portal/` (除前端) 及 `tests/integration/` 全量通过。
-
-12. **[P1] 分支合并：将 `feat/zt-task-effort` Squash Merge 到 `main` (2026-02-17)**
-    - 已通过: Rebase + 本地单元测试 (20/20 passed, PYTHONPATH=.) + 安全性自检。
-    - 降级: 未执行 `make test` (镜像缺失) / `make deploy` (网络超时)。
-    - 阻塞原因: 离线环境与 Docker 镜像加速地址失效导致无法重新构建镜像。
-
-13. **[P2] 测试目录结构重构 (2026-02-17)**
-    - **重组**: 75 个文件归并为 `unit/`, `integration/`, `e2e/`, `scripts/` 四层结构。
-    - **清理**: 删除 `tests/simulations/` (弃用脚本) 和 `tests/analytics/` (过时 DORA 测试)。
-    - **规范**: 统一 `test_*.py` 命名，更新 Makefile (`test-all`)，明确 pyproject.toml testpaths。
-    - **Tech Debt**: 发现并登记 7 个既有 broken tests (Backlog P3)。
-
-
-14. **[P1] Dependency Check CI Integration (2026-02-17)**
-    - **Schema**: Enhanced `DependencyScan` with CI context (`job_url`, `commit_sha`) & False Positive support.
-    - **Worker**: Refactored to support pure JSON import via API, removed legacy local scan logic.
-    - **API**: Implemented `POST /api/security/dependency-check/upload` endpoint in Portal.
-    - **Cleanup**: Deleted unused `client.py` and old tests.
-
-15. **[P1] Security Scan Portal Integration (2026-02-17)**
-    - **Frontend**: Added "安全扫描" (Security Scan) to Quality Assurance sidebar.
-    - **UI**: Implemented scan history table and vulnerable statistics dashboard.
-    - **Upload**: Added portal-based JSON report upload with project selection support.
-    - **Service**: Implemented `sec_service.js` for scanning life-cycle management.
-    - **Verification**: UI routing and modal triggers verified; backend connectivity aligned with `/security` router.
-
-16. **[Process] Development Process Alignment (2026-02-18)**
-    - **Guidelines**: Updated `contexts.md` (Sec 12/14) to mandate **Validation First** and **Evidence-Based Delivery**.
-    - **DoD**: Integrated "Testing Evidence" into the formal Definition of Done.
-    - **Persistence**: Cemented the rule that all verification tests must be persisted as project assets.
-    - **Workflows**: Created `.agent/workflows/lint.md` (Automated) and `.agent/workflows/code-review.md` (Context-Aware).
-    - **Utilities**: Added `scripts/lint_frontend.py` to enforce the 300-line law on JS/CSS/HTML.
-
-
-17. **[P1] Unified Exception System & Audit Persistence (2026-02-18)**
-    - **Unified Exceptions**: Implemented `BusinessException` hierarchy in `devops_collector.core.exceptions` and registered a global handler in FastAPI `main.py` for consistent JSON error responses.
-    - **Refactoring**: Migrated `security_router.py` from `HTTPException` to `BusinessException`, improving API error contract alignment with `contexts.md`.
-    - **Audit Fields**: Enhanced security models (`DependencyScan`, `Dependency`, etc.) with standard `TimestampMixin`, `SCDMixin` (for soft-delete), and `created_by` field.
-    - **Persistence**: Recreated and persisted `tests/unit/devops_portal/test_security_api.py` and `tests/e2e/test_security_ui_sanity.py`, ensuring future quality guardrails.
-    - **Validation**: All tests passed (3 files reformatted, tests 100% success).
-
-18. **[P1] Nexus 深度集成与 MDM 自动对齐 (Nexus Deep Integration)** (2026-02-18)
-    - **模型增强**：对 `NexusComponent` 和 `NexusAsset` 进行了标准化改造，引入 `TimestampMixin`, `SCDMixin` (支持软删除) 和 `OwnableMixin`。
-    - **智能对齐**：在 `NexusWorker` 中实现了 `_resolve_product_id` 逻辑。在同步过程中，系统会根据组件的 `group`(Group ID) 或 `name` 自动解析并绑定所属的 MDM 产品代码 (如 `com.tjhq.devops` 自动关联至 `devops` 产品)。
-    - **批量初始化**：完善了 `scripts/init_nexus_links.py` 脚本，支持基于 **正则表达式** 的手动映射策略，并提供了 `docs/nexus_component_map.csv` 配置模板。
-    - **Schema 对齐**：更新了 Portal 层的 `schemas.py`，在 `NexusComponentSummary` 中透出了 `product_id` 字段，为前端看板提供数据支撑。
-    - **质量验证**：编写并持久化了 `tests/unit/devops_collector/plugins/nexus/test_nexus_worker.py`，模拟多种匹配场景（Group 解析、Name 解析、未匹配解析）并全部通过 ✅。
-
-19. **[P2] 灵活配置管理与注册域名白名单 (Config & Auth Refactoring)** (2026-02-18)
-    - **配置重构**：将 `devops_collector/config.py` 中的子配置类从 `BaseSettings` 转换为 `BaseModel`（由主 `Settings` 统一加载），并引入 `Union[str, List[str]]` 类型模式，完美解决了 Pydantic V2 在 `.env` 中解析逗号分隔列表时的 JSON 强制校验报错。
-    - **环境变量集成**：在 `.env` 中正式引入 `AUTH__ALLOWED_DOMAINS` 配置，实现了注册域名白名单的动态调整（支持 `tjhq.com,mofit.com.cn` 等格式）。
-    - **开放模式支持**：优化了 `auth_service.py` 的校验逻辑，当白名单为空时自动切换为 **开放模式 (Open Mode)**，支持私有化部署下的自由注册。
-    - **范围界定**：按照用户策略，该校验仅作用于 GitLab OAuth 和原生注册环节，不影响 Jenkins/Sonar 等系统的数据同步。
+全局开发规范 (`gemini.md`) 优化完成，AI 原生协作哲学从 5 条扩展为 10 条原则体系。
+当前无活跃编码任务，等待用户指定下一步方向。
 
 ## 🏗️ 进行中 (In Progress)
-- [ ] [P1] 禅道全链路穿透：处理 `192.168.5.53` 服务器离线导致的实测阻塞，需建立 MDM 项目关联。
 
-## 📅 接下来的任务 (Backlog)
-- [ ] 待禅道服务器上线后执行端到端全量数据同步验证。
-- [ ] [P3] 修复 7 个 pre-existing broken test files (引用过时模块的导入错误)
+- [ ] [P1] 禅道全链路穿透 (2026-02-18)
+    - 阻塞原因：`192.168.5.53` 服务器离线，无法实测
+    - 解除条件：禅道服务器恢复上线
+
+## 📅 接下来 (Backlog)
+
+- [ ] [P1] 待禅道服务器上线后执行端到端全量数据同步验证
+- [ ] [P3] 修复 7 个 pre-existing broken test files（引用过时模块的导入错误）
+
+## 📋 最近完成 (Recently Completed)
+
+1. **[P1] 全局开发规范优化 (gemini.md Overhaul)** (2026-02-18)
+    - 第十二章 "AI 原生协作哲学" 从 5 条扩展为 10 条原则 + 核心公式
+    - 新增原则：意图驱动、反馈环密度、组合式架构、信任但验证、演进式设计
+    - 第一至十一章全面优化：统一层级编号、补充可观测性/DB Migration/环境变量规范
+    - progress.txt 规则升级为"固定四段式 + 归档机制"
+
+2. **[P2] 灵活配置管理与注册域名白名单** (2026-02-18)
+    - 将子配置类从 `BaseSettings` 转为 `BaseModel`，引入 `Union[str, List[str]]` 解决 Pydantic V2 解析问题
+    - 在 `.env` 引入 `AUTH__ALLOWED_DOMAINS`，支持开放模式
+
+3. **[P1] Nexus 深度集成与 MDM 自动对齐** (2026-02-18)
+    - 模型标准化改造（TimestampMixin, SCDMixin, OwnableMixin）
+    - 智能对齐：根据 `group`/`name` 自动解析 MDM 产品代码
+    - 验证：多场景单元测试全部通过 ✅
+
+4. **[P1] Unified Exception System & Audit Persistence** (2026-02-18)
+    - 实现 `BusinessException` 层级体系 + FastAPI 全局异常处理器
+    - 安全模型增加 TimestampMixin/SCDMixin/created_by 审计字段
+    - 验证：所有测试 100% 通过
+
+5. **[Process] Development Process Alignment** (2026-02-18)
+    - 更新 `contexts.md` 强制 Validation First 和 Evidence-Based Delivery
+    - 创建 `.agent/workflows/lint.md` 和 `code-review.md`
+    - 新增 `scripts/lint_frontend.py` 执行 300 行定律
 
 ## 📝 阶段性回顾 (Retrospective)
-- **技术突破**：巧妙利用 Pydantic 的 `Union` 类型绕过了 `DotEnvSettingsSource` 的强 JSON 限制，保持了 `.env` 文件的易读性（Comma-separated）与配置中心的严谨性。
-- **流程合规**：遵循“反向采访-用户决策-原子开发-质量验证”闭环，在动手前先对齐了“缺省开放”策略，避免了因需求理解偏差导致的重复返工。
+
+- **技术突破**：利用 Pydantic 的 `Union` 类型绕过 `DotEnvSettingsSource` 的强 JSON 限制
+- **流程合规**：遵循"反向采访-用户决策-原子开发-质量验证"闭环
+
+> 更早的已完成任务已归档至 `progress_archive.md`（共 14 条）
 
 ---
-*最后更新时间：2026-02-18 13:10 (Antigravity)*
+*最后更新时间：2026-02-18 21:50 (Antigravity)*
