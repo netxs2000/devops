@@ -6,7 +6,12 @@
 
 ## 归档批次：2026-02-18
 
-以下 14 条任务从 `progress.txt` 迁移至此归档。
+以下 15 条任务从 `progress.txt` 迁移至此归档。
+
+### 15. [Process] Development Process Alignment (2026-02-18)
+- **宪章更新**: 更新 `contexts.md` 强制 Validation First 和 Evidence-Based Delivery。
+- **工作流**: 创建 `.agent/workflows/lint.md` 和 `code-review.md`。
+- **工具链**: 新增 `scripts/lint_frontend.py` 执行 300 行定律。
 
 ### 14. [P1] Dependency Check CI Integration (2026-02-17)
 - **Schema**: Enhanced `DependencyScan` with CI context (`job_url`, `commit_sha`) & False Positive support.

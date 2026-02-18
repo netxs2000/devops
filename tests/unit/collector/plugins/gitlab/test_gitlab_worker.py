@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import json
 import uuid
 from devops_collector.plugins.gitlab.worker import GitLabWorker
-from devops_collector.plugins.gitlab.identity import IdentityMatcher, UserResolver
+from devops_collector.plugins.gitlab.identity_service import IdentityMatcher, UserResolver
 from devops_collector.plugins.gitlab.models import GitLabProject, GitLabCommit, GitLabIssue
 from devops_collector.models.base_models import User, SyncLog
 

@@ -42,9 +42,10 @@ from sqlalchemy.orm import sessionmaker
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-from devops_collector.models import Base, Project, MergeRequest, Issue
+from devops_collector.models.base_models import Base
+from devops_collector.plugins.gitlab.models import GitLabProject as Project, GitLabMergeRequest as MergeRequest, GitLabIssue as Issue
 from devops_collector.plugins.gitlab.worker import GitLabWorker
-from devops_collector.plugins.gitlab.client import GitLabClient
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('TestLifecycle')
 

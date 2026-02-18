@@ -7,7 +7,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from devops_portal.main import app
-from devops_collector.models import Base, ProjectMaster, Organization, User, GitLabProject as Project, Role
+from devops_collector.models import Base, ProjectMaster, Organization, User, SysRole as Role
+from devops_collector.plugins.gitlab.models import GitLabProject as Project
 from devops_collector.auth.auth_database import get_auth_db as get_db
 from devops_portal.dependencies import get_current_user
 from unittest.mock import MagicMock, patch

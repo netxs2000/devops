@@ -3,7 +3,7 @@
 ## 🎯 当前状态 (Current Focus)
 
 全局开发规范 (`gemini.md`) 优化完成，AI 原生协作哲学从 5 条扩展为 10 条原则体系。
-当前无活跃编码任务，等待用户指定下一步方向。
+已完成 P3 技术债修复（broken tests），当前主要阻塞点仍为禅道服务器离线。
 
 ## 🏗️ 进行中 (In Progress)
 
@@ -14,41 +14,44 @@
 ## 📅 接下来 (Backlog)
 
 - [ ] [P1] 待禅道服务器上线后执行端到端全量数据同步验证
-- [ ] [P3] 修复 7 个 pre-existing broken test files（引用过时模块的导入错误）
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[P1] 全局开发规范优化 (gemini.md Overhaul)** (2026-02-18)
+1. **[P3] 修复 7 个各类 ImportError 的损坏测试文件** (2026-02-18)
+    - 修复 `test_analyzer.py` (DiffAnalyzer -> CodeMetrics)
+    - 修复 `test_gitlab_worker.py` (IdentityMatcher 导入路径)
+    - 修复 `okr_service.py` 及测试 (GitLab 模型导入)
+    - 修复 `test_project_management.py` (SysRole 别名)
+    - 修复 3 个 reliability 测试 (GitLabClient 路径及模型导入)
+    - 验证：`pytest --collect-only` 全量通过，无 ImportError
+
+2. **[P1] 全局开发规范优化 (gemini.md Overhaul)** (2026-02-18)
     - 第十二章 "AI 原生协作哲学" 从 5 条扩展为 10 条原则 + 核心公式
     - 新增原则：意图驱动、反馈环密度、组合式架构、信任但验证、演进式设计
     - 第一至十一章全面优化：统一层级编号、补充可观测性/DB Migration/环境变量规范
     - progress.txt 规则升级为"固定四段式 + 归档机制"
 
-2. **[P2] 灵活配置管理与注册域名白名单** (2026-02-18)
+3. **[P2] 灵活配置管理与注册域名白名单** (2026-02-18)
     - 将子配置类从 `BaseSettings` 转为 `BaseModel`，引入 `Union[str, List[str]]` 解决 Pydantic V2 解析问题
     - 在 `.env` 引入 `AUTH__ALLOWED_DOMAINS`，支持开放模式
 
-3. **[P1] Nexus 深度集成与 MDM 自动对齐** (2026-02-18)
+4. **[P1] Nexus 深度集成与 MDM 自动对齐** (2026-02-18)
     - 模型标准化改造（TimestampMixin, SCDMixin, OwnableMixin）
     - 智能对齐：根据 `group`/`name` 自动解析 MDM 产品代码
     - 验证：多场景单元测试全部通过 ✅
 
-4. **[P1] Unified Exception System & Audit Persistence** (2026-02-18)
+5. **[P1] Unified Exception System & Audit Persistence** (2026-02-18)
     - 实现 `BusinessException` 层级体系 + FastAPI 全局异常处理器
     - 安全模型增加 TimestampMixin/SCDMixin/created_by 审计字段
     - 验证：所有测试 100% 通过
-
-5. **[Process] Development Process Alignment** (2026-02-18)
-    - 更新 `contexts.md` 强制 Validation First 和 Evidence-Based Delivery
-    - 创建 `.agent/workflows/lint.md` 和 `code-review.md`
-    - 新增 `scripts/lint_frontend.py` 执行 300 行定律
 
 ## 📝 阶段性回顾 (Retrospective)
 
 - **技术突破**：利用 Pydantic 的 `Union` 类型绕过 `DotEnvSettingsSource` 的强 JSON 限制
 - **流程合规**：遵循"反向采访-用户决策-原子开发-质量验证"闭环
+- **质量文化**：由被动修 Bug 转为主动清偿技术债 (P3 broken tests)，确保 CI 基础稳固
 
-> 更早的已完成任务已归档至 `progress_archive.md`（共 14 条）
+> 更早的已完成任务已归档至 `progress_archive.md`（共 15 条）
 
 ---
-*最后更新时间：2026-02-18 21:50 (Antigravity)*
+*最后更新时间：2026-02-18 22:45 (Antigravity)*
