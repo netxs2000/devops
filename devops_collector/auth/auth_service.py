@@ -103,16 +103,17 @@ def auth_get_user_by_email(db: Session, email: str) -> Optional[User]:
 def auth_validate_email_domain(email: str) -> bool:
     """验证邮箱域名是否在允许的列表中。
     
-    Args:
-        email: 待验证的邮箱地址。
-        
-    Returns:
-        bool: 验证通过返回 True，否则返回 False。
+    如果 allowed_domains 为空列表，则视为开放注册（允许任意域名）。
     """
     if not email or '@' not in email:
         return False
+        
+    allowed_domains = settings.auth.allowed_domains
+    if not allowed_domains:
+        return True # 开放模式
+        
     domain = email.split('@')[-1].lower()
-    return domain in settings.auth.allowed_domains
+    return domain in [d.lower() for d in allowed_domains]
 
 def auth_create_user(db: Session, user_data: Any) -> User:
     """创建新用户及其认证凭据。

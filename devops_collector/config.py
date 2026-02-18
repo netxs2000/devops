@@ -11,12 +11,12 @@
 """
 
 import os
-from typing import List, Optional
-from pydantic import Field, HttpUrl, RedisDsn, PostgresDsn, field_validator
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field, HttpUrl, RedisDsn, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class GitLabSettings(BaseSettings):
+class GitLabSettings(BaseModel):
     """GitLab connection settings.
 
     Attributes:
@@ -35,7 +35,7 @@ class GitLabSettings(BaseSettings):
     verify_ssl: bool = True
 
 
-class DatabaseSettings(BaseSettings):
+class DatabaseSettings(BaseModel):
     """Database connection and retention settings.
 
     Attributes:
@@ -47,7 +47,7 @@ class DatabaseSettings(BaseSettings):
     raw_data_retention_days: int = 30
 
 
-class RabbitMQSettings(BaseSettings):
+class RabbitMQSettings(BaseModel):
     """RabbitMQ connection settings.
 
     Attributes:
@@ -72,54 +72,15 @@ class RabbitMQSettings(BaseSettings):
         return f"amqp://{self.user}:{self.password}@{self.host}:5672/"
 
 
-class AnalysisSettings(BaseSettings):
-    """Code analysis configuration.
-
-    Attributes:
-        enable_deep_analysis (bool): Whether to enable deep code analysis features.
-        ignored_file_patterns (List[str]): Glob patterns for files to ignore during analysis.
-        production_env_mapping (List[str]): Environment names considered as production.
-    """
-
+class AnalysisSettings(BaseModel):
+    """Code analysis configuration."""
     enable_deep_analysis: bool = False
-    ignored_file_patterns: List[str] = [
-        "*.lock",
-        "package-lock.json",
-        "yarn.lock",
-        "pnpm-lock.yaml",
-        "*.min.js",
-        "*.min.css",
-        "*.map",
-        "node_modules/*",
-        "dist/*",
-        "build/*",
-        "vendor/*",
-        "*.svg",
-        "*.png",
-        "*.jpg",
-        "*.jpeg",
-        "*.gif",
-        "*.ico",
-        "*.pdf",
-        "*.doc",
-        "*.docx",
-        "*.xls",
-        "*.xlsx",
-        "*.ppt",
-        "*.pptx",
-        "*.zip",
-        "*.tar",
-        "*.gz",
-        "*.rar",
-        "*.7z",
-        "*.exe",
-        "*.dll",
-        "*.so",
-        "*.dylib",
+    ignored_file_patterns: Union[str, List[str]] = [
+        "*.lock", "*.min.js", "*.min.css", "node_modules/*", "dist/*"
     ]
-    production_env_mapping: List[str] = ["prod", "production", "prd", "main"]
-    incident_label_patterns: List[str] = ["incident", "production-error", "P0", "P1"]
-    change_failure_label_patterns: List[str] = ["change-failure", "rollback"]
+    production_env_mapping: Union[str, List[str]] = ["prod", "production", "prd", "main"]
+    incident_label_patterns: Union[str, List[str]] = ["incident", "production-error", "P0", "P1"]
+    change_failure_label_patterns: Union[str, List[str]] = ["change-failure", "rollback"]
 
     @field_validator(
         "ignored_file_patterns",
@@ -143,7 +104,7 @@ class AnalysisSettings(BaseSettings):
         return v
 
 
-class RateLimitSettings(BaseSettings):
+class RateLimitSettings(BaseModel):
     """Rate limiting configuration.
 
     Attributes:
@@ -153,7 +114,7 @@ class RateLimitSettings(BaseSettings):
     requests_per_second: int = 10
 
 
-class ClientSettings(BaseSettings):
+class ClientSettings(BaseModel):
     """HTTP client configuration.
 
     Attributes:
@@ -167,7 +128,7 @@ class ClientSettings(BaseSettings):
     max_retries: int = 5
 
 
-class SchedulerSettings(BaseSettings):
+class SchedulerSettings(BaseModel):
     """Task scheduler configuration.
 
     Attributes:
@@ -177,7 +138,7 @@ class SchedulerSettings(BaseSettings):
     sync_interval_minutes: int = 10
 
 
-class LoggingSettings(BaseSettings):
+class LoggingSettings(BaseModel):
     """Logging configuration.
 
     Attributes:
@@ -187,7 +148,7 @@ class LoggingSettings(BaseSettings):
     level: str = "INFO"
 
 
-class SonarQubeSettings(BaseSettings):
+class SonarQubeSettings(BaseModel):
     """SonarQube integration settings.
 
     Attributes:
@@ -203,7 +164,7 @@ class SonarQubeSettings(BaseSettings):
     sync_issues: bool = False
 
 
-class JenkinsSettings(BaseSettings):
+class JenkinsSettings(BaseModel):
     """Jenkins integration settings.
 
     Attributes:
@@ -221,7 +182,7 @@ class JenkinsSettings(BaseSettings):
     build_sync_limit: int = 100
 
 
-class ZenTaoSettings(BaseSettings):
+class ZenTaoSettings(BaseModel):
     """ZenTao integration settings.
 
     Attributes:
@@ -236,7 +197,7 @@ class ZenTaoSettings(BaseSettings):
     build_sync_limit: int = 100
 
 
-class AISettings(BaseSettings):
+class AISettings(BaseModel):
     """AI service configuration.
 
     Attributes:
@@ -250,7 +211,7 @@ class AISettings(BaseSettings):
     model: str = "gpt-4o"
 
 
-class SLASettings(BaseSettings):
+class SLASettings(BaseModel):
     """SLA threshold settings (in hours).
 
     Attributes:
@@ -270,15 +231,9 @@ class SLASettings(BaseSettings):
     default: int = 48
 
 
-class AuthSettings(BaseSettings):
-    """认证相关配置。
-
-    Attributes:
-        secret_key (str): JWT 签名密钥。
-        admin_api_token (str): 管理后台专用 API 令牌。
-    """
-
-    allowed_domains: List[str] = ["tjhq.com", "mofit.com.cn", "szlongtu.com"]
+class AuthSettings(BaseModel):
+    """认证相关配置。"""
+    allowed_domains: Union[str, List[str]] = Field(default_factory=list, description="允许注册的邮箱域名列表")
     secret_key: str = "your-secret-key-keep-it-secret"
     admin_api_token: str = "admin_secret_token_2025"
 
@@ -298,7 +253,7 @@ class AuthSettings(BaseSettings):
         return v
 
 
-class StorageSettings(BaseSettings):
+class StorageSettings(BaseModel):
     """Local storage configuration.
 
     Attributes:

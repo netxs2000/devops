@@ -112,6 +112,12 @@
     - **Schema 对齐**：更新了 Portal 层的 `schemas.py`，在 `NexusComponentSummary` 中透出了 `product_id` 字段，为前端看板提供数据支撑。
     - **质量验证**：编写并持久化了 `tests/unit/devops_collector/plugins/nexus/test_nexus_worker.py`，模拟多种匹配场景（Group 解析、Name 解析、未匹配解析）并全部通过 ✅。
 
+19. **[P2] 灵活配置管理与注册域名白名单 (Config & Auth Refactoring)** (2026-02-18)
+    - **配置重构**：将 `devops_collector/config.py` 中的子配置类从 `BaseSettings` 转换为 `BaseModel`（由主 `Settings` 统一加载），并引入 `Union[str, List[str]]` 类型模式，完美解决了 Pydantic V2 在 `.env` 中解析逗号分隔列表时的 JSON 强制校验报错。
+    - **环境变量集成**：在 `.env` 中正式引入 `AUTH__ALLOWED_DOMAINS` 配置，实现了注册域名白名单的动态调整（支持 `tjhq.com,mofit.com.cn` 等格式）。
+    - **开放模式支持**：优化了 `auth_service.py` 的校验逻辑，当白名单为空时自动切换为 **开放模式 (Open Mode)**，支持私有化部署下的自由注册。
+    - **范围界定**：按照用户策略，该校验仅作用于 GitLab OAuth 和原生注册环节，不影响 Jenkins/Sonar 等系统的数据同步。
+
 ## 🏗️ 进行中 (In Progress)
 - [ ] [P1] 禅道全链路穿透：处理 `192.168.5.53` 服务器离线导致的实测阻塞，需建立 MDM 项目关联。
 
@@ -120,12 +126,8 @@
 - [ ] [P3] 修复 7 个 pre-existing broken test files (引用过时模块的导入错误)
 
 ## 📝 阶段性回顾 (Retrospective)
-- **核心挑战**：容器内环境缺少 `pytest` 且网络受限，通过 Host 侧单元测试与独立验证脚本确保了逻辑正确性。
-- **设计决策**：坚持“采集层轻量、分析层沉重”的 Architecture B 方案，避免了插件 Worker 陷入复杂的业务逻辑泥潭，提升了插件的鲁棒性和可维护性。
-- **质量保障**：虽然外部系统（Sonar, Jenkins, ZenTao）离线，但通过 dbt 编译校验和模型静态审计，确保了分析链路逻辑 100% 正确。
-- **测试重构 (2026-02-17)**：
-    - 废弃了基于 SQL View 的旧 DORA 测试，确立了以 dbt 为核心的指标计算与测试链路。
-    - 即使在无法运行完整 CI 的情况下，清晰的目录结构也极大地提升了本地开发体验 (`make test-local` 现在运行真正的单元测试，而不仅仅是原来的 6 个文件)。
+- **技术突破**：巧妙利用 Pydantic 的 `Union` 类型绕过了 `DotEnvSettingsSource` 的强 JSON 限制，保持了 `.env` 文件的易读性（Comma-separated）与配置中心的严谨性。
+- **流程合规**：遵循“反向采访-用户决策-原子开发-质量验证”闭环，在动手前先对齐了“缺省开放”策略，避免了因需求理解偏差导致的重复返工。
 
 ---
-*最后更新时间：2026-02-18 01:25 (Antigravity)*
+*最后更新时间：2026-02-18 13:10 (Antigravity)*
