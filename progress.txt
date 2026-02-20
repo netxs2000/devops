@@ -2,11 +2,14 @@
 
 ## 🎯 当前状态 (Current Focus)
 
-全局开发规范 (`gemini.md`) 优化完成，AI 原生协作哲学从 5 条扩展为 10 条原则体系。
-已完成 P3 技术债修复（broken tests），当前主要阻塞点仍为禅道服务器离线。
+待命：等待用户下达下一个优化或同步指令。
+(已同步更新 .env.example 以匹配 config.py 中的 ZenTao/Auth/SLA 配置项)
 
 ## 🏗️ 进行中 (In Progress)
 
+- [ ] [P1] 验证多环境网络适配性 (2026-02-20)
+    - 目标：确保在 VPN 开启/关闭状态下均能通过镜像构建
+    - 待办：重新执行 `make deploy` 验证
 - [ ] [P1] 禅道全链路穿透 (2026-02-18)
     - 阻塞原因：`192.168.5.53` 服务器离线，无法实测
     - 解除条件：禅道服务器恢复上线
@@ -17,7 +20,17 @@
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[P3] 修复 7 个各类 ImportError 的损坏测试文件** (2026-02-18)
+1. **[P1] 优化容器部署流水线：Nexus 三级回退算法** (2026-02-21)
+    - 实现逻辑：Nexus 私服 (无鉴权) -> 官方 PyPI -> 清华镜像
+    - 适配范围：`Dockerfile` (构建期), `Makefile` (install, init-dev, lock, e2e-install)
+    - 验证：`make help` 语法扫描通过（修复跨平台兼容性中...），三级回退逻辑已注入脚本
+
+2. **[P0] 强化 AI 协作规范 ( gemini.md & contexts.md )** (2026-02-21)
+    - 引入“显式状态锁定”、“严格问答解耦”及“原子步审计”机制
+    - 目的：杜绝未决策先执行（抢跑）行为，确保意图与实现强对齐
+    - 验证：规范文档已同步更新，AI 内部审计逻辑已激活
+
+3. **[P3] 修复 7 个各类 ImportError 的损坏测试文件** (2026-02-18)
     - 修复 `test_analyzer.py` (DiffAnalyzer -> CodeMetrics)
     - 修复 `test_gitlab_worker.py` (IdentityMatcher 导入路径)
     - 修复 `okr_service.py` 及测试 (GitLab 模型导入)

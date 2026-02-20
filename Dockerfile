@@ -1,9 +1,5 @@
-# 使用多阶段构建以优化镜像体积
 # 第一阶段：编译环境
-# 用官方镜像源：
 FROM python:3.11-slim-bookworm AS builder
-# 使用国内代理镜像源，例如阿里或特定的加速地址
-# FROM docker.m.daocloud.io/library/python:3.11-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -13,13 +9,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件并安装 (使用国内镜像源加速)
+# 复制依赖文件并安装 (由于是企业环境，采用三级回退逻辑：1.Nexus私服 -> 2.官方源 -> 3.清华源)
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install --default-timeout=100 -i https://mirrors.aliyun.com/pypi/simple/ -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install --default-timeout=5 \
+    -i http://192.168.1.168:8081/repository/pypi-all/simple --trusted-host 192.168.1.168 -r requirements.txt || \
+    pip install --no-cache-dir --prefix=/install --default-timeout=30 -r requirements.txt || \
+    pip install --no-cache-dir --prefix=/install --default-timeout=60 -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 # 第二阶段：运行时环境
-# 使用国内代理镜像源，例如阿里或特定的加速地址
-# FROM docker.m.daocloud.io/library/python:3.11-slim-bookworm
 FROM python:3.11-slim-bookworm
 
 WORKDIR /app
