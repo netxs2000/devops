@@ -1,20 +1,26 @@
+# syntax=docker/dockerfile:1
 # 第一阶段：编译环境
 FROM python:3.11-slim-bookworm AS builder
 
 WORKDIR /app
 
 # 鉴于已启用 VPN TUN 模式，还原并使用官方源，避免镜像源签名冲突
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# 使用 BuildKit 缓存挂载点加速 apt 安装
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件并安装 (由于是企业环境，采用三级回退逻辑：1.Nexus私服 -> 2.官方源 -> 3.清华源)
+# 使用 BuildKit 缓存挂载点保存 pip 缓存，并去除 --no-cache-dir 强制使用本地缓存
 COPY requirements.txt .
-RUN pip install --no-cache-dir --prefix=/install --default-timeout=5 \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --prefix=/install --default-timeout=5 \
     -i http://192.168.1.168:8081/repository/pypi-all/simple --trusted-host 192.168.1.168 -r requirements.txt || \
-    pip install --no-cache-dir --prefix=/install --default-timeout=30 -r requirements.txt || \
-    pip install --no-cache-dir --prefix=/install --default-timeout=60 -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+    pip install --prefix=/install --default-timeout=30 -r requirements.txt || \
+    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --default-timeout=60 --prefix=/install -r requirements.txt
 
 # 第二阶段：运行时环境
 FROM python:3.11-slim-bookworm
@@ -22,7 +28,9 @@ FROM python:3.11-slim-bookworm
 WORKDIR /app
 
 # 还原官方源
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*

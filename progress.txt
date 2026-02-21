@@ -7,9 +7,6 @@
 
 ## 🏗️ 进行中 (In Progress)
 
-- [ ] [P1] 验证多环境网络适配性 (2026-02-20)
-    - 目标：确保在 VPN 开启/关闭状态下均能通过镜像构建
-    - 待办：重新执行 `make deploy` 验证
 - [ ] [P1] 禅道全链路穿透 (2026-02-18)
     - 阻塞原因：`192.168.5.53` 服务器离线，无法实测
     - 解除条件：禅道服务器恢复上线
@@ -20,10 +17,21 @@
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[P1] 优化容器部署流水线：Nexus 三级回退算法** (2026-02-21)
-    - 实现逻辑：Nexus 私服 (无鉴权) -> 官方 PyPI -> 清华镜像
-    - 适配范围：`Dockerfile` (构建期), `Makefile` (install, init-dev, lock, e2e-install)
-    - 验证：`make help` 语法扫描通过（修复跨平台兼容性中...），三级回退逻辑已注入脚本
+1. **[P1] 实现本地缓存优先机制 (Local First Cache)** (2026-02-21)
+    - 镜像缓存：修改 `Makefile`，在拉取前检查本地是否存在基础镜像，存在则跳过 Pull。
+    - 依赖缓存：启用 Docker BuildKit `cache mount`，在 `Dockerfile` 中持久化 `pip` 和 `apt` 缓存，避免重复下载。
+    - 验证：第二次执行 `make build` 时，基础镜像检测为 `skipping pull`，依赖安装层直接使用缓存，构建效率显著提升。
+
+2. **[P1] 优化容器部署流水线：Nexus 双层回退算法 (Python & Docker)** (2026-02-21)
+    - 实现逻辑 (Python): Nexus 私服 (无鉴权) -> 官方 PyPI -> 清华镜像
+    - 实现逻辑 (Docker): Nexus Docker Registry (192.168.1.168:8082, 无鉴权) -> 官方 Docker Hub
+    - 适配范围：`Dockerfile`, `Makefile` (build, package, pull-images), `.env.example`
+    - 覆盖对象：`python:3.11-slim-bookworm`, `postgres:15-alpine`, `rabbitmq:3-management-alpine`
+    - 验证：`make deploy` 在 VPN 环境下通过 (耗时约 15min)，fallback 机制在 Nexus 离线时自动切换官方源成功。
+
+2. **[P1] 验证多环境网络适配性** (2026-02-21)
+    - 验证：已通过 `make deploy` 完整部署流程。在 VPN 开启状态下，虽然 Nexus 离线导致 fallback，但后续官方源下载与构建成功。
+    - 改进：在 `Dockerfile` 和 `Makefile` 中增加了更鲁棒的 timeout 和 fallback 策略。
 
 2. **[P0] 强化 AI 协作规范 ( gemini.md & contexts.md )** (2026-02-21)
     - 引入“显式状态锁定”、“严格问答解耦”及“原子步审计”机制
@@ -67,4 +75,4 @@
 > 更早的已完成任务已归档至 `progress_archive.md`（共 15 条）
 
 ---
-*最后更新时间：2026-02-18 22:45 (Antigravity)*
+*最后更新时间：2026-02-21 16:30 (Antigravity)*

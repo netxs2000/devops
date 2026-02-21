@@ -80,9 +80,10 @@
 
 ## 8. 运维流程与生命周期 (DevOps Ops)
 - **部署模式**: 
-    - `make deploy`: 本地快速验证部署。
+    - `make deploy`: 本地快速验证部署。支持基础镜像 Nexus 回退机制 (Nexus -> Docker Hub)。
     - `make package`: 生成镜像存档 `devops-platform.tar`。
     - `make deploy-offline`: 生产/隔离环境一键镜像加载并启动。
+- **镜像加速与回退**: 项目支持通过 `NEXUS_DOCKER_REGISTRY` 配置私有镜像存储加速。在 `make build` 或 `make package` 时，系统会优先尝试从该私服拉取并打标 (tag) 核心基础镜像 (`python`, `postgres`, `rabbitmq`)，失败则自动回退至官方源。
 - **健康检查**: 所有容器定义 `healthcheck`，容器间依赖依赖 `service_healthy` 状态。
 - **异步任务 (RabbitMQ)**:
     - **幂等性**: `BaseWorker.process` 方法必须实现幂等，处理前校验资源状态，防止重复消费产生脏数据。

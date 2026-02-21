@@ -14,6 +14,7 @@ RESET := \033[0m
 
 # 统一执行前缀：在 api 容器中执行 (使用 -T 避免 TTY 问题)
 EXEC_CMD := docker-compose exec -T api
+NEXUS_DOCKER_REGISTRY ?= 192.168.1.168:8082
 
 help: ## 显示帮助信息
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(YELLOW)%-20s$(RESET) %s\n", $$1, $$2}'
@@ -69,9 +70,9 @@ lock: ## [工具] 将 pyproject.toml 的依赖锁定到 requirements.txt
 # 离线包构建与部署 (Offline Deployment)
 # =============================================================================
 
-package: ## [本地构建] 构建并打包镜像为 tar 文件 (devops-platform.tar)
-	@echo "$(GREEN)Building Docker images...$(RESET)"
-	docker build -t devops-platform:latest .
+package: pull-images ## [本地构建] 构建并打包镜像为 tar 文件 (devops-platform.tar)
+	@echo "$(GREEN)Building Docker images with BuildKit...$(RESET)"
+	@powershell -Command "$$env:DOCKER_BUILDKIT=1; docker build -t devops-platform:latest ."
 # docker build -t devops-platform-datahub:latest datahub/
 	@echo "$(GREEN)Saving images to devops-platform.tar...$(RESET)"
 	docker save -o devops-platform.tar devops-platform:latest
@@ -160,9 +161,9 @@ prod-down: ## [服务器专用] 停止生产服务
 # Docker 基础操作
 # =============================================================================
 
-build: ## 构建 Docker 镜像
-	@echo "$(GREEN)Building Docker images...$(RESET)"
-	docker-compose build
+build: pull-images ## 构建 Docker 镜像 (Local First + BuildKit Cache)
+	@echo "$(GREEN)Building Docker images with BuildKit cache...$(RESET)"
+	@powershell -Command "$$env:DOCKER_BUILDKIT=1; $$env:COMPOSE_DOCKER_CLI_BUILD=1; docker-compose build"
 
 up: ## 启动 Docker 容器 (等待健康检查通过)
 	@echo "$(GREEN)Starting services & waiting for DB...$(RESET)"
@@ -231,6 +232,27 @@ sync-all: ## 手动触发全量数据同步
 	@echo "$(GREEN)Triggering full sync...$(RESET)"
 	$(EXEC_CMD) python -m devops_collector.scheduler --force-all
 	$(EXEC_CMD) python -m devops_collector.worker --once
+
+pull-images: ## [工具] 尝试从 Nexus 预拉取基础镜像并打标 (Fallback 机制)
+	@echo "$(GREEN)Checking base images (Local First Strategy)...$(RESET)"
+	@powershell -Command " \
+		$$images = @('python:3.11-slim-bookworm', 'postgres:15-alpine', 'rabbitmq:3-management-alpine'); \
+		foreach ($$img in $$images) { \
+			if (docker images -q $$img) { \
+				Write-Host \"Image $$img already exists locally, skipping pull.\" -ForegroundColor Cyan; \
+				continue; \
+			} \
+			$$nexusImg = '$(NEXUS_DOCKER_REGISTRY)/' + $$img; \
+			Write-Host \"Pulling $$nexusImg ...\"; \
+			docker pull $$nexusImg 2>$$null; \
+			if ($$?) { \
+				Write-Host \"Tagging $$nexusImg as $$img ...\" -ForegroundColor Green; \
+				docker tag $$nexusImg $$img; \
+			} else { \
+				Write-Host \"Nexus pull failed and $$img not found locally, will use default registry during build.\" -ForegroundColor Yellow; \
+			} \
+		} \
+	"
 
 dbt-build: ## 执行 dbt 建模转换
 	@echo "$(GREEN)Running dbt transformations...$(RESET)"

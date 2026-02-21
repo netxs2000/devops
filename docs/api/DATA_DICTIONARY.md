@@ -1,6 +1,6 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-02-16 13:41:04  
+> **生成时间**: 2026-02-21 08:47:16  
 > **版本**: v2.2 (企业级标准版)  
 > **状态**: 有效 (Active)
 
@@ -654,6 +654,7 @@
 | `dev_lead_id` | UUID | FK | 是 | - | 开发经理 |
 | `qa_lead_id` | UUID | FK | 是 | - | 测试经理 |
 | `release_lead_id` | UUID | FK | 是 | - | 发布经理 |
+| `matching_patterns` | JSON | - | 是 | - | 自动识别匹配模式列表 (JSON) |
 | `parent_product_id` | String(100) | FK | 是 | - | 上级产品ID |
 | `node_type` | String(20) | - | 是 | APP | 节点类型 (LINE=产品线 / APP=应用) |
 | `created_at` | DateTime | - | 是 | (auto) | - |
@@ -1727,11 +1728,15 @@
 | `high_cve_count` | Integer | - | 是 | 0 | - |
 | `medium_cve_count` | Integer | - | 是 | 0 | - |
 | `low_cve_count` | Integer | - | 是 | 0 | - |
+| `is_ignored` | Boolean | - | 是 | False | - |
+| `ignore_reason` | Text | - | 是 | - | - |
+| `ignore_by` | String(50) | - | 是 | - | - |
+| `ignore_at` | DateTime | - | 是 | - | - |
 | `file_path` | Text | - | 是 | - | - |
 | `description` | Text | - | 是 | - | - |
 | `homepage_url` | Text | - | 是 | - | - |
 | `raw_data` | JSON | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
@@ -1762,7 +1767,10 @@
 | `fixed_version` | String(100) | - | 是 | - | - |
 | `remediation` | Text | - | 是 | - | - |
 | `references` | JSON | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | - | - |
+| `is_ignored` | Boolean | - | 是 | False | - |
+| `ignore_reason` | Text | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
+| `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
 
@@ -1787,10 +1795,21 @@
 | `vulnerable_dependencies` | Integer | - | 是 | 0 | - |
 | `high_risk_licenses` | Integer | - | 是 | 0 | - |
 | `scan_status` | String(20) | - | 是 | completed | - |
-| `report_path` | Text | - | 是 | - | - |
+| `ci_job_id` | String(50) | - | 是 | - | CI Job ID |
+| `ci_job_url` | String(500) | - | 是 | - | CI Job URL |
+| `commit_sha` | String(40) | - | 是 | - | Commit SHA |
+| `branch` | String(100) | - | 是 | - | Branch Name |
+| `report_url` | String(500) | - | 是 | - | Report Storage URL |
+| `scan_duration_seconds` | Numeric | - | 是 | - | Scan Duration (Seconds) |
 | `raw_json` | JSON | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | - | - |
+| `created_by` | UUID | FK | 是 | - | 创建人 |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
@@ -1938,7 +1957,7 @@
 | `description` | Text | - | 是 | - | - |
 | `policy_notes` | Text | - | 是 | - | - |
 | `is_active` | Boolean | - | 是 | True | - |
-| `created_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 ---
@@ -2051,6 +2070,11 @@
 | `reliability_rating` | String(1) | - | 是 | - | - |
 | `security_rating` | String(1) | - | 是 | - | - |
 | `sqale_rating` | String(1) | - | 是 | - | - |
+| `new_coverage` | Numeric | - | 是 | - | 新增代码覆盖率 |
+| `new_bugs` | Integer | - | 是 | - | 新增 Bug 数 |
+| `new_vulnerabilities` | Integer | - | 是 | - | 新增漏洞数 |
+| `new_reliability_rating` | String(1) | - | 是 | - | 新增可靠性评级 |
+| `new_security_rating` | String(1) | - | 是 | - | 新增安全性评级 |
 | `quality_gate_status` | String(10) | - | 是 | - | - |
 | `created_at` | DateTime | - | 是 | (auto) | - |
 
@@ -2073,6 +2097,8 @@
 | `name` | String(255) | - | 是 | - | - |
 | `qualifier` | String(10) | - | 是 | - | - |
 | `gitlab_project_id` | Integer | FK | 是 | - | - |
+| `mdm_project_id` | String(100) | FK | 是 | - | 关联的 MDM 项目 ID |
+| `mdm_product_id` | String(100) | FK | 是 | - | 关联的 MDM 产品 ID |
 | `last_analysis_date` | DateTime | - | 是 | - | - |
 | `last_synced_at` | DateTime | - | 是 | - | - |
 | `sync_status` | String(20) | - | 是 | PENDING | - |
