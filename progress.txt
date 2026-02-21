@@ -1,12 +1,16 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
 
 ## 🎯 当前状态 (Current Focus)
-
-待命：等待用户下达下一个优化或同步指令。
-(已同步更新 .env.example 以匹配 config.py 中的 ZenTao/Auth/SLA 配置项)
+[阶段：执行中]
+分支：feat/qa-gitlab-style-ui
+任务：重构测试用例模块 UI，复刻 GitLab 企业版（EE）布局与逻辑（列表 + 详情双栏）。
 
 ## 🏗️ 进行中 (In Progress)
 
+- [x] [P1] 测试用例模块 UI 重构 (GitLab 风格) (2026-02-21)
+    - 结果：成功复刻 GitLab 列表+详情双栏布局。
+    - 实现：引入 `qa-test-case-detail` 组件，重构 `qa-test-case-card` 为列表行，支持双栏同步交互。
+    - 分支：开发于 `feat/qa-gitlab-style-ui` 分支，验证通过。
 - [ ] [P1] 禅道全链路穿透 (2026-02-18)
     - 阻塞原因：`192.168.5.53` 服务器离线，无法实测
     - 解除条件：禅道服务器恢复上线
@@ -17,7 +21,19 @@
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[P1] 实现本地缓存优先机制 (Local First Cache)** (2026-02-21)
+1. **[P2] 前端组织架构部门下拉框结构化呈现与冗余 API 清理** (2026-02-21)
+    - 场景：录入测试用例与产品选择时，部门选择框原为扁平显示，缺少层级关系。另外 API 中存在冗余。
+    - 优化：通过前端获取 `org_level` 后，在原生的 `<select>` 中动态拼接 `├─ ` 缩进前缀实现直观的树形视觉展示，兼顾了改动最小原则。同时删除了 `admin_router.py` 中重复的（无层次信息的） `/organizations` 冗余路由。
+    - 测试：`pytest tests/unit/portal/test_admin_router.py` 验证通过。
+
+
+1. **[P1] 实现 Portal UI 职能分离 (Separation of Concerns)** (2026-02-21)
+    - 场景：质量看板 (Dashboard) vs 测试用例 (Test Cases)。
+    - 优化：在“质量看板”视图下自动隐藏“仓库运维工具栏”，并将其标题切换为“Quality Dashboard”。
+    - 意义：减少看板页面的干扰项，强化“洞察”与“管理”的界面区隔。
+    - 适配文件：`index.html` (增加 DOM ID), `sys_app.js` (视图状态维护)。
+
+2. **[P1] 实现本地缓存优先机制 (Local First Cache)** (2026-02-21)
     - 镜像缓存：修改 `Makefile`，在拉取前检查本地是否存在基础镜像，存在则跳过 Pull。
     - 依赖缓存：启用 Docker BuildKit `cache mount`，在 `Dockerfile` 中持久化 `pip` 和 `apt` 缓存，避免重复下载。
     - 验证：第二次执行 `make build` 时，基础镜像检测为 `skipping pull`，依赖安装层直接使用缓存，构建效率显著提升。
@@ -75,4 +91,4 @@
 > 更早的已完成任务已归档至 `progress_archive.md`（共 15 条）
 
 ---
-*最后更新时间：2026-02-21 16:30 (Antigravity)*
+*最后更新时间：2026-02-21 18:56 (Antigravity)*

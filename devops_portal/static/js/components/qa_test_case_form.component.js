@@ -226,7 +226,10 @@ class QaTestCaseForm extends HTMLElement {
                             <label class="label required">所属部门</label>
                             <select class="select" id="org_id" required>
                                 <option value="" disabled selected>🔍 请选择归属部门...</option>
-                                ${this.state.organizations.map(o => `<option value="${o.org_id}" ${this.state.selectedOrgId == o.org_id ? 'selected' : ''}>${o.org_name}</option>`).join('')}
+                                ${this.state.organizations.map(o => {
+            const indent = o.org_level > 1 ? '&nbsp;&nbsp;'.repeat(o.org_level - 1) + '├─ ' : '';
+            return `<option value="${o.org_id}" ${this.state.selectedOrgId == o.org_id ? 'selected' : ''}>${indent}${o.org_name}</option>`;
+        }).join('')}
                             </select>
                         </div>
                         <div class="form-group">

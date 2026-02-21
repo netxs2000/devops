@@ -224,6 +224,10 @@ body.is-app-layout {
     flex-direction: column;
 }
 
+body.is-dual-pane .sys-main-content {
+    overflow-y: hidden;
+}
+
 #sys-header {
     display: flex;
     justify-content: space-between;

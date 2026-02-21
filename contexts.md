@@ -131,6 +131,7 @@
 - **Mock 策略**: 外部 API 调用 (GitLab, SonarQube) 必须使用 `requests-mock` 或 `pytest-httpx` 隔离。
 - **E2E 规范**: 
     - **框架选型**: 新功能模块强制使用 **Playwright** (更快的执行速度、Trace Viewer 调试)。
+    - **凭据管理 (Credentials)**:  E2E 测试所需的登录信息（用户名/邮箱、密码）**必须从 `.env` 文件读取**（对应变量：`E2E_TEST_USER_EMAIL`, `E2E_TEST_USER_PASSWORD`）。**严禁猜测、硬编码或自行编造测试凭据**。AI 代理在执行浏览器自动化操作时同样适用此规则——必须先读取 `.env` 获取凭据后再执行登录。
     - **失败诊断**: CI/自动化运行失败时，必须保存 Trace Viewer 档案 (`test-results/`) 及截图。
     - **视觉锚定**: 涉及可视化大屏或核心 UI 组件，必要时使用 `expect(page).to_have_screenshot()`。
 - **伴生测试**: 新增功能必须同步提交对应的 `pytest` 脚本。
@@ -212,12 +213,10 @@
 ## 13. 分支开发与版本控制规范 (Branching & Versioning)
 > 基础 Git 规范（原子提交、Commit Message、Conventional Commits）参见 [`gemini.md` 第四.5 章](c:/users/netxs/.gemini/gemini.md)。以下为本项目的补充规定。
 
+- **强制性开发流程 (Mandatory Branching)**:
+    - **硬性约束**: 所有**新功能 (New Feature)**、**重大逻辑变更 (Major Change)**、**架构重构 (Refactoring)** 必须且只能在独立的业务分支上进行开发。严禁直接在 `main` 或 `master` 分支进行提交。
+    - **短寿命原则**: 分支生命周期建议不超过 3 天，任务完成后立即合入 `main` 并清理分支。
 - **命名公约 (Naming Convention)**:
-    - 功能开发: `feat/{domain}-{feature_name}` (例: `feat/sd-export-csv`)
-    - 缺陷修复: `fix/{domain}-{issue_description}` (例: `fix/adm-user-sync`)
-    - 架构重构: `refactor/{module}-{target}`
-    - 文档同步: `docs/{topic}`
-- **短寿命原则**: 分支生命周期建议不超过 3 天，任务完成后立即合入 `main` 并清理分支。
 - **提交质量**: 
     - **原子提交**: 每次 Commit 仅包含一个逻辑变动。
     - **语义化信息**: 提交消息必须包含业务域和动作（例: `feat(sd): 实现工单异步导出`）。
@@ -264,10 +263,12 @@
 
 ### 14.5 完工标准 (Definition of Done - DoD)
 - **代码层面**: 通过所有 Lint 检查，无死代码，注释清晰且无拼写错误。
-- **测试层面**: 单元测试覆盖率达标，相关功能的 E2E 测试通过，且 **测试资产已入库**。
+- **验证自动化闭环 (Mandatory Automation)**: 
+    - **后端任务**: 必须通过所有对应的 `pytest` 单元测试与集成测试，确保逻辑覆盖率。
+    - **前端/UI 任务**: 涉及到 UI 重构或交互逻辑变更，**强制开展 E2E 测试** (Playwright)，确保护核心业务链路正常。
 - **文档层面**: `contexts.md`, `project_summary.md` 及 API 文档 (如有变更) 已同步更新。
 - **部署层面**: `make deploy` 在容器环境中验证通过，无回滚风险。
-- **汇报完成**: 必须附带验证证据日志。
+- **证据交付**: 必须附带验证证据日志（录屏、截图或 pytest 结果）。
 
 
 ## 15. 禅道集成规范与元数据对齐 (ZenTao Integration & Metadata)

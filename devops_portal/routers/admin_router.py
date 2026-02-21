@@ -390,12 +390,6 @@ async def link_product_to_project(
     # 已通过 RoleRequired 校验权限
     return service.link_product_to_project(payload)
 
-@router.get('/organizations')
-async def list_organizations(db: Session=Depends(get_auth_db)):
-    """获取组织机构列表。"""
-    orgs = db.query(Organization).filter(Organization.is_current == True).all()
-    return [{'org_id': o.org_id, 'org_name': o.org_name} for o in orgs]
-
 
 # --- Product Import/Export ---
 

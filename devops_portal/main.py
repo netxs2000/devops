@@ -125,7 +125,8 @@ async def notification_stream(current_user=Depends(get_current_user)):
             NOTIFICATION_QUEUES[user_id] = []
         NOTIFICATION_QUEUES[user_id].append(queue)
         try:
-            yield f"data: {json.dumps({'message': 'System Connected', 'type': 'success'})}\n\n"
+            # 发送一条 SSE 注释作为心跳/连接确认，不会触发前端的 onmessage 弹窗
+            yield ": connected\n\n"
             while True:
                 data = await queue.get()
                 yield f"data: {data}\n\n"

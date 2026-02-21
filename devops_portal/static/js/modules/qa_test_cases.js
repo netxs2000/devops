@@ -1,22 +1,25 @@
 /**
  * @file qa_test_cases.js
- * @description QA Test Management Controller (Refactored)
+ * @description QA Test Management Controller (GitLab EE Style)
  */
 import { UI } from './sys_core.js';
 import { QAService } from './qa_service.js';
 import QaDefectHandler from './qa_defects.js';
 import SysUtilsHandler from './sys_utils.js';
 
-// Import CSS for Components (if needed globally) or rely on shadow DOM styles
+// Import Components
 import '../components/qa_test_case_card.component.js';
+import '../components/qa_test_case_detail.component.js';
 import '../components/adm_product_selector.component.js';
 import '../components/qa_test_case_form.component.js';
 
 const QaTestCaseHandler = {
     projectId: null,
+    currentCase: null,
+    allCases: [],  // Raw data cache for client-side filtering
 
     init() {
-        console.log("QA Test Case Handler Initialized");
+        console.log("QA Test Case Handler (GitLab Style) Initialized");
         this.bindEvents();
     },
 
@@ -25,6 +28,20 @@ const QaTestCaseHandler = {
 
         // Listen for events bubbled up from components
         if (container && !container.dataset.bound) {
+            // 行为：点击列表行触发详情展示
+            container.addEventListener('select-case', (e) => {
+                this.showDetail(e.detail.item);
+
+                // 视觉：切换 Active 状态
+                container.querySelectorAll('qa-test-case-card').forEach(card => {
+                    if (card.data.iid === e.detail.item.iid) {
+                        card.setAttribute('active', '');
+                    } else {
+                        card.removeAttribute('active');
+                    }
+                });
+            });
+
             container.addEventListener('execute', (e) => {
                 this.handleExecution(e.detail.iid, e.detail.result);
             });
@@ -48,60 +65,77 @@ const QaTestCaseHandler = {
             selector.dataset.bound = "true";
         }
 
-        // Modal Logic (Create Case) remains in main DOM for now or can be refactored to component later
-        this.bindModalEvents();
-    },
-
-    bindModalEvents() {
-        const modal = document.getElementById('modalOverlay');
-        if (modal && !modal.dataset.bound) {
-            modal.addEventListener('click', (e) => {
-                const t = e.target;
-                if (t.classList.contains('js-btn-submit-case')) this.submitCreate();
-                if (t.classList.contains('js-btn-close-modal')) this.closeModal();
-                if (t.classList.contains('js-btn-add-step')) this.addStepRow();
-                if (t.classList.contains('js-btn-ai-generate')) this.generateMagicSteps();
-            });
-            modal.dataset.bound = "true";
+        // Filter Toolbar Events
+        const searchInput = document.getElementById('qa-tc-search');
+        if (searchInput && !searchInput.dataset.bound) {
+            searchInput.addEventListener('input', () => this.applyFilters());
+            searchInput.dataset.bound = 'true';
+        }
+        const statusFilter = document.getElementById('qa-tc-filter-status');
+        if (statusFilter && !statusFilter.dataset.bound) {
+            statusFilter.addEventListener('change', () => this.applyFilters());
+            statusFilter.dataset.bound = 'true';
+        }
+        const priorityFilter = document.getElementById('qa-tc-filter-priority');
+        if (priorityFilter && !priorityFilter.dataset.bound) {
+            priorityFilter.addEventListener('change', () => this.applyFilters());
+            priorityFilter.dataset.bound = 'true';
         }
     },
 
     /**
-     * Load Test Cases
-     * @param {string} scopeType - 'project' | 'product' | 'org' (default based on inputs)
-     * @param {string} id - ID
+     * 加载测试用例列表
      */
-    async load(scopeType = 'project', id = null) {
-        // Fallback to manual input if no ID passed (legacy mode)
+    async load(scopeType = 'project', id = null, keepDetail = false) {
+        // 如果没有传入 ID，尝试从全局选择器获取
         if (!id) {
-            id = document.getElementById('projectId')?.value;
-            if (!id && !scopeType) return;
+            const selector = document.querySelector('adm-product-selector');
+            if (selector && selector._state) {
+                scopeType = selector._state.selectedType;
+                id = selector._state.selectedId;
+            }
         }
 
-        this.projectId = (scopeType === 'project') ? id : null; // Track current project context
+        if (!id) return;
+
+        this.projectId = (scopeType === 'product' || scopeType === 'project') ? id : null;
+        this.scopeType = scopeType;
 
         const container = document.getElementById('qa-test-results');
+        const detailPane = document.getElementById('qa-test-case-detail-pane');
         if (!container) return;
 
-        UI.toggleLoading("Syncing Test Cases...", true);
-        container.innerHTML = ''; // Clear old content
+        UI.toggleLoading("Fetching Repository...", true);
+        container.innerHTML = '';
+        if (detailPane && !keepDetail) detailPane.classList.add('u-hide'); // 隐藏详情区，除非明确要求保留
 
         try {
-            // 1. Fetch Data
             const data = await QAService.getTestCases(scopeType, id);
-
             UI.toggleLoading("", false);
+            this.allCases = data; // Cache for filtering
+
+            // Show filter toolbar
+            const toolbar = document.getElementById('qa-filter-toolbar');
+            if (toolbar) toolbar.classList.remove('u-hide');
+
+            // Reset filter controls
+            const searchEl = document.getElementById('qa-tc-search');
+            if (searchEl) searchEl.value = '';
+            const statusEl = document.getElementById('qa-tc-filter-status');
+            if (statusEl) statusEl.value = 'all';
+            const priorityEl = document.getElementById('qa-tc-filter-priority');
+            if (priorityEl) priorityEl.value = 'all';
 
             if (data.length === 0) {
-                container.innerHTML = `<div class="empty-state">No test cases found for ${scopeType} ${id}.</div>`;
+                container.innerHTML = `<div class="empty-state">No test cases found.</div>`;
                 this.updateStats({ total: 0, passed: 0, failed: 0 });
+                this._updateFilterCount(0, 0);
                 return;
             }
 
-            // 2. Render Cards
             this.renderList(data, container);
+            this._updateFilterCount(data.length, data.length);
 
-            // 3. Update Stats (Client-side calc for aggregated, or fetch summary for project)
             if (scopeType === 'project') {
                 const summary = await QAService.getTestSummary(id);
                 this.updateStats(summary);
@@ -125,6 +159,97 @@ const QaTestCaseHandler = {
             frag.appendChild(card);
         });
         container.appendChild(frag);
+    },
+
+    /**
+     * 客户端联合筛选：搜索词 + 执行状态 + 优先级
+     */
+    applyFilters() {
+        const keyword = (document.getElementById('qa-tc-search')?.value || '').trim().toLowerCase();
+        const statusVal = document.getElementById('qa-tc-filter-status')?.value || 'all';
+        const priorityVal = document.getElementById('qa-tc-filter-priority')?.value || 'all';
+
+        let filtered = this.allCases;
+
+        // Keyword: match iid or title
+        if (keyword) {
+            filtered = filtered.filter(item =>
+                String(item.iid).includes(keyword) ||
+                (item.title || '').toLowerCase().includes(keyword)
+            );
+        }
+
+        // Status filter
+        if (statusVal !== 'all') {
+            filtered = filtered.filter(item => (item.result || 'pending') === statusVal);
+        }
+
+        // Priority filter
+        if (priorityVal !== 'all') {
+            filtered = filtered.filter(item => (item.priority || 'P2') === priorityVal);
+        }
+
+        const container = document.getElementById('qa-test-results');
+        if (!container) return;
+
+        container.innerHTML = '';
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="empty-state" style="padding:40px; color:#86868b;">没有匹配的用例</div>`;
+        } else {
+            this.renderList(filtered, container);
+        }
+
+        this._updateFilterCount(filtered.length, this.allCases.length);
+    },
+
+    _updateFilterCount(shown, total) {
+        const countEl = document.getElementById('qa-tc-count-display');
+        const totalEl = document.getElementById('qa-tc-total-display');
+        if (countEl) countEl.textContent = shown;
+        if (totalEl) totalEl.textContent = total;
+    },
+
+    /**
+     * 展示 GitLab 样式的详情面板
+     */
+    showDetail(item) {
+        this.currentCase = item;
+        const pane = document.getElementById('qa-test-case-detail-pane');
+        if (!pane) return;
+
+        pane.classList.remove('u-hide');
+        pane.innerHTML = '';
+        const detail = document.createElement('qa-test-case-detail');
+        detail.data = item;
+        pane.appendChild(detail);
+    },
+
+    async handleExecution(iid, result) {
+        if (!this.projectId) return UI.showToast("Project Context Lost", "error");
+
+        try {
+            await QAService.executeTest(this.projectId, iid, result);
+            UI.showToast(`Test #${iid} marked as ${result}`, "success");
+
+            // 为保持一致性，重新加载列表
+            await this.load(this.scopeType, this.projectId, true);
+
+            // 如果当前正在查看详情，同步更新详情视图，并恢复 Active 视觉
+            if (this.currentCase && this.currentCase.iid === iid) {
+                const updatedItem = { ...this.currentCase, result };
+                this.showDetail(updatedItem);
+
+                // 强制恢复 Active 项（因为 load() 重新绘制了列表）
+                const container = document.getElementById('qa-test-results');
+                if (container) {
+                    container.querySelectorAll('qa-test-case-card').forEach(card => {
+                        if (card.data.iid === iid) card.setAttribute('active', '');
+                    });
+                }
+            }
+        } catch (e) {
+            UI.showToast(e.message, "error");
+        }
     },
 
     updateStats(summary) {
@@ -151,100 +276,8 @@ const QaTestCaseHandler = {
         this.updateStats(summary);
     },
 
-    async handleExecution(iid, result) {
-        if (!this.projectId) return UI.showToast("Project Context Lost. Please reload.", "error");
-
-        try {
-            await QAService.executeTest(this.projectId, iid, result);
-            UI.showToast(`Test #${iid} marked as ${result}`, "success");
-
-            // Update UI card state instantly without reload
-            const card = document.querySelector(`qa-test-case-card`);
-            // In a real list, we need to find the specific element. 
-            // Since we don't have IDs on the element itself easily unless we set them.
-            // Let's re-fetch for simplicity or update data.
-            this.load('project', this.projectId);
-        } catch (e) {
-            UI.showToast(e.message, "error");
-        }
-    },
-
-    // --- Create Modal Logic (Simplified) ---
-
     openModal() {
-        // 跳转至独立的任务录入页面，替代旧的 Modal 弹窗
         window.location.hash = 'test-case-form';
-    },
-
-    closeModal() {
-        UI.hideModal('modalOverlay');
-    },
-
-    resetForm() {
-        const fields = ['new_title', 'new_req_iid', 'new_pre'];
-        fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-        document.getElementById('stepsContainer').innerHTML = '';
-        this.addStepRow(); // Add one initial row
-    },
-
-    addStepRow() {
-        const container = document.getElementById('stepsContainer');
-        const row = document.createElement('div');
-        row.className = 'step-row u-flex u-gap-10 u-mb-8';
-        row.innerHTML = `<input type="text" placeholder="Action" class="form-control step-action u-span-2 u-flex-2"><input type="text" placeholder="Expected" class="form-control step-expected u-flex-1">`;
-        container.appendChild(row);
-    },
-
-    async generateMagicSteps() {
-        // ... (AI Logic reuse QAService)
-        const reqIid = document.getElementById('new_req_iid').value;
-        if (!reqIid || !this.projectId) return UI.showToast("Req ID & Project Context required", "warning");
-
-        UI.toggleLoading("AI Generating...", true);
-        try {
-            const data = await QAService.suggestSteps(this.projectId, reqIid);
-            if (data.steps) {
-                const container = document.getElementById('stepsContainer');
-                container.innerHTML = '';
-                data.steps.forEach(s => {
-                    const row = document.createElement('div');
-                    row.className = 'step-row u-flex u-gap-10 u-mb-8';
-                    row.innerHTML = `<input type="text" value="${s.action}" class="form-control step-action u-span-2 u-flex-2"><input type="text" value="${s.expected}" class="form-control step-expected u-flex-1">`;
-                    container.appendChild(row);
-                });
-            }
-        } catch (e) { UI.showToast(e.message, "error"); }
-        finally { UI.toggleLoading("", false); }
-    },
-
-    async submitCreate() {
-        const title = document.getElementById('new_title').value;
-        if (!title || !this.projectId) return UI.showToast("Title & Project required", "warning");
-
-        const steps = [];
-        document.querySelectorAll('#stepsContainer .step-row').forEach((row, idx) => {
-            const action = row.querySelector('.step-action').value;
-            const expected = row.querySelector('.step-expected').value;
-            if (action) steps.push({ step_number: idx + 1, action, expected_result: expected });
-        });
-
-        const payload = {
-            title,
-            requirement_id: parseInt(document.getElementById('new_req_iid').value) || null,
-            priority: document.getElementById('new_priority').value,
-            test_type: document.getElementById('new_type').value,
-            pre_conditions: document.getElementById('new_pre').value.split('\n').filter(l => l.trim()),
-            steps
-        };
-
-        try {
-            await QAService.createTestCase(this.projectId, payload);
-            UI.showToast("Created!", "success");
-            this.closeModal();
-            this.load('project', this.projectId);
-        } catch (e) {
-            UI.showToast(e.message, "error");
-        }
     }
 };
 

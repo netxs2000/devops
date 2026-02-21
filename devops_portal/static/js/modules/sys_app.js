@@ -498,9 +498,36 @@ const SysAppHandler = {
         const headerViews = ['dashboard', 'tests', 'test-cases'];
 
         if (headerEl) {
-            if (headerViews.includes(view) || view === 'dashboard') {
+            if (headerViews.includes(view)) {
                 headerEl.classList.remove('u-hide');
                 headerEl.classList.add('u-flex');
+
+                // Option A: 职能分离 (Separation of Concerns)
+                const toolbar = document.getElementById('qa-repo-ops-toolbar');
+                const mainTitle = document.getElementById('page-main-title');
+                const mainSubtitle = document.getElementById('projectTitle');
+
+                // GitLab Style Dual-Pane Mode
+                const dualPane = document.getElementById('qa-test-cases-dual-pane');
+                const detailPane = document.getElementById('qa-test-case-detail-pane');
+
+                if (view === 'dashboard') {
+                    // 看板模式：单栏全宽，隐藏详情
+                    if (toolbar) toolbar.classList.add('u-hide');
+                    if (mainTitle) mainTitle.textContent = 'Quality Dashboard';
+                    if (mainSubtitle) mainSubtitle.textContent = 'Enterprise Quality Insights & performance metrics';
+                    if (detailPane) detailPane.classList.add('u-hide');
+                    document.body.classList.remove('is-dual-pane');
+                } else if (view === 'test-cases' || view === 'tests') {
+                    // 库管理模式：显示工具栏，启用双栏逻辑
+                    if (toolbar) toolbar.classList.remove('u-hide');
+                    if (mainTitle) mainTitle.textContent = 'Test Repository';
+                    if (mainSubtitle) mainSubtitle.textContent = 'Select a project to view test execution insights';
+                    // Enable dual pane scrolling logic
+                    document.body.classList.add('is-dual-pane');
+                } else {
+                    document.body.classList.remove('is-dual-pane');
+                }
             } else {
                 headerEl.classList.add('u-hide');
                 headerEl.classList.remove('u-flex');

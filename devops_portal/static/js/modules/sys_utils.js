@@ -11,9 +11,14 @@ const SysUtilsHandler = {
      * 加载额外数据（最近项目、流水线状态、用例历史）
      */
     async loadExtraData() {
-        const projectIdInput = document.getElementById('projectId');
-        if (!projectIdInput) return;
-        const projectId = projectIdInput.value;
+        // 从全局选择器获取作用域
+        const selector = document.querySelector('adm-product-selector');
+        let projectId = null;
+        if (selector && selector._state && (selector._state.selectedType === 'product' || selector._state.selectedType === 'project')) {
+            projectId = selector._state.selectedId;
+        }
+
+        if (!projectId) return;
 
         // 1. 最近项目
         try {
@@ -62,9 +67,13 @@ const SysUtilsHandler = {
     },
 
     async updateItemHistory(iid) {
-        const projectIdInput = document.getElementById('projectId');
-        if (!projectIdInput) return;
-        const projectId = projectIdInput.value;
+        let projectId = null;
+        const selector = document.querySelector('adm-product-selector');
+        if (selector && selector._state && (selector._state.selectedType === 'product' || selector._state.selectedType === 'project')) {
+            projectId = selector._state.selectedId;
+        }
+
+        if (!projectId) return;
 
         try {
             const history = await Api.get(`/projects/${projectId}/test-cases/${iid}/history`);
