@@ -1,9 +1,14 @@
-import pytest
 import uuid
-from devops_collector.models.base_models import User, Organization, ProjectMaster, Product, SysRole # Use direct imports
-from devops_portal.dependencies import get_current_user
+
 from devops_collector.auth import auth_service
-from devops_portal.main import app
+from devops_collector.models.base_models import (  # Use direct imports
+    Organization,
+    ProjectMaster,
+    SysRole,
+    User,
+)
+
+
 # Import ProjectProductRelation but use it via db queries if needed, or rely on router response
 
 def create_test_token(email, user_id, roles=None, permissions=None):
@@ -18,11 +23,11 @@ def create_test_token(email, user_id, roles=None, permissions=None):
 
 def test_product_management_flow(client, db_session):
     """集成测试：验证产品创建与项目关联的完整流程。"""
-    
+
     # 创建系统管理员角色
     admin_role = SysRole(role_key="SYSTEM_ADMIN", role_name="System Admin")
     db_session.add(admin_role)
-    
+
     # 创建系统管理员
     admin_id = uuid.uuid4()
     admin = User(
@@ -34,16 +39,16 @@ def test_product_management_flow(client, db_session):
         roles=[admin_role]
     )
     db_session.add(admin)
-    
+
     # 创建 Organization (必须有 org_id)
     org = Organization(org_id="ORG-001", org_name="Test Organization", is_current=True)
     db_session.add(org)
-    
+
     db_session.commit()
-    
+
     token = create_test_token("admin@example.com", admin_id, roles=["SYSTEM_ADMIN"])
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     # 1. 创建产品
     product_data = {
         "product_id": "P-BIZ-01",
@@ -52,21 +57,21 @@ def test_product_management_flow(client, db_session):
         "category": "Core",
         "version_schema": "semver"
     }
-    
+
     response = client.post("/admin/products", json=product_data, headers=headers)
     assert response.status_code == 200, f"Create product failed: {response.text}"
     assert response.json()["product_id"] == "P-BIZ-01"
-    
+
     # 2. 准备项目 (关联Org)
     project = ProjectMaster(
-        project_id="MDM-PROJ-01", 
+        project_id="MDM-PROJ-01",
         project_name="MDM Project 1",
         org_id="ORG-001",
         is_current=True
     )
     db_session.add(project)
     db_session.commit()
-    
+
     # 3. 关联产品到项目
     relation_data = {
         "project_id": "MDM-PROJ-01",
@@ -74,20 +79,20 @@ def test_product_management_flow(client, db_session):
         "relation_type": "PRIMARY",
         "allocation_ratio": 1.0
     }
-    
+
     response = client.post("/admin/link-product", json=relation_data, headers=headers)
     assert response.status_code == 200, f"Link product failed: {response.text}"
     assert response.json()["relation_type"] == "PRIMARY"
-    
+
     # 4. 验证列表接口返回值 (N+1 优化校验)
-    
+
     response = client.get("/admin/mdm-projects", headers=headers)
     assert response.status_code == 200, f"List projects failed: {response.text}"
     data = response.json()
-    
+
     target_proj = next((p for p in data if p["project_id"] == "MDM-PROJ-01"), None)
     assert target_proj is not None
-    
+
     # 验证产品列表存在
     assert "products" in target_proj
     assert len(target_proj["products"]) > 0

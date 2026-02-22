@@ -8,15 +8,17 @@ RBAC 2.0 特性:
 - DataScopeFilter: 行级数据权限过滤
 """
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any
+
 from fastapi import Depends, HTTPException, Query
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
+
 from devops_collector.auth import auth_service
-from devops_collector.core import security
 from devops_collector.auth.auth_database import AuthSessionLocal, get_auth_db
+from devops_collector.core import security
 from devops_collector.models.base_models import Location, User
 
-from fastapi.security import OAuth2PasswordBearer
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +27,8 @@ optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login', auto_error=
 
 
 async def get_current_user(
-    token: Optional[str] = Query(None),
-    auth_header: Optional[str] = Depends(optional_oauth2_scheme),
+    token: str | None = Query(None),
+    auth_header: str | None = Depends(optional_oauth2_scheme),
     db: Session = Depends(get_auth_db)
 ) -> User:
     """获取并校验当前已登录用户。
@@ -51,7 +53,7 @@ async def get_current_user(
     return auth_service.auth_get_current_user(db, final_token)
 
 
-def RoleRequired(allowed_roles: List[str]):
+def RoleRequired(allowed_roles: list[str]):
     """基于角色的 RBAC 校验卫兵。
 
     直接从令牌载荷中提取角色信息，减少数据库查询。
@@ -64,8 +66,8 @@ def RoleRequired(allowed_roles: List[str]):
         依赖注入函数
     """
     async def role_checker(
-        token: Optional[str] = Query(None),
-        auth_header: Optional[str] = Depends(optional_oauth2_scheme),
+        token: str | None = Query(None),
+        auth_header: str | None = Depends(optional_oauth2_scheme),
         db: Session = Depends(get_auth_db)
     ) -> User:
         final_token = token or auth_header
@@ -94,7 +96,7 @@ def RoleRequired(allowed_roles: List[str]):
     return role_checker
 
 
-def PermissionRequired(required_perms: List[str]):
+def PermissionRequired(required_perms: list[str]):
     """基于权限标识的 RBAC 校验卫兵 (RBAC 2.0)。
 
     校验用户是否拥有指定的权限点（权限点已在登录时注入 JWT 载荷）。
@@ -106,8 +108,8 @@ def PermissionRequired(required_perms: List[str]):
         依赖注入函数
     """
     async def permission_checker(
-        token: Optional[str] = Query(None),
-        auth_header: Optional[str] = Depends(optional_oauth2_scheme),
+        token: str | None = Query(None),
+        auth_header: str | None = Depends(optional_oauth2_scheme),
         db: Session = Depends(get_auth_db)
     ) -> User:
         final_token = token or auth_header
@@ -150,17 +152,17 @@ def PermissionRequired(required_perms: List[str]):
     return permission_checker
 
 
-def check_permission(required_roles: List[str]):
+def check_permission(required_roles: list[str]):
     """[向下兼容] 旧版权限校验，使用 RoleRequired。"""
     return RoleRequired(required_roles)
 
 
-def get_user_data_scope_ids(user: User) -> List[str]:
+def get_user_data_scope_ids(user: User) -> list[str]:
     """[P4] 获取用户数据权限范围内的所有地点 ID (含子级)。"""
     return security.get_user_data_scope_ids(user)
 
 
-def get_user_org_scope_ids(current_user: User) -> List[str]:
+def get_user_org_scope_ids(current_user: User) -> list[str]:
     """获取用户组织权限范围内的所有部门 ID (支持无限级向下递归)。"""
     db = AuthSessionLocal()
     try:
@@ -169,7 +171,7 @@ def get_user_org_scope_ids(current_user: User) -> List[str]:
         db.close()
 
 
-def get_user_permissions(current_user: User) -> List[str]:
+def get_user_permissions(current_user: User) -> list[str]:
     """获取用户所有权限标识 (含角色继承)。"""
     db = AuthSessionLocal()
     try:
@@ -179,9 +181,9 @@ def get_user_permissions(current_user: User) -> List[str]:
 
 
 def filter_issues_by_province(
-    issues: List[Dict[str, Any]],
+    issues: list[dict[str, Any]],
     current_user: User
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """[P4 升级版] 基于 MDM Location 树进行数据权限隔离。
 
     - 全国权限 (Global): user.location 为空 -> 返回全量
@@ -216,9 +218,9 @@ def filter_issues_by_province(
 
 
 def filter_issues_by_privacy(
-    issues: List[Dict[str, Any]],
+    issues: list[dict[str, Any]],
     current_user: User
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """综合维度数据权限隔离（地域 + 组织）。
 
     依据登录用户的 MDM 属性应用双重过滤机制：

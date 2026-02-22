@@ -1,10 +1,11 @@
 
-import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
+import streamlit as st
 from sqlalchemy.sql import text
+
 from dashboard.common.db import get_db_engine
+
 
 st.set_page_config(page_title="Talent Radar", page_icon="[Talent]", layout="wide")
 
@@ -107,7 +108,7 @@ col1, col2 = st.columns([2, 1])
 with col1:
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     st.subheader("Influence Matrix: Collaboration vs Knowledge")
-    
+
     fig = px.scatter(
         filtered_df,
         x="metric_knowledge_domains",
@@ -124,7 +125,7 @@ with col1:
         },
         template="plotly_dark"
     )
-    
+
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
@@ -137,13 +138,13 @@ with col1:
 with col2:
     st.subheader("Leadership Leaderboard")
     top_talents = filtered_df.sort_values('talent_influence_index', ascending=False).head(10)
-    
+
     for _, row in top_talents.iterrows():
         arch_class = "arch-active"
         if row['talent_archetype'] == 'Domain Specialist': arch_class = "arch-specialist"
         elif row['talent_archetype'] == 'Collaborative Leader': arch_class = "arch-leader"
         elif row['talent_archetype'] == 'Reliable Contributor': arch_class = "arch-contributor"
-        
+
         st.markdown(f"""
         <div class="glass-card" style="padding: 12px; margin-bottom: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: start;">
@@ -163,7 +164,7 @@ if not df_risk.empty:
     st.markdown('<div class="glass-card" style="border-top: 2px solid #ef4444;">', unsafe_allow_html=True)
     st.subheader("Critical Knowledge Risks (Bus Factor)")
     st.warning("The following sub-systems are heavily dependent on a single contributor.")
-    
+
     # Simple table for risks
     risk_display = df_risk[['project_id', 'subsystem', 'contributor_count', 'subsystem_ownership_pct', 'knowledge_risk_status']]
     st.table(risk_display.head(10))

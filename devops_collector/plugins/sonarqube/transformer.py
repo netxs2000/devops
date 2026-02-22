@@ -5,12 +5,13 @@
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional
-from devops_collector.core.utils import safe_int, safe_float, parse_iso8601
+from datetime import UTC, datetime
+
 from devops_collector.core.identity_manager import IdentityManager
+from devops_collector.core.utils import parse_iso8601, safe_float, safe_int
 from devops_collector.plugins.sonarqube.client import SonarQubeClient
-from devops_collector.plugins.sonarqube.models import SonarProject, SonarMeasure, SonarIssue
+from devops_collector.plugins.sonarqube.models import SonarIssue, SonarMeasure, SonarProject
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +42,10 @@ class SonarDataTransformer:
     def transform_measures_snapshot(
         self,
         project: SonarProject,
-        measures_data: Dict,
-        gate_status: Dict = None,
-        issue_dist: Dict = None,
-        hotspot_dist: Dict = None,
+        measures_data: dict,
+        gate_status: dict = None,
+        issue_dist: dict = None,
+        hotspot_dist: dict = None,
     ) -> SonarMeasure:
         """解析并创建 Sonar 指标快照模型。
 
@@ -65,7 +66,7 @@ class SonarDataTransformer:
         vul_dist = issue_dist.get("VULNERABILITY", {})
         measure = SonarMeasure(
             project_id=project.id,
-            analysis_date=project.last_analysis_date or datetime.now(timezone.utc),
+            analysis_date=project.last_analysis_date or datetime.now(UTC),
             files=safe_int(measures_data.get("files")),
             lines=safe_int(measures_data.get("lines")),
             ncloc=safe_int(measures_data.get("ncloc")),

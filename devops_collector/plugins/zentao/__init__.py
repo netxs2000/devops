@@ -5,9 +5,11 @@
 本模块在导入时自动完成插件注册。
 """
 from devops_collector.core.registry import PluginRegistry
+
 from .client import ZenTaoClient
-from .worker import ZenTaoWorker
 from .config import get_config
+from .worker import ZenTaoWorker
+
 
 # 自注册
 PluginRegistry.register_client('zentao', ZenTaoClient)

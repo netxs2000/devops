@@ -1,15 +1,29 @@
 """禅道 (ZenTao) 全量数据采集 Worker"""
 import logging
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.orm import Session
-from devops_collector.models.base_models import Organization, User as GlobalUser, IdentityMapping
+
 from devops_collector.core.base_worker import BaseWorker
-from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.core.services import close_current_and_insert_new
+from devops_collector.models.base_models import Organization
+
 # from .client import ZenTaoClient
-from .models import ZenTaoProduct, ZenTaoExecution, ZenTaoIssue, ZenTaoProductPlan, ZenTaoTestCase, ZenTaoTestResult, ZenTaoBuild, ZenTaoRelease, ZenTaoAction
+from .models import (
+    ZenTaoAction,
+    ZenTaoBuild,
+    ZenTaoExecution,
+    ZenTaoIssue,
+    ZenTaoProduct,
+    ZenTaoProductPlan,
+    ZenTaoRelease,
+    ZenTaoTestCase,
+    ZenTaoTestResult,
+)
+
+
 logger = logging.getLogger(__name__)
 
 class ZenTaoWorker(BaseWorker):
@@ -66,11 +80,11 @@ class ZenTaoWorker(BaseWorker):
                 tasks = self.client.get_tasks(exec_item.id)
                 for t_data in tasks:
                     self._sync_task(product.id, exec_item.id, t_data)
-            
+
             actions = self.client.get_actions(product.id)
             for a_data in actions:
                 self._sync_action(product.id, a_data)
-            product.last_synced_at = datetime.now(timezone.utc)
+            product.last_synced_at = datetime.now(UTC)
             product.sync_status = 'COMPLETED'
             self.session.commit()
         except Exception as e:
@@ -78,7 +92,7 @@ class ZenTaoWorker(BaseWorker):
             logger.error(f'Failed to sync ZenTao product {product_id}: {e}')
             raise
 
-    def _sync_product(self, product_id: int) -> Optional[ZenTaoProduct]:
+    def _sync_product(self, product_id: int) -> ZenTaoProduct | None:
         """同步禅道产品的元数据。
         
         Args:
@@ -168,11 +182,11 @@ class ZenTaoWorker(BaseWorker):
         if not issue:
             issue = ZenTaoIssue(id=data['id'], product_id=product_id, type=issue_type)
             self.session.add(issue)
-        
+
         # 统一处理工时数据 (Story/Task 有所不同)
         if issue_type == 'feature':
             issue.estimate = data.get('estimate')  # Story 的预计工时
-        
+
         issue.plan_id = data.get('plan')
         issue.title = data.get('title') or data.get('name')
         issue.status = data.get('status')
@@ -216,28 +230,28 @@ class ZenTaoWorker(BaseWorker):
         if not issue:
             issue = ZenTaoIssue(id=data['id'], product_id=product_id, execution_id=execution_id, type='task')
             self.session.add(issue)
-        
+
         issue.title = data.get('name')
         issue.status = data.get('status')
         issue.priority = data.get('pri')
         issue.task_type = data.get('type')  # devel, design 等
-        
+
         # 工时数据 (FinOps 核心)
         issue.estimate = data.get('estimate')
         issue.consumed = data.get('consumed')
         issue.left = data.get('left')
-        
+
         # 人员映射
         issue.opened_by = data.get('openedBy')
         if issue.opened_by:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', issue.opened_by)
             issue.opened_by_user_id = u.global_user_id
-        
+
         issue.assigned_to = data.get('assignedTo')
         if issue.assigned_to:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', issue.assigned_to)
             issue.assigned_to_user_id = u.global_user_id
-            
+
         # 时间映射
         if data.get('openedDate'):
             try:
@@ -247,7 +261,7 @@ class ZenTaoWorker(BaseWorker):
             try:
                 issue.closed_at = datetime.fromisoformat(data['finishedDate'].replace(' ', 'T'))
             except: pass
-            
+
         issue.raw_data = data
         self.session.flush()
         return issue
@@ -363,22 +377,22 @@ class ZenTaoWorker(BaseWorker):
         if not rel:
             rel = ZenTaoRelease(id=data['id'], product_id=product_id)
             self.session.add(rel)
-        
+
         rel.name = data.get('name')
         if data.get('date'):
             rel.date = datetime.fromisoformat(data['date'].replace(' ', 'T'))
         rel.status = data.get('status')
         rel.build_id = data.get('build')
-        
+
         # 仅同步 API 直接提供的计划关联 (如有)
         if data.get('plan'):
             rel.plan_id = data.get('plan')
-        
+
         rel.opened_by = data.get('openedBy')
         if rel.opened_by:
             u = IdentityManager.get_or_create_user(self.session, 'zentao', rel.opened_by)
             rel.opened_by_user_id = u.global_user_id
-        
+
         rel.raw_data = data
         self.session.flush()
         return rel

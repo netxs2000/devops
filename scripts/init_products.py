@@ -7,19 +7,20 @@
 执行方式:
     python scripts/init_products.py
 """
-import sys
-import os
 import logging
-import uuid
+import sys
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from pathlib import Path
+
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
-from devops_collector.models import Base, Product, Organization, User
+from devops_collector.models import Base, Organization, Product
 from scripts.utils import build_user_indexes, resolve_user
+
 
 # 日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -48,13 +49,13 @@ def init_products():
     """解析数据并初始化产品主数据。"""
     engine = create_engine(settings.database.uri)
     Base.metadata.create_all(engine)
-    
+
     with Session(engine) as session:
         logger.info('开始初始化全量产品目录...')
-        
+
         # 构建用户双索引 (邮箱 + 姓名)
         email_idx, name_idx = build_user_indexes(session)
-        
+
         for p_id, p_name, owner_name, manager_name in PRODUCT_RAW_DATA:
             # 1. 匹配所属部门 ID
             owner_id = f"CTR-{owner_name}"
@@ -62,10 +63,10 @@ def init_products():
             if not org:
                 logger.warning(f"产品 {p_name} 的归属部门 {owner_name} 不存在。")
                 owner_id = None
-            
+
             # 2. 查找负责人 (通过姓名或邮箱匹配)
             mgr_user_id = resolve_user(manager_name, email_idx, name_idx, '产品负责人')
-            
+
             # 3. 创建/更新产品
             existing = session.query(Product).filter_by(product_id=p_id).first()
             if not existing:
@@ -87,7 +88,7 @@ def init_products():
                 if mgr_user_id:
                     existing.product_manager_id = mgr_user_id
                 logger.info(f"已更新产品: {p_name}")
-        
+
         session.commit()
         logger.info('产品目录初始化完成！')
 

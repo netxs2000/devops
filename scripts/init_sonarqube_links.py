@@ -1,10 +1,13 @@
 import csv
-import os
 import logging
+import os
+
 from sqlalchemy.orm import Session
+
+from devops_collector.models.base_models import Product, ProjectMaster
 from devops_collector.models.database import SessionLocal
 from devops_collector.plugins.sonarqube.models import SonarProject
-from devops_collector.models.base_models import ProjectMaster, Product
+
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,7 +24,7 @@ def init_sonarqube_links():
     session: Session = SessionLocal()
     try:
         logger.info("开始同步 SonarQube 项目关联...")
-        with open(SONAR_MAP_CSV, mode='r', encoding='utf-8-sig') as f:
+        with open(SONAR_MAP_CSV, encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             for row in reader:
                 sonar_key = row.get('sonar_project_key', '').strip()

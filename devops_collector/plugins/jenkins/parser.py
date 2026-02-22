@@ -3,15 +3,18 @@
 负责将 Jenkins API 返回的 testReport JSON 解析为系统的 JenkinsTestExecution 模型。
 """
 import logging
-from typing import Dict, Any, Optional
+from typing import Any
+
 from devops_collector.models.base_models import JenkinsTestExecution
+
+
 logger = logging.getLogger(__name__)
 
 class ReportParser:
     """Jenkins 测试报告解析器。"""
 
     @staticmethod
-    def parse_jenkins_test_report(project_id: Optional[int], build_id: str, report_data: Dict[str, Any], job_name: str='') -> Optional[JenkinsTestExecution]:
+    def parse_jenkins_test_report(project_id: int | None, build_id: str, report_data: dict[str, Any], job_name: str='') -> JenkinsTestExecution | None:
         """将 Jenkins testReport 转换为 JenkinsTestExecution。
         
         Args:

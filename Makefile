@@ -212,6 +212,18 @@ fmt: ## [本地] 代码格式化 (black)
 	@echo "$(GREEN)Formatting code with black...$(RESET)"
 	black devops_collector/ devops_portal/ tests/ scripts/
 
+ruff-check: ## [实验] 使用 Ruff 进行代码质量检查
+	@echo "$(GREEN)Running Ruff check...$(RESET)"
+	ruff check devops_collector/ devops_portal/ tests/ scripts/
+
+ruff-fmt: ## [实验] 使用 Ruff 进行代码格式化
+	@echo "$(GREEN)Formatting code with Ruff...$(RESET)"
+	ruff format devops_collector/ devops_portal/ tests/ scripts/
+
+ruff-fix: ## [实验] 使用 Ruff 自动修复 (仅限 Import 排序)
+	@echo "$(GREEN)Running Ruff check with --select I --fix...$(RESET)"
+	ruff check --select I --fix devops_collector/ devops_portal/ tests/ scripts/
+
 diagnose: ## [本地] 系统综合诊断 (API, DB, Config)
 	@echo "$(GREEN)Running system diagnosis...$(RESET)"
 	python scripts/sys_diagnose.py

@@ -4,10 +4,14 @@
 
 队列名称: gitlab_tasks
 """
-import pika
 import json
 import logging
+
+import pika
+
 from .config import Config
+
+
 logger = logging.getLogger(__name__)
 
 class MessageQueue:

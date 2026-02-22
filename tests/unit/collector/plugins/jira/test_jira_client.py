@@ -1,7 +1,9 @@
 """TODO: Add module description."""
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from devops_collector.plugins.jira.client import JiraClient
+
 
 class TestJiraClient(unittest.TestCase):
     '''"""TODO: Add class description."""'''

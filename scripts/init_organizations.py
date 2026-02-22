@@ -4,20 +4,21 @@
 执行方式:
     python scripts/init_organizations.py
 """
-import sys
-import os
-import logging
-import uuid
 import csv
+import logging
+import sys
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from pathlib import Path
+
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
-from devops_collector.models import Base, Organization, User
+from devops_collector.models import Base, Organization
 from scripts.utils import build_user_indexes, resolve_user
+
 
 # 日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -45,7 +46,7 @@ def init_organizations_from_csv(session: Session):
         session.flush()
         logger.info(f"创建公司根节点: {root_id}")
 
-    with open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
+    with open(CSV_FILE, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             system = row.get('体系', '').strip()

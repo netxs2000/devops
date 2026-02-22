@@ -1,7 +1,10 @@
 
-from dagster import asset, AssetIn
-from scripts.executive_audit_report import ExecutiveAuditBot
 import logging
+
+from dagster import AssetIn, asset
+
+from scripts.executive_audit_report import ExecutiveAuditBot
+
 
 logger = logging.getLogger(__name__)
 

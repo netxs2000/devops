@@ -1,15 +1,19 @@
 """Jira 数据采集 Worker"""
 import logging
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.orm import Session
-from devops_collector.models.base_models import Organization, User as GlobalUser, TraceabilityLink
+
 from devops_collector.core.base_worker import BaseWorker
-from devops_collector.core.registry import PluginRegistry
-# from .client import JiraClient
-from .models import JiraProject, JiraBoard, JiraSprint, JiraIssue, JiraIssueHistory
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.core.services import close_current_and_insert_new
+from devops_collector.models.base_models import Organization, TraceabilityLink
+
+# from .client import JiraClient
+from .models import JiraBoard, JiraIssue, JiraIssueHistory, JiraProject, JiraSprint
+
+
 logger = logging.getLogger(__name__)
 
 class JiraWorker(BaseWorker):
@@ -55,7 +59,7 @@ Raises:
             issues = self.client.get_issues(jql)
             for i_data in issues:
                 self._sync_issue(project, i_data)
-            project.last_synced_at = datetime.now(timezone.utc)
+            project.last_synced_at = datetime.now(UTC)
             project.sync_status = 'COMPLETED'
             self.session.commit()
         except Exception as e:
@@ -63,7 +67,7 @@ Raises:
             logger.error(f'Failed to sync Jira project {project_key}: {e}')
             raise
 
-    def _sync_project(self, project_key: str) -> Optional[JiraProject]:
+    def _sync_project(self, project_key: str) -> JiraProject | None:
         """同步项目元数据。"""
         project = self.session.query(JiraProject).filter_by(key=project_key).first()
         if not project:
@@ -193,7 +197,7 @@ Raises:
                     self.session.add(h_record)
         self.session.flush()
 
-    def _sync_issue_links(self, issue: JiraIssue, links: List[Dict[str, Any]]) -> None:
+    def _sync_issue_links(self, issue: JiraIssue, links: list[dict[str, Any]]) -> None:
         """同步 Jira 问题的链路关系 (依赖分析)。
         
         Args:

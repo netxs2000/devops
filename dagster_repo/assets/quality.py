@@ -1,9 +1,11 @@
 """TODO: Add module description."""
-import pandas as pd
 import great_expectations as gx
-from dagster import asset_check, AssetCheckResult, AssetKey, Definitions, load_assets_from_modules
-from dagster_repo.resources import DatabaseResource
+import pandas as pd
 import sqlalchemy as sa
+from dagster import AssetCheckResult, AssetKey, asset_check
+
+from dagster_repo.resources import DatabaseResource
+
 
 @asset_check(asset=AssetKey(['devops_dbt_assets', 'fct_developer_activity_profile']), description='Check for non-null user_id and reasonable impact scores')
 def check_developer_profile(db: DatabaseResource):

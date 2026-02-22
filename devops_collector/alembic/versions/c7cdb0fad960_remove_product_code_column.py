@@ -5,17 +5,17 @@ Revises: 15670218bb0d
 Create Date: 2026-02-02 18:27:18.363050
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 
 # revision identifiers, used by Alembic.
 revision: str = 'c7cdb0fad960'
-down_revision: Union[str, None] = '15670218bb0d'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = '15670218bb0d'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -27,7 +27,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # 回滚：重新添加 product_code 列（数据会丢失）
-    op.add_column('mdm_product', 
+    op.add_column('mdm_product',
         sa.Column('product_code', sa.String(25), nullable=True)
     )
     # 注意：原有的 NOT NULL 约束和索引不会自动恢复

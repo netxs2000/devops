@@ -1,13 +1,18 @@
 """TODO: Add module description."""
 import unittest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.models.base_models import Base, User, TraceabilityLink
-from devops_collector.plugins.gitlab.models import GitLabProject as Project, GitLabMergeRequest as MergeRequest, GitLabCommit as Commit
-from devops_collector.plugins.jenkins.models import JenkinsJob, JenkinsBuild
-from devops_collector.plugins.jira.models import JiraProject, JiraIssue
-from devops_collector.plugins.zentao.models import ZenTaoProduct, ZenTaoIssue
+
+from devops_collector.models.base_models import Base, TraceabilityLink
+from devops_collector.plugins.gitlab.models import GitLabCommit as Commit
+from devops_collector.plugins.gitlab.models import GitLabMergeRequest as MergeRequest
+from devops_collector.plugins.gitlab.models import GitLabProject as Project
+from devops_collector.plugins.jenkins.models import JenkinsBuild, JenkinsJob
+from devops_collector.plugins.jira.models import JiraIssue, JiraProject
+from devops_collector.plugins.zentao.models import ZenTaoIssue, ZenTaoProduct
+
 
 class TestTraceabilityModels(unittest.TestCase):
     """跨系统链路追踪元数据单元测试。
@@ -72,12 +77,12 @@ class TestTraceabilityModels(unittest.TestCase):
         jira_proj = JiraProject(key='PROJ', name='Project')
         self.session.add(jira_proj)
         self.session.flush()
-        jira_issue = JiraIssue(id=201, key='PROJ-201', project_id=jira_proj.id, first_commit_sha='sha999', first_fix_date=datetime.now(timezone.utc))
+        jira_issue = JiraIssue(id=201, key='PROJ-201', project_id=jira_proj.id, first_commit_sha='sha999', first_fix_date=datetime.now(UTC))
         self.session.add(jira_issue)
         zt_prod = ZenTaoProduct(id=301, name='ZT Product')
         self.session.add(zt_prod)
         self.session.flush()
-        zt_issue = ZenTaoIssue(id=401, product_id=zt_prod.id, title='Fixed bug', first_commit_sha='sha888', first_fix_date=datetime.now(timezone.utc))
+        zt_issue = ZenTaoIssue(id=401, product_id=zt_prod.id, title='Fixed bug', first_commit_sha='sha888', first_fix_date=datetime.now(UTC))
         self.session.add(zt_issue)
         self.session.commit()
         saved_jira = self.session.query(JiraIssue).filter_by(id=201).first()

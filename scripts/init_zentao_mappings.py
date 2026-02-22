@@ -13,13 +13,15 @@ import os
 import sys
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
+
 
 # 添加项目根目录到路径
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
-from devops_collector.models import Base, User, IdentityMapping
+from devops_collector.models import IdentityMapping, User
+
 
 # 日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -32,34 +34,34 @@ def init_zentao_mappings():
     engine = create_engine(settings.database.uri)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
-    
+
     try:
         if not os.path.exists(CSV_FILE):
             logger.error(f"找不到禅道用户 CSV 文件: {CSV_FILE}")
             return
 
         logger.info('开始同步禅道身份映射数据...')
-        
-        with open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
+
+        with open(CSV_FILE, encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             count = 0
-            
+
             for row in reader:
                 employee_id = row.get('工号', '').strip()
                 full_name = row.get('姓名', '').strip()
                 email = row.get('邮箱', '').strip()
                 account = email.split('@')[0] if email else None # 禅道账号通常是邮箱前缀
-                
+
                 if not employee_id and not email:
                     continue
 
                 user = None
                 match_method = None
-                
+
                 # 1. 优先通过工号匹配 (最高优先级)
                 if employee_id:
                     user = session.query(User).filter(
-                        User.employee_id == employee_id, 
+                        User.employee_id == employee_id,
                         User.is_current == True
                     ).first()
                     if user:
@@ -68,11 +70,11 @@ def init_zentao_mappings():
                         if email and user.primary_email and email.lower() != user.primary_email:
                             logger.warning(f"禅道用户 '{full_name}'({employee_id}) 邮箱不一致: "
                                          f"禅道={email}, 主数据={user.primary_email}")
-                
+
                 # 2. 其次通过 Email 匹配
                 if not user and email:
                     user = session.query(User).filter(
-                        User.primary_email == email.lower(), 
+                        User.primary_email == email.lower(),
                         User.is_current == True
                     ).first()
                     if user:
@@ -89,7 +91,7 @@ def init_zentao_mappings():
                 # 3. 创建映射记录
                 # 禅道中外部系统账号通常标识为邮箱前缀
                 external_id = account or email.lower()
-                
+
                 mapping = session.query(IdentityMapping).filter_by(
                     source_system='zentao',
                     external_user_id=external_id

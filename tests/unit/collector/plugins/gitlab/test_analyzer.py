@@ -1,6 +1,8 @@
 """TODO: Add module description."""
 import unittest
+
 from devops_collector.core.algorithms import CodeMetrics as DiffAnalyzer
+
 
 class TestDiffAnalyzer(unittest.TestCase):
     """测试代码差异分析器与文件分类逻辑。"""

@@ -1,6 +1,7 @@
 """GitLab API 客户端"""
 
-from typing import List, Dict, Optional, Any, Generator
+from collections.abc import Generator
+
 from devops_collector.core.base_client import BaseClient
 
 
@@ -61,8 +62,8 @@ class GitLabClient(BaseClient):
         return self._get(f"groups/{group_id_or_path}").json()
 
     def get_project_commits(
-        self, project_id: int, since: Optional[str] = None, start_page: int = 1, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+        self, project_id: int, since: str | None = None, start_page: int = 1, per_page: int = 100
+    ) -> Generator[dict, None, None]:
         """获取项目的提交记录。
 
         Args:
@@ -87,7 +88,7 @@ class GitLabClient(BaseClient):
                 yield item
             page += 1
 
-    def get_commit_diff(self, project_id: int, commit_sha: str) -> List[dict]:
+    def get_commit_diff(self, project_id: int, commit_sha: str) -> list[dict]:
         """获取指定提交的差异 (Diff) 信息。
 
         Args:
@@ -100,8 +101,8 @@ class GitLabClient(BaseClient):
         return self._get(f"projects/{project_id}/repository/commits/{commit_sha}/diff").json()
 
     def get_project_issues(
-        self, project_id: int, since: Optional[str] = None, start_page: int = 1, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+        self, project_id: int, since: str | None = None, start_page: int = 1, per_page: int = 100
+    ) -> Generator[dict, None, None]:
         """获取项目的 Issue 列表。
 
         Args:
@@ -139,8 +140,8 @@ class GitLabClient(BaseClient):
         return self._get(f"projects/{project_id}/issues/{issue_iid}").json()
 
     def get_project_merge_requests(
-        self, project_id: int, since: Optional[str] = None, start_page: int = 1, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+        self, project_id: int, since: str | None = None, start_page: int = 1, per_page: int = 100
+    ) -> Generator[dict, None, None]:
         """获取项目的合并请求 (MR) 列表。
 
         Args:
@@ -167,7 +168,7 @@ class GitLabClient(BaseClient):
 
     def get_project_pipelines(
         self, project_id: int, start_page: int = 1, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取项目的流水线列表。
 
         Args:
@@ -191,7 +192,7 @@ class GitLabClient(BaseClient):
 
     def get_project_deployments(
         self, project_id: int, start_page: int = 1, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取项目的部署记录列表。
 
         Args:
@@ -215,7 +216,7 @@ class GitLabClient(BaseClient):
 
     def get_issue_notes(
         self, project_id: int, issue_iid: int, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取 Issue 的评论 (Notes)。
 
         Args:
@@ -239,7 +240,7 @@ class GitLabClient(BaseClient):
 
     def get_mr_notes(
         self, project_id: int, mr_iid: int, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取合并请求的评论 (Notes)。
 
         Args:
@@ -275,7 +276,7 @@ class GitLabClient(BaseClient):
         """
         return self._get(f"projects/{project_id}/merge_requests/{mr_iid}/approvals").json()
 
-    def get_mr_pipelines(self, project_id: int, mr_iid: int) -> List[dict]:
+    def get_mr_pipelines(self, project_id: int, mr_iid: int) -> list[dict]:
         """获取合并请求关联的流水线。
 
         Args:
@@ -287,7 +288,7 @@ class GitLabClient(BaseClient):
         """
         return self._get(f"projects/{project_id}/merge_requests/{mr_iid}/pipelines").json()
 
-    def get_project_tags(self, project_id: int, per_page: int = 100) -> Generator[Dict, None, None]:
+    def get_project_tags(self, project_id: int, per_page: int = 100) -> Generator[dict, None, None]:
         """获取项目的标签 (Tag) 列表。
 
         Args:
@@ -310,7 +311,7 @@ class GitLabClient(BaseClient):
 
     def get_project_branches(
         self, project_id: int, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取项目的分支 (Branch) 列表。
 
         Args:
@@ -333,7 +334,7 @@ class GitLabClient(BaseClient):
 
     def get_project_members(
         self, project_id: int, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取项目的成员列表。
 
         Args:
@@ -356,7 +357,7 @@ class GitLabClient(BaseClient):
 
     def get_project_milestones(
         self, project_id: int, per_page: int = 100
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取项目的里程碑列表。
 
         Args:
@@ -388,7 +389,7 @@ class GitLabClient(BaseClient):
         """
         return self._get(f"users/{user_id}").json()
 
-    def get_count(self, endpoint: str, params: Optional[Dict] = None) -> int:
+    def get_count(self, endpoint: str, params: dict | None = None) -> int:
         """获取指定资源的数量 (通过 x-total 头)。
 
         Args:
@@ -401,7 +402,7 @@ class GitLabClient(BaseClient):
         response = self._get(endpoint, params={**(params or {}), "per_page": 1})
         return int(response.headers.get("x-total", 0))
 
-    def get_group_members(self, group_id: int, per_page: int = 100) -> Generator[Dict, None, None]:
+    def get_group_members(self, group_id: int, per_page: int = 100) -> Generator[dict, None, None]:
         """获取群组的成员列表。
 
         Args:
@@ -422,7 +423,7 @@ class GitLabClient(BaseClient):
                 yield item
             page += 1
 
-    def get_packages(self, project_id: int, per_page: int = 100) -> Generator[Dict, None, None]:
+    def get_packages(self, project_id: int, per_page: int = 100) -> Generator[dict, None, None]:
         """获取项目制品库下的包列表。
 
         Args:
@@ -443,7 +444,7 @@ class GitLabClient(BaseClient):
                 yield item
             page += 1
 
-    def get_package_files(self, project_id: int, package_id: int) -> List[dict]:
+    def get_package_files(self, project_id: int, package_id: int) -> list[dict]:
         """获取包关联的文件列表。
 
         Args:
@@ -455,7 +456,7 @@ class GitLabClient(BaseClient):
         """
         return self._get(f"projects/{project_id}/packages/{package_id}/package_files").json()
 
-    def create_group_label(self, group_id: int, label_data: Dict) -> dict:
+    def create_group_label(self, group_id: int, label_data: dict) -> dict:
         """创建群组标签。
 
         Args:
@@ -467,7 +468,7 @@ class GitLabClient(BaseClient):
         """
         return self._post(f"groups/{group_id}/labels", data=label_data).json()
 
-    def create_project_label(self, project_id: int, label_data: Dict) -> dict:
+    def create_project_label(self, project_id: int, label_data: dict) -> dict:
         """创建项目标签。
 
         Args:
@@ -479,7 +480,7 @@ class GitLabClient(BaseClient):
         """
         return self._post(f"projects/{project_id}/labels", data=label_data).json()
 
-    def add_issue_label(self, project_id: int, issue_iid: int, labels: List[str]) -> dict:
+    def add_issue_label(self, project_id: int, issue_iid: int, labels: list[str]) -> dict:
         """为 Issue 添加标签。
 
         Args:
@@ -511,7 +512,7 @@ class GitLabClient(BaseClient):
 
     def get_issue_state_events(
         self, project_id: int, issue_iid: int
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取 Issue 的状态变更事件。
 
         Args:
@@ -527,7 +528,7 @@ class GitLabClient(BaseClient):
 
     def get_issue_label_events(
         self, project_id: int, issue_iid: int
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取 Issue 的标签变更事件。
 
         Args:
@@ -543,7 +544,7 @@ class GitLabClient(BaseClient):
 
     def get_issue_milestone_events(
         self, project_id: int, issue_iid: int
-    ) -> Generator[Dict, None, None]:
+    ) -> Generator[dict, None, None]:
         """获取 Issue 的里程碑变更事件。
 
         Args:
@@ -557,7 +558,7 @@ class GitLabClient(BaseClient):
             f"projects/{project_id}/issues/{issue_iid}/resource_milestone_events"
         )
 
-    def get_project_wiki_events(self, project_id: int) -> Generator[Dict, None, None]:
+    def get_project_wiki_events(self, project_id: int) -> Generator[dict, None, None]:
         """获取项目的 Wiki 事件。
 
         Args:
@@ -570,7 +571,7 @@ class GitLabClient(BaseClient):
             f"projects/{project_id}/events", params={"target_type": "wiki_page"}
         )
 
-    def get_project_dependencies(self, project_id: int) -> Generator[Dict, None, None]:
+    def get_project_dependencies(self, project_id: int) -> Generator[dict, None, None]:
         """获取项目依赖列表 (需开启 Dependency Scanning)。
 
         Args:
@@ -582,8 +583,8 @@ class GitLabClient(BaseClient):
         return self._get_paged_data(f"projects/{project_id}/dependencies")
 
     def _get_paged_data(
-        self, endpoint: str, params: Optional[Dict] = None
-    ) -> Generator[Dict, None, None]:
+        self, endpoint: str, params: dict | None = None
+    ) -> Generator[dict, None, None]:
         """(内部方法) 处理分页数据获取。
 
         Args:
@@ -607,7 +608,7 @@ class GitLabClient(BaseClient):
                 yield item
             page += 1
 
-    def update_issue(self, project_id: int, issue_iid: int, data: Dict) -> dict:
+    def update_issue(self, project_id: int, issue_iid: int, data: dict) -> dict:
         """更新 Issue 属性 (如里程碑、标题等)。
 
         Args:
@@ -640,7 +641,7 @@ class GitLabClient(BaseClient):
         return self._post(f"projects/{project_id}/repository/tags", data=data).json()
 
     def create_project_release(
-        self, project_id: int, tag_name: str, description: str, milestones: List[str] = None
+        self, project_id: int, tag_name: str, description: str, milestones: list[str] = None
     ) -> dict:
         """创建项目发布 (Release)。
 
@@ -658,7 +659,7 @@ class GitLabClient(BaseClient):
             data["milestones"] = milestones
         return self._post(f"projects/{project_id}/releases", data=data).json()
 
-    def update_project_milestone(self, project_id: int, milestone_id: int, data: Dict) -> dict:
+    def update_project_milestone(self, project_id: int, milestone_id: int, data: dict) -> dict:
         """更新项目里程碑 (如关闭里程碑)。
 
         Args:
@@ -700,7 +701,7 @@ class GitLabClient(BaseClient):
             data["description"] = description
         return self._post(f"projects/{project_id}/milestones", data=data).json()
 
-    def create_issue(self, project_id: int, data: Dict) -> dict:
+    def create_issue(self, project_id: int, data: dict) -> dict:
         """创建 Issue。
 
         Args:
@@ -712,7 +713,7 @@ class GitLabClient(BaseClient):
         """
         return self._post(f"projects/{project_id}/issues", data=data).json()
 
-    def get_file_last_commit(self, project_id: int, file_path: str, ref: str) -> Optional[dict]:
+    def get_file_last_commit(self, project_id: int, file_path: str, ref: str) -> dict | None:
         """获取指定文件在特定 ref 之前的最后一次提交信息。
 
         用于判断文件变更时间间隔，支持 Churn (短期重写) 和 Legacy (老代码) 判定。

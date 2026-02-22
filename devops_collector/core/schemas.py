@@ -3,9 +3,11 @@
 用于对 Raw Data Staging 层提取出的原始 JSON 进行二次校验和结构化。
 提供类型提示、默认值填充以及数据清洗功能。
 """
-from typing import Optional, List, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
 
 class GitLabUserSchema(BaseModel):
     """GitLab 用户原始数据结构校验
@@ -21,9 +23,9 @@ class GitLabUserSchema(BaseModel):
     id: int
     username: str
     name: str
-    email: Optional[str] = None
+    email: str | None = None
     state: str = 'active'
-    skype: Optional[str] = Field(None, alias='skypeid')
+    skype: str | None = Field(None, alias='skypeid')
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 class GitLabMRSchema(BaseModel):
@@ -44,11 +46,11 @@ class GitLabMRSchema(BaseModel):
     iid: int
     project_id: int
     title: str
-    description: Optional[str] = ''
+    description: str | None = ''
     state: str
     author: GitLabUserSchema
     created_at: datetime
-    merged_at: Optional[datetime] = None
+    merged_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
 
     @field_validator('state')
@@ -84,10 +86,10 @@ class StagingDataBundle(BaseModel):
     source: str
     entity_type: str
     external_id: str
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     collected_at: datetime = Field(default_factory=datetime.utcnow)
 
-def validate_gitlab_mr(raw_payload: Dict[str, Any]) -> GitLabMRSchema:
+def validate_gitlab_mr(raw_payload: dict[str, Any]) -> GitLabMRSchema:
     """工具函数：验证并转换 GitLab MR
     
     Args:

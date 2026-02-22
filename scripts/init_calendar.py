@@ -9,15 +9,20 @@
 执行方式:
     python scripts/init_calendar.py
 """
+import logging
 import os
 import sys
-import logging
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta
+
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from devops_collector.config import settings
-from devops_collector.models.base_models import Base, Calendar
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+from devops_collector.config import settings
+from devops_collector.models.base_models import Base, Calendar
+
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 HOLIDAYS_2025 = {date(2025, 1, 1): '元旦', date(2025, 1, 28): '除夕', date(2025, 1, 29): '春节', date(2025, 1, 30): '初二', date(2025, 1, 31): '初三', date(2025, 2, 1): '初四', date(2025, 2, 2): '初五', date(2025, 2, 3): '初六', date(2025, 2, 4): '初七', date(2025, 4, 4): '清明节', date(2025, 4, 5): '清明假期', date(2025, 4, 6): '清明假期', date(2025, 5, 1): '劳动节', date(2025, 5, 2): '劳动假期', date(2025, 5, 3): '劳动假期', date(2025, 5, 4): '劳动假期', date(2025, 5, 5): '劳动假期', date(2025, 5, 31): '端午节', date(2025, 6, 1): '端午假期', date(2025, 6, 2): '端午假期', date(2025, 10, 1): '国庆节', date(2025, 10, 2): '国庆假期', date(2025, 10, 3): '国庆假期', date(2025, 10, 4): '中秋节', date(2025, 10, 5): '国庆假期', date(2025, 10, 6): '国庆假期', date(2025, 10, 7): '国庆假期', date(2025, 10, 8): '国庆假期'}

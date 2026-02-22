@@ -4,13 +4,16 @@
 """
 import uuid
 from datetime import timedelta
+
 import pytest
 from jose import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from devops_collector.auth import auth_service
-from devops_collector.models.base_models import Base, User, UserCredential
 from devops_collector.config import settings
+from devops_collector.models.base_models import Base, User, UserCredential
+
 
 # 使用内存数据库进行单元测试，确保测试环境隔离
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -51,7 +54,7 @@ def test_auth_create_access_token():
     """测试 JWT 访问令牌的生成与解密验证。"""
     data = {"sub": "test@tjhq.com", "user_id": str(uuid.uuid4())}
     token = auth_service.auth_create_access_token(data, expires_delta=timedelta(minutes=15))
-    
+
     # 验证令牌内容是否符合预期
     payload = jwt.decode(token, auth_service.SECRET_KEY, algorithms=[auth_service.ALGORITHM])
     assert payload["sub"] == data["sub"]
@@ -63,7 +66,7 @@ def test_auth_validate_email_domain():
     # 确保配置中有预期的域名（通常由 settings 注入）
     original_domains = settings.auth.allowed_domains
     settings.auth.allowed_domains = ["tjhq.com", "mofit.com.cn"]
-    
+
     try:
         assert auth_service.auth_validate_email_domain("user@tjhq.com") is True
         assert auth_service.auth_validate_email_domain("user@mofit.com.cn") is True
@@ -76,7 +79,7 @@ def test_auth_authenticate_user_success(db_session):
     """测试用户凭据认证成功场景。"""
     email = "auth_unit_test@tjhq.com"
     password = "secure_password"
-    
+
     # 构建测试用户数据
     user_id = uuid.uuid4()
     user = User(
@@ -89,14 +92,14 @@ def test_auth_authenticate_user_success(db_session):
     )
     db_session.add(user)
     db_session.flush()
-    
+
     cred = UserCredential(
         user_id=user_id,
         password_hash=auth_service.auth_get_password_hash(password)
     )
     db_session.add(cred)
     db_session.commit()
-    
+
     # 执行认证并检查结果
     authenticated_user = auth_service.auth_authenticate_user(db_session, email, password)
     assert authenticated_user is not False
@@ -106,10 +109,10 @@ def test_auth_authenticate_user_failure(db_session):
     """测试用户认证失败（用户不存在或密码错误）场景。"""
     email = "fail_test@tjhq.com"
     password = "correct_password"
-    
+
     # 1. 尝试认证不存在的用户
     assert auth_service.auth_authenticate_user(db_session, "nonexistent@tjhq.com", password) is False
-    
+
     # 2. 注册用户但输入错误密码
     user_id = uuid.uuid4()
     user = User(
@@ -121,12 +124,12 @@ def test_auth_authenticate_user_failure(db_session):
     )
     db_session.add(user)
     db_session.flush()
-    
+
     cred = UserCredential(
         user_id=user_id,
         password_hash=auth_service.auth_get_password_hash(password)
     )
     db_session.add(cred)
     db_session.commit()
-    
+
     assert auth_service.auth_authenticate_user(db_session, email, "wrong_password") is False

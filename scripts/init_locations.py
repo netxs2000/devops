@@ -6,17 +6,20 @@
 数据来源参考: ISO 3166-2:CN 及常见业务定义。
 对应 GitLab Template: .gitlab/issue_templates/Bug.md 中的 `province::xxx` 标签。
 """
-import sys
 import logging
+import sys
 from pathlib import Path
+
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from config import Config
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.models.base_models import Base, Location
-from config import Config
+
+from devops_collector.models.base_models import Location
+
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -42,7 +45,7 @@ def init_locations():
             "region": "全国",
             "parent_id": None
         },
-        
+
         # --- 直辖市 ---
         {"code": "beijing", "name": "北京市", "short": "北京", "region": "华北"},
         {"code": "shanghai", "name": "上海市", "short": "上海", "region": "华东"},

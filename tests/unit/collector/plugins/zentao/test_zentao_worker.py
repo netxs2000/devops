@@ -1,11 +1,19 @@
 """TODO: Add module description."""
 import unittest
 from unittest.mock import MagicMock
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from devops_collector.models.base_models import Base
+from devops_collector.plugins.zentao.models import (
+    ZenTaoAction,
+    ZenTaoIssue,
+    ZenTaoProduct,
+    ZenTaoProductPlan,
+)
 from devops_collector.plugins.zentao.worker import ZenTaoWorker
-from devops_collector.plugins.zentao.models import ZenTaoProduct, ZenTaoIssue, ZenTaoProductPlan, ZenTaoAction
+
 
 class TestZenTaoWorker(unittest.TestCase):
     '''"""TODO: Add class description."""'''

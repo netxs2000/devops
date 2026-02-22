@@ -2,10 +2,10 @@
 
 从环境变量中读取 GitLab 相关配置。
 """
-from typing import Dict, Any
+from typing import Any
 
 
-def get_config() -> Dict[str, Any]:
+def get_config() -> dict[str, Any]:
     """获取 GitLab 插件的配置。
     
     Returns:
@@ -22,7 +22,7 @@ def get_config() -> Dict[str, Any]:
         }
     """
     from devops_collector.config import Config
-    
+
     return {
         'client': {
             'url': Config.GITLAB_URL,

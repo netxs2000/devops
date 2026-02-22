@@ -1,8 +1,10 @@
 """TODO: Add module description."""
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 from utils import run_query, set_page_config
+
+
 set_page_config()
 st.title('📜 统一活动流引擎 (Unified Activities)')
 st.markdown('---')

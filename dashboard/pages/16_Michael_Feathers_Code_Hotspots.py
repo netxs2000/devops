@@ -1,9 +1,11 @@
 
-import streamlit as st
 import pandas as pd
 import plotly.express as px
+import streamlit as st
 from sqlalchemy import text
+
 from dashboard.common.db import get_db_engine
+
 
 st.set_page_config(page_title="Code Hotspots Radar", page_icon="[Heat]", layout="wide")
 
@@ -96,7 +98,7 @@ col_main, col_list = st.columns([2, 1])
 with col_main:
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     st.subheader("Complexity vs Churn Quadrant")
-    
+
     fig = px.scatter(
         filtered_df,
         x="estimated_loc",
@@ -116,21 +118,21 @@ with col_main:
         log_x=True,
         template="plotly_dark"
     )
-    
+
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)'),
         yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)'),
     )
-    
+
     st.plotly_chart(fig, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_list:
     st.subheader("Critical Hotspots")
     hotspots = filtered_df[filtered_df['risk_zone'] == 'RED_ZONE'].sort_values('risk_factor', ascending=False).head(15)
-    
+
     if not hotspots.empty:
         for _, row in hotspots.iterrows():
             tag_class = "tag-red"

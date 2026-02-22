@@ -1,11 +1,13 @@
 """Unit tests for GitLab Test Management Service and Parser."""
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
-from devops_collector.plugins.gitlab.test_management_service import TestManagementService
-from devops_collector.plugins.gitlab.parser import GitLabTestParser
-from devops_collector.plugins.gitlab.models import GitLabProject
+
 from devops_collector.models.base_models import ProjectProductRelation
-from devops_portal import schemas
+from devops_collector.plugins.gitlab.models import GitLabProject
+from devops_collector.plugins.gitlab.parser import GitLabTestParser
+from devops_collector.plugins.gitlab.test_management_service import TestManagementService
+
 
 @pytest.fixture
 def mock_client():
@@ -74,17 +76,17 @@ class TestTestManagementService:
         project = GitLabProject(id=1, name="Test Project")
         db_session.add(project)
         db_session.commit()
-        
+
         # Setup Mock Client
         mock_client.get_project_issues.return_value = [
             {
-                'id': 101, 'iid': 1, 'title': 'Test Case 1', 
+                'id': 101, 'iid': 1, 'title': 'Test Case 1',
                 'labels': ['type::test', 'status::passed'],
                 'description': '## 📝 测试用例详情\n- **用例优先级**: [P1]\n- **测试类型**: [Functional]\n',
                 'web_url': 'http://gitlab/1'
             }
         ]
-        
+
         cases = await service.get_test_cases(db_session, 1, None)
         assert len(cases) == 1
         assert cases[0].title == "Test Case 1"
@@ -95,13 +97,13 @@ class TestTestManagementService:
     async def test_create_test_case_should_call_client(self, service, mock_client):
         """Test creating a new test case in GitLab."""
         mock_client.create_issue.return_value = {'iid': 55}
-        
+
         steps = [{"action": "Click Button", "expected": "Success"}]
         await service.create_test_case(
             project_id=1, title="New TC", priority="P2", test_type="UI",
             pre_conditions=["Init state"], steps=steps
         )
-        
+
         mock_client.create_issue.assert_called_once()
         args, kwargs = mock_client.create_issue.call_args
         assert args[0] == 1 # project_id
@@ -115,13 +117,13 @@ class TestTestManagementService:
     async def test_execute_test_case_should_update_gitlab(self, service, mock_client):
         """Test executing a test case and recording the result in GitLab."""
         mock_client.get_project_issue.return_value = {'labels': ['type::test', 'status::pending']}
-        
+
         success = await service.execute_test_case(1, 10, "passed", "Tester Alpha")
-        
+
         assert success is True
         mock_client.update_issue.assert_called_once()
         mock_client.add_issue_note.assert_called_once()
-        
+
         # Verify labels updated
         update_args = mock_client.update_issue.call_args[0]
         # In service.py: self.client.update_issue(project_id, issue_iid, {'labels': ','.join(new_labels)})
@@ -136,10 +138,10 @@ class TestTestManagementService:
         rel = ProjectProductRelation(product_id="PROD1", project_id=1001, org_id="ORG1")
         db_session.add_all([p1, rel])
         db_session.commit()
-        
+
         # Mock client for get_test_cases (called internally)
         mock_client.get_project_issues.return_value = []
-        
+
         cases = await service.get_aggregated_test_cases(db_session, None, product_id="PROD1")
         assert isinstance(cases, list)
         mock_client.get_project_issues.assert_called_with(1)
@@ -153,23 +155,23 @@ class TestTestManagementService:
             'labels': ['type::requirement', 'review-state::approved'],
             'description': 'Acceptance Criteria'
         }
-        
+
         # Mock multiple issues in project, one linked to this requirement
         mock_client.get_project_issues.return_value = [
             {
-                'id': 101, 'iid': 1, 'title': 'Linked Test', 
+                'id': 101, 'iid': 1, 'title': 'Linked Test',
                 'labels': ['type::test'],
                 'description': '关联需求]: # 2\n## 📝 测试用例详情\n- **用例优先级**: [P1]\n- **测试类型**: [UI]',
                 'web_url': 'http://gitlab/1'
             },
             {
-                'id': 102, 'iid': 3, 'title': 'Unlinked Test', 
+                'id': 102, 'iid': 3, 'title': 'Unlinked Test',
                 'labels': ['type::test'],
                 'description': 'Other desc',
                 'web_url': 'http://gitlab/3'
             }
         ]
-        
+
         detail = await service.get_requirement_detail(1, 2)
         assert detail is not None
         assert detail.iid == 2
@@ -180,12 +182,12 @@ class TestTestManagementService:
     async def test_batch_import_test_cases_should_work(self, service, mock_client):
         """Test batch importing multiple test cases."""
         mock_client.create_issue.side_effect = [{'iid': 10}, {'iid': 11}]
-        
+
         items = [
             {'title': 'T1', 'priority': 'P1', 'test_type': 'A', 'pre_conditions': [], 'steps': []},
             {'title': 'T2', 'priority': 'P2', 'test_type': 'B', 'pre_conditions': [], 'steps': []}
         ]
-        
+
         result = await service.batch_import_test_cases(1, items)
         assert result['imported_count'] == 2
         assert 10 in result['iids']
@@ -199,7 +201,7 @@ class TestTestManagementService:
             {'state': 'opened'},
             {'state': 'closed'}
         ]
-        
+
         stats = await service.get_mr_summary_stats(1)
         assert stats['total_count'] == 3
         assert stats['merged_count'] == 1

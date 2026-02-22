@@ -1,18 +1,20 @@
 """Service Desk Router: Handles business user tickets and interactions."""
 import logging
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Body
+
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
-from devops_collector.models.base_models import User, ProjectMaster, IdentityMapping
-from devops_portal import schemas
+
 from devops_collector.auth.auth_database import get_auth_db
-from devops_portal.dependencies import get_current_user, PermissionRequired
-from devops_collector.plugins.gitlab.service_desk_service import ServiceDeskService
-from devops_collector.plugins.gitlab.test_management_service import TestManagementService as TestingService
-from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.auth.auth_dependency import get_user_gitlab_client
-from devops_collector.core.security import apply_plugin_privacy_filter
-from devops_collector.config import settings
+from devops_collector.models.base_models import IdentityMapping, ProjectMaster, User
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+from devops_collector.plugins.gitlab.service_desk_service import ServiceDeskService
+from devops_collector.plugins.gitlab.test_management_service import (
+    TestManagementService as TestingService,
+)
+from devops_portal import schemas
+from devops_portal.dependencies import PermissionRequired, get_current_user
+
 
 router = APIRouter(prefix='/service-desk', tags=['service-desk'])
 logger = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ async def list_business_projects(current_user: User = Depends(get_current_user),
     逻辑：拉取所有生效产品，并确保该产品下至少关联了一个配置了受理仓库的项目。
     """
     from devops_collector.models.base_models import Product, ProjectProductRelation
-    
+
     # 查找所有已建立关联且项目有受理仓库的产品
     products = db.query(Product).join(
         ProjectProductRelation, Product.product_id == ProjectProductRelation.product_id
@@ -35,7 +37,7 @@ async def list_business_projects(current_user: User = Depends(get_current_user),
         ProjectMaster.is_current.is_(True),
         ProjectMaster.lead_repo_id.is_not(None)
     ).distinct().all()
-    
+
     # 如果没有配置了受理中心的产品，则降级返回所有产品（为了让下拉框不为空，方便后期配置）
     if not products:
         products = db.query(Product).filter(Product.is_current.is_(True)).all()
@@ -45,8 +47,8 @@ async def list_business_projects(current_user: User = Depends(get_current_user),
 
 @router.post('/upload')
 async def upload_service_desk_attachment(
-    mdm_id: str, 
-    file: UploadFile = File(...), 
+    mdm_id: str,
+    file: UploadFile = File(...),
     db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client)
 ):
@@ -55,14 +57,14 @@ async def upload_service_desk_attachment(
         mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == mdm_id).first()
         if not mdm_p or not mdm_p.lead_repo_id:
             raise HTTPException(status_code=400, detail='该项目未配置受理仓库')
-        
+
         project = client.get_project(mdm_p.lead_repo_id)
         if not project:
             raise HTTPException(status_code=404, detail='Lead project repo not found')
-        
+
         content = await file.read()
         uploaded_file = client._post(
-            f'projects/{mdm_p.lead_repo_id}/uploads', 
+            f'projects/{mdm_p.lead_repo_id}/uploads',
             files={'file': (file.filename, content)}
         ).json()
         return {'markdown': uploaded_file.get('markdown'), 'url': uploaded_file.get('url')}
@@ -74,14 +76,14 @@ async def upload_service_desk_attachment(
 
 @router.post('/submit-bug')
 async def submit_bug_via_service_desk(
-    mdm_id: str, 
-    data: schemas.ServiceDeskBugSubmit, 
-    current_user = Depends(get_current_user), 
+    mdm_id: str,
+    data: schemas.ServiceDeskBugSubmit,
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client)
 ):
     """【三层映射】通过产品 ID 查找到归属项目，并通过其受理中心提交 Bug。"""
-    from devops_collector.models.base_models import Product, ProjectProductRelation
+    from devops_collector.models.base_models import ProjectProductRelation
     try:
         # 1. 尝试找到关联该产品且配置了受理仓库的项目
         mdm_p = db.query(ProjectMaster).join(
@@ -97,23 +99,23 @@ async def submit_bug_via_service_desk(
             # 记录详细日志以便排查
             logger.error(f"Submission failed: Product {mdm_id} has no lead_repo configured.")
             raise HTTPException(status_code=400, detail='该业务系统当前未配置线上受理中心，请通过线下渠道联系 RD 负责人或联系管理员。')
-        
+
         service = ServiceDeskService(client)
         ticket = await service.create_ticket(
-            db=db, 
-            project_id=mdm_p.lead_repo_id, 
-            title=f'[{mdm_p.project_name}] {data.title}', 
-            description=data.actual_result, 
-            issue_type='bug', 
-            requester=current_user, 
+            db=db,
+            project_id=mdm_p.lead_repo_id,
+            title=f'[{mdm_p.project_name}] {data.title}',
+            description=data.actual_result,
+            issue_type='bug',
+            requester=current_user,
             attachments=data.attachments,
             bug_category=data.bug_category
         )
         if not ticket:
             raise HTTPException(status_code=500, detail='Failed to create ticket')
         return {
-            'status': 'success', 
-            'tracking_code': f'BUG-{ticket.id}', 
+            'status': 'success',
+            'tracking_code': f'BUG-{ticket.id}',
             'message': '缺陷已提交至统一受理仓，等待研发分拣！'
         }
     except HTTPException:
@@ -124,14 +126,14 @@ async def submit_bug_via_service_desk(
 
 @router.post('/submit-requirement')
 async def submit_requirement_via_service_desk(
-    mdm_id: str, 
-    data: schemas.ServiceDeskRequirementSubmit, 
-    current_user = Depends(get_current_user), 
+    mdm_id: str,
+    data: schemas.ServiceDeskRequirementSubmit,
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client)
 ):
     """【三层映射】通过产品 ID 查找到归属项目，并通过其受理中心提交需求。"""
-    from devops_collector.models.base_models import Product, ProjectProductRelation
+    from devops_collector.models.base_models import ProjectProductRelation
     try:
         # 相同逻辑查找归属项目
         mdm_p = db.query(ProjectMaster).join(
@@ -144,23 +146,23 @@ async def submit_requirement_via_service_desk(
 
         if not mdm_p or not mdm_p.lead_repo_id:
             raise HTTPException(status_code=400, detail='该业务系统尚未开通线上需求提报流程（未配置受理中心）。')
-            
+
         service = ServiceDeskService(client)
         ticket = await service.create_ticket(
-            db=db, 
-            project_id=mdm_p.lead_repo_id, 
-            title=f'[{mdm_p.project_name}] {data.title}', 
-            description=data.description, 
-            issue_type='requirement', 
-            requester=current_user, 
+            db=db,
+            project_id=mdm_p.lead_repo_id,
+            title=f'[{mdm_p.project_name}] {data.title}',
+            description=data.description,
+            issue_type='requirement',
+            requester=current_user,
             attachments=data.attachments,
             req_type=data.req_type
         )
         if not ticket:
             raise HTTPException(status_code=500, detail='Failed to create requirement')
         return {
-            'status': 'success', 
-            'tracking_code': f'REQ-{ticket.id}', 
+            'status': 'success',
+            'tracking_code': f'REQ-{ticket.id}',
             'message': '需求已提报至受理中心，等待研发规划！'
         }
     except HTTPException:
@@ -171,9 +173,9 @@ async def submit_requirement_via_service_desk(
 
 @router.post('/tickets/{iid}/reject')
 async def reject_ticket(
-    iid: int, 
-    project_id: int = Body(..., embed=True), 
-    reason: str = Body(..., embed=True), 
+    iid: int,
+    project_id: int = Body(..., embed=True),
+    reason: str = Body(..., embed=True),
     current_user = Depends(get_current_user),
     db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client)
@@ -182,9 +184,9 @@ async def reject_ticket(
     try:
         service = TestingService(session=db, client=client)
         success = await service.reject_ticket(
-            project_id=project_id, 
-            ticket_iid=iid, 
-            reason=reason, 
+            project_id=project_id,
+            ticket_iid=iid,
+            reason=reason,
             actor_name=current_user.full_name
         )
         if not success:
@@ -195,12 +197,12 @@ async def reject_ticket(
     except Exception as e:
         logger.error('Reject ticket failed: %s', e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-        
+
 # Note: I'll replace the original reject_ticket with this one in the file writing step.
 
 @router.get('/tickets')
 async def list_service_desk_tickets(
-    current_user: User = Depends(get_current_user), 
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_auth_db)
 ):
     """基于数据库查询 Service Desk 工单列表 (已实现部门隔离)。"""
@@ -208,12 +210,12 @@ async def list_service_desk_tickets(
     tickets = service.get_user_tickets(db, current_user)
     return [
         {
-            'id': t.id, 
-            'title': t.title, 
-            'status': t.status, 
-            'issue_type': t.issue_type, 
-            'origin_dept_name': t.origin_dept_name, 
-            'target_dept_name': t.target_dept_name, 
+            'id': t.id,
+            'title': t.title,
+            'status': t.status,
+            'issue_type': t.issue_type,
+            'origin_dept_name': t.origin_dept_name,
+            'target_dept_name': t.target_dept_name,
             'created_at': t.created_at.isoformat()
         } for t in tickets
     ]
@@ -229,17 +231,17 @@ async def track_service_desk_ticket(ticket_id: int, db: Session = Depends(get_au
 
 @router.patch('/tickets/{ticket_id}/status')
 async def update_service_desk_ticket_status(
-    ticket_id: int, 
-    new_status: str, 
-    current_user = Depends(get_current_user), 
+    ticket_id: int,
+    new_status: str,
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_auth_db)
 ):
     """更新工单状态 (已解耦重构)。"""
     service = ServiceDeskService()
     success = await service.update_ticket_status(
-        db=db, 
-        ticket_id=ticket_id, 
-        new_status=new_status, 
+        db=db,
+        ticket_id=ticket_id,
+        new_status=new_status,
         operator_name=current_user.full_name
     )
     if not success:
@@ -248,7 +250,7 @@ async def update_service_desk_ticket_status(
 
 @router.get('/my-tickets')
 async def get_my_tickets(
-    current_user = Depends(get_current_user), 
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_auth_db)
 ):
     """获取当前用户创建的所有 Service Desk 工单。"""
@@ -258,10 +260,10 @@ async def get_my_tickets(
     my_tickets = [t for t in tickets if t.requester_email == my_email]
     return [
         {
-            'id': t.id, 
-            'title': t.title, 
-            'status': t.status, 
-            'issue_type': t.issue_type, 
+            'id': t.id,
+            'title': t.title,
+            'status': t.status,
+            'issue_type': t.issue_type,
             'created_at': t.created_at.isoformat()
         } for t in my_tickets
     ]
@@ -270,13 +272,13 @@ async def get_my_tickets(
 
 @router.get('/admin/all-users')
 async def list_all_users_for_admin(
-    status: Optional[str] = None,
+    status: str | None = None,
     admin_user: User = Depends(PermissionRequired(['USER:MANAGE'])),
     db: Session = Depends(get_auth_db)
 ):
     """[管理后台] 获取所有用户申请记录及统计信息。"""
     # 已通过 PermissionRequired 校验权限
-    
+
     query = db.query(User).filter(User.is_current == True)
     if status == 'pending':
         query = query.filter(User.is_active == False, User.is_survivor == True) # survivor and inactive means pending
@@ -286,7 +288,7 @@ async def list_all_users_for_admin(
         query = query.filter(User.is_active == False, User.is_survivor == False) # not active and not survivor means rejected
 
     users = query.all()
-    
+
     # 获取统计信息
     total = db.query(User).filter(User.is_current == True).count()
     pending = db.query(User).filter(User.is_current == True, User.is_active == False, User.is_survivor == True).count()
@@ -298,7 +300,7 @@ async def list_all_users_for_admin(
         u_status = 'approved' if u.is_active else ('pending' if u.is_survivor else 'rejected')
         # 获取关联的 GitLab ID
         gitlab_mapping = db.query(IdentityMapping).filter(IdentityMapping.global_user_id == u.global_user_id, IdentityMapping.source_system == 'gitlab').first()
-        
+
         results.append({
             'name': u.full_name,
             'email': u.primary_email,
@@ -320,27 +322,27 @@ async def list_all_users_for_admin(
 
 @router.post('/admin/approve-user')
 async def approve_user_application(
-    email: str, 
-    approved: bool, 
+    email: str,
+    approved: bool,
     admin_user: User = Depends(PermissionRequired(['USER:MANAGE'])),
-    reject_reason: Optional[str] = None,
-    gitlab_user_id: Optional[str] = None,
+    reject_reason: str | None = None,
+    gitlab_user_id: str | None = None,
     db: Session = Depends(get_auth_db)
 ):
     """[管理后台] 审批用户申请并绑定身份标识。"""
     # 已通过 PermissionRequired 校验权限
-    
+
     user = db.query(User).filter(User.primary_email == email, User.is_current == True).first()
     if not user:
         raise HTTPException(status_code=404, detail='User not found')
-    
+
     if approved:
         user.is_active = True
         user.is_survivor = True
         # 如果提供了 GitLab ID，则创建或更新身份映射
         if gitlab_user_id:
             mapping = db.query(IdentityMapping).filter(
-                IdentityMapping.global_user_id == user.global_user_id, 
+                IdentityMapping.global_user_id == user.global_user_id,
                 IdentityMapping.source_system == 'gitlab'
             ).first()
             if mapping:
@@ -358,6 +360,6 @@ async def approve_user_application(
         user.is_active = False
         user.is_survivor = False # 记录为拒绝状态
         # 实际可以在 User 模型记录 reject_reason，这里简单处理
-    
+
     db.commit()
     return {'status': 'success'}

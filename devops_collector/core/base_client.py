@@ -10,12 +10,15 @@ Typical usage:
         def test_connection(self) -> bool:
             return self._get("health").ok
 """
-import time
 import logging
+import time
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
+from typing import Any
+
 import requests
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+
+
 logger = logging.getLogger(__name__)
 
 class RateLimiter:
@@ -101,7 +104,7 @@ class BaseClient(ABC):
                 return self._get("version").ok
     """
 
-    def __init__(self, base_url: str, auth_headers: Dict[str, str], rate_limit: int=10, timeout: int=30, max_retries: int=5, verify: bool=True):
+    def __init__(self, base_url: str, auth_headers: dict[str, str], rate_limit: int=10, timeout: int=30, max_retries: int=5, verify: bool=True):
         """初始化客户端。
         
         Args:
@@ -120,7 +123,7 @@ class BaseClient(ABC):
         self.verify = verify
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60), retry=retry_if_exception(is_retryable_exception))
-    def _get(self, endpoint: str, params: Optional[Dict[str, Any]]=None) -> requests.Response:
+    def _get(self, endpoint: str, params: dict[str, Any] | None=None) -> requests.Response:
         """发送 GET 请求。
         
         Args:
@@ -152,7 +155,7 @@ class BaseClient(ABC):
             raise
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60), retry=retry_if_exception(is_retryable_exception))
-    def _post(self, endpoint: str, data: Optional[Any]=None, json: Optional[Dict[str, Any]]=None, headers: Optional[Dict[str, str]]=None) -> requests.Response:
+    def _post(self, endpoint: str, data: Any | None=None, json: dict[str, Any] | None=None, headers: dict[str, str] | None=None) -> requests.Response:
         """发送 POST 请求。
         
         Args:
@@ -180,7 +183,7 @@ class BaseClient(ABC):
             raise
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60), retry=retry_if_exception(is_retryable_exception))
-    def _put(self, endpoint: str, data: Optional[Dict[str, Any]]=None) -> requests.Response:
+    def _put(self, endpoint: str, data: dict[str, Any] | None=None) -> requests.Response:
         """发送 PUT 请求。"""
         self.limiter.wait_for_token()
         url = f'{self.base_url}/{endpoint}'

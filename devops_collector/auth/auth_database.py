@@ -5,7 +5,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+
 from devops_collector.config import settings
+
 
 # 创建认证模块专用的数据库引擎
 auth_engine = create_engine(settings.database.uri)

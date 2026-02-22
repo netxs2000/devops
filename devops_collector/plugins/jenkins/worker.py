@@ -3,16 +3,20 @@
 基于 BaseWorker 实现的 Jenkins 数据同步逻辑。
 """
 import logging
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.orm import Session
+
 from devops_collector.core.base_worker import BaseWorker
-from devops_collector.core.registry import PluginRegistry
-# from .client import JenkinsClient
-from .models import JenkinsJob, JenkinsBuild
-from .parser import ReportParser
-from devops_collector.models import User, Organization, SyncLog, JenkinsTestExecution
 from devops_collector.core.identity_manager import IdentityManager
+from devops_collector.models import JenkinsTestExecution
+
+# from .client import JenkinsClient
+from .models import JenkinsBuild, JenkinsJob
+from .parser import ReportParser
+
+
 try:
     from devops_collector.plugins.gitlab.models import GitLabProject
 except ImportError:
@@ -79,7 +83,7 @@ class JenkinsWorker(BaseWorker):
             job.color = j_data.get('color')
             self.save_to_staging(source='jenkins', entity_type='job', external_id=full_name, payload=j_data, schema_version=self.SCHEMA_VERSION)
             job.raw_data = j_data
-            job.last_synced_at = datetime.now(timezone.utc)
+            job.last_synced_at = datetime.now(UTC)
             job.sync_status = 'SUCCESS'
             if GitLabProject and (not job.gitlab_project_id):
                 gitlab_project = self.session.query(GitLabProject).filter((GitLabProject.path_with_namespace == full_name) | (GitLabProject.name == job.name)).first()
@@ -122,7 +126,7 @@ class JenkinsWorker(BaseWorker):
         self.log_success(f'Synced {count} builds for job {job_full_name}')
         return count
 
-    def _transform_build(self, job: JenkinsJob, build: Optional[JenkinsBuild], b_data: dict) -> JenkinsBuild:
+    def _transform_build(self, job: JenkinsJob, build: JenkinsBuild | None, b_data: dict) -> JenkinsBuild:
         """核心解析逻辑：将原始 Jenkins Build JSON 转换为 JenkinsBuild 模型。"""
         build_num = b_data['number']
         if not build:
@@ -137,7 +141,7 @@ class JenkinsWorker(BaseWorker):
         build.building = b_data.get('building', False)
         build.executor = b_data.get('executor')
         if b_data.get('timestamp'):
-            build.timestamp = datetime.fromtimestamp(b_data['timestamp'] / 1000.0, tz=timezone.utc)
+            build.timestamp = datetime.fromtimestamp(b_data['timestamp'] / 1000.0, tz=UTC)
         actions = b_data.get('actions', [])
         for action in actions:
             if action.get('_class') == 'hudson.model.CauseAction':

@@ -1,9 +1,10 @@
-import pytest
-from devops_collector.plugins.jenkins.models import JenkinsJob, JenkinsBuild
-from devops_collector.plugins.jfrog.models import JFrogArtifact
-from devops_collector.plugins.nexus.models import NexusComponent
+
 from devops_collector.models.dependency import DependencyScan
 from devops_collector.plugins.gitlab.models import GitLabProject
+from devops_collector.plugins.jenkins.models import JenkinsBuild, JenkinsJob
+from devops_collector.plugins.jfrog.models import JFrogArtifact
+from devops_collector.plugins.nexus.models import NexusComponent
+
 
 def test_api_root(client):
     """Test the static file mount (root)."""
@@ -38,9 +39,9 @@ def test_list_jenkins_builds(authenticated_client, db_session):
     )
     db_session.add(job)
     db_session.commit()
-    
+
     build = JenkinsBuild(
-        job_id=job.id,  
+        job_id=job.id,
         number=1,
         result="SUCCESS",
         url="http://jenkins/job/test-job/1"
@@ -56,10 +57,10 @@ def test_list_jenkins_builds(authenticated_client, db_session):
 
 def test_gitlab_webhook(client):
     payload = {
-        "object_kind": "issue", 
+        "object_kind": "issue",
         "object_attributes": {
-            "id": 123, 
-            "iid": 1, 
+            "id": 123,
+            "iid": 1,
             "action": "update",
             "state": "opened"
         },
@@ -113,7 +114,7 @@ def test_list_dependency_scans(authenticated_client, db_session):
     )
     db_session.add(project)
     db_session.commit()
-    
+
     scan = DependencyScan(
         project_id=project.id,
         scan_status="completed",

@@ -2,13 +2,16 @@
 import os
 import sys
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+
 from alembic import context
+from sqlalchemy import engine_from_config, pool
+
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from devops_collector.models.base_models import Base
 from devops_collector.config import settings
 from devops_collector.core.plugin_loader import PluginLoader
+from devops_collector.models.base_models import Base
+
 
 # 动态加载所有插件模型，确保 Base.metadata 收集到完整的表结构
 PluginLoader.load_models()

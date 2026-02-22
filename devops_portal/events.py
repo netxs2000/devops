@@ -4,13 +4,15 @@ Handles SSE notifications and real-time event dispatching.
 """
 import json
 import logging
-import asyncio
 from datetime import datetime
-from typing import Union, List, Dict, Any, Optional
+from typing import Any
+
 from devops_portal.state import NOTIFICATION_QUEUES
+
+
 logger = logging.getLogger(__name__)
 
-async def push_notification(user_ids: Union[str, List[str]], message: str, type: str='info', metadata: Optional[Dict[str, Any]]=None):
+async def push_notification(user_ids: str | list[str], message: str, type: str='info', metadata: dict[str, Any] | None=None):
     """推送通知到 SSE（支持单播/多播/广播）。
     
     Args:

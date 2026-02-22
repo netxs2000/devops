@@ -1,9 +1,8 @@
 """Project Health & Security Cockpit."""
-import streamlit as st
 import plotly.express as px
-import plotly.graph_objects as go
-import pandas as pd
-from utils import set_page_config, run_query
+import streamlit as st
+from utils import run_query, set_page_config
+
 
 # --- Configuration & Styling ---
 set_page_config()
@@ -73,8 +72,8 @@ col_left, col_right = st.columns([1.5, 1])
 with col_left:
     st.subheader('🔍 质量-负荷平衡气泡图')
     fig = px.scatter(
-        df, x='health_score', y='tech_debt_hours', 
-        size='bug_count', color='quality_gate', 
+        df, x='health_score', y='tech_debt_hours',
+        size='bug_count', color='quality_gate',
         hover_name='project_name', text='project_name',
         labels={'health_score': '综合健康分', 'tech_debt_hours': '技术债 (小时)'},
         color_discrete_map={'PASSED': '#00ff7f', 'FAILED': '#ff3333', 'WARN': '#ffab00'},
@@ -110,7 +109,7 @@ with tab1:
 
 with tab2:
     fig_cov = px.funnel(
-        df.sort_values('test_coverage_pct', ascending=False), 
+        df.sort_values('test_coverage_pct', ascending=False),
         y='project_name', x='test_coverage_pct',
         title='单元测试覆盖率排位',
         template='plotly_dark'
@@ -120,7 +119,7 @@ with tab2:
 # --- Raw Data Table ---
 with st.expander("📊 查看全量监控明细"):
     st.dataframe(
-        df, 
+        df,
         column_config={
             'health_score': st.column_config.ProgressColumn('健康指数', min_value=0, max_value=100, format='%d'),
             'test_coverage_pct': st.column_config.NumberColumn('覆盖率', format='%.2f%%'),

@@ -4,8 +4,10 @@
 API 文档: https://docs.sonarqube.org/latest/extension-guide/web-api/
 """
 import base64
-from typing import List, Dict, Optional, Any
+from typing import Any
+
 from devops_collector.core.base_client import BaseClient
+
 
 class SonarQubeClient(BaseClient):
     """SonarQube Web API 客户端。
@@ -48,7 +50,7 @@ class SonarQubeClient(BaseClient):
         except Exception:
             return False
 
-    def get_projects(self, page: int=1, page_size: int=100, organization: Optional[str]=None) -> List[dict]:
+    def get_projects(self, page: int=1, page_size: int=100, organization: str | None=None) -> list[dict]:
         """获取所有项目列表。
         
         Args:
@@ -65,7 +67,7 @@ class SonarQubeClient(BaseClient):
         response = self._get('projects/search', params=params)
         return response.json().get('components', [])
 
-    def get_all_projects(self, organization: Optional[str]=None) -> List[dict]:
+    def get_all_projects(self, organization: str | None=None) -> list[dict]:
         """获取所有项目 (自动分页)。"""
         projects = []
         page = 1
@@ -77,7 +79,7 @@ class SonarQubeClient(BaseClient):
             page += 1
         return projects
 
-    def get_project(self, key: str) -> Optional[dict]:
+    def get_project(self, key: str) -> dict | None:
         """获取单个项目详情。
         
         Args:
@@ -90,7 +92,7 @@ class SonarQubeClient(BaseClient):
         components = response.json().get('components', [])
         return components[0] if components else None
 
-    def get_measures(self, project_key: str, metrics: Optional[List[str]]=None) -> Dict[str, Any]:
+    def get_measures(self, project_key: str, metrics: list[str] | None=None) -> dict[str, Any]:
         """获取项目代码质量指标。
         
         Args:
@@ -115,7 +117,7 @@ class SonarQubeClient(BaseClient):
             result[measure['metric']] = measure.get('value')
         return result
 
-    def get_issues(self, project_key: str, page: int=1, page_size: int=100, resolved: bool=False, severities: Optional[List[str]]=None, types: Optional[List[str]]=None) -> List[dict]:
+    def get_issues(self, project_key: str, page: int=1, page_size: int=100, resolved: bool=False, severities: list[str] | None=None, types: list[str] | None=None) -> list[dict]:
         """获取项目问题列表。
         
         Args:
@@ -137,7 +139,7 @@ class SonarQubeClient(BaseClient):
         response = self._get('issues/search', params=params)
         return response.json().get('issues', [])
 
-    def get_all_issues(self, project_key: str, resolved: bool=False, **kwargs) -> List[dict]:
+    def get_all_issues(self, project_key: str, resolved: bool=False, **kwargs) -> list[dict]:
         """获取项目所有问题 (自动分页)。
         
         警告: 问题数量可能很大，请谨慎使用。
@@ -152,7 +154,7 @@ class SonarQubeClient(BaseClient):
             page += 1
         return issues
 
-    def get_analysis_history(self, project_key: str, page: int=1, page_size: int=100) -> List[dict]:
+    def get_analysis_history(self, project_key: str, page: int=1, page_size: int=100) -> list[dict]:
         """获取项目分析历史。
         
         Returns:
@@ -176,7 +178,7 @@ class SonarQubeClient(BaseClient):
         from devops_collector.core.algorithms import QualityMetrics
         return QualityMetrics.rating_to_letter(value)
 
-    def get_issue_severity_distribution(self, project_key: str) -> Dict[str, Dict[str, int]]:
+    def get_issue_severity_distribution(self, project_key: str) -> dict[str, dict[str, int]]:
         """获取项目问题类型和严重程度的分布统计。
         
         Uses facets to avoid fetching all issues.
@@ -201,7 +203,7 @@ class SonarQubeClient(BaseClient):
                         distribution[issue_type][severity] = count
         return distribution
 
-    def get_hotspot_distribution(self, project_key: str) -> Dict[str, int]:
+    def get_hotspot_distribution(self, project_key: str) -> dict[str, int]:
         """获取项目安全热点风险程度分布。
         
         API: api/hotspots/search (SonarQube >= 8.x)

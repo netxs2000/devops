@@ -5,12 +5,17 @@
 本文件遵循 **Google Python Style Guide**，所有注释采用中文的 Google Docstring 风格。
 """
 from __future__ import annotations
+
 import logging
-from datetime import datetime, timezone
-from typing import Any, Dict, Type
-from sqlalchemy.orm import Session
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.exc import NoResultFound
+from sqlalchemy.orm import Session
+
 from devops_collector.models.base_models import Base
+
+
 log = logging.getLogger(__name__)
 
 class ConcurrencyError(RuntimeError):
@@ -20,7 +25,7 @@ class ConcurrencyError(RuntimeError):
     未能找到当前有效记录时抛出。业务层可捕获后决定重试或返回错误信息。
     """
 
-def close_current_and_insert_new(session: Session, model_cls: Type[Base], natural_key: Dict[str, Any], new_data: Dict[str, Any]) -> Base:
+def close_current_and_insert_new(session: Session, model_cls: type[Base], natural_key: dict[str, Any], new_data: dict[str, Any]) -> Base:
     """统一的 SCD Type2 更新函数。
 
     该函数在同一个事务中完成以下步骤：
@@ -59,11 +64,11 @@ def close_current_and_insert_new(session: Session, model_cls: Type[Base], natura
         raise ConcurrencyError('new_data 必须包含 sync_version 用于乐观锁校验')
     if current.sync_version != expected_version:
         raise ConcurrencyError(f'乐观锁冲突：当前版本 {current.sync_version} 与期望 {expected_version} 不匹配')
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current.is_current = False
     current.effective_to = now
     session.add(current)
-    insert_kwargs: Dict[str, Any] = {**natural_key}
+    insert_kwargs: dict[str, Any] = {**natural_key}
     new_data_clean = {k: v for k, v in new_data.items() if k != 'sync_version'}
     insert_kwargs.update(new_data_clean)
     insert_kwargs.update({'sync_version': current.sync_version + 1, 'effective_from': now, 'effective_to': None, 'is_current': True, 'is_deleted': False})

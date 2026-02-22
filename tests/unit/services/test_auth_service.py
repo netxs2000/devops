@@ -4,12 +4,15 @@
 """
 import uuid
 from datetime import timedelta
+
 import pytest
 from jose import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from devops_collector.auth import auth_service as services
 from devops_collector.models.base_models import Base, User, UserCredential
+
 
 # 使用内存数据库进行单元测试
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -44,7 +47,7 @@ def test_create_access_token():
     """测试 JWT 访问令牌生成。"""
     data = {"sub": "test@example.com", "user_id": str(uuid.uuid4())}
     token = services.auth_create_access_token(data, expires_delta=timedelta(minutes=15))
-    
+
     # 验证令牌内容
     payload = jwt.decode(token, services.SECRET_KEY, algorithms=[services.ALGORITHM])
     assert payload["sub"] == data["sub"]
@@ -55,7 +58,7 @@ def test_authenticate_user_success(db_session):
     """测试用户认证成功场景。"""
     email = "auth_test@example.com"
     password = "secure_password"
-    
+
     # 手动创建测试用户
     user_id = uuid.uuid4()
     user = User(
@@ -68,14 +71,14 @@ def test_authenticate_user_success(db_session):
     )
     db_session.add(user)
     db_session.flush()
-    
+
     cred = UserCredential(
         user_id=user_id,
         password_hash=services.auth_get_password_hash(password)
     )
     db_session.add(cred)
     db_session.commit()
-    
+
     # 执行认证测试
     authenticated_user = services.auth_authenticate_user(db_session, email, password)
     assert authenticated_user is not False
@@ -85,10 +88,10 @@ def test_authenticate_user_failure(db_session):
     """测试用户认证失败场景。"""
     email = "fail_test@example.com"
     password = "correct_password"
-    
+
     # 场景 1: 用户不存在
     assert services.auth_authenticate_user(db_session, "none@example.com", password) is False
-    
+
     # 注册用户
     user_id = uuid.uuid4()
     user = User(
@@ -100,7 +103,7 @@ def test_authenticate_user_failure(db_session):
     )
     db_session.add(user)
     db_session.flush()
-    
+
     # 场景 2: 密码错误
     cred = UserCredential(
         user_id=user_id,
@@ -108,5 +111,5 @@ def test_authenticate_user_failure(db_session):
     )
     db_session.add(cred)
     db_session.commit()
-    
+
     assert services.auth_authenticate_user(db_session, email, "wrong_password") is False

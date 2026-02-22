@@ -1,13 +1,14 @@
-import pytest
 import uuid
-import time
-from unittest.mock import MagicMock, AsyncMock, patch
-from devops_collector.models.base_models import ProjectMaster, User, Product, ProjectProductRelation
-from devops_portal.routers.service_desk_router import ServiceDeskService, TestingService
-from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 from devops_collector.auth.auth_dependency import get_user_gitlab_client
+from devops_collector.models.base_models import Product, ProjectMaster, ProjectProductRelation
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_portal.dependencies import get_current_user
 from devops_portal.main import app
+
 
 def generate_id(prefix: str) -> str:
     """Helper to generate unique IDs for tests."""
@@ -29,7 +30,7 @@ def test_list_business_projects(authenticated_client, db_session):
     # Setup full chain: Product -> Relation -> Project
     pid = generate_id("MDM")
     prod_id = generate_id("PROD")
-    
+
     project = ProjectMaster(
         project_id=pid,
         project_name="Biz Project 1",
@@ -49,12 +50,12 @@ def test_list_business_projects(authenticated_client, db_session):
         product_id=prod_id,
         org_id="ORG001"
     )
-    
+
     db_session.add(project)
     db_session.add(product)
     db_session.add(relation)
     db_session.commit()
-    
+
     response = authenticated_client.get("/service-desk/business-projects")
     assert response.status_code == 200
     data = response.json()
@@ -77,7 +78,7 @@ async def test_upload_service_desk_attachment(authenticated_client, db_session, 
     )
     db_session.add(project)
     db_session.commit()
-    
+
     # Mocking client response for upload
     mock_response = MagicMock()
     mock_response.json.return_value = {"markdown": "url", "url": "url"}
@@ -87,18 +88,18 @@ async def test_upload_service_desk_attachment(authenticated_client, db_session, 
     # Simulate file upload
     files = {'file': ('test.png', b'content', 'image/png')}
     response = authenticated_client.post(f"/service-desk/upload?mdm_id={pid}", files=files)
-    
+
     assert response.status_code == 200
     assert "url" in response.json()
 
 @pytest.mark.asyncio
 async def test_submit_bug(authenticated_client, db_session, mock_gitlab_client):
     app.dependency_overrides[get_user_gitlab_client] = lambda: mock_gitlab_client
-    
+
     # Setup data for Join query
     product_id = generate_id("PROD_BUG")
     pid = generate_id("MDM")
-    
+
     project = ProjectMaster(
         project_id=pid,
         project_name="Biz Project 1",
@@ -122,7 +123,7 @@ async def test_submit_bug(authenticated_client, db_session, mock_gitlab_client):
     db_session.add(product)
     db_session.add(relation)
     db_session.commit()
-    
+
     # Mock create_issue for create_ticket
     mock_gitlab_client.create_issue.return_value = {'iid': 100}
 
@@ -140,7 +141,7 @@ async def test_submit_bug(authenticated_client, db_session, mock_gitlab_client):
     response = authenticated_client.post(f"/service-desk/submit-bug?mdm_id={product_id}", json=payload)
     if response.status_code != 200:
         print(response.json())
-        
+
     assert response.status_code == 200
     assert "BUG" in response.json()["tracking_code"]
 
@@ -150,7 +151,7 @@ async def test_submit_requirement(authenticated_client, db_session, mock_gitlab_
 
     product_id = generate_id("PROD_REQ")
     pid = generate_id("MDM")
-    
+
     project = ProjectMaster(
         project_id=pid,
         project_name="Biz Project 1",
@@ -176,7 +177,7 @@ async def test_submit_requirement(authenticated_client, db_session, mock_gitlab_
     db_session.commit()
 
     mock_gitlab_client.create_issue.return_value = {'iid': 200}
-    
+
     payload = {
         "title": "Test Req",
         "description": "I want feature X",
@@ -196,11 +197,11 @@ def test_list_service_desk_tickets(authenticated_client, db_session):
     # We should fetch the mock_user to get its ID, or rely on conftest creating it with a known valid ID.
     # conftest mock_user uses: global_user_id=uuid.uuid4()
     # It might be dynamic.
-    
+
     # However, authenticated_client fixture sets the override to lambda: mock_user.
     # We can access that user instance.
     mock_user = app.dependency_overrides[get_current_user]()
-    
+
     title = f"Test Ticket {uuid.uuid4()}"
     ticket = ServiceDeskTicket(
         gitlab_project_id=10,
@@ -212,7 +213,7 @@ def test_list_service_desk_tickets(authenticated_client, db_session):
     )
     db_session.add(ticket)
     db_session.commit()
-    
+
     response = authenticated_client.get("/service-desk/tickets")
     assert response.status_code == 200
     data = response.json()
@@ -231,7 +232,7 @@ def test_track_service_desk_ticket(authenticated_client, db_session):
     )
     db_session.add(ticket)
     db_session.commit()
-    
+
     response = authenticated_client.get(f"/service-desk/track/{ticket.id}")
     assert response.status_code == 200
     assert response.json()["title"] == "Track Me"
@@ -246,7 +247,7 @@ async def test_update_ticket_status(authenticated_client, db_session, mock_gitla
     # Let's check update_ticket_status in router again.
     # It uses: service = ServiceDeskService() -> no client.
     # So it won't sync to GitLab. But DB update should work.
-    
+
     from devops_collector.models.service_desk import ServiceDeskTicket
     ticket = ServiceDeskTicket(
         gitlab_project_id=10,
@@ -256,38 +257,38 @@ async def test_update_ticket_status(authenticated_client, db_session, mock_gitla
     )
     db_session.add(ticket)
     db_session.commit()
-    
+
     response = authenticated_client.patch(f"/service-desk/tickets/{ticket.id}/status?new_status=closed")
     assert response.status_code == 200
     assert response.json()["new_status"] == "closed"
-    
+
     db_session.refresh(ticket)
     assert ticket.status == "closed"
 
 def test_get_my_tickets(authenticated_client, db_session):
     mock_user = app.dependency_overrides[get_current_user]()
-    
+
     from devops_collector.models.service_desk import ServiceDeskTicket
     # Ticket for user
     t1 = ServiceDeskTicket(
-        gitlab_project_id=10, 
-        gitlab_issue_iid=1, 
-        title="My Ticket", 
+        gitlab_project_id=10,
+        gitlab_issue_iid=1,
+        title="My Ticket",
         requester_id=mock_user.global_user_id,
         requester_email=mock_user.primary_email
     )
     # Ticket for other
     t2 = ServiceDeskTicket(
-        gitlab_project_id=10, 
-        gitlab_issue_iid=2, 
-        title="Other Ticket", 
+        gitlab_project_id=10,
+        gitlab_issue_iid=2,
+        title="Other Ticket",
         requester_email="other@example.com"
     )
 
     db_session.add(t1)
     db_session.add(t2)
     db_session.commit()
-    
+
     response = authenticated_client.get("/service-desk/my-tickets")
     assert response.status_code == 200
     data = response.json()

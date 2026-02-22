@@ -1,9 +1,11 @@
 """TODO: Add module description."""
-from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, BigInteger, Float, and_
-from sqlalchemy.orm import relationship
+
+from sqlalchemy import JSON, BigInteger, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
-from datetime import datetime, timezone
-from devops_collector.models.base_models import Base, User, Product
+from sqlalchemy.orm import relationship
+
+from devops_collector.models.base_models import Base
+
 
 class JFrogArtifact(Base):
     """JFrog 制品模型 (jfrog_artifacts)。

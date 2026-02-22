@@ -1,7 +1,14 @@
 """Nexus 插件数据模型。"""
-from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, BigInteger
+from sqlalchemy import JSON, BigInteger, Column, DateTime, ForeignKey, String
 from sqlalchemy.orm import relationship
-from devops_collector.models.base_models import Base, Product, TimestampMixin, SCDMixin, OwnableMixin
+
+from devops_collector.models.base_models import (
+    Base,
+    OwnableMixin,
+    SCDMixin,
+    TimestampMixin,
+)
+
 
 class NexusComponent(Base, TimestampMixin, SCDMixin, OwnableMixin):
     """Nexus 组件模型 (nexus_components)。
@@ -25,7 +32,7 @@ class NexusComponent(Base, TimestampMixin, SCDMixin, OwnableMixin):
     name = Column(String(255), nullable=False)
     version = Column(String(100))
     product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True)
-    
+
     product = relationship('Product')
     assets = relationship('NexusAsset', back_populates='component', cascade='all, delete-orphan')
     raw_data = Column(JSON)
@@ -54,10 +61,10 @@ class NexusAsset(Base, TimestampMixin, SCDMixin):
     checksum_sha1 = Column(String(40))
     checksum_sha256 = Column(String(64))
     checksum_md5 = Column(String(32))
-    
+
     last_modified = Column(DateTime)
     last_downloaded = Column(DateTime)
-    
+
     component = relationship('NexusComponent', back_populates='assets')
     raw_data = Column(JSON)
 

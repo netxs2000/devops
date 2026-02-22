@@ -1,14 +1,17 @@
 
+import os
+import sys
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import sys
-import os
+
 
 # Set up path to import models
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
-from devops_collector.models import User, SysRole, UserRole
+from devops_collector.models import SysRole, User, UserRole
+
 
 def check_admin():
     engine = create_engine(settings.database.uri)
@@ -23,7 +26,7 @@ def check_admin():
         return
 
     print(f"User found: {user.full_name}, global_user_id: {user.global_user_id}")
-    
+
     roles = session.query(SysRole).join(UserRole).filter(UserRole.user_id == user.global_user_id).all()
     print(f"Roles for {admin_email}:")
     for role in roles:

@@ -1,9 +1,9 @@
 """Developer DNA & Activity Profile Dashboard."""
-import streamlit as st
-import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
 from utils import run_query, set_page_config
+
 
 # --- Configuration & Styling ---
 set_page_config()
@@ -100,7 +100,7 @@ with col_radar:
     # Normalizing values for the radar (example ratios)
     values = [row['commit_count'], row['review_comment_count'], row['mr_open_count'], row['issue_closed_count']]
     max_v = max(values) if max(values) > 0 else 1
-    
+
     fig = go.Figure()
     fig.add_trace(go.Scatterpolar(
         r=values, theta=categories, fill='toself',

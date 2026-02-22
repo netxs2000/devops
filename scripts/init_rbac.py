@@ -5,24 +5,30 @@
 2. 自动根据逻辑分配权限（SYSTEM_ADMIN 获得全部，业务角色获得非管理菜单）。
 3. 保持向后兼容：如果存在 docs/sys_*.csv，则以文件内容为准。
 """
+import csv
 import logging
-import os
 import sys
 import uuid
-import csv
-from typing import Any, List, Dict
+from pathlib import Path
+
 from passlib.context import CryptContext
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from pathlib import Path
+
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
 from devops_collector.models.base_models import (
-    Base, User, SysRole, SysMenu, SysRoleMenu, UserCredential, UserRole
+    Base,
+    SysMenu,
+    SysRole,
+    SysRoleMenu,
+    User,
+    UserCredential,
+    UserRole,
 )
-from scripts.utils import build_user_indexes, resolve_user
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('InitRBAC')
@@ -44,20 +50,20 @@ DEFAULT_MENUS = [
     {"id": 102, "pid": 1, "name": "用户管理", "path": "/admin/user", "type": "C", "icon": "user", "perm": "sys:user:view"},
     {"id": 103, "pid": 1, "name": "产品定义", "path": "/admin/product", "type": "C", "icon": "shopping-cart", "perm": "sys:product:view"},
     {"id": 104, "pid": 1, "name": "项目主表", "path": "/admin/project", "type": "C", "icon": "project", "perm": "sys:project:view"},
-    
+
     {"id": 2, "pid": 0, "name": "研发协同", "path": "/devops", "type": "M", "icon": "rocket", "perm": "sys:devops:view"},
     {"id": 201, "pid": 2, "name": "需求池", "path": "/devops/backlog", "type": "C", "icon": "unordered-list", "perm": "pm:backlog:view"},
     {"id": 202, "pid": 2, "name": "迭代看板", "path": "/devops/iteration", "type": "C", "icon": "dashboard", "perm": "pm:iteration:view"},
     {"id": 203, "pid": 2, "name": "质量门禁", "path": "/devops/quality", "type": "C", "icon": "safety-certificate", "perm": "qa:gate:view"},
-    
+
     {"id": 3, "pid": 0, "name": "测试管理", "path": "/test", "type": "M", "icon": "experiment", "perm": "sys:test:view"},
     {"id": 301, "pid": 3, "name": "测试用例", "path": "/test/cases", "type": "C", "icon": "container", "perm": "qa:test:view"},
     {"id": 302, "pid": 3, "name": "追溯矩阵", "path": "/test/rtm", "type": "C", "icon": "deployment-unit", "perm": "qa:rtm:view"},
-    
+
     {"id": 4, "pid": 0, "name": "服务支持", "path": "/service", "type": "M", "icon": "customer-service", "perm": "sys:service:view"},
     {"id": 401, "pid": 4, "name": "反馈中心", "path": "/service/desk", "type": "C", "icon": "message", "perm": "sd:ticket:view"},
     {"id": 402, "pid": 4, "name": "知识库", "path": "/service/kb", "type": "C", "icon": "read", "perm": "sd:kb:view"},
-    
+
     {"id": 5, "pid": 0, "name": "效能看板", "path": "/analytics", "type": "M", "icon": "line-chart", "perm": "sys:analytics:view"},
     {"id": 501, "pid": 5, "name": "DORA指标", "path": "/analytics/dora", "type": "C", "icon": "thunderbolt", "perm": "ana:dora:view"},
     {"id": 502, "pid": 5, "name": "成本分析", "path": "/analytics/cost", "type": "C", "icon": "account-book", "perm": "ana:cost:view"},
@@ -67,7 +73,7 @@ def ensure_auto_permissions(session: Session):
     """【业务常识授权】超管拥有一切，业务经理拥有非敏感菜单。"""
     admin_role = session.query(SysRole).filter_by(role_key='SYSTEM_ADMIN').first()
     business_roles = session.query(SysRole).filter(SysRole.role_key.in_(['EXECUTIVE_MANAGER', 'DEPT_MANAGER'])).all()
-    
+
     if not admin_role: return
 
     all_menus = session.query(SysMenu).all()
@@ -92,7 +98,7 @@ def ensure_auto_permissions(session: Session):
                 if (br.id, menu.id) not in existing:
                     to_add.append(SysRoleMenu(role_id=br.id, menu_id=menu.id))
                     existing.add((br.id, menu.id))
-    
+
     if to_add:
         session.bulk_save_objects(to_add)
         logger.info(f"已自动分配 {len(to_add)} 项系统权限关联。")
@@ -101,7 +107,7 @@ def load_menus(session: Session):
     csv_path = Path('docs/sys_menus.csv')
     if csv_path.exists():
         logger.info("从 CSV 加载菜单配置...")
-        with open(csv_path, mode='r', encoding='utf-8-sig') as f:
+        with open(csv_path, encoding='utf-8-sig') as f:
             data = list(csv.DictReader(f))
             for row in data:
                 mid = int(row['ID'])
@@ -124,7 +130,7 @@ def load_roles(session: Session):
     csv_path = Path('docs/sys_roles.csv')
     if csv_path.exists():
         logger.info("从 CSV 加载角色配置...")
-        with open(csv_path, mode='r', encoding='utf-8-sig') as f:
+        with open(csv_path, encoding='utf-8-sig') as f:
             for row in csv.DictReader(f):
                 rid = int(row['ID'])
                 r = session.query(SysRole).get(rid) or SysRole(id=rid)
@@ -152,19 +158,19 @@ def main():
             session.add(admin_user)
             session.flush()
             session.add(UserCredential(user_id=uid, password_hash=pwd_context.hash('admin_password_123!')))
-        
+
         # 2. 加载基础数据
         load_menus(session)
         load_roles(session)
-        
+
         # 3. 自动权限同步 (核心简化：无需 CSV 指定，逻辑自动完成关联)
         ensure_auto_permissions(session)
-        
+
         # 4. 兜底绑定 admin 角色
         ar = session.query(SysRole).filter_by(role_key='SYSTEM_ADMIN').first()
         if ar and not session.query(UserRole).filter_by(user_id=admin_user.global_user_id, role_id=ar.id).first():
             session.add(UserRole(user_id=admin_user.global_user_id, role_id=ar.id))
-        
+
         session.commit()
     logger.info("🎉 RBAC 系统初始化/同步完成（内置模式）。")
 

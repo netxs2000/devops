@@ -1,15 +1,16 @@
 """Webhook Router: Handles real-time synchronization from external systems."""
 
-import logging
 import asyncio
-from typing import List, Optional
-from fastapi import APIRouter, Request, Depends
-from sqlalchemy.orm import Session
-from devops_collector.config import settings
+import logging
+
+from fastapi import APIRouter, Request
+
 from devops_collector.auth.auth_database import AuthSessionLocal
+from devops_collector.config import settings
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
-from devops_portal.state import PIPELINE_STATUS
 from devops_portal.events import push_notification
+from devops_portal.state import PIPELINE_STATUS
+
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
@@ -18,7 +19,7 @@ def get_system_gitlab_client() -> GitLabClient:
     """获取使用系统级令牌的 GitLab 客户端。"""
     return GitLabClient(url=settings.gitlab.url, token=settings.gitlab.private_token)
 
-async def get_requirement_author(project_id: int, issue_iid: int) -> Optional[str]:
+async def get_requirement_author(project_id: int, issue_iid: int) -> str | None:
     """获取需求发起人 ID (使用系统令牌)。"""
     db = AuthSessionLocal()
     try:
@@ -32,7 +33,7 @@ async def get_requirement_author(project_id: int, issue_iid: int) -> Optional[st
     finally:
         db.close()
 
-def get_project_stakeholders_helper(project_id: int) -> List[str]:
+def get_project_stakeholders_helper(project_id: int) -> list[str]:
     """获取项目干系人 ID 列表 (模拟实现，后续应从 MDM 获取)。"""
     # TODO: 实现从数据库获取项目干系人的逻辑
     return []
@@ -43,7 +44,7 @@ async def gitlab_webhook(request: Request):
     try:
         payload = await request.json()
         event_type = request.headers.get("X-Gitlab-Event")
-        
+
         if event_type == "Issue Hook":
             object_attr = payload.get("object_attributes", {})
             labels = [l.get("title") for l in payload.get("labels", [])]
@@ -68,7 +69,7 @@ async def gitlab_webhook(request: Request):
                     None
                 )
                 logger.info(f"Requirement Sync: #{issue_iid} - Action: {action}, Review: {old_review_state} -> {review_state}")
-                
+
                 if action == "update" and old_review_state and (old_review_state != review_state):
                     try:
                         author_id = await get_requirement_author(p_id, issue_iid)
@@ -76,7 +77,7 @@ async def gitlab_webhook(request: Request):
                         notify_targets = set(stakeholders)
                         if author_id:
                             notify_targets.add(author_id)
-                        
+
                         if notify_targets:
                             asyncio.create_task(push_notification(
                                 list(notify_targets),
@@ -106,7 +107,7 @@ async def gitlab_webhook(request: Request):
                     "user_name": payload.get("user_name")
                 }
                 logger.info(f"Pipeline Sync: Project {p_id} is now {obj.get('status')}")
-                
+
                 if obj.get("status") == "failed":
                     # 通用通知逻辑在此实现
                     pass

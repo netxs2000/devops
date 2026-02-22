@@ -3,9 +3,11 @@ Service Desk E2E Tests - Specific Fixtures
 """
 
 import os
+from collections.abc import Generator
+
 import pytest
 from playwright.sync_api import Page
-from typing import Generator
+
 
 @pytest.fixture
 def rd_authenticated_page(

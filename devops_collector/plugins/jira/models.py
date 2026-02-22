@@ -2,11 +2,23 @@
 
 定义 Jira 相关的 SQLAlchemy ORM 模型，包括项目、看板、Sprint 和 Issue。
 """
-from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, Boolean, BigInteger
-from sqlalchemy.orm import relationship
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
 from devops_collector.models.base_models import Base
+
 
 class JiraProject(Base):
     """Jira 项目模型 (jira_projects)。
@@ -33,8 +45,8 @@ class JiraProject(Base):
     gitlab_project = relationship('GitLabProject', back_populates='jira_projects')
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default='PENDING')
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC))
     raw_data = Column(JSON)
     boards = relationship('JiraBoard', back_populates='project', cascade='all, delete-orphan')
     issues = relationship('JiraIssue', back_populates='project', cascade='all, delete-orphan')

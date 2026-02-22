@@ -9,10 +9,10 @@
     0: 数据字典已是最新
     1: 数据字典需要更新
 """
-import sys
 import subprocess
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
 
 def get_git_modified_files() -> set:

@@ -3,11 +3,12 @@
 技能快速验证脚本 - 精简版
 """
 
-import sys
-import os
 import re
-import yaml
+import sys
 from pathlib import Path
+
+import yaml
+
 
 def validate_skill(skill_path):
     """技能的基本验证"""

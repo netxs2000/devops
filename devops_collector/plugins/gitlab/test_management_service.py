@@ -9,20 +9,24 @@
 遵循“非侵入式二级开发”原则，底层完全依赖 GitLab Issues 进行存储。
 """
 import logging
-import asyncio
-from typing import List, Dict, Optional, Any
-from datetime import datetime, timezone
 import re
-from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_
+from datetime import datetime
+from typing import Any
 
-from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
-from devops_collector.plugins.gitlab.models import GitLabProject, GitLabIssue
+from sqlalchemy.orm import Session
+
+from devops_collector.models.base_models import (
+    ProjectMaster,
+    ProjectProductRelation,
+    TraceabilityLink,
+)
 from devops_collector.models.test_management import GTMTestCase
-from devops_collector.models.base_models import ProjectMaster, ProjectProductRelation, Organization, TraceabilityLink
-from devops_collector.plugins.zentao.models import ZenTaoProduct, ZenTaoIssue, ZenTaoTestCase
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_collector.plugins.gitlab.parser import GitLabTestParser
+from devops_collector.plugins.zentao.models import ZenTaoIssue, ZenTaoProduct
 from devops_portal import schemas
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +47,7 @@ class TestManagementService:
         self.session = session
         self.client = client
 
-    async def get_test_cases(self, db: Session, project_id: int, current_user: Any) -> List[schemas.TestCase]:
+    async def get_test_cases(self, db: Session, project_id: int, current_user: Any) -> list[schemas.TestCase]:
         """获取并解析 GitLab 项目中的所有测试用例。"""
         try:
             # 获取项目信息：优先获取 MDM 主项目名称，若未绑定则显示 GitLab 项目名
@@ -51,7 +55,7 @@ class TestManagementService:
             project_name = f"P{project_id}"
             if project:
                 project_name = project.mdm_project.project_name if project.mdm_project else project.name
-            
+
             # 获取 Issue 列表
             issues = list(self.client.get_project_issues(project_id))
             return self._parse_issues_to_test_cases(issues, project_name=project_name)
@@ -59,7 +63,7 @@ class TestManagementService:
             logger.error(f"Failed to get test cases for project {project_id}: {e}")
             raise e
 
-    def _parse_issues_to_test_cases(self, issues: List[Dict], project_name: Optional[str] = None) -> List[schemas.TestCase]:
+    def _parse_issues_to_test_cases(self, issues: list[dict], project_name: str | None = None) -> list[schemas.TestCase]:
         """将 GitLab Issue 数据解析为测试用例模型。"""
         test_cases = []
         for issue_data in issues:
@@ -84,16 +88,16 @@ class TestManagementService:
         return test_cases
 
     async def get_aggregated_test_cases(
-        self, 
-        db: Session, 
-        current_user: Any, 
-        product_id: Optional[str] = None, 
-        org_id: Optional[str] = None
-    ) -> List[schemas.TestCase]:
+        self,
+        db: Session,
+        current_user: Any,
+        product_id: str | None = None,
+        org_id: str | None = None
+    ) -> list[schemas.TestCase]:
         """按产品或组织聚合获取多个项目下的测试用例。"""
         # 1. 查找目标项目列表
         project_ids = []
-        
+
         if product_id:
             # 查找关联到该产品的所有项目
             relations = db.query(ProjectProductRelation).filter(
@@ -104,7 +108,7 @@ class TestManagementService:
                 GitLabProject.mdm_project_id.in_(mdm_ids)
             ).all()
             project_ids = [p.id for p in git_projects]
-            
+
         elif org_id:
             # 查找该部门下的所有项目
             mdm_projects = db.query(ProjectMaster).filter(
@@ -129,21 +133,21 @@ class TestManagementService:
             except Exception as e:
                 logger.warning(f"Failed to fetch aggregated cases for project {pid}: {e}")
                 continue
-                
+
         return all_test_cases
 
     async def get_aggregated_requirements(
         self,
         db: Session,
         current_user: Any,
-        product_id: Optional[str] = None,
-        org_id: Optional[str] = None
-    ) -> List[schemas.TraceabilityMatrixItem]:
+        product_id: str | None = None,
+        org_id: str | None = None
+    ) -> list[schemas.TraceabilityMatrixItem]:
         """按产品或组织聚合获取多个项目下的需求及其追溯信息。"""
-        
+
         # 1. 查找目标 ZenTao 产品列表
         zt_product_ids = set()
-        
+
         if product_id:
             # 通过 GitLab 项目关联反查
             relations = db.query(ProjectProductRelation).filter(
@@ -154,13 +158,13 @@ class TestManagementService:
                 GitLabProject.mdm_project_id.in_(mdm_ids)
             ).all()
             gp_ids = [p.id for p in git_projects]
-            
+
             if gp_ids:
                 products_via_git = db.query(ZenTaoProduct.id).filter(
                     ZenTaoProduct.gitlab_project_id.in_(gp_ids)
                 ).all()
                 zt_product_ids.update([p[0] for p in products_via_git])
-                
+
             # 直接匹配 ZenTao 产品代码
             # ZenTaoProduct usually doesn't store 'code' matching MDM product_id perfectly, but let's try.
             # If MDM Product ID is 'PRD-001', ZenTao might use name or something else.
@@ -168,7 +172,7 @@ class TestManagementService:
             # Assuming 'code' field on ZenTaoProduct matches if available.
             products_via_code = db.query(ZenTaoProduct.id).filter(ZenTaoProduct.code == product_id).all()
             zt_product_ids.update([p[0] for p in products_via_code])
-            
+
         elif org_id:
             # 通过组织 -> 项目 -> GitLab -> ZenTao
             mdm_projects = db.query(ProjectMaster).filter(ProjectMaster.org_id == org_id).all()
@@ -177,7 +181,7 @@ class TestManagementService:
                 GitLabProject.mdm_project_id.in_(mdm_ids)
             ).all()
             gp_ids = [p.id for p in git_projects]
-            
+
             if gp_ids:
                 products_via_git = db.query(ZenTaoProduct.id).filter(
                     ZenTaoProduct.gitlab_project_id.in_(gp_ids)
@@ -192,7 +196,7 @@ class TestManagementService:
             ZenTaoIssue.product_id.in_(zt_product_ids),
             ZenTaoIssue.type.in_(['story', 'feature', 'requirement'])
         ).all()
-        
+
         # 3. 预加载当前范围内的 Test Cases (避免 N+1 查询)
         # 获取涉及的 GitLab 项目 ID
         relevant_gitlab_project_ids = []
@@ -200,7 +204,7 @@ class TestManagementService:
             relevant_gitlab_project_ids = gp_ids
         else:
             # Fallback if we only found by Code
-            pass 
+            pass
 
         gtm_cases = []
         if relevant_gitlab_project_ids:
@@ -210,7 +214,7 @@ class TestManagementService:
 
         # 建立用例与需求的内存映射 (基于 #ID 文本匹配)
         req_case_map = {str(i.id): [] for i in issues}
-        
+
         for case in gtm_cases:
             # 简单匹配: 检查 Title 或 Description 中是否包含 #ReqID
             # 优化: 可以使用正则提取所有 #ID，然后匹配
@@ -224,7 +228,7 @@ class TestManagementService:
         results = []
         for issue in issues:
             issue_id_str = str(issue.id)
-            
+
             # 4. 获取关联用例 (从内存映射)
             linked_cases = req_case_map.get(issue_id_str, [])
             api_cases = [
@@ -240,16 +244,16 @@ class TestManagementService:
             # 5. 获取关联缺陷 (Defects)
             # 策略: 查找关联到了上述 Test Cases 的 Bug，或者直接关联了 Requirement 的 Bug
             # 简化: 目前只查找 TraceabilityLink 中 target_type='bug' 的
-            
+
             # 6. 获取代码变更 (TraceabilityLink)
             links = db.query(TraceabilityLink).filter(
                 TraceabilityLink.source_id == issue_id_str
             ).all()
-            
+
             mrs = []
             commits = []
             defects = []
-            
+
             for l in links:
                 if l.target_type == 'merge_request':
                     mrs.append({'id': l.target_id, 'iid': l.target_id, 'title': f'MR !{l.target_id}', 'state': 'merged'})
@@ -272,7 +276,7 @@ class TestManagementService:
                 state=issue.status or 'open',
                 review_state='approved' if issue.status == 'active' else 'draft'
             )
-            
+
             results.append(schemas.TraceabilityMatrixItem(
                 requirement=req_summary,
                 test_cases=api_cases,
@@ -280,26 +284,26 @@ class TestManagementService:
                 merge_requests=mrs,
                 commits=commits
             ))
-            
+
         return results
 
-    def _determine_result_from_labels(self, labels: List[str]) -> str:
+    def _determine_result_from_labels(self, labels: list[str]) -> str:
         """根据标签确定执行结果。"""
         if 'status::passed' in labels: return 'passed'
         if 'status::failed' in labels: return 'failed'
         if 'status::blocked' in labels: return 'blocked'
         return 'pending'
 
-    async def create_test_case(self, project_id: int, title: str, priority: str, test_type: str, 
-                               pre_conditions: List[str], steps: List[Dict], 
-                               requirement_id: Optional[str] = None, 
-                               product_id: Optional[str] = None,
-                               org_id: Optional[str] = None,
-                               creator: str = "System") -> Dict:
+    async def create_test_case(self, project_id: int, title: str, priority: str, test_type: str,
+                               pre_conditions: list[str], steps: list[dict],
+                               requirement_id: str | None = None,
+                               product_id: str | None = None,
+                               org_id: str | None = None,
+                               creator: str = "System") -> dict:
         # 构建符合 TestCase.md 模板规范的 Markdown 描述
         description = f"# 🧪 测试用例: {title}\n\n"
         description += "---\n\n"
-        
+
         description += "## ℹ️ 基本信息\n"
         description += f"- **用例优先级**: [{priority}]\n"
         description += f"- **测试类型**: [{test_type}]\n"
@@ -310,7 +314,7 @@ class TestManagementService:
         if org_id:
             description += f"- **所属产品线/部门**: {org_id}\n"
         description += f"- **创建者**: {creator}\n\n"
-        
+
         description += "---\n\n"
         description += "## 🛠️ 前置条件\n"
         if pre_conditions:
@@ -318,14 +322,14 @@ class TestManagementService:
                 description += f"- [ ] {pre}\n"
         else:
             description += "- [ ] 无\n"
-        
+
         description += "\n---\n\n"
         description += "## 📝 测试步骤\n"
         for i, step in enumerate(steps):
             num = i + 1
             action = step.get('action', '无')
             description += f"{num}. **操作描述**: {action}\n"
-            
+
         description += "\n---\n\n"
         description += "## ✅ 预期结果\n"
         for i, step in enumerate(steps):
@@ -344,7 +348,7 @@ class TestManagementService:
         description += "  - (说明: 环境或前置功能问题导致无法执行)\n\n"
         description += "---\n\n"
         description += "## 📎 测试附件\n[在此上传或粘贴执行截图]\n\n"
-        
+
         labels = 'type::test,status::todo'
         if product_id:
             labels += f',product::{product_id}'
@@ -356,7 +360,7 @@ class TestManagementService:
             'description': description,
             'labels': labels
         }
-        
+
         try:
             return self.client.create_issue(project_id, data)
         except Exception as e:
@@ -371,19 +375,19 @@ class TestManagementService:
             old_labels = issue.get('labels', [])
             new_labels = [l for l in old_labels if not l.startswith('status::')]
             new_labels.append(f"status::{result}")
-            
+
             self.client.update_issue(project_id, issue_iid, {'labels': ','.join(new_labels)})
-            
+
             # 2. 添加 Note
             note_body = f"🤖 **测试执行记录**\n- **执行结果**: {result.upper()}\n- **执行人**: {executor}\n- **时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
             self.client.add_issue_note(project_id, issue_iid, note_body)
-            
+
             return True
         except Exception as e:
             logger.error(f"Failed to execute test case #{issue_iid}: {e}")
             return False
 
-    async def list_requirements(self, project_id: int, current_user: Any, db: Session) -> List[schemas.RequirementSummary]:
+    async def list_requirements(self, project_id: int, current_user: Any, db: Session) -> list[schemas.RequirementSummary]:
         """列出项目中的需求 (type::requirement)。"""
         try:
             issues = list(self.client.get_project_issues(project_id))
@@ -403,16 +407,16 @@ class TestManagementService:
             logger.error(f"Failed to list requirements: {e}")
             raise e
 
-    async def get_requirement_detail(self, project_id: int, iid: int) -> Optional[schemas.RequirementDetail]:
+    async def get_requirement_detail(self, project_id: int, iid: int) -> schemas.RequirementDetail | None:
         """获取需求详情及其关联的测试用例。"""
         try:
             issue_data = self.client.get_project_issue(project_id, iid)
             labels = issue_data.get('labels', [])
             if 'type::requirement' not in labels:
                 return None
-            
+
             review_state = next((l.split('::')[1] for l in labels if l.startswith('review-state::')), 'draft')
-            
+
             # 查找关联的测试用例
             # 简化逻辑：遍历项目内所有 Issue，寻找描述中包含关联该需求 ID 的用例
             # 实际生产中应使用数据库查询或 GitLab API 的 linked issues（如果 CE 支持）
@@ -435,7 +439,7 @@ class TestManagementService:
                             result=self._determine_result_from_labels(other_issue.get('labels', [])),
                             web_url=other_issue['web_url']
                         ))
-            
+
             return schemas.RequirementDetail(
                 id=issue_data['id'],
                 iid=issue_data['iid'],
@@ -448,16 +452,16 @@ class TestManagementService:
         except Exception as e:
             logger.error(f"Failed to get requirement detail #{iid}: {e}")
             raise e
-            
-    async def create_requirement(self, project_id: int, title: str, priority: str, category: str, 
-                                 business_value: str, acceptance_criteria: List[str], creator_name: str) -> Dict:
+
+    async def create_requirement(self, project_id: int, title: str, priority: str, category: str,
+                                 business_value: str, acceptance_criteria: list[str], creator_name: str) -> dict:
         """创建需求。"""
         description = f"## 🏷️ 需求背景\n{business_value}\n\n"
-        description += f"## ✅ 验收标准 (AC)\n"
+        description += "## ✅ 验收标准 (AC)\n"
         for ac in acceptance_criteria:
             description += f"- [ ] {ac}\n"
         description += f"\n-- **创建人**: {creator_name} **优先级**: {priority} **类型**: {category}"
-        
+
         labels = f"type::requirement,priority::{priority},category::{category},review-state::draft"
         data = {
             'title': title,
@@ -466,9 +470,9 @@ class TestManagementService:
         }
         return self.client.create_issue(project_id, data)
 
-    async def create_defect(self, project_id: int, title: str, severity: str, priority: str, 
-                            category: str, env: str, steps: str, expected: str, actual: str, 
-                            reporter_name: str, related_test_case_iid: Optional[int] = None) -> Dict:
+    async def create_defect(self, project_id: int, title: str, severity: str, priority: str,
+                            category: str, env: str, steps: str, expected: str, actual: str,
+                            reporter_name: str, related_test_case_iid: int | None = None) -> dict:
         """创建缺陷。"""
         description = f"## 🐞 缺陷描述\n- **严重程度**: {severity}\n- **优先级**: {priority}\n- **环境**: {env}\n\n"
         description += f"## 🔄 复现步骤\n{steps}\n\n"
@@ -477,7 +481,7 @@ class TestManagementService:
         if related_test_case_iid:
             description += f"- **关联测试用例**: # {related_test_case_iid}\n"
         description += f"\n-- **报告人**: {reporter_name}"
-        
+
         labels = f"type::bug,severity::{severity},priority::{priority}"
         data = {
             'title': title,
@@ -486,7 +490,7 @@ class TestManagementService:
         }
         return self.client.create_issue(project_id, data)
 
-    async def batch_import_test_cases(self, project_id: int, items: List[Dict]) -> Dict:
+    async def batch_import_test_cases(self, project_id: int, items: list[dict]) -> dict:
         """批量导入用例。"""
         results = []
         for item in items:
@@ -506,7 +510,7 @@ class TestManagementService:
                 logger.error(f"Batch import item failed: {e}")
         return {'status': 'success', 'imported_count': len(results), 'iids': results}
 
-    async def clone_test_cases_from_project(self, source_project_id: int, target_project_id: int) -> Dict:
+    async def clone_test_cases_from_project(self, source_project_id: int, target_project_id: int) -> dict:
         """跨项目克隆用例。"""
         # 1. 获取源项目所有用例
         issues = list(self.client.get_project_issues(source_project_id))
@@ -527,7 +531,7 @@ class TestManagementService:
                 cloned_count += 1
         return {'status': 'success', 'cloned_count': cloned_count}
 
-    async def generate_steps_from_requirement(self, project_id: int, requirement_iid: int) -> Dict:
+    async def generate_steps_from_requirement(self, project_id: int, requirement_iid: int) -> dict:
         """[AI Placeholder] 根据关联需求的验收标准自动生成测试步骤。"""
         # 实际应通过 AI 模块实现，这里先实现一个逻辑占位
         issue = self.client.get_project_issue(project_id, requirement_iid)
@@ -540,10 +544,10 @@ class TestManagementService:
                 if line.strip().startswith('- [ ]'):
                     ac_item = line.replace('- [ ]', '').strip()
                     steps.append({'step_number': i+1, 'action': f"验证 {ac_item}", 'expected': f"{ac_item} 表现正常"})
-        
+
         if not steps:
             steps = [{'step_number': 1, 'action': "打开页面并检查基础功能", 'expected': "功能可用"}]
-            
+
         return {'title': f"Verify: {issue['title']}", 'steps': steps}
 
     def generate_test_code_from_case(self, test_case: schemas.TestCase) -> str:
@@ -558,7 +562,7 @@ class TestManagementService:
             code += "        pass\n\n"
         return code
 
-    async def run_semantic_deduplication(self, project_id: int, type: str) -> List[Dict]:
+    async def run_semantic_deduplication(self, project_id: int, type: str) -> list[dict]:
         """[AI Placeholder] 语义查重。"""
         return []
 
@@ -577,24 +581,24 @@ class TestManagementService:
             # 1. 添加拒绝理由评论
             note_body = f"❌ **工单已被拒绝**\n- **理由**: {reason}\n- **操作人**: {actor_name}\n- **状态**: 已关闭"
             self.client.add_issue_note(project_id, ticket_iid, note_body)
-            
+
             # 2. 关闭 Issue
             self.client.update_issue(project_id, ticket_iid, {'state_event': 'close'})
-            
+
             return True
         except Exception as e:
             logger.error(f"Failed to reject ticket #{ticket_iid}: {e}")
             return False
 
-    async def get_mr_summary_stats(self, project_id: int) -> Dict:
+    async def get_mr_summary_stats(self, project_id: int) -> dict:
         """获取合并请求统计信息。"""
         try:
             mrs = list(self.client.get_project_merge_requests(project_id))
             total = len(mrs)
-            merged = sum((1 for mr in mrs if mr['state'] == 'merged'))
-            opened = sum((1 for mr in mrs if mr['state'] == 'opened'))
-            closed = sum((1 for mr in mrs if mr['state'] == 'closed'))
-            
+            merged = sum(1 for mr in mrs if mr['state'] == 'merged')
+            opened = sum(1 for mr in mrs if mr['state'] == 'opened')
+            closed = sum(1 for mr in mrs if mr['state'] == 'closed')
+
             # 简单计算平均评审时长 (如果是 merged 的)
             durations = []
             for mr in mrs:
@@ -602,9 +606,9 @@ class TestManagementService:
                     start = datetime.fromisoformat(mr['created_at'].replace('Z', '+00:00'))
                     end = datetime.fromisoformat(mr['merged_at'].replace('Z', '+00:00'))
                     durations.append((end - start).total_seconds() / 3600.0)
-            
+
             avg_duration = sum(durations) / len(durations) if durations else 0
-            
+
             return {
                 'total_count': total,
                 'merged_count': merged,
@@ -616,7 +620,7 @@ class TestManagementService:
             logger.error(f"Failed to get MR summary: {e}")
             return {'total_count': 0, 'merged_count': 0, 'opened_count': 0, 'closed_count': 0, 'avg_merge_time': 0}
 
-    async def get_test_case_detail(self, project_id: int, iid: int) -> Optional[schemas.TestCase]:
+    async def get_test_case_detail(self, project_id: int, iid: int) -> schemas.TestCase | None:
         """获取单个用例详情。"""
         try:
             issue_data = self.client.get_project_issue(project_id, iid)

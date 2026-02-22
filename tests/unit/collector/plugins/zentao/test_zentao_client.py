@@ -1,7 +1,9 @@
 """TODO: Add module description."""
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from devops_collector.plugins.zentao.client import ZenTaoClient
+
 
 class TestZenTaoClient(unittest.TestCase):
     '''"""TODO: Add class description."""'''

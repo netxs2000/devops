@@ -1,7 +1,8 @@
-import pytest
 import uuid
-from devops_collector.models.base_models import User, IdentityMapping
+
 from devops_collector.auth import auth_service
+from devops_collector.models.base_models import IdentityMapping, User
+
 
 def create_test_token(email, user_id, roles=None, permissions=None):
     """Helper to create a JWT for testing."""
@@ -44,19 +45,19 @@ def test_list_all_users_for_admin(client, db_session):
     )
     db_session.add_all([u1, u2, admin])
     db_session.commit()
-    
+
     # 赋予 USER:MANAGE 权限
     token = create_test_token("admin@example.com", admin_id, permissions=["USER:MANAGE"])
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     response = client.get("/service-desk/admin/all-users", headers=headers)
     assert response.status_code == 200
     data = response.json()
-    
+
     # 验证统计数据
     assert data["stats"]["pending"] >= 1
     assert data["stats"]["approved"] >= 1
-    
+
     # 验证列表中包含待处理用户
     emails = [u["email"] for u in data["users"]]
     assert "pending@example.com" in emails
@@ -83,26 +84,26 @@ def test_approve_user_application(client, db_session):
     )
     db_session.add_all([user, admin])
     db_session.commit()
-    
+
     token = create_test_token("admin@example.com", admin_id, permissions=["USER:MANAGE"])
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     payload = {
         "email": "to_approve@example.com",
         "approved": True,
         "gitlab_user_id": "GL-123"
     }
-    
+
     response = client.post("/service-desk/admin/approve-user", params=payload, headers=headers)
     assert response.status_code == 200
-    
+
     # 验证数据库状态
     db_session.refresh(user)
     assert user.is_active is True
-    
+
     # 验证身份映射
     mapping = db_session.query(IdentityMapping).filter_by(
-        global_user_id=user_id, 
+        global_user_id=user_id,
         source_system='gitlab'
     ).first()
     assert mapping is not None

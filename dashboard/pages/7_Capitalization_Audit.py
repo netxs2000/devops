@@ -1,10 +1,11 @@
 
-import streamlit as st
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
 from sqlalchemy.sql import text
+
 from dashboard.common.db import get_db_engine
+
 
 st.set_page_config(page_title="R&D Capitalization", page_icon="[Finance]", layout="wide")
 
@@ -114,7 +115,7 @@ for _, row in df.head(15).iterrows():
     status_class = "status-info"
     if row['audit_status'] == 'AUDIT_READY': status_class = "status-audit"
     elif row['audit_status'] == 'HIGH_CAPEX_INSPECTION_REQUIRED': status_class = "status-warning"
-    
+
     with st.expander(f"Project: {row['project_id']} - Week {row['audit_week']}"):
         c1, c2, c3 = st.columns(3)
         c1.write(f"**CapEx Effort:** {row['capex_impact']}")

@@ -1,7 +1,9 @@
 """统一扁平化工作项仪表盘。"""
-import streamlit as st
 import plotly.express as px
+import streamlit as st
 from utils import run_query, set_page_config
+
+
 set_page_config()
 st.title('统一扁平化工作项 (Unified Work Items)')
 st.markdown('---')

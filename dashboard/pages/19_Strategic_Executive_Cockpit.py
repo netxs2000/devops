@@ -1,8 +1,8 @@
-import streamlit as st
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas as pd
-from utils import set_page_config, run_query
+import streamlit as st
+from utils import run_query, set_page_config
 
 
 def safe_float(val, default=0.0):
@@ -174,7 +174,7 @@ col_left, col_right = st.columns([1.5, 1])
 with col_left:
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     st.markdown("#### 🧭 产研投入雷达 (Investment Mix)")
-    
+
     if not fin_data.empty:
         fig_pie = px.pie(
             fin_data, values='total_cost', names='category',
@@ -230,7 +230,7 @@ if not trend_df.empty:
         x=trend_df['month'], y=trend_df['lead_time'],
         name='前置时间', yaxis='y2', line=dict(color='#8F00FF', width=3, dash='dot')
     ))
-    
+
     fig_trend.update_layout(
         template='plotly_dark',
         yaxis=dict(title='发布次数 (次/月)'),

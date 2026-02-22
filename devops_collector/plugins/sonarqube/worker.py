@@ -1,15 +1,16 @@
 """SonarQube 数据采集 Worker"""
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+from typing import Any
+
 from sqlalchemy.orm import Session
+
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.utils import parse_iso8601
+
 from .models import SonarProject
 from .transformer import SonarDataTransformer
-import os
-from typing import Any
+
 
 try:
     from devops_collector.plugins.gitlab.models import GitLabProject
@@ -34,7 +35,7 @@ class SonarQubeWorker(BaseWorker):
         """
         if client is None:
             raise ValueError("Client must be provided")
-                
+
         super().__init__(session, client)
         self.sync_issues = sync_issues
         self.transformer = SonarDataTransformer(session)
@@ -53,7 +54,7 @@ class SonarQubeWorker(BaseWorker):
             issues_count = self._sync_issues(project)
         return {'project': project.name, 'coverage': measure.coverage if measure else None, 'issues': issues_count}
 
-    def _sync_project_metadata(self, key: str) -> Optional[SonarProject]:
+    def _sync_project_metadata(self, key: str) -> SonarProject | None:
         """同步项目元数据并维护映射关系。"""
         p_data = self.client.get_project(key)
         if not p_data:

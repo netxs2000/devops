@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 
+
 # 示例：在浏览器自动化过程中捕获控制台日志 (console logs)
 
 url = 'http://localhost:5173'  # 替换为您的 URL
@@ -32,4 +33,4 @@ with open('/mnt/user-data/outputs/console.log', 'w') as f:
     f.write('\n'.join(console_logs))
 
 print(f"\n捕获了 {len(console_logs)} 条控制台消息")
-print(f"日志已保存至: /mnt/user-data/outputs/console.log")
+print("日志已保存至: /mnt/user-data/outputs/console.log")

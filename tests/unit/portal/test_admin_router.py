@@ -1,6 +1,6 @@
-import pytest
-from devops_collector.models.base_models import IdentityMapping, Team, Organization, ProjectMaster
-from devops_collector.plugins.gitlab.models import GitLabProject
+
+from devops_collector.models.base_models import IdentityMapping, Organization, ProjectMaster, Team
+
 
 def test_list_users(authenticated_client, db_session):
     response = authenticated_client.get("/admin/users")
@@ -13,7 +13,7 @@ def test_list_identity_mappings(authenticated_client, db_session):
     # User is already in DB from fixture
     from devops_collector.models.base_models import User
     user = db_session.query(User).filter_by(primary_email="test@example.com").first()
-    
+
     mapping = IdentityMapping(
         global_user_id=user.global_user_id,
         source_system="gitlab",
@@ -44,7 +44,7 @@ def test_create_identity_mapping(authenticated_client, db_session):
     response = authenticated_client.post("/admin/identity-mappings", json=payload)
     assert response.status_code == 200
     assert response.json()["status"] == "success"
-    
+
     mapping = db_session.query(IdentityMapping).filter_by(source_system="jira").first()
     assert mapping is not None
 
@@ -63,7 +63,7 @@ def test_list_mdm_projects(authenticated_client, db_session):
     org = Organization(org_id="ORG1", org_name="Org 1")
     db_session.add(org)
     project = ProjectMaster(
-        project_id="PROJ1", project_name="Project 1", 
+        project_id="PROJ1", project_name="Project 1",
         org_id="ORG1", status="PLAN"
     )
     db_session.add(project)

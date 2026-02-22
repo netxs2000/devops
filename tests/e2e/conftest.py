@@ -3,20 +3,21 @@ Shared E2E Fixtures (Common for all modules)
 """
 
 import os
-import time
-import subprocess
 import socket
-from typing import Generator
+import subprocess
+import time
+from collections.abc import Generator
 
-import pytest
 import httpx
-from playwright.sync_api import Page, Browser, BrowserContext, expect
+import pytest
 from dotenv import load_dotenv
+from playwright.sync_api import Browser, BrowserContext, Page, expect
+
 
 load_dotenv()
 
 BASE_URL = os.getenv("E2E_BASE_URL", "http://127.0.0.1:8000")
-APP_STARTUP_TIMEOUT = 30 
+APP_STARTUP_TIMEOUT = 30
 
 def is_port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -56,7 +57,7 @@ def app_server() -> Generator[str, None, None]:
     if not wait_for_server(BASE_URL, APP_STARTUP_TIMEOUT):
         proc.terminate()
         stdout, stderr = proc.communicate(timeout=5)
-        raise RuntimeError(f"Server failed to start")
+        raise RuntimeError("Server failed to start")
 
     yield BASE_URL
     proc.terminate()
@@ -90,7 +91,7 @@ def authenticated_page(
     test_user_credentials: dict
 ) -> Generator[Page, None, None]:
     page.on("console", lambda msg: print(f"  [BROWSER CONSOLE] {msg.type}: {msg.text}"))
-    
+
     # 拦截外部网络请求，防止 Google Fonts 等超时阻塞测试
     def handle_route(route):
         url = route.request.url
@@ -101,11 +102,11 @@ def authenticated_page(
             route.continue_()
         else:
             route.abort()
-    
+
     page.route("**/*", handle_route)
     page.goto(f"{app_server}/static/index.html", wait_until="commit")
     login_modal = page.locator("#loginModal")
-    
+
     try:
         user_name = page.locator("#user-display-name")
         if user_name.is_visible() and user_name.inner_text() != "Loading...":

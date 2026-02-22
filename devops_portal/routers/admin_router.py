@@ -1,26 +1,47 @@
-from typing import List, Optional
+import csv
+import io
+import uuid
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException, Body, File, UploadFile
+
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload, selectinload
+
 from devops_collector.auth.auth_database import get_auth_db
+from devops_collector.core.admin_service import AdminService
 from devops_collector.models.base_models import (
-    Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember,
-    Product, ProjectProductRelation, SysRole
+    IdentityMapping,
+    Organization,
+    ProjectMaster,
+    ProjectProductRelation,
+    Team,
+    TeamMember,
+    User,
 )
 from devops_collector.plugins.gitlab.models import GitLabProject
-from devops_collector.core.admin_service import AdminService
-from devops_portal.dependencies import get_current_user, RoleRequired, PermissionRequired, DataScopeFilter
-from devops_portal.schemas import (
-    TeamCreate, TeamView, TeamMemberCreate, UserFullProfile,
-    ProductView, ProductCreate, ProjectProductRelationView, ProjectProductRelationCreate,
-    IdentityMappingView, IdentityMappingCreate, IdentityMappingUpdateStatus,
-    OrganizationCreate, OrganizationView, ImportSummary
+from devops_portal.dependencies import (
+    DataScopeFilter,
+    PermissionRequired,
+    RoleRequired,
 )
-from pydantic import BaseModel
-import uuid
-import io
-import csv
+from devops_portal.schemas import (
+    IdentityMappingCreate,
+    IdentityMappingUpdateStatus,
+    IdentityMappingView,
+    ImportSummary,
+    OrganizationCreate,
+    OrganizationView,
+    ProductCreate,
+    ProductView,
+    ProjectProductRelationCreate,
+    ProjectProductRelationView,
+    TeamCreate,
+    TeamMemberCreate,
+    TeamView,
+    UserFullProfile,
+)
+
 
 def get_admin_service(db: Session = Depends(get_auth_db)):
     """获取 AdminService 实例的依赖项。"""
@@ -39,7 +60,7 @@ async def export_organizations(
     writer.writerow(['org_id', 'org_name', 'org_level', 'parent_org_id', '负责人'])
     for o in orgs:
         writer.writerow([o.org_id, o.org_name, o.org_level, o.parent_org_id, o.manager.full_name if o.manager else ''])
-    
+
     output.seek(0)
     return StreamingResponse(
         io.BytesIO(output.getvalue().encode('utf-8-sig')),
@@ -47,7 +68,7 @@ async def export_organizations(
         headers={"Content-Disposition": "attachment; filename=orgs_export.csv"}
     )
 
-@router.get('/organizations', response_model=List[OrganizationView])
+@router.get('/organizations', response_model=list[OrganizationView])
 async def list_organizations(service: AdminService = Depends(get_admin_service)):
     """获取详细组织机构列表。"""
     return service.list_all_organizations()
@@ -94,7 +115,7 @@ async def export_users(
     writer.writerow(['global_user_id', 'employee_id', 'full_name', 'email', 'department_id', '人事关系'])
     for u in users:
         writer.writerow([str(u.global_user_id), u.employee_id, u.full_name, u.primary_email, u.department_id, u.hr_relationship])
-    
+
     output.seek(0)
     return StreamingResponse(
         io.BytesIO(output.getvalue().encode('utf-8-sig')),
@@ -106,7 +127,7 @@ def get_admin_service(db: Session = Depends(get_auth_db)) -> AdminService:
     """获取系统管理服务实例。"""
     return AdminService(db)
 
-@router.get('/users', response_model=List[dict])
+@router.get('/users', response_model=list[dict])
 async def list_users(
     filter: DataScopeFilter = Depends(),
     db: Session=Depends(get_auth_db),
@@ -114,7 +135,7 @@ async def list_users(
 ):
     """获取所有全局用户简要列表。"""
     query = db.query(User).filter(User.is_current == True)
-    # User 表通常不需要 RLS 过滤（基础数据），或者仅过滤非本部门? 
+    # User 表通常不需要 RLS 过滤（基础数据），或者仅过滤非本部门?
     # 此处假设用户管理列表需要遵循 RLS，比如部门经理只能看本部门员工
     query = filter.apply(db, query, User, current_user, dept_field='department_id')
     users = query.all()
@@ -128,7 +149,7 @@ async def get_user_profile(user_id: uuid.UUID, service: AdminService = Depends(g
         raise HTTPException(status_code=404, detail="User not found")
     return profile
 
-@router.get('/identity-mappings', response_model=List[IdentityMappingView])
+@router.get('/identity-mappings', response_model=list[IdentityMappingView])
 async def list_identity_mappings(db: Session=Depends(get_auth_db)):
     """获取所有外部身份映射。"""
     mappings = db.query(IdentityMapping).options(joinedload(IdentityMapping.user)).all()
@@ -170,16 +191,16 @@ async def delete_identity_mapping(
     mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
     if not mapping:
         raise HTTPException(status_code=404, detail='Mapping not found')
-    
+
     db.delete(mapping)
     db.commit()
     return {'status': 'success'}
 
 @router.patch('/identity-mappings/{mapping_id}/status')
 async def update_identity_mapping_status(
-    mapping_id: int, 
-    payload: IdentityMappingUpdateStatus, 
-    db: Session=Depends(get_auth_db), 
+    mapping_id: int,
+    payload: IdentityMappingUpdateStatus,
+    db: Session=Depends(get_auth_db),
     admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
 ):
     """更新身份映射的状态（治理操作）。"""
@@ -187,14 +208,14 @@ async def update_identity_mapping_status(
     mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
     if not mapping:
         raise HTTPException(status_code=404, detail='Mapping not found')
-        
+
     mapping.mapping_status = payload.mapping_status
     db.commit()
     return {'status': 'success', 'mapping_status': mapping.mapping_status}
 
 # --- Virtual Team Management ---
 
-@router.get('/teams', response_model=List[TeamView])
+@router.get('/teams', response_model=list[TeamView])
 async def list_teams(db: Session=Depends(get_auth_db)):
     """列出所有虚拟业务团队。"""
     teams = db.query(Team).options(
@@ -244,7 +265,7 @@ async def add_team_member(
 ):
     """向虚拟团队添加成员。"""
     # 已通过 RoleRequired 校验权限
-        
+
     service.add_team_member(team_id, payload)
     return {'status': 'success'}
 
@@ -253,20 +274,20 @@ class MDMProjectCreate(BaseModel):
     project_id: str
     project_name: str
     org_id: str
-    project_type: Optional[str] = 'SPRINT'
-    status: Optional[str] = 'PLAN'
-    pm_user_id: Optional[str] = None
-    plan_start_date: Optional[date] = None
-    plan_end_date: Optional[date] = None
-    budget_code: Optional[str] = None
-    budget_type: Optional[str] = None
-    description: Optional[str] = None
+    project_type: str | None = 'SPRINT'
+    status: str | None = 'PLAN'
+    pm_user_id: str | None = None
+    plan_start_date: date | None = None
+    plan_end_date: date | None = None
+    budget_code: str | None = None
+    budget_type: str | None = None
+    description: str | None = None
 
 class RepoLinkRequest(BaseModel):
     '''"""TODO: Add class description."""'''
     mdm_project_id: str
     gitlab_project_id: int
-    is_lead: Optional[bool] = False
+    is_lead: bool | None = False
 
 @router.get('/mdm-projects')
 async def list_mdm_projects(
@@ -280,25 +301,25 @@ async def list_mdm_projects(
         selectinload(ProjectMaster.gitlab_repos),
         selectinload(ProjectMaster.product_relations).joinedload(ProjectProductRelation.product)
     ).filter(ProjectMaster.is_current == True)
-    
-    # 应用 RLS: 
+
+    # 应用 RLS:
     # - 部门权限基于 org_id
     # - 个人权限自动推断 (OwnableMixin.get_owner_column -> pm_user_id)
     query = filter.apply(db, query, ProjectMaster, current_user, dept_field='org_id')
-    
+
     projects = query.all()
-    
+
     return [{
-        'project_id': p.project_id, 
-        'project_name': p.project_name, 
-        'project_type': p.project_type, 
-        'status': p.status, 
-        'org_name': p.organization.org_name if p.organization else '未指派', 
-        'repo_count': len(p.gitlab_repos), 
+        'project_id': p.project_id,
+        'project_name': p.project_name,
+        'project_type': p.project_type,
+        'status': p.status,
+        'org_name': p.organization.org_name if p.organization else '未指派',
+        'repo_count': len(p.gitlab_repos),
         'lead_repo_id': p.lead_repo_id,
         'products': [
             {
-                'product_id': r.product.product_id, 
+                'product_id': r.product.product_id,
                 'product_name': r.product.product_name,
                 'relation_type': r.relation_type
             } for r in p.product_relations if r.product
@@ -365,7 +386,7 @@ async def set_lead_repo(
     db.commit()
     return {'status': 'success'}
 
-@router.get('/products', response_model=List[ProductView])
+@router.get('/products', response_model=list[ProductView])
 async def list_products(service: AdminService = Depends(get_admin_service)):
     """获取所有产品列表。"""
     return service.list_products()
@@ -440,8 +461,8 @@ async def import_product_mappings(
     return service.import_product_mappings(content.decode('utf-8'))
 @router.get('/okrs')
 async def list_okrs(
-    period: Optional[str] = None,
-    status: Optional[str] = None,
+    period: str | None = None,
+    status: str | None = None,
     service: AdminService = Depends(get_admin_service),
     admin_user: User = Depends(RoleRequired(['SYSTEM_ADMIN']))
 ):
@@ -450,8 +471,8 @@ async def list_okrs(
 
 @router.get('/export/okrs')
 async def export_okrs(
-    period: Optional[str] = None,
-    status: Optional[str] = None,
+    period: str | None = None,
+    status: str | None = None,
     service: AdminService = Depends(get_admin_service),
     admin_user: User = Depends(RoleRequired(['SYSTEM_ADMIN']))
 ):

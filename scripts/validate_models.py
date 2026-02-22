@@ -1,10 +1,12 @@
 """TODO: Add module description."""
-import os
 import sys
+
+import great_expectations as gx
 import pandas as pd
 from sqlalchemy import create_engine
-import great_expectations as gx
+
 from devops_collector.config import settings
+
 
 def run_validation():
     """Runs data quality validation for core dbt models using Great Expectations."""

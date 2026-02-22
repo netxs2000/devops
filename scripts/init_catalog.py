@@ -2,20 +2,20 @@
 
 从 `docs/mdm_systems_registry.csv` 和 `docs/mdm_services.csv` 加载数据。
 """
-import sys
-import os
-import logging
 import csv
-import json
+import logging
+import sys
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from pathlib import Path
+
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
-from devops_collector.models import Base, SystemRegistry, Service, Organization, BusinessSystem
-from scripts.utils import build_user_indexes, resolve_user
+from devops_collector.models import BusinessSystem, Organization, Service, SystemRegistry
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def init_systems(session: Session):
         return
 
     logger.info(f"正在从 {SYSTEMS_CSV.name} 同步系统注册表...")
-    with open(SYSTEMS_CSV, mode='r', encoding='utf-8-sig') as f:
+    with open(SYSTEMS_CSV, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             code = row.get('system_code', '').strip()
@@ -48,21 +48,21 @@ def init_systems(session: Session):
             if not system:
                 system = SystemRegistry(system_code=code, system_name=row.get('system_name', code))
                 session.add(system)
-            
+
             system.system_name = row.get('system_name', code)
             system.system_type = row.get('system_type', '').strip()
             system.env_tag = row.get('env_tag', 'PROD').strip()
             system.base_url = row.get('base_url', '').strip()
             system.api_version = row.get('api_version', '').strip()
             system.auth_type = row.get('auth_type', '').strip()
-            
+
             is_active_str = row.get('is_active', 'TRUE').strip().upper()
             system.is_active = (is_active_str == 'TRUE')
-            
+
             system.remarks = row.get('remarks', '').strip()
-            
+
             session.flush()
-    
+
     session.commit()
     logger.info("系统注册表同步完成")
 
@@ -72,11 +72,11 @@ def init_services(session: Session):
         return
 
     logger.info(f"正在从 {SERVICES_CSV.name} 同步服务目录...")
-    
+
     # 预加载依赖数据
     orgs = {o.org_name: o.org_id for o in session.query(Organization).filter_by(is_current=True).all()}
 
-    with open(SERVICES_CSV, mode='r', encoding='utf-8-sig') as f:
+    with open(SERVICES_CSV, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             name = row.get('服务名称', '').strip()
@@ -86,18 +86,18 @@ def init_services(session: Session):
             if not service:
                 service = Service(name=name)
                 session.add(service)
-            
+
             # 基础属性
             service.tier = row.get('服务分级', '').strip()
             service.description = row.get('描述', '').strip()
             service.lifecycle = row.get('生命周期', 'production').strip()
             service.component_type = row.get('组件类型', 'service').strip()
-            
+
             # 关联组织
             org_name = row.get('负责组织', '').strip()
             if org_name in orgs:
                 service.org_id = orgs[org_name]
-            
+
             # 关联业务系统 (Business System)
             bs_code = row.get('所属业务系统代码', '').strip()
             bs = ensure_business_system(session, bs_code)
@@ -114,6 +114,6 @@ def main():
     with Session(engine) as session:
         init_systems(session)
         init_services(session)
-        
+
 if __name__ == '__main__':
     main()

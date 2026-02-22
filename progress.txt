@@ -3,25 +3,27 @@
 ## 🎯 当前状态 (Current Focus)
 [阶段：执行中]
 分支：feat/qa-gitlab-style-ui
-任务：重构测试用例模块 UI，复刻 GitLab 企业版（EE）布局与逻辑（列表 + 详情双栏）。
+任务：完成测试用例模块 UI 的交互细节优化（步骤检查、回执评论），并同步 Ruff 规则至全量代码。
 
 ## 🏗️ 进行中 (In Progress)
 
-- [x] [P1] 测试用例模块 UI 重构 (GitLab 风格) (2026-02-21)
-    - 结果：成功复刻 GitLab 列表+详情双栏布局。
-    - 实现：引入 `qa-test-case-detail` 组件，重构 `qa-test-case-card` 为列表行，支持双栏同步交互。
+- [x] [P1] 测试用例模块 UI 重构与交互升级 (GitLab 风格) (2026-02-23)
+    - 结果：成功复刻 GitLab 列表+详情双栏布局，并新增交互反馈。
+    - 实现：
+        1. 引入 Web Components 实现双栏同步。
+        2. 支持测试步骤交互式 Checkbox 标记与实时进度条。
+        3. 增加执行评论回传与环境标识，打通后端全链路执行 API。
     - 分支：开发于 `feat/qa-gitlab-style-ui` 分支，验证通过。
-- [ ] [P1] 禅道全链路穿透 (2026-02-18)
-    - 阻塞原因：`192.168.5.53` 服务器离线，无法实测
-    - 解除条件：禅道服务器恢复上线
+📅 接下来 (Backlog)
 
-## 📅 接下来 (Backlog)
-
-- [ ] [P1] 待禅道服务器上线后执行端到端全量数据同步验证
+- [ ] [P1] 待禅道服务器上线后执行端到端全量数据同步验证 (2026-02-20)
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[P2] 前端组织架构部门下拉框结构化呈现与冗余 API 清理** (2026-02-21)
+1. **[P3] Ruff 极致性能工具链迁移实验 (isort 整合)** (2026-02-23)
+    - 成果：替代原有 `isort` + `flake8-import-order`。单次运行全量（266 文件）排序修复耗时 < 0.5s。
+    - 风险控制：通过 `[lint.per-file-ignores]` 机制保护了 `__init__.py` 中的插件注册逻辑，解决了初始化导致的 `ModuleNotFoundError`。
+    - 配置：新增 `ruff.toml` 影子运行，已执行 `ruff check --select I --fix` 完成全量 Import 规范化。
     - 场景：录入测试用例与产品选择时，部门选择框原为扁平显示，缺少层级关系。另外 API 中存在冗余。
     - 优化：通过前端获取 `org_level` 后，在原生的 `<select>` 中动态拼接 `├─ ` 缩进前缀实现直观的树形视觉展示，兼顾了改动最小原则。同时删除了 `admin_router.py` 中重复的（无层次信息的） `/organizations` 冗余路由。
     - 测试：`pytest tests/unit/portal/test_admin_router.py` 验证通过。
@@ -91,4 +93,4 @@
 > 更早的已完成任务已归档至 `progress_archive.md`（共 15 条）
 
 ---
-*最后更新时间：2026-02-21 18:56 (Antigravity)*
+*最后更新时间：2026-02-23 11:30 (Antigravity)*

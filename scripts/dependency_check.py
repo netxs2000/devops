@@ -1,8 +1,11 @@
 """TODO: Add module description."""
-import os
 import csv
-from bs4 import BeautifulSoup
 import logging
+import os
+
+from bs4 import BeautifulSoup
+
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
 def find_html_file(directory):
@@ -23,7 +26,7 @@ def parse_html_report(html_file):
     :param html_file: HTML报告文件路径
     :return: 包含Dependency, Severity, CVE Count字段的信息列表
     """
-    with open(html_file, 'r', encoding='utf-8') as file:
+    with open(html_file, encoding='utf-8') as file:
         soup = BeautifulSoup(file, 'html.parser')
     vulnerabilities = []
     vulnerability_table = soup.find('table', id='summaryTable')

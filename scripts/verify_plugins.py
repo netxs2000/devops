@@ -6,16 +6,17 @@
 3. 验证 Client、Worker 和 Config 是否都已注册
 4. 尝试获取每个插件的配置并打印摘要
 """
-import sys
-import os
 import logging
+import os
+import sys
+
 
 # 添加项目根目录到 pythonpath
 sys.path.append(os.getcwd())
 
-from devops_collector.core.plugin_loader import PluginLoader
 from devops_collector.core.registry import PluginRegistry
 from devops_collector.plugins import load_all_plugins
+
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,48 +32,48 @@ def main():
     logger.info(f"   Autodiscovered plugins: {loaded_plugins}")
 
     expected_plugins = [
-        'gitlab', 'sonarqube', 'jenkins', 
-        'jira', 'zentao', 'jfrog', 
+        'gitlab', 'sonarqube', 'jenkins',
+        'jira', 'zentao', 'jfrog',
         'nexus', 'dependency_check'
     ]
 
     # 2. 验证插件注册状态
     logger.info("\n2. Verifying Plugin Registration Status...")
     all_passed = True
-    
+
     for name in expected_plugins:
         logger.info(f"   Checking plugin: [{name}]")
-        
+
         # 检查加载状态
         if name not in loaded_plugins:
             logger.error(f"   [X] Plugin module '{name}' was not loaded by PluginLoader!")
             all_passed = False
             continue
-            
+
         # 检查组件注册
         client_cls = PluginRegistry.get_client(name)
         worker_cls = PluginRegistry.get_worker(name)
         config_dict = PluginRegistry.get_config(name)
-        
+
         status = []
-        if client_cls: 
-            status.append("Client [OK]") 
+        if client_cls:
+            status.append("Client [OK]")
         elif name == 'dependency_check':
             status.append("Client [SKIPPED]")
-        else: 
-            status.append("Client [MISSING]") 
-        
-        if worker_cls: status.append("Worker [OK]") 
+        else:
+            status.append("Client [MISSING]")
+
+        if worker_cls: status.append("Worker [OK]")
         else: status.append("Worker [MISSING]")
-        
-        if config_dict: status.append("Config [OK]") 
+
+        if config_dict: status.append("Config [OK]")
         else: status.append("Config [MISSING]")
 
         logger.info(f"      Status: {', '.join(status)}")
-        
+
         # dependency_check 不需要 Client (CI 驱动模式)
         is_client_ok = bool(client_cls) or (name == 'dependency_check')
-        
+
         if not (is_client_ok and worker_cls and config_dict):
             logger.error(f"      [X] Incomplete registration for {name}")
             all_passed = False

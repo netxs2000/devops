@@ -2,19 +2,22 @@
 
 重构说明：已移除所有硬编码 OKR_DATA，改为从 docs/okrs.csv 动态加载。
 """
+import csv
 import logging
 import os
 import sys
-import csv
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
+
 
 # 添加项目根目录到路径
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
-from devops_collector.models import Base, User, Organization, OKRObjective, OKRKeyResult
+from devops_collector.models import Base, OKRKeyResult, OKRObjective, Organization, User
 from scripts.utils import build_user_indexes, resolve_user
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('InitOKR')
@@ -24,22 +27,22 @@ CSV_FILE = os.path.join('docs', 'okrs.csv')
 def init_okrs():
     engine = create_engine(settings.database.uri)
     Base.metadata.create_all(engine)
-    
+
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
-    
+
     try:
         if not os.path.exists(CSV_FILE):
             logger.warning(f"跳过 OKR 初始化：未找到 {CSV_FILE}")
             return
 
         logger.info(f'开始从 {CSV_FILE} 同步 OKR 数据...')
-        
-        with open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
+
+        with open(CSV_FILE, encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             # 记录已处理的 Objective，避免重复创建
             processed_objectives = {}
-            
+
             # 预加载用户索引 (邮箱 + 姓名)
             email_idx, name_idx = build_user_indexes(session)
             # 同时建立 user_id -> User 对象索引 (用于后续取 global_user_id)
@@ -59,11 +62,11 @@ def init_okrs():
                 # 1. 查找组织和负责人
                 org = session.query(Organization).filter(Organization.org_name == org_name).first()
                 owner_id = resolve_user(owner_val, email_idx, name_idx, '负责人')
-                
+
                 if not org or not owner_id:
                     logger.warning(f"跳过 KR '{kr_title}'：未找到组织 {org_name} 或负责人 {owner_val}")
                     continue
-                
+
                 # 2. 获取或创建 Objective
                 obj_key = (o_title, period, org.org_id)
                 if obj_key not in processed_objectives:
@@ -88,7 +91,7 @@ def init_okrs():
                 kr = session.query(OKRKeyResult).filter_by(objective_id=obj.id, title=kr_title).first()
                 # 进度对齐模型定义 (0.0 - 1.0)
                 progress = round(current / target, 4) if target > 0 else 0.0
-                
+
                 if not kr:
                     kr = OKRKeyResult(
                         objective_id=obj.id,
@@ -106,7 +109,7 @@ def init_okrs():
 
         session.commit()
         logger.info('✅ OKR 数据初始化完成！')
-        
+
     except Exception as e:
         session.rollback()
         logger.error(f"OKR 初始化失败: {e}")

@@ -1,7 +1,10 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+
 from devops_collector.config import Config
 from devops_portal.routers.quality_router import get_quality_service
+
 
 def test_province_quality(authenticated_client, mock_user, monkeypatch):
     # Mock httpx response in Config.http_client
@@ -93,10 +96,10 @@ async def test_get_mr_summary(authenticated_client):
 async def test_get_quality_report(authenticated_client):
     mock_service = AsyncMock()
     mock_service.generate_report.return_value = "## Report"
-    
+
     from devops_portal.main import app
     app.dependency_overrides[get_quality_service] = lambda: mock_service
-    
+
     try:
         response = authenticated_client.get("/quality/projects/1/quality-report")
         assert response.status_code == 200

@@ -1,11 +1,14 @@
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from devops_portal.schemas import TestCaseCreate, TestCase, TestStep
-from devops_portal.routers.test_management_router import TestManagementService, get_test_management_service
-from devops_portal.main import app
-from devops_collector.models.base_models import SysRole
+
 from devops_collector.auth import auth_service
-import uuid
+from devops_portal.main import app
+from devops_portal.routers.test_management_router import (
+    get_test_management_service,
+)
+from devops_portal.schemas import TestCase
+
 
 @pytest.fixture
 def mock_test_service():
@@ -36,7 +39,7 @@ def test_list_test_cases(authenticated_client, mock_test_service):
 @pytest.mark.asyncio
 async def test_create_test_case(authenticated_client, mock_test_service, mock_user):
     mock_test_service.create_test_case = AsyncMock(return_value={"iid": 102, "title": "New Case"})
-    
+
     payload = {
         "title": "New Case",
         "priority": "P2",
@@ -44,7 +47,7 @@ async def test_create_test_case(authenticated_client, mock_test_service, mock_us
         "steps": [{"action": "Click", "expected_result": "Done"}],
         "pre_conditions": "None"
     }
-    
+
     response = authenticated_client.post("/test-management/projects/1/test-cases", json=payload)
     assert response.status_code == 200
     assert response.json()["issue"]["iid"] == 102
@@ -52,7 +55,7 @@ async def test_create_test_case(authenticated_client, mock_test_service, mock_us
 @pytest.mark.asyncio
 async def test_execute_test_case(authenticated_client, mock_test_service, mock_user):
     mock_test_service.execute_test_case = AsyncMock(return_value=True)
-    
+
     response = authenticated_client.post(
         "/test-management/projects/1/test-cases/101/execute?result=passed"
     )
@@ -69,9 +72,9 @@ async def test_get_test_summary(authenticated_client, mock_test_service):
         id=2, iid=2, title="Fail", priority="P1", test_type="Func",
         steps=[], result='failed', web_url="http://gitlab/2"
     )
-    
+
     mock_test_service.get_test_cases = AsyncMock(return_value=[mock_case_passed, mock_case_failed])
-    
+
     response = authenticated_client.get("/test-management/projects/1/test-summary")
     assert response.status_code == 200
     data = response.json()
@@ -88,7 +91,7 @@ async def test_import_test_cases_forbidden(authenticated_client, mock_test_servi
         'permissions': []
     }
     monkeypatch.setattr(auth_service, "auth_decode_access_token", lambda t: token_payload if t == "mock-token" else None)
-    
+
     files = {'file': ('test.csv', b'title,priority\nT1,P1', 'text/csv')}
     response = authenticated_client.post("/test-management/projects/1/test-cases/import", files=files)
     assert response.status_code == 403

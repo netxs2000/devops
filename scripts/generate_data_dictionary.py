@@ -9,18 +9,19 @@
     - 支持变更检测和 Diff 对比
     - 支持增量更新记录
 """
-import sys
 import inspect
-import hashlib
+import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Set, Tuple, Optional
+from typing import Any
+
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import inspect as sa_inspect
-from devops_collector.models.base_models import Base
+
 from devops_collector import models
+from devops_collector.models.base_models import Base
 
 
 def get_column_type_description(column) -> str:
@@ -55,7 +56,7 @@ def get_column_type_description(column) -> str:
     return col_type
 
 
-def get_column_constraints(column) -> List[str]:
+def get_column_constraints(column) -> list[str]:
     """获取列的约束信息。
 
     Args:
@@ -99,7 +100,7 @@ def extract_docstring_description(model_class) -> str:
     return ' '.join(description) if description else '无描述'
 
 
-def generate_table_documentation(model_class) -> Dict[str, Any]:
+def generate_table_documentation(model_class) -> dict[str, Any]:
     """为单个模型生成表文档。
 
     Args:
@@ -116,7 +117,7 @@ def generate_table_documentation(model_class) -> Dict[str, Any]:
     for column in mapper.columns:
         # 获取 comment (字段注释)
         comment = getattr(column, 'comment', None) or '-'
-        
+
         col_info = {
             'name': column.name,
             'type': get_column_type_description(column),
@@ -144,7 +145,7 @@ def generate_table_documentation(model_class) -> Dict[str, Any]:
     }
 
 
-def generate_markdown_table(columns_info: List[Dict]) -> str:
+def generate_markdown_table(columns_info: list[dict]) -> str:
     """生成 Markdown 格式的表格。
 
     Args:
@@ -166,7 +167,7 @@ def generate_markdown_table(columns_info: List[Dict]) -> str:
     return md
 
 
-def extract_table_names_from_content(content: str) -> Set[str]:
+def extract_table_names_from_content(content: str) -> set[str]:
     """从 Markdown 内容中提取表名列表。
 
     Args:
@@ -180,7 +181,7 @@ def extract_table_names_from_content(content: str) -> Set[str]:
     return set(re.findall(pattern, content))
 
 
-def generate_changelog(old_path: Path, new_tables: Set[str]) -> Tuple[str, List[str]]:
+def generate_changelog(old_path: Path, new_tables: set[str]) -> tuple[str, list[str]]:
     """对比新旧数据字典，生成变更摘要。
 
     Args:
@@ -216,7 +217,7 @@ def generate_changelog(old_path: Path, new_tables: Set[str]) -> Tuple[str, List[
     return summary, changes
 
 
-def categorize_models(all_models: List) -> Dict[str, List]:
+def categorize_models(all_models: list) -> dict[str, list]:
     """按业务域对模型进行分类。
 
     Args:
@@ -253,7 +254,7 @@ def categorize_models(all_models: List) -> Dict[str, List]:
     return categories
 
 
-def generate_full_data_dictionary() -> Tuple[str, Set[str]]:
+def generate_full_data_dictionary() -> tuple[str, set[str]]:
     """生成完整的数据字典文档。
 
     Returns:
@@ -273,7 +274,7 @@ def generate_full_data_dictionary() -> Tuple[str, Set[str]]:
 
     # 开始生成文档
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
+
     md = f"""# DevOps 效能平台 - 数据字典 (Data Dictionary)
 
 > **生成时间**: {now}  
@@ -363,7 +364,7 @@ def main():
     print('=' * 60)
     print('Data Dictionary Generator v2.2')
     print('=' * 60)
-    print(f'Scanning models from: devops_collector.models')
+    print('Scanning models from: devops_collector.models')
 
     try:
         output_path = Path(__file__).parent.parent / 'docs' / 'api' / 'DATA_DICTIONARY.md'
@@ -382,7 +383,7 @@ def main():
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(markdown_content)
 
-        print(f'\nData Dictionary generated successfully!')
+        print('\nData Dictionary generated successfully!')
         print(f'Output: {output_path}')
         print(f'Total tables documented: {len(new_tables)}')
 

@@ -2,17 +2,18 @@
 
 处理用户注册、登录、获取当前用户信息以及 GitLab OAuth 绑定。
 """
-from datetime import timedelta, datetime
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordRequestForm
-from fastapi.responses import RedirectResponse
+from datetime import timedelta
+
 import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from devops_collector.auth import auth_service, auth_schema
-from devops_collector.models.base_models import User, UserOAuthToken
+
+from devops_collector.auth import auth_schema, auth_service
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.config import settings
+
 
 # 初始化认证模块路由
 auth_router = APIRouter(prefix='/auth', tags=['Authentication'])
@@ -20,8 +21,8 @@ auth_router = APIRouter(prefix='/auth', tags=['Authentication'])
 
 @auth_router.get('/gitlab/bind')
 async def auth_bind_gitlab(
-    request: Request, 
-    token: str = Depends(auth_service.auth_oauth2_scheme), 
+    request: Request,
+    token: str = Depends(auth_service.auth_oauth2_scheme),
     db: Session = Depends(get_auth_db)
 ):
     """发起 GitLab OAuth 绑定。
@@ -39,16 +40,16 @@ async def auth_bind_gitlab(
     """
     if not settings.gitlab.client_id or not settings.gitlab.redirect_uri:
         raise HTTPException(500, 'GitLab OAuth not configured')
-        
+
     payload = auth_service.auth_decode_access_token(token)
     if not payload:
         raise HTTPException(401, 'Invalid or expired token')
-    
+
     email: str = payload.get('sub')
     current_user = auth_service.auth_get_user_by_email(db, email=email)
     if not current_user:
         raise HTTPException(401, 'User not found')
-    
+
     state = str(current_user.global_user_id)
     auth_url = (
         f'{settings.gitlab.url}/oauth/authorize?'
@@ -73,7 +74,7 @@ async def auth_login_gitlab(request: Request):
     """
     if not settings.gitlab.client_id or not settings.gitlab.redirect_uri:
         raise HTTPException(500, 'GitLab OAuth not configured')
-    
+
     # 使用 login_flow 前缀来标识这是登录流程
     state = "login_flow"
     auth_url = (
@@ -99,13 +100,13 @@ async def auth_gitlab_callback(code: str, state: str = None, db: Session = Depen
     # 处理登录流程
     if state == 'login_flow':
         result = await auth_service.auth_process_gitlab_callback(db, code)
-        
+
         if "error" in result:
             return RedirectResponse(url=f'/index.html?auth_error={result["error"]}')
-        
+
         if result.get("state") == "pending":
             return RedirectResponse(url='/index.html?auth_state=pending')
-            
+
         access_token = result.get("access_token")
         return RedirectResponse(
             url=f'/index.html?access_token={access_token}&token_type=bearer#login_success'
@@ -116,12 +117,12 @@ async def auth_gitlab_callback(code: str, state: str = None, db: Session = Depen
         # 先换取 Token
         async with httpx.AsyncClient(verify=settings.gitlab.verify_ssl) as client:
             resp = await client.post(
-                f'{settings.gitlab.url}/oauth/token', 
+                f'{settings.gitlab.url}/oauth/token',
                 data={
-                    'client_id': settings.gitlab.client_id, 
-                    'client_secret': settings.gitlab.client_secret, 
-                    'code': code, 
-                    'grant_type': 'authorization_code', 
+                    'client_id': settings.gitlab.client_id,
+                    'client_secret': settings.gitlab.client_secret,
+                    'code': code,
+                    'grant_type': 'authorization_code',
                     'redirect_uri': settings.gitlab.redirect_uri
                 }
             )
@@ -154,10 +155,10 @@ def auth_register(user: auth_schema.AuthRegisterRequest, db: Session = Depends(g
     if not auth_service.auth_validate_email_domain(user.email):
         allowed = ", ".join(settings.auth.allowed_domains)
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f'仅支持以下域名的公司邮箱注册: {allowed}'
         )
-    
+
     db_user = auth_service.auth_get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail='Email already registered')
@@ -180,25 +181,25 @@ def auth_login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()
         HTTPException: 用户名或密码错误。
     """
     from devops_collector.core import security
-    
+
     user = auth_service.auth_authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail='Incorrect username or password', 
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Incorrect username or password',
             headers={'WWW-Authenticate': 'Bearer'}
         )
     access_token_expires = timedelta(minutes=auth_service.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     # RBAC 2.0: 获取用户角色标识列表
     user_roles = [r.role_key for r in user.roles] if user.roles else []
-    
+
     # RBAC 2.0: 聚合用户所有角色的权限标识 (含角色继承)
     user_permissions = security.get_user_permissions(db, user)
-    
+
     # RBAC 2.0: 获取用户有效的数据范围
     data_scope = security.get_user_effective_data_scope(db, user)
-    
+
     token_data = {
         'sub': user.primary_email,
         'user_id': str(user.global_user_id),
@@ -209,9 +210,9 @@ def auth_login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()
         'permissions': user_permissions,
         'data_scope': data_scope
     }
-    
+
     access_token = auth_service.auth_create_access_token(
-        data=token_data, 
+        data=token_data,
         expires_delta=access_token_expires
     )
     return {'access_token': access_token, 'token_type': 'bearer'}
@@ -231,7 +232,7 @@ def auth_read_users_me(token: str = Depends(auth_service.auth_oauth2_scheme), db
         HTTPException: 令牌无效或用户未找到。
     """
     user = auth_service.auth_get_current_user(db, token)
-    
+
     # 1. Base User Info
     resp_data = {
         "global_user_id": str(user.global_user_id),
@@ -266,7 +267,7 @@ def auth_read_users_me(token: str = Depends(auth_service.auth_oauth2_scheme), db
                 "org_id": str(user.department.org_id),
                 "org_name": str(user.department.org_name)
             }
-        
+
         if user.location:
             resp_data["location"] = {
                 "location_id": str(user.location.location_id),

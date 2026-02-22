@@ -5,10 +5,13 @@
 本模块在导入时自动完成插件注册。
 """
 import os
+
 from devops_collector.core.registry import PluginRegistry
-from .models import SonarProject, SonarMeasure, SonarIssue
-from .worker import SonarQubeWorker
+
 from .config import get_config
+from .models import SonarIssue, SonarMeasure, SonarProject
+from .worker import SonarQubeWorker
+
 
 # 根据环境变量动态选择 Client 实现
 if os.getenv('USE_PYAIRBYTE', 'false').lower() == 'true':

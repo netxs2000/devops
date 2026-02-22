@@ -7,21 +7,33 @@
 4. 虚拟团队负责人角色推断
 5. 动态权限标识聚合
 """
-import pytest
 import uuid
-from devops_collector.models.base_models import (
-    User, Organization, Product, ProjectMaster, Team, 
-    SysRole, SysMenu, SysRoleMenu
-)
-from devops_collector.plugins.gitlab.models import GitLabProject, GitLabGroup, GitLabProjectMember, GitLabGroupMember
+
 from devops_collector.core.business_auth import get_business_linked_roles, get_dynamic_permissions
+from devops_collector.models.base_models import (
+    Organization,
+    Product,
+    ProjectMaster,
+    SysMenu,
+    SysRole,
+    SysRoleMenu,
+    Team,
+    User,
+)
+from devops_collector.plugins.gitlab.models import (
+    GitLabGroup,
+    GitLabGroupMember,
+    GitLabProject,
+    GitLabProjectMember,
+)
+
 
 def test_get_business_linked_roles_should_return_dept_manager_when_user_is_org_manager(db_session):
     # Setup
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="manager", full_name="Manager")
     db_session.add(user)
-    
+
     org = Organization(
         org_id="ORG_001",
         org_name="Test Org",
@@ -43,7 +55,7 @@ def test_get_business_linked_roles_should_return_product_manager_when_user_is_pm
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="pm", full_name="PM")
     db_session.add(user)
-    
+
     product = Product(
         product_id="PROD_001",
         product_name="Test Product",
@@ -67,7 +79,7 @@ def test_get_business_linked_roles_should_return_project_manager_when_user_is_pr
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="pl", full_name="PL")
     db_session.add(user)
-    
+
     project = ProjectMaster(
         project_id="PROJ_001",
         project_name="Test Project",
@@ -89,7 +101,7 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_team_
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="tl", full_name="TL")
     db_session.add(user)
-    
+
     team = Team(
         name="Test Team",
         team_code="TEAM_001",
@@ -112,7 +124,7 @@ def test_get_dynamic_permissions_should_aggregate_all_perms_from_business_roles(
     dept_role = SysRole(id=1, role_name="Dept Manager", role_key="DEPT_MANAGER")
     pm_role = SysRole(id=2, role_name="Product Manager", role_key="PRODUCT_MANAGER")
     db_session.add_all([dept_role, pm_role])
-    
+
     # 2. Menus
     menu1 = SysMenu(id=101, menu_name="Org View", perms="org:view", status=True)
     menu2 = SysMenu(id=102, menu_name="Prod Manage", perms="prod:manage", status=True)
@@ -122,12 +134,12 @@ def test_get_dynamic_permissions_should_aggregate_all_perms_from_business_roles(
     # 3. Role-Menu Matrix
     db_session.add(SysRoleMenu(role_id=dept_role.id, menu_id=menu1.id))
     db_session.add(SysRoleMenu(role_id=pm_role.id, menu_id=menu2.id))
-    
+
     # 4. User acting as both Org Manager and Product Manager
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="boss", full_name="Boss")
     db_session.add(user)
-    
+
     org = Organization(org_id="O1", org_name="O1", manager_user_id=user_id, is_current=True, sync_version=1)
     prod = Product(product_id="P1", product_name="P1", product_description="P1", version_schema="S", product_manager_id=user_id, is_current=True, sync_version=1)
     db_session.add_all([org, prod])
@@ -151,13 +163,13 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_gitla
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="gitlab_boss", full_name="GitLab Boss")
     db_session.add(user)
-    
+
     # Create GitLab Group and Membership
     # Note: access_level = 40 (Maintainer)
     group = GitLabGroup(id=101, name="Core Group", full_path="core")
     db_session.add(group)
     db_session.flush()
-    
+
     membership = GitLabGroupMember(group_id=101, user_id=user_id, access_level=40)
     db_session.add(membership)
     db_session.commit()
@@ -173,13 +185,13 @@ def test_get_business_linked_roles_should_return_project_manager_when_user_is_gi
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="gitlab_pm", full_name="GitLab PM")
     db_session.add(user)
-    
+
     # Create GitLab Project and Membership
     # Note: access_level = 50 (Owner)
     project = GitLabProject(id=201, name="Web App", path_with_namespace="core/webapp")
     db_session.add(project)
     db_session.flush()
-    
+
     membership = GitLabProjectMember(project_id=201, user_id=user_id, access_level=50)
     db_session.add(membership)
     db_session.commit()

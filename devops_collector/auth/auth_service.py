@@ -2,21 +2,24 @@
 
 实现用户鉴权、密码哈希处理、令牌生成以及核心业务校验（如域名过滤）。
 """
-import uuid
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Optional, Any, Union
+import uuid
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from uuid import UUID
+
+import httpx
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-import httpx
-from devops_collector.models.base_models import User, UserCredential
-from devops_collector.config import settings, Config
-from uuid import UUID
-from devops_collector.auth.auth_database import get_auth_db
+
 from devops_collector.auth import auth_schema
+from devops_collector.auth.auth_database import get_auth_db
+from devops_collector.config import settings
+from devops_collector.models.base_models import User, UserCredential
+
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -28,7 +31,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 auth_pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 auth_oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
 
-def auth_decode_access_token(token: str) -> Optional[dict]:
+def auth_decode_access_token(token: str) -> dict | None:
     """解码并验证 JWT 访问令牌。
     
     Args:
@@ -65,7 +68,7 @@ def auth_get_password_hash(password: str) -> str:
     """
     return auth_pwd_context.hash(password)
 
-def auth_create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def auth_create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """生成 JWT 访问令牌。
     
     Args:
@@ -77,10 +80,10 @@ def auth_create_access_token(data: dict, expires_delta: Optional[timedelta] = No
     """
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+        expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
     to_encode.update({"exp": expire})
     for k, v in to_encode.items():
         if isinstance(v, (UUID, uuid.UUID)):
@@ -88,7 +91,7 @@ def auth_create_access_token(data: dict, expires_delta: Optional[timedelta] = No
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def auth_get_user_by_email(db: Session, email: str) -> Optional[User]:
+def auth_get_user_by_email(db: Session, email: str) -> User | None:
     """根据主邮箱获取当前有效用户。
     
     Args:
@@ -107,12 +110,12 @@ def auth_validate_email_domain(email: str) -> bool:
     """
     if not email or '@' not in email:
         return False
-        
+
     allowed_domains = settings.auth.allowed_domains
     if not allowed_domains:
         return True # 开放模式
-        
-    domain = email.split('@')[-1].lower()
+
+    domain = email.rsplit('@', maxsplit=1)[-1].lower()
     return domain in [d.lower() for d in allowed_domains]
 
 def auth_create_user(db: Session, user_data: Any) -> User:
@@ -127,14 +130,14 @@ def auth_create_user(db: Session, user_data: Any) -> User:
     """
     hashed_password = auth_get_password_hash(user_data.password)
     db_user = User(
-        global_user_id=uuid.uuid4(), 
-        primary_email=user_data.email, 
-        full_name=user_data.full_name, 
-        employee_id=user_data.employee_id, 
-        is_active=False, 
-        is_survivor=True, 
-        sync_version=1, 
-        is_current=True, 
+        global_user_id=uuid.uuid4(),
+        primary_email=user_data.email,
+        full_name=user_data.full_name,
+        employee_id=user_data.employee_id,
+        is_active=False,
+        is_survivor=True,
+        sync_version=1,
+        is_current=True,
         is_deleted=False
     )
     db.add(db_user)
@@ -145,7 +148,7 @@ def auth_create_user(db: Session, user_data: Any) -> User:
     db.refresh(db_user)
     return db_user
 
-def auth_authenticate_user(db: Session, email: str, password: str) -> Union[User, bool]:
+def auth_authenticate_user(db: Session, email: str, password: str) -> User | bool:
     """验证用户凭据并返回用户对象。
     
     Args:
@@ -165,7 +168,7 @@ def auth_authenticate_user(db: Session, email: str, password: str) -> Union[User
         return False
     return user
 
-def auth_get_gitlab_token(db: Session, user_id: Any) -> Optional[Any]:
+def auth_get_gitlab_token(db: Session, user_id: Any) -> Any | None:
     """获取用户的 GitLab OAuth 令牌。
     
     Args:
@@ -221,18 +224,18 @@ def auth_get_current_user(db: Session, token: str) -> User:
     payload = auth_decode_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail='Invalid token or expired')
-    
+
     email: str = payload.get('sub')
     if email is None:
         raise HTTPException(status_code=401, detail='Invalid token')
-        
+
     user = auth_get_user_by_email(db, email=email)
     if user is None:
         raise HTTPException(status_code=401, detail='User not found')
     return user
 
 def get_current_user_obj(
-    token: str = Depends(auth_oauth2_scheme), 
+    token: str = Depends(auth_oauth2_scheme),
     db: Session = Depends(get_auth_db)
 ) -> User:
     """FastAPI 依赖项：获取并校验当前已登录用户。
@@ -275,16 +278,16 @@ async def auth_process_gitlab_callback(db: Session, code: str) -> dict:
         dict: 结果字典，包含 redirect_url 或错误信息
     """
     from devops_collector.core import security
-    
+
     # 1. 换取 Token
     async with httpx.AsyncClient(verify=settings.gitlab.verify_ssl) as client:
         resp = await client.post(
-            f'{settings.gitlab.url}/oauth/token', 
+            f'{settings.gitlab.url}/oauth/token',
             data={
-                'client_id': settings.gitlab.client_id, 
-                'client_secret': settings.gitlab.client_secret, 
-                'code': code, 
-                'grant_type': 'authorization_code', 
+                'client_id': settings.gitlab.client_id,
+                'client_secret': settings.gitlab.client_secret,
+                'code': code,
+                'grant_type': 'authorization_code',
                 'redirect_uri': settings.gitlab.redirect_uri
             }
         )
@@ -305,7 +308,7 @@ async def auth_process_gitlab_callback(db: Session, code: str) -> dict:
 
     email = gitlab_user.get('email')
     full_name = gitlab_user.get('name') or gitlab_user.get('username')
-    
+
     if not email:
         return {"error": "email_missing"}
 
@@ -315,11 +318,11 @@ async def auth_process_gitlab_callback(db: Session, code: str) -> dict:
 
     # 4. 查找或创建用户
     user = auth_get_user_by_email(db, email)
-    
+
     if not user:
         # 自动创建待审批账户
         user = auth_create_user(
-            db=db, 
+            db=db,
             user_data=auth_schema.AuthRegisterRequest(
                 email=email,
                 password=security.generate_random_password(),
@@ -343,7 +346,7 @@ async def auth_process_gitlab_callback(db: Session, code: str) -> dict:
     user_roles = [r.role_key for r in user.roles] if user.roles else []
     user_permissions = security.get_user_permissions(db, user)
     data_scope = security.get_user_effective_data_scope(db, user)
-    
+
     token_payload = {
         'sub': user.primary_email,
         'user_id': str(user.global_user_id),
@@ -354,9 +357,9 @@ async def auth_process_gitlab_callback(db: Session, code: str) -> dict:
         'permissions': user_permissions,
         'data_scope': data_scope
     }
-    
+
     access_token = auth_create_access_token(
-        data=token_payload, 
+        data=token_payload,
         expires_delta=access_token_expires
     )
 

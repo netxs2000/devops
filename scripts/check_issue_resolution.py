@@ -8,10 +8,12 @@
 """
 import argparse
 import sys
-from typing import List, Dict, Optional
+
 import requests
+
 from devops_collector.core.config import Config
 from devops_collector.core.logger import logger
+
 
 class IssueResolutionChecker:
     """Issue 关闭原因检查器。
@@ -35,7 +37,7 @@ class IssueResolutionChecker:
         self.session = requests.Session()
         self.session.headers.update({'PRIVATE-TOKEN': private_token, 'Content-Type': 'application/json'})
 
-    def get_closed_issues_without_resolution(self, project_id: int) -> List[Dict]:
+    def get_closed_issues_without_resolution(self, project_id: int) -> list[dict]:
         """获取已关闭但没有 resolution 标签的 Issues。
 
         Args:
@@ -57,7 +59,7 @@ class IssueResolutionChecker:
                 for issue in issues:
                     labels = issue.get('labels', [])
                     if 'type::bug' in labels or 'type::requirement' in labels:
-                        has_resolution = any((l.startswith(self.RESOLUTION_PREFIX) for l in labels))
+                        has_resolution = any(l.startswith(self.RESOLUTION_PREFIX) for l in labels)
                         if not has_resolution:
                             target_issues.append(issue)
                 if 'x-next-page' not in response.headers or not response.headers['x-next-page']:
@@ -83,12 +85,12 @@ class IssueResolutionChecker:
             response = self.session.get(url)
             response.raise_for_status()
             notes = response.json()
-            return any(('⚠️ **关闭原因缺失提醒**' in note.get('body', '') for note in notes))
+            return any('⚠️ **关闭原因缺失提醒**' in note.get('body', '') for note in notes)
         except Exception as e:
             logger.error(f'获取 Issue #{issue_iid} 评论失败: {e}')
             return False
 
-    def add_resolution_reminder(self, project_id: int, issue: Dict) -> bool:
+    def add_resolution_reminder(self, project_id: int, issue: dict) -> bool:
         """为 Issue 添加关闭原因提醒评论。
 
         Args:

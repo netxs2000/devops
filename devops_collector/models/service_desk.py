@@ -2,9 +2,11 @@
 
 实现工单的持久化存储，支持跨部门标签审计与状态追溯。
 """
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Index, UUID
+from sqlalchemy import UUID, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.sql import func
+
 from devops_collector.models.base_models import Base
+
 
 class ServiceDeskTicket(Base):
     """服务台工单表 (service_desk_tickets)。

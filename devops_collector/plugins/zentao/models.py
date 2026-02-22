@@ -2,11 +2,14 @@
 
 定义禅道相关的 SQLAlchemy ORM 模型，支持产品、执行、需求、缺陷、用例、构建和发布。
 """
-from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, Boolean
-from sqlalchemy.orm import relationship
+from datetime import UTC, datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
 from devops_collector.models.base_models import Base
+
 
 class ZenTaoProduct(Base):
     """禅道产品模型 (zentao_products)。
@@ -36,8 +39,8 @@ class ZenTaoProduct(Base):
     gitlab_project_id = Column(Integer, ForeignKey('gitlab_projects.id'), nullable=True)
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default='PENDING')
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC))
     raw_data = Column(JSON)
     # MDM 关联字段
     mdm_product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True, comment='关联的 MDM 产品 ID')

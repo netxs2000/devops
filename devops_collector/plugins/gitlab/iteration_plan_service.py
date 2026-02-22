@@ -8,13 +8,18 @@
 这些方法设计用于被前端 API 直接调用。
 """
 import logging
-from typing import List, Dict, Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_, desc
+
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
-from devops_collector.plugins.gitlab.models import GitLabProject, GitLabIssue, GitLabMilestone, GitLabRelease, ReleaseMilestoneLink
-from devops_collector.models.base_models import User
+from devops_collector.plugins.gitlab.models import (
+    GitLabIssue,
+    GitLabMilestone,
+    GitLabRelease,
+)
+
+
 logger = logging.getLogger(__name__)
 
 class IterationPlanService:
@@ -33,7 +38,7 @@ class IterationPlanService:
         self.session = session
         self.client = client
 
-    def get_backlog_issues(self, project_id: int) -> List[GitLabIssue]:
+    def get_backlog_issues(self, project_id: int) -> list[GitLabIssue]:
         """获取待办需求池 (Product Backlog)。
         
         逻辑定义:
@@ -54,7 +59,7 @@ class IterationPlanService:
         backlog.sort(key=lambda x: (x.weight or 0, x.created_at), reverse=True)
         return backlog
 
-    def get_sprint_backlog(self, project_id: int, milestone_title: str) -> List[GitLabIssue]:
+    def get_sprint_backlog(self, project_id: int, milestone_title: str) -> list[GitLabIssue]:
         """获取当前迭代/里程碑的需求 (Sprint Backlog)。
         
         修改说明:
@@ -90,11 +95,11 @@ class IterationPlanService:
     def execute_release(self,
                         project_id: int,
                         milestone_title: str,
-                        new_title: Optional[str] = None,
+                        new_title: str | None = None,
                         ref_branch: str = 'main',
-                        user_id: Optional[str] = None,
+                        user_id: str | None = None,
                         auto_rollover: bool = False,
-                        target_milestone_id: Optional[int] = None) -> Dict:
+                        target_milestone_id: int | None = None) -> dict:
         """执行发布流程：结转任务、打 Tag、生成 Release Notes 以及关闭里程碑。
 
         Args:
@@ -200,8 +205,8 @@ class IterationPlanService:
                                           tag_name=tag_name,
                                           name=gl_release_data.get('name'),
                                           description=gl_release_data.get('description'),
-                                          created_at=datetime.now(timezone.utc),
-                                          released_at=datetime.now(timezone.utc),
+                                          created_at=datetime.now(UTC),
+                                          released_at=datetime.now(UTC),
                                           author_id=user_id,
                                           raw_data=gl_release_data)
             self.session.add(local_release)
@@ -214,11 +219,11 @@ class IterationPlanService:
             logger.error(f"发布执行失败: {e}")
             raise e
 
-    def create_sprint(self, project_id: int, title: str, start_date: str, due_date: str, description: str=None) -> Dict:
+    def create_sprint(self, project_id: int, title: str, start_date: str, due_date: str, description: str=None) -> dict:
         """【迭代规划】创建新的冲刺 (GitLabMilestone)。"""
         try:
             gl_milestone = self.client.create_project_milestone(project_id, title, start_date, due_date, description)
-            new_ms = GitLabMilestone(id=gl_milestone['id'], iid=gl_milestone['iid'], project_id=project_id, title=gl_milestone['title'], state=gl_milestone['state'], start_date=datetime.strptime(gl_milestone['start_date'], '%Y-%m-%d') if gl_milestone.get('start_date') else None, due_date=datetime.strptime(gl_milestone['due_date'], '%Y-%m-%d') if gl_milestone.get('due_date') else None, created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc), raw_data=gl_milestone)
+            new_ms = GitLabMilestone(id=gl_milestone['id'], iid=gl_milestone['iid'], project_id=project_id, title=gl_milestone['title'], state=gl_milestone['state'], start_date=datetime.strptime(gl_milestone['start_date'], '%Y-%m-%d') if gl_milestone.get('start_date') else None, due_date=datetime.strptime(gl_milestone['due_date'], '%Y-%m-%d') if gl_milestone.get('due_date') else None, created_at=datetime.now(UTC), updated_at=datetime.now(UTC), raw_data=gl_milestone)
             self.session.merge(new_ms)
             self.session.commit()
             return gl_milestone
@@ -226,7 +231,7 @@ class IterationPlanService:
             logger.error(f'Failed to create sprint: {e}')
             raise e
 
-    def get_sprint_issues_inclusive(self, project_id: int, milestone_title: str) -> List[GitLabIssue]:
+    def get_sprint_issues_inclusive(self, project_id: int, milestone_title: str) -> list[GitLabIssue]:
         """(辅助) 获取里程碑下的所有 GitLabIssue (含已完成)。"""
         query = self.session.query(GitLabIssue).filter(GitLabIssue.project_id == project_id)
         issues = []

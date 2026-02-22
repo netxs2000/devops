@@ -1,10 +1,12 @@
 
-import streamlit as st
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas as pd
+import streamlit as st
 from sqlalchemy.sql import text
+
 from dashboard.common.db import get_db_engine
+
 
 st.set_page_config(page_title="DORA Metrics", page_icon="[DORA]", layout="wide")
 
@@ -120,10 +122,10 @@ with col_s:
     fig = go.Figure()
     # Aggregate by month for the chart
     monthly_agg = filtered_df.groupby('month').agg({'wait_time_hours': 'mean', 'work_time_hours': 'mean'}).reset_index()
-    
+
     fig.add_trace(go.Bar(name='Wait (Pickup Delay)', x=monthly_agg['month'], y=monthly_agg['wait_time_hours'], marker_color='#ef4444'))
     fig.add_trace(go.Bar(name='Work (Review Effort)', x=monthly_agg['month'], y=monthly_agg['work_time_hours'], marker_color='#10b981'))
-    
+
     fig.update_layout(barmode='stack', template="plotly_dark", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
@@ -132,7 +134,7 @@ with col_s:
 st.subheader("Process Bottleneck Analysis")
 for _, row in latest_df.head(10).iterrows():
     rating_class = f"rating-{row['performance_rating'].lower()}"
-    
+
     with st.expander(f"Project: {row['project_name']} - Rating: {row['performance_rating']}"):
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Wait Time", f"{row['wait_time_hours']:.1f}h")

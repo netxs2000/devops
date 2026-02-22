@@ -22,21 +22,25 @@ Scenario:
         - Records 3, 4, 5 are successfully ingested.
         - Final DB count is 5.
 """
-import unittest
 import logging
-import sys
 import os
+import sys
+import unittest
 from unittest.mock import MagicMock
-from datetime import datetime
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 from devops_collector.models.base_models import Base
-from devops_collector.plugins.gitlab.models import GitLabProject as Project, GitLabCommit as Commit
-from devops_collector.plugins.gitlab.worker import GitLabWorker
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+from devops_collector.plugins.gitlab.models import GitLabCommit as Commit
+from devops_collector.plugins.gitlab.worker import GitLabWorker
+
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('TestInterruptRecovery')
 

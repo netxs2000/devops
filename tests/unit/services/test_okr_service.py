@@ -1,12 +1,15 @@
 """TODO: Add module description."""
 import unittest
+from datetime import UTC, datetime
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime, timezone
-from devops_collector.models.base_models import Base, OKRObjective, OKRKeyResult
-from devops_collector.plugins.gitlab.models import GitLabCommit as Commit, GitLabProject as Project
-from devops_collector.plugins.sonarqube.models import SonarMeasure, SonarProject
+
 from devops_collector.core.okr_service import OKRService
+from devops_collector.models.base_models import Base, OKRKeyResult, OKRObjective
+from devops_collector.plugins.gitlab.models import GitLabCommit as Commit
+from devops_collector.plugins.sonarqube.models import SonarMeasure, SonarProject
+
 
 class TestOKRService(unittest.TestCase):
     """OKR 自动化服务单元测试。"""
@@ -53,7 +56,7 @@ Raises:
         s_project = SonarProject(key='my-app', name='Test App')
         self.session.add(s_project)
         self.session.flush()
-        measure = SonarMeasure(project_id=s_project.id, coverage=65.0, analysis_date=datetime.now(timezone.utc))
+        measure = SonarMeasure(project_id=s_project.id, coverage=65.0, analysis_date=datetime.now(UTC))
         self.session.add(measure)
         self.session.commit()
         self.service.update_all_active_okrs()

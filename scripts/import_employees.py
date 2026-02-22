@@ -8,20 +8,22 @@
 执行方式:
     python scripts/import_employees.py
 """
-import sys
-import os
-import logging
-import uuid
 import csv
+import logging
+import sys
+import uuid
+from pathlib import Path
+
 import pypinyin
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from pathlib import Path
+
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
-from devops_collector.models import Base, User, Organization
+from devops_collector.models import Base, Organization, User
+
 
 # 日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -44,16 +46,16 @@ def import_employees():
     """从 CSV 导入员工数据。"""
     engine = create_engine(settings.database.uri)
     Base.metadata.create_all(engine)
-    
+
     csv_path = Path(CSV_FILE)
     if not csv_path.exists():
         logger.error(f"CSV 文件未找到: {csv_path}")
         return
 
-    with Session(engine) as session, open(csv_path, mode='r', encoding='utf-8-sig') as f:
+    with Session(engine) as session, open(csv_path, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         logger.info('开始从 CSV 导入员工数据...')
-        
+
         count = 0
         for row in reader:
             name = row.get('姓名', '').strip()
@@ -63,10 +65,10 @@ def import_employees():
             position = row.get('职位', '').strip()
             hr_relationship = row.get('人事关系', '').strip() or row.get('hr_relationship', '').strip()
             csv_email = row.get('邮箱', '').strip()
-            
+
             if not name or not employee_id:
                 continue
-            
+
             # 1. 确定邮箱和用户名 (优先使用 CSV)
             if csv_email:
                 email = csv_email.lower().strip()
@@ -74,7 +76,7 @@ def import_employees():
             else:
                 username = to_pinyin(name)
                 email = f"{username}@tjhq.com"
-            
+
             # 2. 查找所属组织
             org_id = get_org_id(center, dept)
             org = session.query(Organization).filter_by(org_id=org_id).first()
@@ -83,16 +85,16 @@ def import_employees():
                 org = session.query(Organization).filter(Organization.org_name == dept).first()
                 if not org:
                     org = session.query(Organization).filter(Organization.org_name == center).first()
-            
+
             final_org_id = org.org_id if org else None
-            
+
             # 3. 创建或更新用户
             user = session.query(User).filter_by(employee_id=employee_id).first()
-            
+
             if not user:
                 # 如果工号不存在，尝试通过邮箱找（处理工号变更但邮箱未变的情况）
                 user = session.query(User).filter_by(primary_email=email).first()
-            
+
             if not user:
                 user = User(
                     global_user_id=uuid.uuid4(),
@@ -121,12 +123,12 @@ def import_employees():
                 user.is_active = True
                 user.is_current = True
                 logger.debug(f"更新员工信息: {name} ({employee_id})")
-            
+
             count += 1
             if count % 100 == 0:
                 session.flush() # 定期刷新
                 logger.info(f"已处理 {count} 条记录...")
-        
+
         session.commit()
         logger.info(f"✅ 员工导入已完成！共处理 {count} 条记录。")
 

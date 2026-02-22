@@ -14,7 +14,9 @@ Typical usage:
     load_all_plugins()
 """
 import logging
+
 from devops_collector.core.plugin_loader import PluginLoader
+
 
 logger = logging.getLogger(__name__)
 

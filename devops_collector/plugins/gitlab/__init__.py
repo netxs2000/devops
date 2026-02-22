@@ -5,9 +5,12 @@
 本模块在导入时自动完成插件注册。
 """
 import os
+
 from devops_collector.core.registry import PluginRegistry
-from .worker import GitLabWorker
+
 from .config import get_config
+from .worker import GitLabWorker
+
 
 # 根据环境变量动态选择 Client 实现
 if os.getenv('USE_PYAIRBYTE', 'false').lower() == 'true':

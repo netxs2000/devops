@@ -5,17 +5,20 @@
 
 遵循 Google Python Style Guide。
 """
+import logging
 import os
 import sys
-import logging
-from sqlalchemy import create_engine, or_, and_
+
+from sqlalchemy import create_engine, or_
 from sqlalchemy.orm import sessionmaker
+
 
 # 确保可以导入项目模块
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
-from devops_collector.models.base_models import User, IdentityMapping
+from devops_collector.models.base_models import IdentityMapping, User
+
 
 # 配置日志
 logging.basicConfig(
@@ -48,15 +51,15 @@ class IdentityResolver:
         ).all()
 
         logger.info(f"Found {len(mappings)} identity mappings to re-evaluate.")
-        
+
         updated_count = 0
         for mapping in mappings:
             best_match, score = self._find_best_match(mapping)
-            
+
             if best_match and score >= 0.6:
                 if mapping.global_user_id != best_match.global_user_id or mapping.confidence_score != score:
                     logger.info(f"Match found: {mapping.external_username} -> {best_match.full_name} (Score: {score})")
-                    
+
                     if not dry_run:
                         mapping.global_user_id = best_match.global_user_id
                         mapping.confidence_score = score
@@ -75,7 +78,7 @@ class IdentityResolver:
         email = (mapping.external_email or "").lower()
         ext_username = (mapping.external_username or "").lower()
         ext_uid = (mapping.external_user_id or "").lower()
-        
+
         email_prefix = email.split('@')[0] if '@' in email else None
 
         best_user = None
@@ -90,15 +93,15 @@ class IdentityResolver:
             # 1. Email 精确匹配 (Weight: 1.0)
             if email and email == u_email:
                 current_score = 1.0
-            
+
             # 2. 工号精确匹配 (Weight: 1.0)
             elif ext_uid == u_emp_id:
                 current_score = 1.0
-                
+
             # 3. Email 前缀匹配 (Weight: 0.8)
             elif email_prefix and (email_prefix == u_emp_id or email_prefix == user.username):
                 current_score = 0.8
-                
+
             # 4. 姓名 + Email 域匹配 (Weight: 0.7)
             elif ext_username == u_name and "@" in email:
                 # 检查是否是公司内部域名
@@ -106,7 +109,7 @@ class IdentityResolver:
                     current_score = 0.7
                 else:
                     current_score = 0.5
-            
+
             # 5. 仅姓名匹配 (Weight: 0.4)
             elif ext_username == u_name:
                 current_score = 0.4
@@ -114,16 +117,16 @@ class IdentityResolver:
             if current_score > max_score:
                 max_score = current_score
                 best_user = user
-                
+
             if max_score == 1.0: # 找到完美匹配直接退出
                 break
-                
+
         return best_user, max_score
 
 def main():
     """入口函数。"""
     logger.info("Starting Identity Resolver script...")
-    
+
     engine = create_engine(settings.database.uri)
     Session = sessionmaker(bind=engine)
     session = Session()
@@ -134,7 +137,7 @@ def main():
         dry_run = "--apply" not in sys.argv
         if dry_run:
             logger.info("Running in DRY-RUN mode. Use --apply to save changes.")
-        
+
         resolver.run(dry_run=dry_run)
     except Exception as e:
         logger.error(f"Resolver failed: {e}")

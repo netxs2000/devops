@@ -3,10 +3,12 @@
 提供 MR 及其相关分析逻辑。
 """
 import logging
-from datetime import datetime
-from typing import List, Optional
+
 from devops_collector.core.utils import parse_iso8601
-from ..models import GitLabProject, GitLabMergeRequest
+
+from ..models import GitLabMergeRequest, GitLabProject
+
+
 logger = logging.getLogger(__name__)
 
 class MergeRequestMixin:
@@ -15,7 +17,7 @@ class MergeRequestMixin:
     包含 MR 的基础信息同步、数据转换以及深度协作分析功能。
     """
 
-    def _sync_merge_requests(self, project: GitLabProject, since: Optional[str]) -> int:
+    def _sync_merge_requests(self, project: GitLabProject, since: str | None) -> int:
         """从项目同步合并请求 (MR)。
 
         Args:
@@ -27,7 +29,7 @@ class MergeRequestMixin:
         """
         return self._process_generator(self.client.get_project_merge_requests(project.id, since=since), lambda batch: self._save_mrs_batch(project, batch))
 
-    def _save_mrs_batch(self, project: GitLabProject, batch: List[dict]) -> None:
+    def _save_mrs_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存合并请求记录。
         
         第一阶段：Extract & Load (Staging) - 原始数据落盘
@@ -41,7 +43,7 @@ class MergeRequestMixin:
             self.save_to_staging(source='gitlab', entity_type='merge_request', external_id=data['id'], payload=data, schema_version=self.SCHEMA_VERSION)
         self._transform_mrs_batch(project, batch)
 
-    def _transform_mrs_batch(self, project: GitLabProject, batch: List[dict]) -> None:
+    def _transform_mrs_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """核心解析逻辑：将原始 JSON 转换为 MergeRequest 模型。
 
         Args:

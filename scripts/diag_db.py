@@ -1,12 +1,14 @@
-import sys
 import os
+import sys
+
 from sqlalchemy import text
-from typing import List
+
 
 # 将项目根目录添加到 python 路径
 sys.path.insert(0, os.getcwd())
 
 from devops_collector.auth.auth_database import AuthEngine, AuthSessionLocal
+
 
 def diagnose_db():
     """诊断数据库连接及核心数据表。"""
@@ -23,16 +25,16 @@ def diagnose_db():
 
         # 2. 检查核心表内容
         db = AuthSessionLocal()
-        
+
         # 统计一些关键表的记录数
         tables = ["adm_users", "adm_roles", "sd_tickets", "pm_projects"]
-        
+
         print("\n核心表数据统计:")
         for table in tables:
             try:
                 count_result = db.execute(text(f"SELECT count(*) FROM {table}")).fetchone()[0]
                 print(f"  - {table:20}: {count_result} 条记录")
-            except Exception as e:
+            except Exception:
                 print(f"  - {table:20}: ✗ 查询失败 (可能表不存在)")
 
         db.close()

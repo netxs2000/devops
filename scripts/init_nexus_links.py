@@ -1,11 +1,11 @@
 import csv
-import os
 import logging
+import os
 import re
-from sqlalchemy.orm import Session
-from devops_collector.models.database import SessionLocal
-from devops_collector.plugins.nexus.models import NexusComponent
+
 from devops_collector.models.base_models import Product
+from devops_collector.plugins.nexus.models import NexusComponent
+
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -21,7 +21,7 @@ def init_nexus_links():
 
     try:
         logger.info("开始同步 Nexus 组件关联 (高性能模式)...")
-        
+
         # 1. 预加载所有有效产品到内存
         all_products = session.query(Product.product_id).filter(Product.is_current == True).all()
         valid_product_ids = {p.product_id for p in all_products}
@@ -29,7 +29,7 @@ def init_nexus_links():
 
         # 2. 预加载并编译所有映射规则
         rules = []
-        with open(NEXUS_MAP_CSV, mode='r', encoding='utf-8-sig') as f:
+        with open(NEXUS_MAP_CSV, encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             for row in reader:
                 group_pat = row.get('group', '').strip()
@@ -53,7 +53,7 @@ def init_nexus_links():
                     'name_re': re.compile(name_pat) if match_type == 'regex' and name_pat else None
                 }
                 rules.append(rule)
-        
+
         logger.info(f"已加载 {len(rules)} 条映射规则。")
 
         # 3. 遍历所有组件一次进行匹配 (O(Rules * Components))
@@ -65,7 +65,7 @@ def init_nexus_links():
         for comp in all_components:
             for rule in rules:
                 is_match = True
-                
+
                 if rule['type'] == 'regex':
                     if rule['group'] and not rule['group_re'].search(comp.group or ''):
                         is_match = False
@@ -76,7 +76,7 @@ def init_nexus_links():
                         is_match = False
                     if rule['name'] and comp.name != rule['name']:
                         is_match = False
-                        
+
                 if is_match:
                     if comp.product_id != rule['pid']:
                         comp.product_id = rule['pid']

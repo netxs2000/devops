@@ -1,7 +1,9 @@
 """TODO: Add module description."""
-import streamlit as st
 import plotly.express as px
-from utils import set_page_config, run_query
+import streamlit as st
+from utils import run_query, set_page_config
+
+
 set_page_config()
 st.title('⚠️ 合规审计与过程风控')
 st.caption('基于“四眼原则”与分支保护规范，识别研发流程中的违规隐患。')

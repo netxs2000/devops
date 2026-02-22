@@ -2,26 +2,29 @@
 Seed an E2E test user with SYSTEM_ADMIN role.
 """
 
-import sys
 import os
+import sys
 import uuid
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from pathlib import Path
+
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from devops_collector.config import settings
-from devops_collector.models.base_models import User, UserCredential, SysRole, UserRole
 from devops_collector.auth.auth_service import auth_get_password_hash
+from devops_collector.config import settings
+from devops_collector.models.base_models import SysRole, User, UserCredential, UserRole
+
 
 def seed_e2e_admin():
     engine = create_engine(settings.database.uri)
     with Session(engine) as session:
         email = os.getenv("E2E_TEST_USER_EMAIL", "e2e_test@example.com")
         password = os.getenv("E2E_TEST_USER_PASSWORD", "e2e_test_password")
-        
+
         # Check if user exists
         user = session.query(User).filter_by(primary_email=email).first()
         if not user:
@@ -37,7 +40,7 @@ def seed_e2e_admin():
             )
             session.add(user)
             session.flush()
-            
+
             cred = UserCredential(
                 user_id=user.global_user_id,
                 password_hash=auth_get_password_hash(password)
@@ -66,7 +69,7 @@ def seed_e2e_admin():
             link = UserRole(user_id=user.global_user_id, role_id=admin_role.id)
             session.add(link)
             print("Linked SYSTEM_ADMIN role to E2E user")
-        
+
         session.commit()
         print("Done.")
 

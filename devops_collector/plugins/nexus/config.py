@@ -3,10 +3,10 @@
 从环境变量中读取 Nexus 相关配置。
 """
 import os
-from typing import Dict, Any
+from typing import Any
 
 
-def get_config() -> Dict[str, Any]:
+def get_config() -> dict[str, Any]:
     """获取 Nexus 插件的配置。
     
     Returns:

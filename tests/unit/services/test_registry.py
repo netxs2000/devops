@@ -3,7 +3,9 @@
 验证插件的注册、查询和实例化功能。
 """
 import unittest
+
 from devops_collector.core.registry import PluginRegistry
+
 
 class MockClient:
     """Mock 客户端类。"""

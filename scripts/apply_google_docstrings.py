@@ -1,6 +1,6 @@
 import ast
-import os
 from pathlib import Path
+
 
 MODULE_PLACEHOLDER = """TODO: Add module description."""
 PLACEHOLDER = '''"""TODO: Add description.

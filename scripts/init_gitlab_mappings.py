@@ -20,11 +20,13 @@ from collections import defaultdict
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+
 # 添加项目根目录到路径
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
-from devops_collector.models import Base, User, IdentityMapping
+from devops_collector.models import IdentityMapping, User
+
 
 # 日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -38,10 +40,10 @@ def init_gitlab_mappings():
     engine = create_engine(settings.database.uri)
     SessionLocal = sessionmaker(bind=engine)
     session = SessionLocal()
-    
+
     # 统计信息
     stats = defaultdict(int)
-    
+
     try:
         if not os.path.exists(CSV_FILE):
             logger.error(f"找不到 GitLab 用户 CSV 文件: {CSV_FILE}")
@@ -50,7 +52,7 @@ def init_gitlab_mappings():
         logger.info('=' * 60)
         logger.info('开始 GitLab 身份映射初始化 (Email 优先策略)')
         logger.info('=' * 60)
-        
+
         # 预加载所有员工主数据，按 Email 和姓名建立索引
         all_users = session.query(User).filter(User.is_current == True).all()
         email_index = {u.primary_email.lower(): u for u in all_users if u.primary_email}
@@ -58,27 +60,27 @@ def init_gitlab_mappings():
         for u in all_users:
             if u.full_name:
                 name_index[u.full_name].append(u)
-        
+
         logger.info(f"已加载 {len(email_index)} 条员工邮箱索引")
         logger.info(f"已加载 {len(name_index)} 个不同姓名")
-        
-        with open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
+
+        with open(CSV_FILE, encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
-            
+
             for row in reader:
                 gitlab_id = row.get('GitLab用户ID', '').strip() or row.get('GITLAB ID', '').strip()
                 username = row.get('用户名', '').strip() or row.get('username', '').strip()
                 full_name = row.get('全名', '').strip() or row.get('Full name', '').strip()
                 email = row.get('Email', '').strip().lower()
-                
+
                 if not gitlab_id or not username:
                     stats['skipped_invalid'] += 1
                     continue
-                
+
                 stats['total'] += 1
                 user = None
                 match_method = None
-                
+
                 # ========================================
                 # 策略 1: Email 精确匹配 (最高优先级)
                 # ========================================
@@ -86,7 +88,7 @@ def init_gitlab_mappings():
                     user = email_index[email]
                     match_method = 'EMAIL'
                     stats['matched_by_email'] += 1
-                
+
                 # ========================================
                 # 策略 2: 姓名唯一匹配 (降级策略)
                 # ========================================
@@ -108,7 +110,7 @@ def init_gitlab_mappings():
                             f"存在 {len(candidates)} 个重名员工，无法确定映射"
                         )
                         continue
-                
+
                 # ========================================
                 # 策略 3: 无法匹配，跳过
                 # ========================================
@@ -116,11 +118,11 @@ def init_gitlab_mappings():
                     stats['skipped_no_match'] += 1
                     logger.info(f"[跳过] GitLab用户 '{full_name}' ({email}) 无法匹配主数据")
                     continue
-                
+
                 # ========================================
                 # 创建或更新 IdentityMapping
                 # ========================================
-                
+
                 # 检查此 external_user_id 是否已有映射
                 mapping = session.query(IdentityMapping).filter_by(
                     source_system='gitlab',
@@ -128,13 +130,13 @@ def init_gitlab_mappings():
                 ).first()
 
                 confidence = 1.0 if match_method == 'EMAIL' else 0.8
-                
+
                 # 检查此 global_user_id 是否已经绑定了其他的 gitlab_id (防止违反 uq_source_global_user)
                 other_mapping = session.query(IdentityMapping).filter_by(
                     source_system='gitlab',
                     global_user_id=user.global_user_id
                 ).first()
-                
+
                 if other_mapping and (not mapping or other_mapping.id != mapping.id):
                     logger.error(
                         f"[跳过] 员工 {user.full_name}({user.employee_id}) 已绑定 GitLab ID: {other_mapping.external_user_id}, "
@@ -174,7 +176,7 @@ def init_gitlab_mappings():
                     stats['updated'] += 1
 
             session.commit()
-            
+
             # 输出统计报告
             logger.info('=' * 60)
             logger.info('GitLab 身份映射初始化完成!')
@@ -184,7 +186,7 @@ def init_gitlab_mappings():
             logger.info(f"  - 姓名匹配: {stats['matched_by_name']}")
             logger.info(f"  - 新建映射: {stats['created']}")
             logger.info(f"  - 更新映射: {stats['updated']}")
-            logger.info(f"跳过记录:")
+            logger.info("跳过记录:")
             logger.info(f"  - 无法匹配: {stats['skipped_no_match']}")
             logger.info(f"  - 重名冲突: {stats['skipped_duplicate_name']}")
             logger.info(f"  - 账号冲突: {stats['skipped_duplicate_user']}")

@@ -3,9 +3,12 @@
 验证 API 客户端的重试机制、错误处理和限流集成。
 """
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import requests
+
 from devops_collector.core.base_client import BaseClient
+
 
 class MockClient(BaseClient):
     """用于测试的 BaseClient 实现类。"""

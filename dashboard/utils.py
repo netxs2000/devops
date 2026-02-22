@@ -1,8 +1,10 @@
 """TODO: Add module description."""
-import streamlit as st
 import pandas as pd
+import streamlit as st
 from sqlalchemy import create_engine
+
 from devops_collector.config import settings
+
 
 def get_engine():
     """Returns a SQLAlchemy engine using the project settings."""

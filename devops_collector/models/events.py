@@ -3,14 +3,16 @@
 实现“一次映射，全量归责”：当由于新建立身份映射关系时，
 自动追溯并关联历史存量数据（如 Commit, Issue 等）。
 """
-from sqlalchemy import event, or_, func, Integer
+from sqlalchemy import Integer, event
+
 from devops_collector.models.base_models import IdentityMapping, User
+
 
 def auto_link_user_activities(mapper, connection, target):
     """当新增身份映射时，自动关联该用户在各插件中的历史活动记录。"""
     # Local import to avoid circular dependency
     from devops_collector.plugins.gitlab.models import GitLabCommit, GitLabIssue
-    
+
     if target.source_system == 'gitlab':
         user = connection.execute(User.__table__.select().where(User.__table__.c.global_user_id == target.global_user_id)).first()
         if not user:
@@ -21,7 +23,7 @@ def auto_link_user_activities(mapper, connection, target):
             connection.execute(
                 GitLabIssue.__table__.update()
                 .where(
-                    (GitLabIssue.__table__.c.author_id == None) & 
+                    (GitLabIssue.__table__.c.author_id == None) &
                     (GitLabIssue.__table__.c.raw_data[('author', 'id')].as_string().cast(Integer) == gitlab_uid)
                 )
                 .values(author_id=target.global_user_id)

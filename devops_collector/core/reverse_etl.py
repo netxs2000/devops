@@ -4,10 +4,14 @@
 实现数据闭环，让分析结果能够直接触达业务流程。
 """
 import logging
+
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from devops_collector.models.base_models import User
+
 from devops_collector.core.services import close_current_and_insert_new
+from devops_collector.models.base_models import User
+
+
 logger = logging.getLogger(__name__)
 
 def sync_talent_tags_to_mdm(session: Session, threshold: float=50.0) -> int:

@@ -1,34 +1,36 @@
 """核心算法工具类单元测试 (algorithms.py)"""
 import unittest
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime
+
 from devops_collector.core.algorithms import AgileMetrics, CodeMetrics, QualityMetrics
+
 
 class TestAgileMetrics(unittest.TestCase):
     """测试敏捷指标计算逻辑。"""
 
     def test_calculate_cycle_time(self):
         """测试周期时间计算。"""
-        start = datetime(2025, 12, 1, 10, 0, 0, tzinfo=timezone.utc)
-        mid = datetime(2025, 12, 1, 14, 0, 0, tzinfo=timezone.utc)
-        end = datetime(2025, 12, 2, 10, 0, 0, tzinfo=timezone.utc)
+        start = datetime(2025, 12, 1, 10, 0, 0, tzinfo=UTC)
+        mid = datetime(2025, 12, 1, 14, 0, 0, tzinfo=UTC)
+        end = datetime(2025, 12, 2, 10, 0, 0, tzinfo=UTC)
         histories = [{'to_string': 'In Progress', 'created_at': start}, {'to_string': 'Testing', 'created_at': mid}, {'to_string': 'Done', 'created_at': end}]
         cycle_time = AgileMetrics.calculate_cycle_time(histories)
         self.assertEqual(cycle_time, 24.0)
 
     def test_calculate_cycle_time_reopen(self):
         """测试重开场景下的周期时间。"""
-        t1 = datetime(2025, 12, 1, 10, 0, tzinfo=timezone.utc)
-        t2 = datetime(2025, 12, 1, 12, 0, tzinfo=timezone.utc)
-        t3 = datetime(2025, 12, 1, 14, 0, tzinfo=timezone.utc)
-        t4 = datetime(2025, 12, 1, 16, 0, tzinfo=timezone.utc)
+        t1 = datetime(2025, 12, 1, 10, 0, tzinfo=UTC)
+        t2 = datetime(2025, 12, 1, 12, 0, tzinfo=UTC)
+        t3 = datetime(2025, 12, 1, 14, 0, tzinfo=UTC)
+        t4 = datetime(2025, 12, 1, 16, 0, tzinfo=UTC)
         histories = [{'to_string': 'In Progress', 'created_at': t1}, {'to_string': 'Done', 'created_at': t2}, {'to_string': 'In Progress', 'created_at': t3}, {'to_string': 'Done', 'created_at': t4}]
         cycle_time = AgileMetrics.calculate_cycle_time(histories)
         self.assertEqual(cycle_time, 6.0)
 
     def test_calculate_lead_time(self):
         """测试前置时间计算。"""
-        created = datetime(2025, 12, 1, 10, 0, tzinfo=timezone.utc)
-        resolved = datetime(2025, 12, 1, 12, 30, tzinfo=timezone.utc)
+        created = datetime(2025, 12, 1, 10, 0, tzinfo=UTC)
+        resolved = datetime(2025, 12, 1, 12, 30, tzinfo=UTC)
         lead_time = AgileMetrics.calculate_lead_time(created, resolved)
         self.assertEqual(lead_time, 2.5)
 

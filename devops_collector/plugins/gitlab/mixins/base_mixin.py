@@ -3,7 +3,10 @@
 提供通用的批处理辅助方法。
 """
 import logging
-from typing import List, Callable, Any
+from collections.abc import Callable
+from typing import Any
+
+
 logger = logging.getLogger(__name__)
 
 class BaseMixin:
@@ -12,7 +15,7 @@ class BaseMixin:
     必须混入到拥有 session 属性的类中使用。
     """
 
-    def _process_generator(self, generator, processor_func: Callable[[List[Any]], None], batch_size: int=500) -> int:
+    def _process_generator(self, generator, processor_func: Callable[[list[Any]], None], batch_size: int=500) -> int:
         """通用的生成器批处理助手。
         
         将 API 返回的生成器流数据按批次收集，并调用处理函数进行存储，

@@ -2,9 +2,10 @@
 
 采用 Pydantic V2 定义全链路一致的请求与响应格式。
 """
-from pydantic import BaseModel, EmailStr, ConfigDict
-from typing import Optional, List
 from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, EmailStr
+
 
 class AuthRegisterRequest(BaseModel):
     """用户注册请求数据。
@@ -19,8 +20,8 @@ class AuthRegisterRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str
-    employee_id: Optional[str] = None
-    department_code: Optional[str] = None
+    employee_id: str | None = None
+    department_code: str | None = None
 
 class AuthLoginRequest(BaseModel):
     """用户登录请求数据。
@@ -48,7 +49,7 @@ class AuthTokenData(BaseModel):
     Attributes:
         username: 从令牌中提取的用户名（通常是邮箱）。
     """
-    username: Optional[str] = None
+    username: str | None = None
 
 class AuthLocationInfo(BaseModel):
     """地域信息对齐模型。
@@ -60,7 +61,7 @@ class AuthLocationInfo(BaseModel):
     """
     location_id: str
     location_name: str
-    region: Optional[str] = None
+    region: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 class AuthDepartmentInfo(BaseModel):
@@ -90,11 +91,11 @@ class AuthUserResponse(BaseModel):
     global_user_id: UUID
     email: str
     full_name: str
-    employee_id: Optional[str]
+    employee_id: str | None
     is_active: bool
-    location: Optional[AuthLocationInfo] = None
-    department: Optional[AuthDepartmentInfo] = None
-    roles: List[dict] = []
+    location: AuthLocationInfo | None = None
+    department: AuthDepartmentInfo | None = None
+    roles: list[dict] = []
     gitlab_connected: bool = False
 
     model_config = ConfigDict(from_attributes=True)

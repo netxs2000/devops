@@ -17,7 +17,10 @@ Typical usage:
     config = PluginRegistry.get_config('gitlab')
 """
 import logging
-from typing import Dict, Type, Optional, List, Callable, Any
+from collections.abc import Callable
+from typing import Any
+
+
 logger = logging.getLogger(__name__)
 
 class PluginRegistry:
@@ -41,12 +44,12 @@ class PluginRegistry:
         config = PluginRegistry.get_config('gitlab')
         client = GitLabClient(**config['client'])
     """
-    _clients: Dict[str, Type] = {}
-    _workers: Dict[str, Type] = {}
-    _configs: Dict[str, Callable[[], Dict[str, Any]]] = {}
+    _clients: dict[str, type] = {}
+    _workers: dict[str, type] = {}
+    _configs: dict[str, Callable[[], dict[str, Any]]] = {}
 
     @classmethod
-    def register_client(cls, name: str, client_class: Type) -> None:
+    def register_client(cls, name: str, client_class: type) -> None:
         """注册 API 客户端类。
         
         Args:
@@ -60,12 +63,12 @@ class PluginRegistry:
             existing = cls._clients[name]
             if existing is not client_class:
                 raise ValueError(f"Client conflict: '{name}' is already registered by {existing.__name__}")
-        
+
         cls._clients[name] = client_class
         logger.debug(f'Registered client: {name} -> {client_class.__name__}')
 
     @classmethod
-    def register_worker(cls, name: str, worker_class: Type) -> None:
+    def register_worker(cls, name: str, worker_class: type) -> None:
         """注册 Worker 类。
         
         Args:
@@ -84,7 +87,7 @@ class PluginRegistry:
         logger.debug(f'Registered worker: {name} -> {worker_class.__name__}')
 
     @classmethod
-    def register_config(cls, name: str, config_getter: Callable[[], Dict[str, Any]]) -> None:
+    def register_config(cls, name: str, config_getter: Callable[[], dict[str, Any]]) -> None:
         """注册插件配置获取函数。
         
         Args:
@@ -115,7 +118,7 @@ class PluginRegistry:
 
 
     @classmethod
-    def get_client(cls, name: str) -> Optional[Type]:
+    def get_client(cls, name: str) -> type | None:
         """获取已注册的客户端类。
         
         Args:
@@ -130,7 +133,7 @@ class PluginRegistry:
         return cls._clients[name]
 
     @classmethod
-    def get_worker(cls, name: str) -> Optional[Type]:
+    def get_worker(cls, name: str) -> type | None:
         """获取已注册的 Worker 类。
         
         Args:
@@ -145,7 +148,7 @@ class PluginRegistry:
         return cls._workers[name]
 
     @classmethod
-    def get_config(cls, name: str) -> Optional[Dict[str, Any]]:
+    def get_config(cls, name: str) -> dict[str, Any] | None:
         """获取插件配置。
         
         Args:
@@ -157,7 +160,7 @@ class PluginRegistry:
         if name not in cls._configs:
             logger.warning(f'Config not found: {name}')
             return None
-        
+
         # 调用配置获取函数
         try:
             config = cls._configs[name]()
@@ -168,7 +171,7 @@ class PluginRegistry:
 
 
     @classmethod
-    def list_plugins(cls) -> Dict[str, Dict[str, str]]:
+    def list_plugins(cls) -> dict[str, dict[str, str]]:
         """列出所有已注册的插件。
         
         Returns:
@@ -184,7 +187,7 @@ class PluginRegistry:
         return result
 
     @classmethod
-    def list_sources(cls) -> List[str]:
+    def list_sources(cls) -> list[str]:
         """列出所有已注册的数据源名称。
         
         Returns:
@@ -193,7 +196,7 @@ class PluginRegistry:
         return list(set(cls._clients.keys()) | set(cls._workers.keys()))
 
     @classmethod
-    def get_client_instance(cls, name: str, **kwargs) -> Optional[object]:
+    def get_client_instance(cls, name: str, **kwargs) -> object | None:
         """获取并实例化客户端。
         
         Args:
@@ -209,7 +212,7 @@ class PluginRegistry:
         return client_cls(**kwargs)
 
     @classmethod
-    def get_worker_instance(cls, name: str, session: object, client: object, **kwargs) -> Optional[object]:
+    def get_worker_instance(cls, name: str, session: object, client: object, **kwargs) -> object | None:
         """获取并实例化 Worker。
         
         Args:

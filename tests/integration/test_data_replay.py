@@ -1,15 +1,19 @@
 """TODO: Add module description."""
 import logging
-import json
-import pytest
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from devops_collector.config import Config
+
+
 Config.DB_URI = 'sqlite:///:memory:'
-from devops_collector.models.base_models import Base, RawDataStaging
-from devops_collector.plugins.gitlab.models import GitLabProject, GitLabMergeRequest
 from devops_collector.models import *
+from devops_collector.models.base_models import Base, RawDataStaging
+from devops_collector.plugins.gitlab.models import GitLabMergeRequest, GitLabProject
 from scripts.reprocess_staging_data import reprocess_by_source
+
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger('Test-DataReplay')
 

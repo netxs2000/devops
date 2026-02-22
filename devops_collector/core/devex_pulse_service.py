@@ -4,10 +4,12 @@
 """
 import logging
 from datetime import date, datetime
-from typing import Dict, Any, Optional
+
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
 from devops_portal.schemas_pulse import PulseStatus, PulseSubmission
+
 
 logger = logging.getLogger(__name__)
 

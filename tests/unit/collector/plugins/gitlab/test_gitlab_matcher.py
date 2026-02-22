@@ -1,11 +1,13 @@
 """TODO: Add module description."""
 import unittest
-from unittest.mock import MagicMock
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.models.base_models import Base, User, IdentityMapping
-from devops_collector.plugins.gitlab.worker import IdentityMatcher
+
+from devops_collector.models.base_models import Base, IdentityMapping, User
 from devops_collector.plugins.gitlab.models import GitLabCommit as Commit
+from devops_collector.plugins.gitlab.worker import IdentityMatcher
+
 
 class TestGitLabIdentityMatcher(unittest.TestCase):
     '''"""TODO: Add class description."""'''

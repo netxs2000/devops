@@ -12,15 +12,18 @@ import logging
 import os
 import sys
 from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from devops_collector.config import settings
-from devops_collector.models import Base, Product, ProjectMaster, EntityTopology, SystemRegistry
-from devops_collector.plugins.zentao.models import ZenTaoProduct, ZenTaoExecution
+from devops_collector.models import EntityTopology, Product, ProjectMaster, SystemRegistry
+from devops_collector.plugins.zentao.models import ZenTaoExecution, ZenTaoProduct
+
 
 # 日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -50,14 +53,14 @@ def init_product_links(session: Session):
         return
 
     logger.info("开始同步禅道产品关联...")
-    with open(PRODUCT_MAP_CSV, mode='r', encoding='utf-8-sig') as f:
+    with open(PRODUCT_MAP_CSV, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             zt_pid = row.get('zentao_product_id', '').strip()
             mdm_pid = row.get('mdm_product_id', '').strip()
-            
+
             if not zt_pid or not mdm_pid: continue
-            
+
             # 1. 验证 MDM 产品是否存在
             mdm_product = session.query(Product).filter_by(product_id=mdm_pid).first()
             if not mdm_product:
@@ -69,16 +72,16 @@ def init_product_links(session: Session):
             if not zt_product:
                 zt_product = ZenTaoProduct(id=int(zt_pid), name=f"ZenTao Product {zt_pid}")
                 session.add(zt_product)
-            
+
             zt_product.mdm_product_id = mdm_pid
-            
+
             # 3. 更新 EntityTopology (用于 DORA/反向查询)
             topology = session.query(EntityTopology).filter_by(
                 system_code='zentao',
                 external_resource_id=zt_pid,
                 element_type='issue-tracker-product'
             ).first()
-            
+
             if not topology:
                 topology = EntityTopology(
                     system_code='zentao',
@@ -88,7 +91,7 @@ def init_product_links(session: Session):
                     is_active=True
                 )
                 session.add(topology)
-            
+
             logger.info(f"建立关联: ZenTao Product {zt_pid} -> MDM Product {mdm_pid}")
 
 def init_project_links(session: Session):
@@ -99,7 +102,7 @@ def init_project_links(session: Session):
 
     logger.info("开始同步禅道项目/执行关联...")
     mappings = []
-    with open(PROJECT_MAP_CSV, mode='r', encoding='utf-8-sig') as f:
+    with open(PROJECT_MAP_CSV, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             zt_eid = row.get('zentao_execution_id', '').strip()
@@ -119,7 +122,7 @@ def init_project_links(session: Session):
         if target_node:
             target_node.mdm_project_id = mdm_id
             logger.info(f"直接关联: ZenTao Node {zt_id} ({target_node.type}) -> MDM Project {mdm_id}")
-            
+
             # 3. 继承逻辑 (Inheritance): 利用 path 字段查找所有子孙节点
             # 禅道 path 格式通常为 ",1,5,10,"，如果我们要找 5 的子孙，匹配 "%,5,%"
             search_pattern = f"%,{zt_id},%"
@@ -143,7 +146,7 @@ def init_project_links(session: Session):
             external_resource_id=str(zt_id),
             element_type='issue-tracker'
         ).first()
-        
+
         if not topology:
             topology = EntityTopology(
                 project_id=mdm_id,
@@ -158,7 +161,7 @@ def init_project_links(session: Session):
 def main():
     engine = create_engine(settings.database.uri)
     ensure_system_registry(Session(engine))
-    
+
     with Session(engine) as session:
         try:
             init_product_links(session)

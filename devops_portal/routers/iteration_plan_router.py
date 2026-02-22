@@ -2,7 +2,6 @@
 
 该模块处理所有与迭代计划看板、规划以及发布相关的 API 请求。
 """
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -10,15 +9,13 @@ from sqlalchemy.orm import Session
 
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.auth.auth_dependency import get_user_gitlab_client
-from devops_collector.config import Config
 from devops_collector.core import security
 from devops_collector.models import User
-from devops_collector.plugins.gitlab.iteration_plan_service import \
-    IterationPlanService
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
-from devops_collector.plugins.gitlab.models import (GitLabMilestone,
-                                                    GitLabProject)
+from devops_collector.plugins.gitlab.iteration_plan_service import IterationPlanService
+from devops_collector.plugins.gitlab.models import GitLabMilestone, GitLabProject
 from devops_portal.dependencies import get_current_user
+
 
 router = APIRouter(prefix='/iteration-plan',
                    tags=['iteration-plan'],
@@ -41,18 +38,18 @@ class RemoveIssueRequest(BaseModel):
 class ReleaseRequest(BaseModel):
     """一键发布请求模型。"""
     version: str = Field(..., description="当前版本名称")
-    new_title: Optional[str] = Field(None, description="修改后的版本/Tag名称")
+    new_title: str | None = Field(None, description="修改后的版本/Tag名称")
     ref_branch: str = Field('main', description="发布分支")
     auto_rollover: bool = Field(False, description="是否自动结转未完成任务")
-    target_milestone_id: Optional[int] = Field(None, description="结转目标里程碑 ID")
+    target_milestone_id: int | None = Field(None, description="结转目标里程碑 ID")
 
 
 class CreateMilestoneRequest(BaseModel):
     """创建里程碑请求模型。"""
     title: str = Field(..., description="里程碑标题")
-    start_date: Optional[str] = None
-    due_date: Optional[str] = None
-    description: Optional[str] = None
+    start_date: str | None = None
+    due_date: str | None = None
+    description: str | None = None
 
 
 def get_iteration_plan_service(

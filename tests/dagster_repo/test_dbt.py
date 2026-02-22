@@ -1,7 +1,9 @@
 """TODO: Add module description for dagster_repo assets dbt tests."""
-import sys
 import os
+import sys
 from unittest.mock import MagicMock
+
+
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 if project_root not in sys.path:
     sys.path.append(project_root)

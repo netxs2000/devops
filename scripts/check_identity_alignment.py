@@ -9,10 +9,9 @@
 
 import csv
 import io
-import os
 import sys
 from pathlib import Path
-from collections import defaultdict
+
 
 # 设置控制台输出为 UTF-8 (解决 Windows GBK 编码问题)
 if sys.platform == 'win32':
@@ -33,18 +32,18 @@ def load_employees():
     """加载员工主数据，返回按邮箱和工号索引的字典。"""
     employees_by_email = {}
     employees_by_id = {}
-    
+
     if not EMPLOYEES_CSV.exists():
         print(f"❌ 员工主数据文件不存在: {EMPLOYEES_CSV}")
         return employees_by_email, employees_by_id
-    
-    with open(EMPLOYEES_CSV, mode='r', encoding='utf-8-sig') as f:
+
+    with open(EMPLOYEES_CSV, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             emp_id = row.get('工号', '').strip()
             name = row.get('姓名', '').strip()
             email = row.get('邮箱', '').strip().lower()
-            
+
             if email:
                 employees_by_email[email] = {
                     'employee_id': emp_id,
@@ -57,33 +56,33 @@ def load_employees():
                     'name': name,
                     'email': email
                 }
-    
+
     return employees_by_email, employees_by_id
 
 
 def check_gitlab_alignment(employees_by_email, employees_by_id):
     """检查 GitLab 用户邮箱是否与员工主数据对齐。"""
     print("\n========== GitLab 身份对齐检查 ==========")
-    
+
     if not GITLAB_CSV.exists():
         print(f"⚠️ GitLab 用户文件不存在: {GITLAB_CSV}")
         return
-    
+
     issues = []
     matched = 0
     unmatched = 0
-    
-    with open(GITLAB_CSV, mode='r', encoding='utf-8-sig') as f:
+
+    with open(GITLAB_CSV, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             gitlab_id = row.get('GitLab用户ID', '').strip()
             username = row.get('用户名', '').strip()
             full_name = row.get('全名', '').strip()
             email = row.get('Email', '').strip().lower()
-            
+
             if not gitlab_id or not email:
                 continue
-            
+
             # 检查邮箱是否在员工主数据中
             if email in employees_by_email:
                 emp = employees_by_email[email]
@@ -118,7 +117,7 @@ def check_gitlab_alignment(employees_by_email, employees_by_id):
                         })
                         found = True
                         break
-                
+
                 if not found:
                     unmatched += 1
                     issues.append({
@@ -128,12 +127,12 @@ def check_gitlab_alignment(employees_by_email, employees_by_id):
                         'gitlab_name': full_name,
                         'gitlab_email': email
                     })
-    
+
     # 输出结果
     print(f"✅ 匹配成功: {matched} 条")
     print(f"⚠️ 问题记录: {len(issues)} 条")
     print(f"❌ 未匹配: {unmatched} 条")
-    
+
     if issues:
         print("\n问题详情:")
         for idx, issue in enumerate(issues[:20], 1):  # 只显示前20条
@@ -145,34 +144,34 @@ def check_gitlab_alignment(employees_by_email, employees_by_id):
                 print(f"  {idx}. [{issue['type']}] GitLab: {issue['gitlab_name']} vs MDM: {issue['mdm_name']}")
             else:
                 print(f"  {idx}. [{issue['type']}] {issue['gitlab_name']} ({issue['gitlab_email']})")
-        
+
         if len(issues) > 20:
             print(f"  ... 还有 {len(issues) - 20} 条问题")
-    
+
     return issues
 
 
 def check_zentao_alignment(employees_by_email, employees_by_id):
     """检查禅道用户工号/邮箱是否与员工主数据对齐。"""
     print("\n========== 禅道身份对齐检查 ==========")
-    
+
     if not ZENTAO_CSV.exists():
         print(f"⚠️ 禅道用户文件不存在: {ZENTAO_CSV}")
         return
-    
+
     issues = []
     matched = 0
-    
-    with open(ZENTAO_CSV, mode='r', encoding='utf-8-sig') as f:
+
+    with open(ZENTAO_CSV, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             emp_id = row.get('工号', '').strip()
             name = row.get('姓名', '').strip()
             email = row.get('邮箱', '').strip().lower()
-            
+
             if not emp_id and not email:
                 continue
-            
+
             # 优先按工号匹配
             if emp_id and emp_id in employees_by_id:
                 mdm = employees_by_id[emp_id]
@@ -213,11 +212,11 @@ def check_zentao_alignment(employees_by_email, employees_by_id):
                     'name': name,
                     'email': email
                 })
-    
+
     # 输出结果
     print(f"✅ 匹配成功: {matched} 条")
     print(f"⚠️ 问题记录: {len(issues)} 条")
-    
+
     if issues:
         print("\n问题详情:")
         for idx, issue in enumerate(issues[:20], 1):
@@ -232,10 +231,10 @@ def check_zentao_alignment(employees_by_email, employees_by_id):
                 print(f"  {idx}. [{issue['type']}] 禅道: {issue['zentao_name']} vs 主数据: {issue['mdm_name']}")
             else:
                 print(f"  {idx}. [{issue['type']}] {issue['name']} ({issue['employee_id']})")
-        
+
         if len(issues) > 20:
             print(f"  ... 还有 {len(issues) - 20} 条问题")
-    
+
     return issues
 
 
@@ -244,19 +243,19 @@ def main():
     print("=" * 50)
     print("身份对齐检查工具 (Identity Alignment Checker)")
     print("=" * 50)
-    
+
     # 加载员工主数据
     print("\n正在加载员工主数据...")
     employees_by_email, employees_by_id = load_employees()
     print(f"  已加载 {len(employees_by_email)} 条邮箱索引")
     print(f"  已加载 {len(employees_by_id)} 条工号索引")
-    
+
     # 检查 GitLab 对齐
     gitlab_issues = check_gitlab_alignment(employees_by_email, employees_by_id)
-    
+
     # 检查禅道对齐
     zentao_issues = check_zentao_alignment(employees_by_email, employees_by_id)
-    
+
     # 总结
     print("\n" + "=" * 50)
     print("检查完成!")

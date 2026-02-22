@@ -3,13 +3,15 @@
 本模块定义了用于二开测试管理功能的核心模型，包括测试用例实体及其与 Issue 的关联关系。
 遵循 GitLab 社区版二开建议书中的数据库设计原则。
 """
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Table, JSON, DateTime, and_
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.ext.hybrid import hybrid_property
-from devops_collector.models.base_models import Base, TimestampMixin, User
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
+from devops_collector.models.base_models import Base, TimestampMixin
+
 
 class GTMTestCase(Base, TimestampMixin):
     """GitLab 测试用例模型。
@@ -27,7 +29,7 @@ class GTMTestCase(Base, TimestampMixin):
     pre_conditions = Column(Text)
     description = Column(Text)
     test_steps = Column(JSON, default=[])
-    
+
     author = relationship('User', primaryjoin='and_(User.global_user_id==GTMTestCase.author_id, User.is_current==True)', back_populates='test_cases')
     project = relationship('GitLabProject', back_populates='test_cases')
     linked_issues = relationship('GitLabIssue', secondary='gtm_test_case_issue_links', back_populates='associated_test_cases')
@@ -42,11 +44,11 @@ class GTMTestCase(Base, TimestampMixin):
     def execution_count(cls):
         """用例被执行的总次数的 SQL 表达式。"""
         return func.count(GTMTestExecutionRecord.id).label('execution_count')
-    
+
     execution_records = relationship(
-        'GTMTestExecutionRecord', 
-        primaryjoin='foreign(GTMTestExecutionRecord.test_case_iid) == GTMTestCase.iid', 
-        viewonly=True, 
+        'GTMTestExecutionRecord',
+        primaryjoin='foreign(GTMTestExecutionRecord.test_case_iid) == GTMTestCase.iid',
+        viewonly=True,
         overlaps='project'
     )
 
@@ -75,7 +77,7 @@ class GTMRequirement(Base, TimestampMixin):
     title = Column(String(255), nullable=False)
     description = Column(Text)
     state = Column(String(20), default='opened')
-    
+
     author = relationship('User', primaryjoin='and_(User.global_user_id==GTMRequirement.author_id, User.is_current==True)', back_populates='requirements')
     project = relationship('GitLabProject', back_populates='requirements')
     test_cases = relationship('GTMTestCase', secondary='gtm_requirement_test_case_links', back_populates='associated_requirements')

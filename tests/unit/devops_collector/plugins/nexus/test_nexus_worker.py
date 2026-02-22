@@ -1,16 +1,17 @@
 """Nexus Worker 单元测试"""
 import unittest
 from unittest.mock import MagicMock, patch
-from devops_collector.plugins.nexus.worker import NexusWorker
+
 from devops_collector.plugins.nexus.models import NexusComponent
-from devops_collector.models.base_models import Product
+from devops_collector.plugins.nexus.worker import NexusWorker
+
 
 class TestNexusWorker(unittest.TestCase):
     def setUp(self):
         self.session = MagicMock()
         self.client = MagicMock()
         self.worker = NexusWorker(self.session, self.client)
-        
+
         # 模拟产品数据 (带 matching_patterns 字段)
         self.mock_products = [
             MagicMock(product_id="devops", matching_patterns=None, is_current=True),
@@ -29,11 +30,11 @@ class TestNexusWorker(unittest.TestCase):
     def test_resolve_product_id_by_group(self):
         """测试通过 Group 自动识别产品。"""
         self.worker._init_product_cache()
-        
+
         # 匹配 devops
         pid = self.worker._resolve_product_id("com.tjhq.devops", "some-lib")
         self.assertEqual(pid, "devops")
-        
+
         # 匹配 portal
         pid = self.worker._resolve_product_id("org.company.portal.submodule", "api")
         self.assertEqual(pid, "portal")
@@ -41,7 +42,7 @@ class TestNexusWorker(unittest.TestCase):
     def test_resolve_product_id_by_name(self):
         """测试通过组件名称精确匹配产品。"""
         self.worker._init_product_cache()
-        
+
         pid = self.worker._resolve_product_id("random.group", "collector")
         self.assertEqual(pid, "collector")
 
@@ -64,7 +65,7 @@ class TestNexusWorker(unittest.TestCase):
     def test_resolve_product_id_not_found(self):
         """测试匹配失败情况。"""
         self.worker._init_product_cache()
-        
+
         pid = self.worker._resolve_product_id("unknown.group", "unknown-lib")
         self.assertIsNone(pid)
 
@@ -73,7 +74,7 @@ class TestNexusWorker(unittest.TestCase):
         """测试批量保存时的自动映射逻辑。"""
         self.worker._init_product_cache()
         self.session.query(NexusComponent).filter_by().first.return_value = None
-        
+
         batch = [{
             'id': 'comp1',
             'repository': 'maven-public',
@@ -82,9 +83,9 @@ class TestNexusWorker(unittest.TestCase):
             'name': 'core',
             'version': '1.0.0'
         }]
-        
+
         self.worker._save_batch(batch)
-        
+
         # 验证是否创建了组件且绑定了 product_id
         args, kwargs = self.session.add.call_args
         comp = args[0]

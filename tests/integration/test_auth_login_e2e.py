@@ -9,7 +9,6 @@
 """
 
 import pytest
-from fastapi.testclient import TestClient
 
 
 def test_portal_homepage_unauthenticated(client):
@@ -29,9 +28,10 @@ def test_portal_homepage_unauthenticated(client):
 
 def test_login_e2e_flow(client, db_session):
     """测试完整的登录端到端流程。"""
+    import uuid
+
     from devops_collector.auth import auth_service as services
     from devops_collector.models.base_models import User, UserCredential
-    import uuid
 
     # 1. 创建测试用户
     email = "e2e_test@example.com"
@@ -83,9 +83,10 @@ def test_login_e2e_flow(client, db_session):
 
 def test_login_with_invalid_credentials(client, db_session):
     """测试使用无效凭据登录。"""
+    import uuid
+
     from devops_collector.auth import auth_service as services
     from devops_collector.models.base_models import User, UserCredential
-    import uuid
 
     # 创建有效用户
     email = "valid_user@example.com"
@@ -131,9 +132,10 @@ def test_access_protected_endpoint_without_token(client):
 
 def test_login_and_frontend_flow(client, db_session):
     """测试登录后前端状态变化（模拟）。"""
+    import uuid
+
     from devops_collector.auth import auth_service as services
     from devops_collector.models.base_models import User, UserCredential
-    import uuid
 
     # 创建用户并登录
     email = "frontend_test@example.com"

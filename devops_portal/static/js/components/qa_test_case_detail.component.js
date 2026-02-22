@@ -95,24 +95,49 @@ class QaTestCaseDetail extends HTMLElement {
                     margin-bottom: 20px;
                     padding-bottom: 20px;
                     border-bottom: 1px dashed #E5E5EA;
+                    transition: opacity 0.2s;
                 }
                 .step-item:last-child { border-bottom: none; }
+                .step-item.is-completed { opacity: 0.5; }
+                
+                .step-check {
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 4px;
+                    border: 2px solid #D2D2D7;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    margin-top: 2px;
+                    flex-shrink: 0;
+                    background: white;
+                    transition: all 0.2s;
+                }
+                .step-check.is-checked {
+                    background: #34C759;
+                    border-color: #34C759;
+                    color: white;
+                }
                 
                 .step-num {
                     counter-increment: step;
                     width: 24px;
                     height: 24px;
-                    background: #0071e3;
-                    color: white;
+                    background: #F5F5F7;
+                    color: #86868b;
                     border-radius: 50%;
                     text-align: center;
                     line-height: 24px;
-                    font-size: 12px;
+                    font-size: 11px;
                     font-weight: 600;
                     flex-shrink: 0;
                 }
+                .step-item.is-active .step-num { background: #0071e3; color: white; }
+
                 .step-body { flex: 1; }
                 .step-action { font-weight: 500; margin-bottom: 8px; }
+                .step-item.is-completed .step-action { text-decoration: line-through; }
                 .step-expect { color: #6e6e73; font-size: 14px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #F0F0F0; margin-top: 8px; }
 
                 /* Sidebar Area */
@@ -120,6 +145,8 @@ class QaTestCaseDetail extends HTMLElement {
                     padding: 32px 24px;
                     background: #F9FAFB;
                     overflow-y: auto;
+                    display: flex;
+                    flex-direction: column;
                 }
                 
                 .sidebar-group {
@@ -155,10 +182,23 @@ class QaTestCaseDetail extends HTMLElement {
                     display: flex;
                     flex-direction: column;
                     gap: 10px;
-                    margin-top: 32px;
+                    margin-top: auto;
                     padding-top: 24px;
                     border-top: 1px solid #E5E5EA;
                 }
+                .exec-comment {
+                    width: 100%;
+                    min-height: 80px;
+                    border-radius: 8px;
+                    border: 1px solid #D2D2D7;
+                    padding: 10px;
+                    font-size: 13px;
+                    resize: vertical;
+                    margin-bottom: 12px;
+                    font-family: inherit;
+                }
+                .exec-comment:focus { outline: none; border-color: #0071e3; ring: 2px rgba(0,113,227,0.1); }
+
                 .btn-exec {
                     width: 100%;
                     padding: 12px;
@@ -195,10 +235,19 @@ class QaTestCaseDetail extends HTMLElement {
                     </div>
 
                     <div class="section">
-                        <div class="section-title">Execution Steps</div>
+                        <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                            Execution Steps
+                            <div id="step-progress" style="font-size:12px; font-weight:500; color:#6e6e73;">0% of ${item.steps?.length || 0} items</div>
+                        </div>
+                        <div style="height:4px; background:#F2F2F7; border-radius:2px; margin-bottom:20px; overflow:hidden;">
+                            <div id="progress-bar" style="height:100%; background:#34C759; width:0%; transition:width 0.3s ease;"></div>
+                        </div>
                         <div class="steps-list">
                             ${(item.steps || []).map(s => `
-                                <div class="step-item">
+                                <div class="step-item js-step-item" data-step="${s.step_number}">
+                                    <div class="step-check js-step-check">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="display:none;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    </div>
                                     <div class="step-num">${s.step_number}</div>
                                     <div class="step-body">
                                         <div class="step-action">${s.action}</div>
@@ -240,6 +289,8 @@ class QaTestCaseDetail extends HTMLElement {
 
                     <div class="exec-toolbar">
                         <div class="sidebar-label" style="text-align: center; margin-bottom: 4px;">Quick Execute</div>
+                        <textarea class="exec-comment js-exec-comment" placeholder="Add execution notes or evidence (optional)..."></textarea>
+                        
                         <button class="btn-exec btn-pass js-exec" data-result="passed">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                             Mark as Passed
@@ -261,10 +312,42 @@ class QaTestCaseDetail extends HTMLElement {
     }
 
     setupEvents() {
+        const updateProgress = () => {
+            const total = this.item.steps?.length || 0;
+            const completed = this.shadowRoot.querySelectorAll('.js-step-check.is-checked').length;
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            const bar = this.shadowRoot.querySelector('#progress-bar');
+            const text = this.shadowRoot.querySelector('#step-progress');
+            if (bar) bar.style.width = `${percent}%`;
+            if (text) text.textContent = `${percent}% of ${total} items`;
+        };
+
+        // Step Checklist Logic
+        this.shadowRoot.querySelectorAll('.js-step-item').forEach(item => {
+            const check = item.querySelector('.js-step-check');
+            const svg = check.querySelector('svg');
+
+            check.onclick = () => {
+                const isChecked = check.classList.toggle('is-checked');
+                item.classList.toggle('is-completed', isChecked);
+                svg.style.display = isChecked ? 'block' : 'none';
+                updateProgress();
+            };
+        });
+
         this.shadowRoot.querySelectorAll('.js-exec').forEach(btn => {
             btn.onclick = () => {
+                const comment = this.shadowRoot.querySelector('.js-exec-comment').value;
                 this.dispatchEvent(new CustomEvent('execute', {
-                    detail: { iid: this.item.iid, result: btn.dataset.result },
+                    detail: {
+                        iid: this.item.iid,
+                        result: btn.dataset.result,
+                        report: {
+                            comment: comment,
+                            environment: 'Web Portal'
+                        }
+                    },
                     bubbles: true,
                     composed: true
                 }));

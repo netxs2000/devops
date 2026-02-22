@@ -4,17 +4,18 @@
 使用 FastAPI TestClient 和内存数据库进行全链路验证。
 """
 import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from devops_portal.main import app
+from devops_collector.auth import auth_service
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.models.base_models import Base, User, UserCredential
-from devops_collector.auth import auth_service
-from devops_collector.config import settings
+from devops_portal.main import app
+
 
 # 使用内存数据库进行集成测试
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -60,7 +61,7 @@ def fixture_client(db_session):
             yield db_session
         finally:
             pass
-            
+
     app.dependency_overrides[get_auth_db] = override_get_auth_db
     with TestClient(app) as client:
         yield client
@@ -84,7 +85,7 @@ def test_auth_login_user(client, db_session):
     """测试用户登录获取 Token 接口。"""
     email = "login_test@tjhq.com"
     password = "loginpassword123"
-    
+
     # 预先在模拟数据库中创建一个用户
     hashed_pwd = auth_service.auth_get_password_hash(password)
     user_id = uuid.uuid4()
@@ -100,7 +101,7 @@ def test_auth_login_user(client, db_session):
     db_session.flush()
     db_session.add(UserCredential(user_id=user_id, password_hash=hashed_pwd))
     db_session.commit()
-    
+
     # 执行登录请求 (OAuth2PasswordRequestForm 使用 data 而不是 json)
     login_data = {
         "username": email,
@@ -116,7 +117,7 @@ def test_auth_get_me_protected(client, db_session):
     """测试获取个人信息接口（含认证 Token 验证）。"""
     email = "me_test@tjhq.com"
     password = "mepassword123"
-    
+
     # 场景：用户已存在
     user_id = uuid.uuid4()
     user = User(
@@ -131,11 +132,11 @@ def test_auth_get_me_protected(client, db_session):
     db_session.flush()
     db_session.add(UserCredential(user_id=user_id, password_hash=auth_service.auth_get_password_hash(password)))
     db_session.commit()
-    
+
     # 登录获取 Token
     login_resp = client.post("/auth/login", data={"username": email, "password": password})
     token = login_resp.json()["access_token"]
-    
+
     # 使用 Token 请求受保护的 /auth/me 接口
     headers = {"Authorization": f"Bearer {token}"}
     me_response = client.get("/auth/me", headers=headers)

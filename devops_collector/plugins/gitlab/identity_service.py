@@ -1,9 +1,13 @@
 """GitLab 身份识别与匹配模块 (支持 SCD Type 2)"""
 import logging
-from typing import Optional, Dict, List, Any
+from typing import Any
+
 from sqlalchemy.orm import Session
-from devops_collector.models import IdentityMapping, User, Organization
+
 from devops_collector.core.identity_manager import IdentityManager
+from devops_collector.models import IdentityMapping, Organization
+
+
 logger = logging.getLogger(__name__)
 
 class IdentityMatcher:
@@ -39,7 +43,7 @@ Raises:
             if m.external_username:
                 self.name_map[m.external_username.lower()] = m.global_user_id
 
-    def match(self, commit: Any) -> Optional[Any]:
+    def match(self, commit: Any) -> Any | None:
         """按 4 级规则匹配 Commit 作者到内部用户 OneID (UUID)。"""
         email = commit.author_email.lower() if commit.author_email else ''
         name = commit.author_name.lower() if commit.author_name else ''
@@ -78,7 +82,7 @@ Raises:
 """'''
         self.session = session
         self.client = client
-        self.cache: Dict[int, Any] = {}
+        self.cache: dict[int, Any] = {}
         self._load_cache()
 
     def _load_cache(self):
@@ -90,7 +94,7 @@ Raises:
             except (ValueError, TypeError):
                 continue
 
-    def resolve(self, gitlab_id: int) -> Optional[Any]:
+    def resolve(self, gitlab_id: int) -> Any | None:
         """解析 GitLab 用户 ID 到内部 OneID。"""
         if gitlab_id in self.cache:
             return self.cache[gitlab_id]

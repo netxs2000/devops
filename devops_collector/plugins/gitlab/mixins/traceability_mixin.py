@@ -2,11 +2,15 @@
 
 提供跨工具链的追溯链路提取能力。
 """
-import re
 import logging
-from typing import List, Any
+import re
+from typing import Any
+
 from devops_collector.models.base_models import TraceabilityLink
+
 from ..models import GitLabCommit, GitLabMergeRequest
+
+
 logger = logging.getLogger(__name__)
 
 class TraceabilityMixin:
@@ -33,7 +37,7 @@ class TraceabilityMixin:
             text_to_scan = f'{obj.title}\n{obj.message}'
         elif isinstance(obj, GitLabMergeRequest):
             text_to_scan = f"{obj.title}\n{obj.description or ''}"
-        
+
         if not text_to_scan:
             return
 
@@ -53,10 +57,10 @@ class TraceabilityMixin:
                 if zid not in seen:
                     ordered_zentao_ids.append(zid)
                     seen.add(zid)
-            
+
             self._save_traceability_results(obj, ordered_zentao_ids, 'zentao', text_to_scan)
 
-    def _save_traceability_results(self, obj: Any, ids: List[str], source: str, text_content: str=None) -> None:
+    def _save_traceability_results(self, obj: Any, ids: list[str], source: str, text_content: str=None) -> None:
         """保存提取到的追溯 ID 到对象并创建映射表记录。
         
         逻辑规则:
@@ -89,7 +93,7 @@ class TraceabilityMixin:
         # 存储到追溯表 (保存全部 ID)
         target_type = 'commit' if isinstance(obj, GitLabCommit) else 'mr'
         target_id = str(obj.id) if isinstance(obj, GitLabCommit) else str(obj.iid)
-        
+
         for ext_id in ids:
             # 检查是否已存在相同的关联，防止重复插入
             existing = self.session.query(TraceabilityLink).filter_by(
@@ -110,7 +114,7 @@ class TraceabilityMixin:
                     target_id=target_id,
                     link_type='fixes' if source == 'zentao' else 'implements',
                     raw_data={
-                        'auto_extracted': True, 
+                        'auto_extracted': True,
                         'found_in': text_content[:200] if text_content else None,
                         'is_tentative': True # 标记为初步关联，待主数据验证
                     }

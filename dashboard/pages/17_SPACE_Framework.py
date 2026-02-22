@@ -3,11 +3,13 @@
 This dashboard implements the SPACE framework (Satisfaction, Performance, Activity,
 Communication, Efficiency) to provide a holistic view of developer productivity.
 """
-import streamlit as st
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas as pd
-from utils import set_page_config, run_query
+import streamlit as st
+from utils import run_query, set_page_config
+
+
 # --- Configuration & Styling ---
 set_page_config()
 st.title("🌌 SPACE Framework Intelligence")
@@ -42,7 +44,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
- 
+
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -144,7 +146,7 @@ with col_radar:
     st.subheader("🕸️ 均衡度分析 (Balance Radar)")
     categories = ['Satisfaction', 'Performance', 'Activity', 'Communication', 'Efficiency']
     values = [metrics['S'], metrics['P'], metrics['A'], metrics['C'], metrics['E']]
-    
+
     fig = go.Figure()
     fig.add_trace(go.Scatterpolar(
         r=values,
@@ -165,14 +167,14 @@ with col_radar:
 
 with col_insights:
     st.subheader("💡 智能治理建议")
-    
+
     if metrics['A'] > metrics['P'] + 0.5:
         st.error("🚀 **Activity Overload**: 产出量很高但性能/质量得分偏低，可能存在盲目提交或自动化测试失效，建议加强代码审查。")
     if metrics['S'] < 3.0:
         st.warning("😟 **Morale Alert**: 满意度跌破警戒线，建议开展 1-on-1 或回顾会议，识别流程中的摩擦点。")
     if metrics['C'] < 3.0:
         st.info("🤐 **Silo Risk**: 协作活跃度不足，建议推行 Cross-team Code Review 机制。")
-    
+
     st.markdown("""
     ---
     **系统洞察:** 

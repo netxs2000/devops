@@ -2,16 +2,23 @@
 OWASP Dependency-Check Worker
 采集项目的依赖清单、许可证信息和漏洞信息
 """
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-import re
-from pathlib import Path
-from sqlalchemy.orm import Session
 import logging
+import re
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from sqlalchemy.orm import Session
 
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
-from devops_collector.models.dependency import DependencyScan, Dependency, DependencyCVE, LicenseRiskRule
+from devops_collector.models.dependency import (
+    Dependency,
+    DependencyCVE,
+    DependencyScan,
+    LicenseRiskRule,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +37,7 @@ class DependencyCheckWorker(BaseWorker):
         self.license_rules = self._load_license_rules()
         self.scanner_version = self.client.get_version() if self.client else 'unknown'
 
-    def _load_license_rules(self) -> Dict[str, LicenseRiskRule]:
+    def _load_license_rules(self) -> dict[str, LicenseRiskRule]:
         """加载许可证风险规则"""
         rules = {}
         try:
@@ -63,18 +70,18 @@ class DependencyCheckWorker(BaseWorker):
         处理 CI 流水线上传的报告
         """
         import json
-        
+
         # 1. 获取报告内容
         report_data = task.get('report_json')
         report_path = task.get('report_path')
-        
+
         if report_data is None and report_path:
             logger.info(f"Loading report from file: {report_path}")
             if not Path(report_path).exists():
                 raise FileNotFoundError(f"Report not found: {report_path}")
-            with open(report_path, 'r', encoding='utf-8') as f:
+            with open(report_path, encoding='utf-8') as f:
                 report_data = json.load(f)
-        
+
         if not report_data:
             raise ValueError("No report data provided")
 
@@ -88,38 +95,38 @@ class DependencyCheckWorker(BaseWorker):
             ci_job_url=task.get('ci_job_url'),
             commit_sha=task.get('commit_sha'),
             branch=task.get('branch'),
-            report_url=task.get('report_url'), 
+            report_url=task.get('report_url'),
             scan_duration_seconds=task.get('duration'),
             raw_json=report_data if task.get('save_raw', True) else None
         )
         self.session.add(scan)
         self.session.commit()
-        
+
         try:
             # 3. 解析并保存依赖
             stats = self._save_dependencies(scan.id, project_id, report_data)
-            
+
             # 4. 更新记录状态
             scan.scan_status = 'completed'
             scan.total_dependencies = stats['total']
             scan.vulnerable_dependencies = stats['vulnerable']
             scan.high_risk_licenses = stats['high_risk_licenses']
             self.session.commit()
-            
+
             logger.info(f"CI Report processed for project {project_id}, scan_id: {scan.id}")
             return scan.id
-            
+
         except Exception as e:
             logger.error(f"Failed to process CI report: {e}")
             scan.scan_status = 'failed'
             self.session.commit()
             raise
-    def cleanup_old_reports(self, dry_run: bool=False) -> Dict[str, int]:
+    def cleanup_old_reports(self, dry_run: bool=False) -> dict[str, int]:
         """
         清理过期的报告文件
         """
-        from datetime import timedelta
         import shutil
+        from datetime import timedelta
         if self.report_retention_days == 0:
             logger.info('Report retention is set to 0 (永久保留), skipping cleanup')
             return {'deleted_count': 0, 'freed_space_mb': 0.0}
@@ -139,7 +146,7 @@ class DependencyCheckWorker(BaseWorker):
                     continue
                 mtime = datetime.fromtimestamp(scan_dir.stat().st_mtime)
                 if mtime < cutoff_date:
-                    dir_size = sum((f.stat().st_size for f in scan_dir.rglob('*') if f.is_file()))
+                    dir_size = sum(f.stat().st_size for f in scan_dir.rglob('*') if f.is_file())
                     freed_space += dir_size
                     if dry_run:
                         logger.info(f'[DRY RUN] Would delete: {scan_dir} ({dir_size / 1024 / 1024:.2f} MB)')
@@ -151,11 +158,11 @@ class DependencyCheckWorker(BaseWorker):
         logger.info(f'Cleanup completed: {deleted_count} directories, {freed_space_mb:.2f} MB freed')
         return {'deleted_count': deleted_count, 'freed_space_mb': round(freed_space_mb, 2)}
 
-    def _save_dependencies(self, scan_id: int, project_id: int, report_data: Dict) -> Dict:
+    def _save_dependencies(self, scan_id: int, project_id: int, report_data: dict) -> dict:
         """保存依赖清单"""
         dependencies_data = report_data.get('dependencies', [])
         stats = {'total': 0, 'vulnerable': 0, 'high_risk_licenses': 0}
-        
+
         for dep_data in dependencies_data:
             package_name = dep_data.get('fileName', 'Unknown')
             package_version = self._extract_version(dep_data)
@@ -177,7 +184,7 @@ class DependencyCheckWorker(BaseWorker):
         self.session.commit()
         return stats
 
-    def _extract_version(self, dep_data: Dict) -> Optional[str]:
+    def _extract_version(self, dep_data: dict) -> str | None:
         """提取版本号"""
         evidence_collected = dep_data.get('evidenceCollected', {})
         version_evidence = evidence_collected.get('versionEvidence', [])
@@ -190,7 +197,7 @@ class DependencyCheckWorker(BaseWorker):
             return version_match.group(1)
         return None
 
-    def _extract_license(self, dep_data: Dict) -> Dict:
+    def _extract_license(self, dep_data: dict) -> dict:
         """提取许可证信息"""
         license_str = dep_data.get('license', '')
         if not license_str:
@@ -233,7 +240,7 @@ class DependencyCheckWorker(BaseWorker):
         else:
             return 'unknown'
 
-    def _detect_package_manager(self, dep_data: Dict) -> Optional[str]:
+    def _detect_package_manager(self, dep_data: dict) -> str | None:
         """检测包管理器"""
         file_path = dep_data.get('filePath', '')
         if 'pom.xml' in file_path or '.jar' in file_path:
@@ -250,7 +257,7 @@ class DependencyCheckWorker(BaseWorker):
             return 'rubygems'
         return None
 
-    def _analyze_vulnerabilities(self, vulnerabilities: List[Dict]) -> Dict:
+    def _analyze_vulnerabilities(self, vulnerabilities: list[dict]) -> dict:
         """分析漏洞统计"""
         stats = {'highest_cvss': 0.0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
         for vuln in vulnerabilities:
@@ -268,7 +275,7 @@ class DependencyCheckWorker(BaseWorker):
                 stats['low'] += 1
         return stats
 
-    def _extract_cvss_score(self, vuln: Dict) -> Optional[float]:
+    def _extract_cvss_score(self, vuln: dict) -> float | None:
         """提取 CVSS 评分"""
         cvssv3 = vuln.get('cvssv3', {})
         if cvssv3 and 'baseScore' in cvssv3:
@@ -278,7 +285,7 @@ class DependencyCheckWorker(BaseWorker):
             return float(cvssv2['score'])
         return None
 
-    def _extract_cvss_vector(self, vuln: Dict) -> Optional[str]:
+    def _extract_cvss_vector(self, vuln: dict) -> str | None:
         """提取 CVSS 向量"""
         cvssv3 = vuln.get('cvssv3', {})
         if cvssv3 and 'attackVector' in cvssv3:

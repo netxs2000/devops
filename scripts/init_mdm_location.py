@@ -2,17 +2,20 @@
 
 重构：从 docs/locations.csv 加载。
 """
-import sys
-import os
-import logging
 import csv
+import logging
+import os
+import sys
 from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
 from devops_collector.models import Base, Location
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,11 +25,11 @@ CSV_FILE = 'docs/locations.csv'
 def init_mdm_location():
     engine = create_engine(settings.database.uri)
     Base.metadata.create_all(engine, tables=[Location.__table__])
-    
+
     if not os.path.exists(CSV_FILE): return
     logger.info(f'从 {CSV_FILE} 加载地理位置...')
-    
-    with Session(engine) as session, open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
+
+    with Session(engine) as session, open(CSV_FILE, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             loc_id = row['ID'].strip()

@@ -1,10 +1,13 @@
 import unittest
 from unittest.mock import MagicMock
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.models.base_models import Base, Product, ProjectMaster, EntityTopology
-from devops_collector.plugins.zentao.models import ZenTaoProduct, ZenTaoExecution, ZenTaoIssue
+
+from devops_collector.models.base_models import Base
+from devops_collector.plugins.zentao.models import ZenTaoIssue
 from devops_collector.plugins.zentao.worker import ZenTaoWorker
+
 
 class TestZenTaoSyncLogic(unittest.TestCase):
     def setUp(self):
@@ -33,10 +36,10 @@ class TestZenTaoSyncLogic(unittest.TestCase):
             'consumed': 2.0,
             'left': 3.5
         }
-        
+
         # 执行转换
         issue = self.worker._transform_task(product_id, execution_id, task_data)
-        
+
         self.assertEqual(issue.id, 500)
         self.assertEqual(issue.type, 'task')
         self.assertEqual(issue.estimate, 5.5)
@@ -49,14 +52,14 @@ class TestZenTaoSyncLogic(unittest.TestCase):
         # 创建一个 ID 为 100 的需求 (feature)
         issue_f = ZenTaoIssue(id=100, type='feature', title='需求A', product_id=1)
         self.session.add(issue_f)
-        
+
         # 创建一个同样 ID 为 100 的任务 (task)
         issue_t = ZenTaoIssue(id=100, type='task', title='任务A', product_id=1)
         self.session.add(issue_t)
-        
+
         # 如果主键设置正确，这里不应该报错
         self.session.commit()
-        
+
         count = self.session.query(ZenTaoIssue).filter_by(id=100).count()
         self.assertEqual(count, 2)
 

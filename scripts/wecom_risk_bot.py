@@ -2,14 +2,20 @@
 
 该脚本定时运行，从数据库风险宽表中获取异常记录，并推送到企业微信、飞书、钉钉。
 """
+import logging
 import os
 import sys
-import logging
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from devops_collector.core.notifiers import WeComBot, FeishuBot, DingTalkBot
 from devops_config import config
+
+from devops_collector.core.notifiers import DingTalkBot, FeishuBot, WeComBot
+
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 

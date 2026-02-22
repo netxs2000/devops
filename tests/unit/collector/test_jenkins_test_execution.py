@@ -1,6 +1,8 @@
 import pytest
 from sqlalchemy.exc import IntegrityError
+
 from devops_collector.models.base_models import JenkinsTestExecution
+
 
 def test_create_jenkins_test_execution(db_session):
     """Test creating a JenkinsTestExecution record."""
@@ -20,7 +22,7 @@ def test_create_jenkins_test_execution(db_session):
     db_session.add(execution)
     db_session.commit()
     db_session.refresh(execution)
-    
+
     assert execution.id is not None
     assert execution.project_id == 101
     assert execution.build_id == "build-500"
@@ -38,7 +40,7 @@ def test_jenkins_test_execution_uniqueness(db_session):
     )
     db_session.add(execution1)
     db_session.commit()
-    
+
     # Try to create duplicate record
     execution2 = JenkinsTestExecution(
         project_id=202,
@@ -47,10 +49,10 @@ def test_jenkins_test_execution_uniqueness(db_session):
         pass_rate=0.0
     )
     db_session.add(execution2)
-    
+
     with pytest.raises(IntegrityError):
         db_session.commit()
-    
+
     db_session.rollback()
 
 def test_jenkins_test_execution_allow_different_levels(db_session):
@@ -69,9 +71,9 @@ def test_jenkins_test_execution_allow_different_levels(db_session):
         test_level="UI",
         pass_rate=80.0
     )
-    
+
     db_session.add(unit_test)
     db_session.add(ui_test)
     db_session.commit()
-    
+
     assert db_session.query(JenkinsTestExecution).filter_by(project_id=303, build_id="build-999").count() == 2

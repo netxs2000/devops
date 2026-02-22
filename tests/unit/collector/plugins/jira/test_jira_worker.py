@@ -1,13 +1,15 @@
 """TODO: Add module description."""
 import unittest
 from unittest.mock import MagicMock
-from datetime import datetime, timezone
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.models.base_models import Base
+
+from devops_collector.models.base_models import Base, Organization
+from devops_collector.models.base_models import User as GlobalUser
+from devops_collector.plugins.jira.models import JiraIssue, JiraIssueHistory, JiraProject
 from devops_collector.plugins.jira.worker import JiraWorker
-from devops_collector.plugins.jira.models import JiraProject, JiraIssue, JiraIssueHistory
-from devops_collector.models.base_models import Organization, User as GlobalUser
+
 
 class TestJiraWorker(unittest.TestCase):
     '''"""TODO: Add class description."""'''

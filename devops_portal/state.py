@@ -1,7 +1,9 @@
 """TODO: Add module description."""
-from typing import Dict, List, Any
-EXECUTION_HISTORY: Dict[int, List[Any]] = {}
+from typing import Any
+
+
+EXECUTION_HISTORY: dict[int, list[Any]] = {}
 RECENT_PROJECTS: set = set()
-PIPELINE_STATUS: Dict[int, Dict[str, Any]] = {}
-GLOBAL_QUALITY_ALERTS: List[Dict[str, Any]] = []
-NOTIFICATION_QUEUES: Dict[str, List[Any]] = {}
+PIPELINE_STATUS: dict[int, dict[str, Any]] = {}
+GLOBAL_QUALITY_ALERTS: list[dict[str, Any]] = []
+NOTIFICATION_QUEUES: dict[str, list[Any]] = {}

@@ -1,6 +1,6 @@
 """TODO: Add module description for dbt_project metadata tests."""
-import os
 from pathlib import Path
+
 
 def test_dbt_project_structure():
     """测试 dbt 项目结构是否完整。"""

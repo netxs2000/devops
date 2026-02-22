@@ -4,23 +4,25 @@ OWASP Dependency-Check 数据模型
 """
 
 from sqlalchemy import (
+    JSON,
+    Boolean,
     Column,
+    DateTime,
+    Float,
+    ForeignKey,
     Integer,
     String,
-    Boolean,
-    Float,
     Text,
-    DateTime,
-    ForeignKey,
     UniqueConstraint,
-    JSON,
 )
 
+
 JSONB = JSON
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from .base_models import Base, TimestampMixin, SCDMixin
-from sqlalchemy.dialects.postgresql import UUID
+
+from .base_models import Base, SCDMixin, TimestampMixin
 
 
 class DependencyScan(Base, TimestampMixin, SCDMixin):

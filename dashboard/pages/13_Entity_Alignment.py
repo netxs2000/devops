@@ -1,7 +1,9 @@
 """模糊实体对齐与链接仪表盘。"""
-import streamlit as st
 import plotly.express as px
+import streamlit as st
 from utils import run_query, set_page_config
+
+
 set_page_config()
 st.title('模糊实体对齐与链接 (Entity Alignment)')
 st.markdown('---')
@@ -30,20 +32,20 @@ else:
     total_repos = len(alignment_df)
     aligned_repos = len(alignment_df[alignment_df['master_entity_id'].notna()])
     alignment_rate = aligned_repos / total_repos * 100 if total_repos > 0 else 0
-    
+
     c1.metric('仓库总数', total_repos)
     c2.metric('已对齐数', aligned_repos)
     c3.metric('对齐率', f"{alignment_rate:.1f}%")
-    
+
     # 对齐策略分布
     st.subheader("对齐策略分布")
     strategy_counts = alignment_df['alignment_strategy'].value_counts().reset_index()
     strategy_counts.columns = ['strategy', 'count']
-    fig = px.pie(strategy_counts, values='count', names='strategy', 
+    fig = px.pie(strategy_counts, values='count', names='strategy',
                  color_discrete_sequence=['#00d4ff', '#3366ff', '#8F00FF', '#ffab00'],
                  template='plotly_dark', hole=0.4)
     st.plotly_chart(fig, use_container_width=True)
-    
+
     # 实体对齐明细
     st.subheader("实体对齐明细")
     st.dataframe(

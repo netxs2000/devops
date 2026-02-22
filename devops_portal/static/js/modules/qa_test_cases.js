@@ -43,7 +43,7 @@ const QaTestCaseHandler = {
             });
 
             container.addEventListener('execute', (e) => {
-                this.handleExecution(e.detail.iid, e.detail.result);
+                this.handleExecution(e.detail.iid, e.detail.result, e.detail.report);
             });
 
             container.addEventListener('report-bug', (e) => {
@@ -224,11 +224,11 @@ const QaTestCaseHandler = {
         pane.appendChild(detail);
     },
 
-    async handleExecution(iid, result) {
+    async handleExecution(iid, result, report = null) {
         if (!this.projectId) return UI.showToast("Project Context Lost", "error");
 
         try {
-            await QAService.executeTest(this.projectId, iid, result);
+            await QAService.executeTest(this.projectId, iid, result, report);
             UI.showToast(`Test #${iid} marked as ${result}`, "success");
 
             // 为保持一致性，重新加载列表

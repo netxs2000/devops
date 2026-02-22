@@ -1,10 +1,13 @@
-import pytest
-import uuid
 import csv
 import io
+import uuid
+
+import pytest
 from sqlalchemy.orm import Session
+
 from devops_collector.core.admin_service import AdminService
-from devops_collector.models.base_models import OKRObjective, OKRKeyResult, User, Organization
+from devops_collector.models.base_models import OKRKeyResult, OKRObjective, Organization, User
+
 
 @pytest.fixture
 def admin_service(db_session: Session):
@@ -48,11 +51,11 @@ def test_export_okrs_content(admin_service, db_session):
 
     # 2. 执行导出
     csv_str = admin_service.export_okrs(period="2024-Q1")
-    
+
     # 3. 验证格式和内容
     reader = csv.DictReader(io.StringIO(csv_str))
     rows = list(reader)
-    
+
     assert len(rows) == 1
     row = rows[0]
     assert row['目标标题'] == "单元测试目标"

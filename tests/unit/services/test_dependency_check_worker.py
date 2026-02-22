@@ -2,10 +2,10 @@
 OWASP Dependency-Check Worker 单元测试
 """
 import unittest
-from unittest.mock import Mock, patch, MagicMock
-import json
-from pathlib import Path
+from unittest.mock import MagicMock
+
 from devops_collector.plugins.dependency_check.worker import DependencyCheckWorker
+
 
 class TestDependencyCheckWorker(unittest.TestCase):
     """测试 DependencyCheckWorker"""
@@ -32,7 +32,7 @@ Raises:
         with indent_mock_process_ci_report(self.worker) as mock_ci:
             self.worker.process_task({'project_id': 1, 'report_json': {}})
             mock_ci.assert_called_once()
-            
+
         # Case 2: Invalid Input
         with self.assertRaises(ValueError):
             self.worker.process_task({'project_id': 1})
@@ -48,12 +48,12 @@ Raises:
         def set_id(obj):
             obj.id = 100
         self.worker.session.add.side_effect = set_id
-        
+
         # Mock _save_dependencies
         self.worker._save_dependencies = MagicMock(return_value={
             'total': 10, 'vulnerable': 2, 'high_risk_licenses': 1
         })
-        
+
         task = {
             'project_id': 1,
             'report_json': {'reportSchema': '1.0', 'dependencies': []},
@@ -61,9 +61,9 @@ Raises:
             'commit_sha': 'abcdef',
             'branch': 'main'
         }
-        
+
         scan_id = self.worker.process_ci_report(1, task)
-        
+
         self.assertEqual(scan_id, 100)
         self.worker.session.add.assert_called_once()
         self.worker._save_dependencies.assert_called_once()
@@ -110,6 +110,7 @@ Raises:
 
 # Helper context managers for patching methods on the instance
 from contextlib import contextmanager
+
 
 @contextmanager
 def indent_mock_process_ci_report(worker):

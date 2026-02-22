@@ -1,13 +1,14 @@
 """JFrog Artifactory 数据采集 Worker"""
 import logging
-from datetime import datetime, timezone
-from typing import Optional, Dict, List
-from sqlalchemy.orm import Session
+from datetime import UTC, datetime
+
 from devops_collector.core.base_worker import BaseWorker
-from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.identity_manager import IdentityManager
+
 # from .client import JFrogClient
 from .models import JFrogArtifact, JFrogScan, JFrogVulnerabilityDetail
+
+
 logger = logging.getLogger(__name__)
 
 class JFrogWorker(BaseWorker):
@@ -38,7 +39,7 @@ class JFrogWorker(BaseWorker):
             stats = self.client.get_artifact_stats(repo, item['path'] + '/' + item['name'])
             artifact.download_count = stats.get('downloadCount', 0)
             if stats.get('lastDownloaded'):
-                artifact.last_downloaded_at = datetime.fromtimestamp(stats['lastDownloaded'] / 1000, tz=timezone.utc)
+                artifact.last_downloaded_at = datetime.fromtimestamp(stats['lastDownloaded'] / 1000, tz=UTC)
             scan_data = self.client.get_xray_summary(repo, item['path'] + '/' + item['name'])
             if scan_data:
                 self._sync_xray_scan(artifact, scan_data)

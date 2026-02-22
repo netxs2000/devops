@@ -5,8 +5,11 @@ to be managed as Software-Defined Assets (SDA) within the Dagster ecosystem.
 """
 import os
 from pathlib import Path
+
 from dagster import AssetExecutionContext
 from dagster_dbt import DbtCliResource, dbt_assets
+
+
 DBT_PROJECT_DIR = Path(__file__).joinpath('..', '..', '..', 'dbt_project').resolve()
 dbt_resource = DbtCliResource(project_dir=os.fspath(DBT_PROJECT_DIR))
 

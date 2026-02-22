@@ -4,7 +4,8 @@
 支持解析：优先级、测试类型、关联需求 ID、预置条件以及测试步骤。
 """
 import re
-from typing import Dict, List, Any, Optional
+from typing import Any
+
 
 class GitLabTestParser:
     """GitLab 测试用例内容解析器。
@@ -13,7 +14,7 @@ class GitLabTestParser:
     """
 
     @staticmethod
-    def parse_description(description: str) -> Dict[str, Any]:
+    def parse_description(description: str) -> dict[str, Any]:
         """解析 Issue 描述中的结构化 Markdown 内容。
         
         Args:
@@ -53,7 +54,7 @@ class GitLabTestParser:
         return {'priority': priority, 'test_type': test_type, 'pre_conditions': pre_conditions, 'test_steps': test_steps}
 
     @staticmethod
-    def extract_requirement_id(description: str) -> Optional[int]:
+    def extract_requirement_id(description: str) -> int | None:
         """从描述中提取关联的 Issue ID (需求 ID)。
         
         Args:

@@ -1,11 +1,14 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.models.base_models import Base
+
 from devops_collector.core.plugin_loader import PluginLoader
+from devops_collector.models.base_models import Base
+from devops_collector.plugins.gitlab.models import GitLabCommit, GitLabProject
 from devops_collector.plugins.gitlab.worker import GitLabWorker
-from devops_collector.plugins.gitlab.models import GitLabProject, GitLabCommit, GitLabIssue
+
 
 @pytest.fixture
 def session():
@@ -14,7 +17,7 @@ def session():
     PluginLoader.autodiscover()
     PluginLoader.load_models()
     Base.metadata.create_all(engine)
-    
+
     Session = sessionmaker(bind=engine)
     session = Session()
     yield session
@@ -39,7 +42,7 @@ def test_gitlab_worker_sync_project_and_commits(session):
         'path': 'group',
         'full_path': 'group'
     }
-    
+
     # Mocking commit generator
     def get_commits_gen(pid, since=None):
         yield {
@@ -53,28 +56,28 @@ def test_gitlab_worker_sync_project_and_commits(session):
                 'committed_date': '2023-01-01T10:00:00Z',
                 'stats': {'additions': 10, 'deletions': 2, 'total': 12}
             }
-    
+
     mock_client.get_project_commits.side_effect = get_commits_gen
     mock_client.get_project_issues.return_value = []
     mock_client.get_merge_requests.return_value = []
-    
+
     # 2. Run Worker
     worker = GitLabWorker(session, mock_client)
     task = {'source': 'gitlab', 'project_id': 101, 'job_type': 'full'}
-    
+
     worker.process_task(task)
     session.commit()
-    
+
     # 3. Verify Persistence in Renamed Tables
     project = session.query(GitLabProject).filter_by(id=101).first()
     assert project is not None
     assert project.name == 'Test Project'
-    
+
     commits = session.query(GitLabCommit).filter_by(project_id=101).all()
     assert len(commits) == 1
     assert commits[0].id == 'sha123'
     assert commits[0].additions == 10
-    
+
     # Verify SyncLog (Core Model)
     from devops_collector.models.base_models import SyncLog
     log = session.query(SyncLog).filter_by(project_id=101).order_by(SyncLog.id.desc()).first()

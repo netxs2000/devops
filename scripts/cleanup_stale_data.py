@@ -1,11 +1,15 @@
 """数据清理脚本
 用于手动或定时执行原始采集数据的清理任务。
 """
-import sys
-import os
 import logging
+import os
+import sys
+
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from devops_collector.core.retention_manager import RetentionManager
+
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('CleanupScript')
 

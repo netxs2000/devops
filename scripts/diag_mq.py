@@ -1,12 +1,14 @@
-import sys
 import os
+import sys
+
 import pika
-from typing import Optional
+
 
 # 将项目根目录添加到 python 路径
 sys.path.insert(0, os.getcwd())
 
 from devops_collector.config import settings
+
 
 def diagnose_mq():
     """诊断 RabbitMQ 连接和队列状态。"""
@@ -27,12 +29,12 @@ def diagnose_mq():
             pika.ConnectionParameters(host=host, port=port, credentials=credentials, timeout=5)
         )
         channel = connection.channel()
-        
+
         print("✓ 连接成功")
 
         # 检查一些核心队列 (如果已知名称)
         # 这里仅列出连接成功
-        
+
         connection.close()
         print("✓ 连接关闭正常")
         return True

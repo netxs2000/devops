@@ -4,14 +4,15 @@
 """
 from sqlalchemy import event, func
 
+
 def _update_project_activity(mapper, connection, target):
     """更新关联项目的最后活跃时间辅助函数。"""
     from .models import GitLabProject
     project_id = getattr(target, 'project_id', None)
     if project_id:
         activity_time = (
-            getattr(target, 'created_at', None) or 
-            getattr(target, 'authored_date', None) or 
+            getattr(target, 'created_at', None) or
+            getattr(target, 'authored_date', None) or
             func.now()
         )
         connection.execute(
@@ -29,9 +30,9 @@ def _handle_issue_first_response(mapper, connection, target):
         connection.execute(
             GitLabIssue.__table__.update()
             .where(
-                (GitLabIssue.__table__.c.iid == target.noteable_iid) & 
-                (GitLabIssue.__table__.c.project_id == target.project_id) & 
-                (GitLabIssue.__table__.c.first_response_at == None) & 
+                (GitLabIssue.__table__.c.iid == target.noteable_iid) &
+                (GitLabIssue.__table__.c.project_id == target.project_id) &
+                (GitLabIssue.__table__.c.first_response_at == None) &
                 (GitLabIssue.__table__.c.author_id != target.author_id)
             )
             .values(first_response_at=target.created_at or func.now())
@@ -39,8 +40,8 @@ def _handle_issue_first_response(mapper, connection, target):
 
 def register_events():
     """注册 GitLab 模型事件。"""
-    from .models import GitLabCommit, GitLabIssue, GitLabMergeRequest, GitLabPipeline, GitLabNote
-    
+    from .models import GitLabCommit, GitLabIssue, GitLabMergeRequest, GitLabNote, GitLabPipeline
+
     event.listen(GitLabCommit, 'after_insert', _update_project_activity)
     event.listen(GitLabIssue, 'after_insert', _update_project_activity)
     event.listen(GitLabMergeRequest, 'after_insert', _update_project_activity)

@@ -2,13 +2,15 @@
 
 验证 GitLabTestParser 和 TestManagementService 的核心解析与业务逻辑。
 """
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 from sqlalchemy.orm import Session
+
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.gitlab.parser import GitLabTestParser
 from devops_collector.plugins.gitlab.test_management_service import TestManagementService
-from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
-from devops_portal import schemas
+
 
 # --- GitLabTestParser 单元测试 ---
 
@@ -83,7 +85,7 @@ async def test_get_test_cases_should_parse_gitlab_issues(service, mock_client, m
     mock_db.query().filter().first.return_value = None # No project info found in DB
 
     cases = await service.get_test_cases(mock_db, 1, MagicMock())
-    
+
     assert len(cases) == 1
     assert cases[0].iid == 101
     assert cases[0].result == 'passed'
@@ -94,9 +96,9 @@ async def test_execute_test_case_should_update_labels_and_add_note(service, mock
     project_id = 1
     issue_iid = 101
     mock_client.get_project_issue.return_value = {'labels': ['type::test', 'status::pending']}
-    
+
     success = await service.execute_test_case(project_id, issue_iid, 'passed', 'Tester Zhang')
-    
+
     assert success is True
     # 验证是否调用了更新接口，且移除了之前的 status 标签
     mock_client.update_issue.assert_called_once()
@@ -105,7 +107,7 @@ async def test_execute_test_case_should_update_labels_and_add_note(service, mock
     update_data = args[2] if len(args) > 2 else kwargs.get('data', {})
     assert 'status::passed' in update_data['labels']
     assert 'status::pending' not in update_data['labels']
-    
+
     # 验证是否添加了记录
     mock_client.add_issue_note.assert_called_once()
     note_args = mock_client.add_issue_note.call_args[0]

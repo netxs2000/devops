@@ -3,10 +3,22 @@
 提供次要资产（Tag, Branch, Milestone, Package, Wiki, Dependency 等）的同步逻辑。
 """
 import logging
-from datetime import datetime, timezone
-from typing import List
+from datetime import UTC, datetime
+
 from devops_collector.core.utils import parse_iso8601
-from ..models import GitLabProject, GitLabTag, GitLabBranch, GitLabMilestone, GitLabPackage, GitLabPackageFile, GitLabWikiLog, GitLabDependency
+
+from ..models import (
+    GitLabBranch,
+    GitLabDependency,
+    GitLabMilestone,
+    GitLabPackage,
+    GitLabPackageFile,
+    GitLabProject,
+    GitLabTag,
+    GitLabWikiLog,
+)
+
+
 logger = logging.getLogger(__name__)
 
 class AssetMixin:
@@ -25,7 +37,7 @@ class AssetMixin:
         project.tags_count = count
         return count
 
-    def _save_tags_batch(self, project: GitLabProject, batch: List[dict]) -> None:
+    def _save_tags_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存标签。
         
         Args:
@@ -54,7 +66,7 @@ class AssetMixin:
         """
         return self._process_generator(self.client.get_project_branches(project.id), lambda batch: self._save_branches_batch(project, batch))
 
-    def _save_branches_batch(self, project: GitLabProject, batch: List[dict]) -> None:
+    def _save_branches_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存分支。
         
         Args:
@@ -89,7 +101,7 @@ class AssetMixin:
         """
         return self._process_generator(self.client.get_project_milestones(project.id), lambda batch: self._save_milestones_batch(project, batch))
 
-    def _save_milestones_batch(self, project: GitLabProject, batch: List[dict]) -> None:
+    def _save_milestones_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存里程碑。
         
         Args:
@@ -111,12 +123,12 @@ class AssetMixin:
             ms.state = data.get('state')
             if data.get('due_date'):
                 try:
-                    ms.due_date = datetime.fromisoformat(data['due_date']).replace(tzinfo=timezone.utc)
+                    ms.due_date = datetime.fromisoformat(data['due_date']).replace(tzinfo=UTC)
                 except ValueError:
                     pass
             if data.get('start_date'):
                 try:
-                    ms.start_date = datetime.fromisoformat(data['start_date']).replace(tzinfo=timezone.utc)
+                    ms.start_date = datetime.fromisoformat(data['start_date']).replace(tzinfo=UTC)
                 except ValueError:
                     pass
             ms.created_at = parse_iso8601(data.get('created_at'))
@@ -133,7 +145,7 @@ class AssetMixin:
         """
         return self._process_generator(self.client.get_packages(project.id), lambda batch: self._save_packages_batch(project, batch))
 
-    def _save_packages_batch(self, project: GitLabProject, batch: List[dict]) -> None:
+    def _save_packages_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """保存包及其关联文件。
         
         Args:
@@ -162,7 +174,7 @@ class AssetMixin:
             except Exception as e:
                 logger.warning(f'Failed to sync files for package {pkg.id}: {e}')
 
-    def _sync_package_files(self, package: GitLabPackage, files_data: List[dict]) -> None:
+    def _sync_package_files(self, package: GitLabPackage, files_data: list[dict]) -> None:
         """同步特定包下的文件。
         
         Args:

@@ -2,11 +2,15 @@
 - 自动清理超过保留期限的原始 Staging 数据。
 """
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import sessionmaker
+
 from devops_collector.config import Config
 from devops_collector.models.base_models import RawDataStaging
+
+
 logger = logging.getLogger(__name__)
 
 class RetentionManager:
@@ -59,7 +63,7 @@ Raises:
         if retention_days <= 0:
             logger.info('Retention days is set to 0 or less, skipping cleanup.')
             return 0
-        threshold_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
+        threshold_date = datetime.now(UTC) - timedelta(days=retention_days)
         session = self._get_session()
         try:
             stmt = delete(RawDataStaging).where(RawDataStaging.collected_at < threshold_date)

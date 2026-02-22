@@ -2,9 +2,11 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from devops_collector.models import Base
-from devops_collector.models.base_models import ProjectMaster, Organization
-from devops_collector.plugins.gitlab.models import GitLabProject as Project, GitLabMergeRequest as MergeRequest, GitLabCommit as Commit
+from devops_collector.models.base_models import Organization, ProjectMaster
+from devops_collector.plugins.gitlab.models import GitLabProject as Project
+
 
 @pytest.fixture
 def db_session():

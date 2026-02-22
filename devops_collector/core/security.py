@@ -16,12 +16,21 @@
 - 数据范围取最大: 多角色时，取数值最小的 data_scope (权限最大)
 """
 import logging
-from typing import List, Any, Set, Optional
-from sqlalchemy.orm import Session, Query
-from devops_collector.models.base_models import (
-    Organization, User, Product, SysRole, SysRoleDept, SysRoleMenu, SysMenu, ProjectMaster
-)
+from typing import Any
+
+from sqlalchemy.orm import Query, Session
+
 from devops_collector.core import business_auth
+from devops_collector.models.base_models import (
+    Organization,
+    Product,
+    SysMenu,
+    SysRole,
+    SysRoleDept,
+    SysRoleMenu,
+    User,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +60,7 @@ def generate_random_password(length: int = 16) -> str:
     return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
-def get_user_org_scope_ids(db: Session, user: User) -> List[str]:
+def get_user_org_scope_ids(db: Session, user: User) -> list[str]:
     """获取用户组织权限范围内的所有部门 ID (支持无限级向下递归)。
 
     Args:
@@ -83,7 +92,7 @@ def get_user_org_scope_ids(db: Session, user: User) -> List[str]:
             collect_children_orgs(child_id, db_session)
 
     collect_children_orgs(user_dept_id, db)
-    
+
     # --- [核心增强] 业务关联数据范围 ---
     # 额外加入该用户作为 manager 的所有组织及其下级项
     managed_orgs = db.query(Organization.org_id).filter_by(
@@ -99,7 +108,7 @@ def get_user_org_scope_ids(db: Session, user: User) -> List[str]:
     return list(set(scope_ids))
 
 
-def get_role_hierarchy(db: Session, role: SysRole, depth: int = 1) -> List[SysRole]:
+def get_role_hierarchy(db: Session, role: SysRole, depth: int = 1) -> list[SysRole]:
     """获取角色继承链 (包含父角色)。
 
     Args:
@@ -148,14 +157,13 @@ def get_user_effective_data_scope(db: Session, user: User) -> int:
     # 如果是部门负责人及以上，数据范围至少提升到“本部门及以下”
     dynamic_roles = business_auth.get_business_linked_roles(db, user.global_user_id)
     if 'DEPT_MANAGER' in dynamic_roles or 'EXECUTIVE_MANAGER' in dynamic_roles:
-        if min_scope > DATA_SCOPE_DEPT_BELOW:
-            min_scope = DATA_SCOPE_DEPT_BELOW
+        min_scope = min(min_scope, DATA_SCOPE_DEPT_BELOW)
     # ---------------------------
 
     return min_scope
 
 
-def get_custom_dept_ids(db: Session, user: User) -> List[str]:
+def get_custom_dept_ids(db: Session, user: User) -> list[str]:
     """获取用户自定义数据权限范围内的部门 ID 列表。
 
     通过 sys_role_dept 表获取所有角色关联的自定义部门。
@@ -170,7 +178,7 @@ def get_custom_dept_ids(db: Session, user: User) -> List[str]:
     if not hasattr(user, 'roles') or not user.roles:
         return []
 
-    dept_ids: Set[str] = set()
+    dept_ids: set[str] = set()
     for role in user.roles:
         role_chain = get_role_hierarchy(db, role)
         for r in role_chain:
@@ -180,7 +188,7 @@ def get_custom_dept_ids(db: Session, user: User) -> List[str]:
     return list(dept_ids)
 
 
-def get_user_permissions(db: Session, user: User) -> List[str]:
+def get_user_permissions(db: Session, user: User) -> list[str]:
     """聚合用户所有角色的权限标识 (考虑继承)。
 
     Args:
@@ -193,7 +201,7 @@ def get_user_permissions(db: Session, user: User) -> List[str]:
     if not hasattr(user, 'roles') or not user.roles:
         return []
 
-    permissions: Set[str] = set()
+    permissions: set[str] = set()
     for role in user.roles:
         # 超管直接返回通配符
         if role.role_key == ADMIN_ROLE_KEY:
@@ -313,18 +321,18 @@ def apply_row_level_security(
     if data_scope == DATA_SCOPE_SELF:
         user_id = getattr(current_user, 'global_user_id', None)
         owner_col = None
-        
+
         # 1. 优先使用 OwnableMixin 接口
         if hasattr(model_class, 'get_owner_column'):
             owner_col = model_class.get_owner_column()
-            
+
         # 2. 回退到参数指定 (兼容)
         if owner_col is None and hasattr(model_class, owner_field):
              owner_col = getattr(model_class, owner_field)
 
         if user_id and owner_col is not None:
             return query.filter(owner_col == user_id)
-        
+
         # [Security] Fail-closed
         from sqlalchemy import false
         return query.filter(false())
@@ -383,7 +391,7 @@ def apply_plugin_privacy_filter(
     return query
 
 
-def get_user_data_scope_ids(user: User) -> List[str]:
+def get_user_data_scope_ids(user: User) -> list[str]:
     """[P4] 获取用户数据权限范围内的所有地点 ID (含子级)。"""
     user_location = getattr(user, 'location', None)
     if not user_location:
@@ -406,9 +414,9 @@ def get_user_data_scope_ids(user: User) -> List[str]:
 
 def filter_issues_by_province(
     db: Session,
-    issues: List[dict],
+    issues: list[dict],
     current_user: User
-) -> List[dict]:
+) -> list[dict]:
     """[P4 升级版] 基于 MDM Location 树进行数据权限隔离。
 
     - 全国权限 (Global): user.location 为空 -> 返回全量
@@ -441,9 +449,9 @@ def filter_issues_by_province(
 
 def filter_issues_by_privacy(
     db: Session,
-    issues: List[dict],
+    issues: list[dict],
     current_user: User
-) -> List[dict]:
+) -> list[dict]:
     """综合维度数据权限隔离（地域 + 组织）。
 
     依据登录用户的 MDM 属性应用双重过滤机制：

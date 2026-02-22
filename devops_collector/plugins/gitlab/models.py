@@ -10,15 +10,31 @@
     >>> from devops_collector.plugins.gitlab.models import GitLabGroup
     >>> session.query(GitLabGroup).filter(GitLabGroup.path == 'my-group').first()
 """
-from datetime import datetime, timezone
-from typing import List, Optional
-from devops_collector.config import settings
-from sqlalchemy import JSON, BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, select, cast, and_
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    cast,
+    select,
+)
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import backref, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
-from devops_collector.models.base_models import Base, Organization, User, SyncLog
+
+from devops_collector.config import settings
+from devops_collector.models.base_models import Base, Organization
+
+
 Organization.gitlab_projects = relationship('GitLabProject', back_populates='organization')
 
 class GitLabGroup(Base):
@@ -235,7 +251,7 @@ Raises:
     @change_failure_rate.expression
     def change_failure_rate(cls):
         """CFR 的 SQL 聚合。"""
-        from sqlalchemy import case, cast, Float
+        from sqlalchemy import Float, case
         Issue_ = cls.issues.property.mapper.class_
         Deployment_ = cls.deployments.property.mapper.class_
         failures_count = select(func.count(Issue_.id)).where(Issue_.project_id == cls.id).where(Issue_.is_change_failure == True).scalar_subquery()
@@ -390,8 +406,8 @@ class GitLabMergeRequest(Base):
         如果是已合并状态，计算从创建到合并的时间；否则返回 None。
         """
         if self.merged_at and self.created_at:
-            start = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=timezone.utc)
-            end = self.merged_at if self.merged_at.tzinfo else self.merged_at.replace(tzinfo=timezone.utc)
+            start = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=UTC)
+            end = self.merged_at if self.merged_at.tzinfo else self.merged_at.replace(tzinfo=UTC)
             return (end - start).total_seconds()
         return None
 
@@ -591,7 +607,7 @@ class GitLabIssue(Base):
     @hybrid_property
     def is_deployed(self):
         for mr in self.merge_requests:
-            if any((d.is_success and d.is_production for d in mr.deployments)):
+            if any(d.is_success and d.is_production for d in mr.deployments):
                 return True
         return False
 
@@ -610,8 +626,8 @@ class GitLabIssue(Base):
     def resolution_time(self):
         """Issue 解决时长 (秒)。"""
         if self.closed_at and self.created_at:
-            start = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=timezone.utc)
-            end = self.closed_at if self.closed_at.tzinfo else self.closed_at.replace(tzinfo=timezone.utc)
+            start = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=UTC)
+            end = self.closed_at if self.closed_at.tzinfo else self.closed_at.replace(tzinfo=UTC)
             return (end - start).total_seconds()
         return None
 
@@ -636,8 +652,8 @@ Raises:
         基于 updated_at 估算状态最后变更时间。
         """
         if self.updated_at:
-            updated_at = self.updated_at if self.updated_at.tzinfo else self.updated_at.replace(tzinfo=timezone.utc)
-            return (datetime.now(timezone.utc) - updated_at).total_seconds()
+            updated_at = self.updated_at if self.updated_at.tzinfo else self.updated_at.replace(tzinfo=UTC)
+            return (datetime.now(UTC) - updated_at).total_seconds()
         return 0
 
     @hybrid_property
@@ -645,7 +661,7 @@ Raises:
         """根据标签判定是否为 Bug。"""
         if not self.labels:
             return False
-        return any(('bug' in str(label).lower() for label in self.labels))
+        return any('bug' in str(label).lower() for label in self.labels)
 
     @hybrid_property
     def is_incident(self):
@@ -653,12 +669,12 @@ Raises:
         if not self.labels:
             return False
         labels_str = str(self.labels).lower()
-        return any((p.lower() in labels_str for p in settings.analysis.incident_label_patterns))
+        return any(p.lower() in labels_str for p in settings.analysis.incident_label_patterns)
 
     @is_incident.expression
     def is_incident(cls):
         """DORA 事故检测的 SQL 表达式。"""
-        from sqlalchemy import or_, Text
+        from sqlalchemy import Text, or_
         conditions = [func.cast(cls.labels, Text).ilike(f'%{p}%') for p in settings.analysis.incident_label_patterns]
         return or_(*conditions)
 
@@ -668,12 +684,12 @@ Raises:
         if not self.labels:
             return False
         labels_str = str(self.labels).lower()
-        return any((p.lower() in labels_str for p in settings.analysis.change_failure_label_patterns))
+        return any(p.lower() in labels_str for p in settings.analysis.change_failure_label_patterns)
 
     @is_change_failure.expression
     def is_change_failure(cls):
         """变更失败检测的 SQL 表达式。"""
-        from sqlalchemy import or_, Text
+        from sqlalchemy import Text, or_
         conditions = [func.cast(cls.labels, Text).ilike(f'%{p}%') for p in settings.analysis.change_failure_label_patterns]
         return or_(*conditions)
 
@@ -706,9 +722,9 @@ Raises:
         """是否违反了 SLA 响应承诺。"""
         if not self.created_at:
             return False
-        start = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=timezone.utc)
-        raw_end = self.first_response_at or datetime.now(timezone.utc)
-        end = raw_end if raw_end.tzinfo else raw_end.replace(tzinfo=timezone.utc)
+        start = self.created_at if self.created_at.tzinfo else self.created_at.replace(tzinfo=UTC)
+        raw_end = self.first_response_at or datetime.now(UTC)
+        end = raw_end if raw_end.tzinfo else raw_end.replace(tzinfo=UTC)
         response_time = (end - start).total_seconds()
         return response_time > self.sla_limit_seconds
 
@@ -1247,7 +1263,7 @@ class GitLabMilestone(Base):
         if self.state == 'closed':
             return False
         if self.due_date:
-            return datetime.now(timezone.utc) > self.due_date
+            return datetime.now(UTC) > self.due_date
         return False
 
     def __repr__(self) -> str:
@@ -1490,4 +1506,6 @@ Raises:
 """'''
         return f"<GitLabDependency(id={self.id}, name='{self.name}', version='{self.version}')>"
 from . import events
+
+
 events.register_events()

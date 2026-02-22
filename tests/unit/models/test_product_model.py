@@ -1,8 +1,11 @@
 """TODO: Add module description."""
 import unittest
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.models.base_models import Base, User, Organization, Product
+
+from devops_collector.models.base_models import Base, Organization, Product, User
+
 
 class TestProductModel(unittest.TestCase):
     '''"""TODO: Add class description."""'''

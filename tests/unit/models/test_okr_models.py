@@ -1,8 +1,11 @@
 """TODO: Add module description."""
 import unittest
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.models.base_models import Base, User, Organization, OKRObjective, OKRKeyResult
+
+from devops_collector.models.base_models import Base, OKRKeyResult, OKRObjective, Organization, User
+
 
 class TestOKRModels(unittest.TestCase):
     """OKR 模型单元测试。

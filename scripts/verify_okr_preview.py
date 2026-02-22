@@ -1,17 +1,18 @@
 
-import requests
 import sys
 
 # Assume the dev environment is running at localhost:8000
 # And we have a valid token (requires login or mock)
 # For now, let's just check the structure and if it's reachable in the container if possible.
 # Actually, I'll run a python script that mocks the DB session and calls the service directly to verify the service logic.
-
 import uuid
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from devops_collector.core.admin_service import AdminService
 from devops_collector.models.base_models import Base, OKRObjective, User
+
 
 def test_preview_logic():
     engine = create_engine('sqlite:///:memory:')
@@ -36,7 +37,7 @@ def test_preview_logic():
 
     service = AdminService(session)
     results = service.list_okrs()
-    
+
     print(f"Results count: {len(results)}")
     if len(results) > 0:
         print(f"First result: {results[0]['title']}, status: {results[0]['status']}, period: {results[0]['period']}")

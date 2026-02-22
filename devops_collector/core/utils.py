@@ -4,8 +4,10 @@
 旨在消除重复代码，统一处理逻辑。
 """
 import logging
-from datetime import datetime, timezone
-from typing import Optional, Union, Any
+from datetime import datetime
+from typing import Any
+
+
 logger = logging.getLogger(__name__)
 
 def safe_int(value: Any, default: int=0) -> int:
@@ -38,7 +40,7 @@ def safe_float(value: Any, default: float=0.0) -> float:
     except (ValueError, TypeError):
         return default
 
-def parse_iso8601(date_str: Optional[str]) -> Optional[datetime]:
+def parse_iso8601(date_str: str | None) -> datetime | None:
     """解析 ISO 8601 格式的时间字符串。
     
     统一处理带 'Z' 后缀的 UTC 时间字符串，将其转换为带时区信息的 datetime 对象。
@@ -58,7 +60,9 @@ def parse_iso8601(date_str: Optional[str]) -> Optional[datetime]:
         logger.warning(f"Failed to parse date string '{date_str}': {e}")
         return None
 from pathlib import Path
+
 from devops_collector.config import settings
+
 
 def resolve_data_path(filename: str) -> Path:
     """获取数据文件的绝对持久化路径。

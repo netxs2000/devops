@@ -5,10 +5,13 @@
 """
 import logging
 import re
-import airbyte as ab
+from typing import Any
 from urllib.parse import urlparse
-from typing import List, Dict, Optional, Any
+
+import airbyte as ab
+
 from devops_collector.core.base_client import BaseClient
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,25 +28,25 @@ class AirbyteJiraClient(BaseClient):
             rate_limit (int): 忽略。
         """
         super().__init__(base_url=url, rate_limit=rate_limit)
-        
+
         # 提取域名
         parsed_url = urlparse(url)
         domain = parsed_url.netloc
-        
+
         self.config = {
             "domain": domain,
             "email": email,
             "api_token": api_token
         }
-        
+
         self._source = None
-        self._cache: Dict[str, List[dict]] = {}
+        self._cache: dict[str, list[dict]] = {}
 
     def _get_source(self):
         """获取或初始化 Airbyte Source 实例。"""
         if self._source:
             return self._source
-            
+
         logger.info("正在初始化 PyAirbyte 'source-jira' 连接器...")
         try:
             self._source = ab.get_source(
@@ -57,14 +60,14 @@ class AirbyteJiraClient(BaseClient):
             logger.error(f"PyAirbyte Jira connection check failed: {e}")
             raise
 
-    def _load_stream(self, stream_name: str) -> List[dict]:
+    def _load_stream(self, stream_name: str) -> list[dict]:
         """加载并缓存指定流的数据。"""
         if stream_name in self._cache:
             return self._cache[stream_name]
-            
+
         source = self._get_source()
         logger.info(f"Reading '{stream_name}' stream from Airbyte...")
-        
+
         # 处理可能的流名称不一致问题，Airbyte流名称通常是复数
         available_streams = source.get_available_streams()
         target_stream = stream_name
@@ -80,7 +83,7 @@ class AirbyteJiraClient(BaseClient):
             data = []
             for record in result.streams[target_stream]:
                 data.append(record.to_dict() if hasattr(record, 'to_dict') else record)
-            
+
             logger.info(f"Loaded {len(data)} records for stream '{stream_name}'.")
             self._cache[stream_name] = data
             return data
@@ -97,28 +100,28 @@ class AirbyteJiraClient(BaseClient):
         except Exception:
             return False
 
-    def get_projects(self) -> List[Dict[str, Any]]:
+    def get_projects(self) -> list[dict[str, Any]]:
         """获取所有项目。"""
         return self._load_stream('projects')
 
-    def get_groups(self) -> List[Dict[str, Any]]:
+    def get_groups(self) -> list[dict[str, Any]]:
         """获取用户组列表 (对应 Airbyte 'groups' 流)。"""
         # 注意: 具体流名称取决于 source-jira 版本，通常是 'groups' 或 'user_groups'
         # 尝试加载 groups
         return self._load_stream('groups')
 
-    def get_all_users(self) -> List[Dict[str, Any]]:
+    def get_all_users(self) -> list[dict[str, Any]]:
         """获取所有用户 (对应 Airbyte 'users' 流)。"""
         return self._load_stream('users')
 
-    def get_boards(self, project_key: Optional[str]=None) -> List[Dict[str, Any]]:
+    def get_boards(self, project_key: str | None=None) -> list[dict[str, Any]]:
         """获取看板。"""
         # source-jira 的 boards 流可能不可用或结构不同。
         # 假设存在 'boards' 流
         boards = self._load_stream('boards')
         if not project_key:
             return boards
-            
+
         filtered_boards = []
         for board in boards:
             # 检查 board location
@@ -128,16 +131,16 @@ class AirbyteJiraClient(BaseClient):
                 filtered_boards.append(board)
         return filtered_boards
 
-    def get_sprints(self, board_id: int) -> List[Dict[str, Any]]:
+    def get_sprints(self, board_id: int) -> list[dict[str, Any]]:
         """获取看板下的 Sprints。"""
         # 假设存在 'sprints' 流
         sprints = self._load_stream('sprints')
         return [s for s in sprints if s.get('originBoardId') == board_id or s.get('originBoardId') == str(board_id)]
 
-    def get_issues(self, jql: str) -> List[Dict[str, Any]]:
+    def get_issues(self, jql: str) -> list[dict[str, Any]]:
         """获取 Issues。注意：Airbyte 不支持 JQL 查询，这里使用缓存过滤。"""
         all_issues = self._load_stream('issues')
-        
+
         # 简单的 JQL 解析：仅提取 `project = KEY`
         # 如果 JQL 复杂，这里的过滤可能不准确，建议 Worker 进一步验证
         # 假设 JQL 格式为 "project = KEY" 或 "project=KEY"
@@ -145,11 +148,11 @@ class AirbyteJiraClient(BaseClient):
         match = re.search(r"project\s*=\s*['\"]?(\w+)['\"]?", jql, re.IGNORECASE)
         if match:
             project_key = match.group(1)
-            
+
         if not project_key:
             logger.warning(f"Could not parse Project Key from JQL: '{jql}'. Returning all cached issues (may be mixed projects).")
             return all_issues
-            
+
         filtered = []
         for issue in all_issues:
             # issue fields 包含 project: {key: 'KEY'}

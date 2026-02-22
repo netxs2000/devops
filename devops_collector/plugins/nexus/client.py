@@ -1,7 +1,9 @@
 """Nexus Repository OSS API 客户端"""
-from typing import List, Dict, Optional, Any, Generator
-from devops_collector.core.base_client import BaseClient
 import base64
+from collections.abc import Generator
+
+from devops_collector.core.base_client import BaseClient
+
 
 class NexusClient(BaseClient):
     """Nexus Repository v3 REST API 客户端。"""
@@ -34,11 +36,11 @@ Raises:
         except Exception:
             return False
 
-    def list_repositories(self) -> List[Dict]:
+    def list_repositories(self) -> list[dict]:
         """获取仓库列表。"""
         return self._get('repositories').json()
 
-    def list_components(self, repository: str) -> Generator[Dict, None, None]:
+    def list_components(self, repository: str) -> Generator[dict, None, None]:
         """流式获取仓库下的组件列表（支持自动分页）。"""
         continuation_token = None
         while True:
@@ -53,11 +55,11 @@ Raises:
             if not continuation_token:
                 break
 
-    def get_component(self, component_id: str) -> Dict:
+    def get_component(self, component_id: str) -> dict:
         """获取特定组件详情。"""
         return self._get(f'components/{component_id}').json()
 
-    def list_assets(self, repository: str) -> Generator[Dict, None, None]:
+    def list_assets(self, repository: str) -> Generator[dict, None, None]:
         """流式获取资产列表。"""
         continuation_token = None
         while True:

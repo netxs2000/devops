@@ -1,6 +1,5 @@
 """TODO: Add module description."""
 import streamlit as st
-import pandas as pd
 
 
 def run():
@@ -27,9 +26,9 @@ Raises:
     with col3:
         st.metric('元数据健康得分', '98', 'Excellent')
     st.markdown('### 🔭 DataHub 治理视图')
-    
+
     datahub_url = 'http://localhost:9002'
-    
+
     # Check if DataHub is actually running to avoid "Connection Refused" error in iframe
     import socket
     def is_port_open(host, port):
@@ -53,7 +52,7 @@ Raises:
         2. 运行 `docker-compose -f docker-compose-datahub.yml up -d` (如果适用)。
         3. 刷新此页面。
         """)
-        
+
     st.markdown('### 🛠️ 运维操作')
     if st.button('🚀 立即触发全量元数据扫描 (Batch Ingestion)'):
         st.code('make datahub-ingest')

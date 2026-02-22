@@ -7,7 +7,8 @@ Service Desk Page Object
 - Support Center 视图
 """
 
-from playwright.sync_api import Page, Locator, expect
+from playwright.sync_api import Locator, expect
+
 from .base_page import BasePage
 
 

@@ -1,17 +1,21 @@
 """TODO: Add module description."""
-import pytest
 import uuid
-from datetime import date
+from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from devops_portal.main import app
-from devops_collector.models import Base, ProjectMaster, Organization, User, SysRole as Role
-from devops_collector.plugins.gitlab.models import GitLabProject as Project
+
 from devops_collector.auth.auth_database import get_auth_db as get_db
+from devops_collector.models import Base, Organization, ProjectMaster, User
+from devops_collector.models import SysRole as Role
+from devops_collector.plugins.gitlab.models import GitLabProject as Project
 from devops_portal.dependencies import get_current_user
-from unittest.mock import MagicMock, patch
+from devops_portal.main import app
+
+
 SQLALCHEMY_DATABASE_URL = 'sqlite:///:memory:'
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={'check_same_thread': False}, poolclass=StaticPool)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

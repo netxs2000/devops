@@ -6,16 +6,19 @@
 3. 在无需请求外部 API 的情况下，刷新业务表数据。
 """
 import logging
-from typing import List, Dict, Any, Type
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.config import Config
-from devops_collector.models.base_models import RawDataStaging
-from devops_collector.core.registry import PluginRegistry
-from devops_collector.core.base_worker import BaseWorker
+
 import devops_collector.plugins.gitlab.worker
 import devops_collector.plugins.sonarqube.worker
 import devops_collector.plugins.zentao.worker
+from devops_collector.config import Config
+from devops_collector.core.base_worker import BaseWorker
+from devops_collector.core.registry import PluginRegistry
+from devops_collector.models.base_models import RawDataStaging
+
+
 try:
     import devops_collector.plugins.jenkins.worker
 except ImportError:
@@ -64,7 +67,7 @@ def reprocess_by_source(source_name: str, entity_type: str=None):
     Session = sessionmaker(bind=engine)
     session = Session()
     try:
-        worker_cls: Type[BaseWorker] = PluginRegistry.get_worker(source_name)
+        worker_cls: type[BaseWorker] = PluginRegistry.get_worker(source_name)
         if not worker_cls:
             raise ValueError(f'No worker found for source: {source_name}')
         worker = worker_cls(session, client=MockClient())
@@ -73,7 +76,7 @@ def reprocess_by_source(source_name: str, entity_type: str=None):
             query = query.filter(RawDataStaging.entity_type == entity_type)
         if hasattr(query, 'execution_options'):
             query = query.execution_options(stream_results=True)
-        batch_buffer: Dict[str, List[dict]] = {}
+        batch_buffer: dict[str, list[dict]] = {}
         buffer_size = 50
         processed_count = 0
         source_handlers = HANDLER_MAPPING.get(source_name, {})

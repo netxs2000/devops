@@ -9,16 +9,21 @@ import csv
 import logging
 import os
 import sys
+from pathlib import Path
+
 import pypinyin
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from pathlib import Path
+from sqlalchemy.orm import Session
+
 
 sys.path.append(os.getcwd())
 from devops_collector.config import settings
 from devops_collector.models import (
-    Base, User, SysRole, Organization, Product, ProjectMaster, UserRole
+    SysRole,
+    User,
+    UserRole,
 )
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('LinkUsers')
@@ -52,16 +57,16 @@ def get_role_by_position(position: str) -> str:
 def sync_manager_roles(session: Session):
     """【行业常识】将 organizations.csv 中的负责人自动设为 DEPT_MANAGER。"""
     if not ORG_CSV.exists(): return
-    
+
     role_dept_mgr = session.query(SysRole).filter_by(role_key='DEPT_MANAGER').first()
     if not role_dept_mgr: return
 
-    with open(ORG_CSV, mode='r', encoding='utf-8-sig') as f:
+    with open(ORG_CSV, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             m_email = row.get('负责人邮箱', '').strip().lower()
             if not m_email: continue
-            
+
             user = session.query(User).filter(User.primary_email == m_email, User.is_current == True).first()
             if user:
                 # 检查是否已有关联
@@ -73,13 +78,13 @@ def sync_employee_roles(session: Session):
     """基于职位关键词自动授权。"""
     if not EMP_CSV.exists(): return
     all_roles = {r.role_key: r for r in session.query(SysRole).all()}
-    
-    with open(EMP_CSV, mode='r', encoding='utf-8-sig') as f:
+
+    with open(EMP_CSV, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         for row in reader:
             name, pos = row.get('姓名', '').strip(), row.get('职位', '').strip()
             if not name: continue
-            
+
             user = session.query(User).filter(User.full_name == name, User.is_current == True).first()
             if user:
                 rk = get_role_by_position(pos)

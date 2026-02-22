@@ -1,13 +1,11 @@
 """TODO: Add module description."""
 import unittest
-from unittest.mock import MagicMock, patch, ANY, call
-from datetime import datetime, timezone
-import json
-import uuid
-from devops_collector.plugins.gitlab.worker import GitLabWorker
+from unittest.mock import MagicMock, call, patch
+
+from devops_collector.models.base_models import User
 from devops_collector.plugins.gitlab.identity_service import IdentityMatcher, UserResolver
-from devops_collector.plugins.gitlab.models import GitLabProject, GitLabCommit, GitLabIssue
-from devops_collector.models.base_models import User, SyncLog
+from devops_collector.plugins.gitlab.models import GitLabCommit, GitLabIssue, GitLabProject
+from devops_collector.plugins.gitlab.worker import GitLabWorker
 
 
 class TestIdentityMatcher(unittest.TestCase):

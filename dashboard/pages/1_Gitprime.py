@@ -3,12 +3,13 @@
 此页面展示基于代码当量 (ELOC) 的开发人员价值贡献榜。
 核心指标包括 ELOC 分数、Impact (影响力)、Churn Rate (近期代码重写率) 以及 Sherpa Score (协作贡献)。
 """
-import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
+import streamlit as st
 from sqlalchemy import create_engine, text
+
 from devops_collector.config import settings
+
 
 # Page Configuration
 st.set_page_config(
@@ -60,7 +61,7 @@ def get_db_engine():
 def load_data():
     """Loads leaderboard data from database with fallback logic."""
     engine = get_db_engine()
-    
+
     # Query trying to join all metrics including Collaboration (Reviews)
     query_full = """
     SELECT 
@@ -85,7 +86,7 @@ def load_data():
     HAVING SUM(cm.eloc_score) > 0 OR SUM(dds.review_count) > 0
     ORDER BY impact_score DESC;
     """
-    
+
     # Fallback query
     query_basic = """
     SELECT 
@@ -112,10 +113,10 @@ def load_data():
     try:
         with engine.connect() as conn:
              df = pd.read_sql(text(query_full), conn)
-    except Exception as e:
+    except Exception:
         with engine.connect() as conn:
             df = pd.read_sql(text(query_basic), conn)
-            
+
     return df
 
 def process_metrics(df):
@@ -132,29 +133,29 @@ def process_metrics(df):
     """
     if df.empty:
         return df
-        
+
     # Calculate Ratios
     df['churn_rate'] = df.apply(lambda x: (x['churn_lines'] / x['raw_additions'] * 100) if x['raw_additions'] > 0 else 0, axis=1)
     df['test_rate'] = df.apply(lambda x: (x['test_lines'] / x['raw_additions'] * 100) if x['raw_additions'] > 0 else 0, axis=1)
     df['refactor_intensity'] = df['refactor_ratio'] * 100
-    
+
     # Assign Levels based on Rank (Dense Rank)
     df['rank'] = df['eloc_score'].rank(method='dense', ascending=False)
-    
+
     def get_level(rank):
         if rank <= 3: return 'Elite'
         if rank <= 10: return 'Core'
         if rank <= 30: return 'Contributor'
         return 'Member'
-        
+
     df['level'] = df['rank'].apply(get_level)
-    
+
     # Sherpa Score (Placeholder logic: 1 review = 5 points)
-    df['sherpa_score'] = df['review_count'] * 5 
-    
+    df['sherpa_score'] = df['review_count'] * 5
+
     # TTF Placeholder
-    df['ttf'] = "N/A" 
-    
+    df['ttf'] = "N/A"
+
     return df
 
 # Main UI
@@ -178,7 +179,7 @@ else:
     file_impact = df['impact_score'].sum()
     total_churn = df['churn_lines'].sum()
     avg_churn = df['churn_rate'].mean()
-    
+
     with top_row[0]:
         st.metric("Total Team Impact", f"{file_impact:,.0f}", help="Sum of Impact Score (ELOC * Legacy Factor)")
     with top_row[1]:
@@ -192,15 +193,15 @@ else:
 
     # --- Tabs ---
     tab_value, tab_quality, tab_collab = st.tabs([
-        "💎 Value Creation (ELOC & Impact)", 
-        "🛡️ Quality & Efficiency (Churn & TTF)", 
+        "💎 Value Creation (ELOC & Impact)",
+        "🛡️ Quality & Efficiency (Churn & TTF)",
         "🤝 Collaboration (Sherpa Score)"
     ])
 
     # === Tab 1: Value ===
     with tab_value:
         st.caption("Focus: Code production, Complexity weighting, Legacy Refactoring Impact.")
-        
+
         c1, c2 = st.columns([2, 1])
         with c1:
             fig_val = px.scatter(
@@ -213,7 +214,7 @@ else:
             )
             fig_val.update_traces(textposition='top center')
             st.plotly_chart(fig_val, use_container_width=True)
-            
+
         with c2:
             st.subheader("Leaderboard (by Impact)")
             st.dataframe(
@@ -230,19 +231,19 @@ else:
     # === Tab 2: Quality ===
     with tab_quality:
         st.caption("Focus: Code Stability (Churn), Turnaround Time (TTF). Lower Churn is better.")
-        
+
         col_q1, col_q2 = st.columns(2)
         with col_q1:
             # Churn Rate Bar Chart
             fig_churn = px.bar(
-                df.sort_values('churn_rate', ascending=True).head(15), 
+                df.sort_values('churn_rate', ascending=True).head(15),
                 x="churn_rate", y="full_name", orientation='h',
                 title="Lowest Churn Rate (Top Stability)",
                 labels={"churn_rate": "Churn Rate %", "full_name": "Developer"},
                 color="churn_rate", color_continuous_scale="RdYlGn_r" # Green is low churn
             )
             st.plotly_chart(fig_churn, use_container_width=True)
-            
+
         with col_q2:
             st.subheader("Quality Metrics Detail")
             st.dataframe(
@@ -260,9 +261,9 @@ else:
     # === Tab 3: Collaboration ===
     with tab_collab:
         st.caption("Focus: Code Review contributions, Mentorship (Sherpa Score).")
-        
+
         col_c1, col_c2 = st.columns([1, 2])
-        
+
         with col_c1:
             st.metric("Total Reviews (90d)", f"{df['review_count'].sum():,.0f}")
             st.markdown("##### What is Sherpa Score?")
@@ -270,7 +271,7 @@ else:
             **Sherpa Score** measures a developer's contribution to helping others 'climb'.
             Calculated based on Code Reviews Code Comments, and Mentorship activities.
             """)
-        
+
         with col_c2:
             st.subheader("Sherpa Leaderboard")
             st.dataframe(
@@ -285,4 +286,4 @@ else:
             )
 
     st.markdown("---")
-    st.caption(f"*Data updated via DevOps Collector. Last analysis includes rolling 90 days.*")
+    st.caption("*Data updated via DevOps Collector. Last analysis includes rolling 90 days.*")

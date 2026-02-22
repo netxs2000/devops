@@ -6,6 +6,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+
 class TestPyAirbyteSonarQubeIntegration(unittest.TestCase):
     """测试 SonarQube 在 Airbyte 模式下的适配。"""
 
@@ -17,12 +18,12 @@ class TestPyAirbyteSonarQubeIntegration(unittest.TestCase):
         # 1. 模拟记录
         mock_source = MagicMock()
         mock_get_source.return_value = mock_source
-        
+
         mock_m1 = MagicMock()
         mock_m1.to_dict.return_value = {"componentKey": "prj-1", "metric": "coverage", "value": "85.0"}
         mock_m2 = MagicMock()
         mock_m2.to_dict.return_value = {"componentKey": "prj-1", "metric": "bugs", "value": "10"}
-        
+
         mock_read_result = MagicMock()
         mock_read_result.__getitem__.side_effect = lambda key: [mock_m1, mock_m2] if key == "measures" else []
         mock_source.read.return_value = mock_read_result

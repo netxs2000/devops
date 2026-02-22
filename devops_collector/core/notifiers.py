@@ -2,11 +2,12 @@
 
 负责将 DevOps 效能平台的风险告警通过 Webhook 推送到企业微信、飞书、钉钉。
 """
-import requests
 import logging
-import json
 from abc import ABC, abstractmethod
-from typing import Optional, List, Dict
+
+import requests
+
+
 logger = logging.getLogger(__name__)
 
 class BaseBot(ABC):
@@ -28,14 +29,14 @@ Raises:
         self.webhook_url = webhook_url
 
     @abstractmethod
-    def send_risk_card(self, title: str, details: List[Dict[str, str]], level: str='HIGH') -> bool:
+    def send_risk_card(self, title: str, details: list[dict[str, str]], level: str='HIGH') -> bool:
         """发送结构化的风险预警卡片。"""
         pass
 
 class WeComBot(BaseBot):
     """企业微信机器人 Webhook 客户端。"""
 
-    def send_risk_card(self, title: str, details: List[Dict[str, str]], level: str='HIGH') -> bool:
+    def send_risk_card(self, title: str, details: list[dict[str, str]], level: str='HIGH') -> bool:
         '''"""TODO: Add description.
 
 Args:
@@ -82,7 +83,7 @@ Raises:
 class FeishuBot(BaseBot):
     """飞书机器人 Webhook 客户端。"""
 
-    def send_risk_card(self, title: str, details: List[Dict[str, str]], level: str='HIGH') -> bool:
+    def send_risk_card(self, title: str, details: list[dict[str, str]], level: str='HIGH') -> bool:
         '''"""TODO: Add description.
 
 Args:
@@ -114,7 +115,7 @@ Raises:
 class DingTalkBot(BaseBot):
     """钉钉机器人 Webhook 客户端。"""
 
-    def send_risk_card(self, title: str, details: List[Dict[str, str]], level: str='HIGH') -> bool:
+    def send_risk_card(self, title: str, details: list[dict[str, str]], level: str='HIGH') -> bool:
         '''"""TODO: Add description.
 
 Args:

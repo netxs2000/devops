@@ -2,13 +2,15 @@
 
 定义 SonarQube 相关的 SQLAlchemy ORM 模型。
 """
-from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Boolean
+from datetime import UTC, datetime
+
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from devops_collector.models.base_models import Base
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.sql import func, select
+from sqlalchemy.orm import relationship
+
+from devops_collector.models.base_models import Base
+
 
 class SonarProject(Base):
     """SonarQube 项目模型 (sonar_projects)。
@@ -36,12 +38,12 @@ class SonarProject(Base):
     # MDM 拓扑关联
     mdm_project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True, comment='关联的 MDM 项目 ID')
     mdm_product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True, comment='关联的 MDM 产品 ID')
-    
+
     last_analysis_date = Column(DateTime(timezone=True))
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default='PENDING')
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC))
     gitlab_project = relationship('GitLabProject', back_populates='sonar_projects')
     measures = relationship('SonarMeasure', back_populates='project', cascade='all, delete-orphan')
     issues = relationship('SonarIssue', back_populates='project', cascade='all, delete-orphan')
@@ -188,16 +190,16 @@ class SonarMeasure(Base):
     reliability_rating = Column(String(1))
     security_rating = Column(String(1))
     sqale_rating = Column(String(1))
-    
+
     # --- 增量代码 (New Code) 指标，用于流水线质量门禁 ---
     new_coverage = Column(Float, comment='新增代码覆盖率')
     new_bugs = Column(Integer, comment='新增 Bug 数')
     new_vulnerabilities = Column(Integer, comment='新增漏洞数')
     new_reliability_rating = Column(String(1), comment='新增可靠性评级')
     new_security_rating = Column(String(1), comment='新增安全性评级')
-    
+
     quality_gate_status = Column(String(10))
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     project = relationship('SonarProject', back_populates='measures')
 
     def __repr__(self) -> str:

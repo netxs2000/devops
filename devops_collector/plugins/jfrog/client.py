@@ -1,6 +1,8 @@
 """JFrog Artifactory API 客户端"""
-from typing import List, Dict, Optional, Any, Generator
+from collections.abc import Generator
+
 from devops_collector.core.base_client import BaseClient
+
 
 class JFrogClient(BaseClient):
     """JFrog Artifactory REST API 客户端。"""
@@ -30,7 +32,7 @@ Raises:
         except Exception:
             return False
 
-    def get_artifacts(self, repo: str, path: str='') -> Generator[Dict, None, None]:
+    def get_artifacts(self, repo: str, path: str='') -> Generator[dict, None, None]:
         """通过 AQL 或递归 API 获取仓库下的制品列表。"""
         endpoint = 'search/aql'
         query = f'items.find({{"repo": "{repo}", "path": {{"$match": "{path}*"}}, "type": "file"}}).include("*", "property")'
@@ -39,15 +41,15 @@ Raises:
         for item in data.get('results', []):
             yield item
 
-    def get_artifact_stats(self, repo: str, path: str) -> Dict:
+    def get_artifact_stats(self, repo: str, path: str) -> dict:
         """获取制品的下载量等统计信息。"""
         return self._get(f'storage/{repo}/{path}?stats').json()
 
-    def get_build_info(self, build_name: str, build_number: str) -> Dict:
+    def get_build_info(self, build_name: str, build_number: str) -> dict:
         """获取构建详细信息。"""
         return self._get(f'build/{build_name}/{build_number}').json()
 
-    def get_xray_summary(self, repo: str, path: str) -> Dict:
+    def get_xray_summary(self, repo: str, path: str) -> dict:
         """从 Xray 获取安全漏洞摘要。"""
         try:
             return self._get(f'xray/summary/artifact/{repo}/{path}').json()

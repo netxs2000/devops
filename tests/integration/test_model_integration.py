@@ -2,31 +2,46 @@
 
 验证跨模型、跨插件的关联关系、Hybrid 属性计算以及 Association Proxy 逻辑。
 """
-import sys
 import os
+import sys
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime
+
+
 sys.path.append(os.getcwd())
 import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+
 def run_integration_test():
     """执行深度集成测试，涵盖组织架构、用户身份、跨插件关联、DORA 指标等 14 个场景。"""
     print('Starting deep integration test...')
-    
+
     # 延迟加载，防止 collection 阶段死锁
     from devops_collector.core.plugin_loader import PluginLoader
     PluginLoader.autodiscover()
     PluginLoader.load_models()
 
-    from devops_collector.models import Base, Organization, User, IdentityMapping, Product, GTMTestCase, GTMRequirement, Service, ResourceCost
-    from devops_collector.plugins.gitlab.models import (
-        GitLabProject as Project, GitLabCommit as Commit, GitLabIssue as Issue,
-        GitLabMilestone as Milestone, GitLabNote as Note, GitLabDeployment as Deployment,
-        GitLabProjectMember as ProjectMember
+    from devops_collector.models import (
+        Base,
+        GTMRequirement,
+        GTMTestCase,
+        IdentityMapping,
+        Organization,
+        Product,
+        ResourceCost,
+        Service,
+        User,
     )
-    from devops_collector.plugins.sonarqube.models import SonarProject, SonarMeasure
-    from devops_collector.plugins.jira.models import JiraProject
+    from devops_collector.plugins.gitlab.models import GitLabCommit as Commit
+    from devops_collector.plugins.gitlab.models import GitLabDeployment as Deployment
+    from devops_collector.plugins.gitlab.models import GitLabIssue as Issue
+    from devops_collector.plugins.gitlab.models import GitLabMilestone as Milestone
+    from devops_collector.plugins.gitlab.models import GitLabNote as Note
+    from devops_collector.plugins.gitlab.models import GitLabProject as Project
+    from devops_collector.plugins.gitlab.models import GitLabProjectMember as ProjectMember
+    from devops_collector.plugins.sonarqube.models import SonarMeasure, SonarProject
 
     engine = create_engine('sqlite:///:memory:')
     Base.metadata.create_all(engine)
@@ -61,12 +76,12 @@ def run_integration_test():
         assert root_org.manager.full_name == 'John Doe'
         assert root_org in test_user.managed_organizations
         assert len(saved_user.identities) == 2
-        assert any((i.source_system == 'gitlab' for i in saved_user.identities))
+        assert any(i.source_system == 'gitlab' for i in saved_user.identities)
         print('  - User and identity mapping verified (including bidirectional org membership).')
         print('Scenario 3: Cross-Plugin Relations & Test Management...')
         gitlab_project = Project(id=50001, name='core-api', path_with_namespace='infra/core-api', organization_id='ORG_DEPT_01')
         session.add(gitlab_project)
-        test_commit = Commit(id='sha123456789', project_id=50001, author_email='john.doe@example.com', message='Initial commit', authored_date=datetime.now(timezone.utc))
+        test_commit = Commit(id='sha123456789', project_id=50001, author_email='john.doe@example.com', message='Initial commit', authored_date=datetime.now(UTC))
         session.add(test_commit)
         test_case = GTMTestCase(project_id=50001, author_id=user_uuid, iid=1, title='Verify login')
         requirement = GTMRequirement(project_id=50001, author_id=user_uuid, iid=101, title='User must be able to login')
@@ -105,10 +120,13 @@ def run_integration_test():
         session.commit()
         assert test_user.projects[0].name == 'core-api'
         print('  - Association Proxy (User.projects) verified.')
-        from devops_collector.plugins.gitlab.models import GitLabMergeRequest as MergeRequest, GitLabPipeline as Pipeline, GitLabDeployment as Deployment
         from datetime import timedelta
-        create_time = datetime.now(timezone.utc) - timedelta(days=2)
-        merge_time = datetime.now(timezone.utc)
+
+        from devops_collector.plugins.gitlab.models import GitLabDeployment as Deployment
+        from devops_collector.plugins.gitlab.models import GitLabMergeRequest as MergeRequest
+        from devops_collector.plugins.gitlab.models import GitLabPipeline as Pipeline
+        create_time = datetime.now(UTC) - timedelta(days=2)
+        merge_time = datetime.now(UTC)
         test_mr = MergeRequest(id=9001, iid=5, project_id=50001, title='Fix bug', created_at=create_time, merged_at=merge_time, state='merged')
         session.add(test_mr)
         session.commit()
@@ -120,7 +138,7 @@ def run_integration_test():
         print('  - Hybrid Attribute (MergeRequest.cycle_time) and Python-side calculation verified.')
         print('Scenario 6: Phase 2 Black Tech (Events & DORA Hybrids)...')
         old_activity = saved_project.last_activity_at
-        new_commit = Commit(id='sha999', project_id=50001, message='Activity trigger', authored_date=datetime.now(timezone.utc))
+        new_commit = Commit(id='sha999', project_id=50001, message='Activity trigger', authored_date=datetime.now(UTC))
         session.add(new_commit)
         session.commit()
         session.refresh(saved_project)
@@ -170,17 +188,17 @@ def run_integration_test():
         session.commit()
         bugs = requirement.linked_bugs
         assert len(bugs) >= 1
-        assert any((b.id == 70002 for sublist in bugs for b in (sublist if isinstance(sublist, list) else [sublist])))
+        assert any(b.id == 70002 for sublist in bugs for b in (sublist if isinstance(sublist, list) else [sublist]))
         print('  - Requirement -> Bug (Association Proxy) penetration verified.')
         from devops_collector.models import GTMTestExecutionRecord
-        exec_record = GTMTestExecutionRecord(project_id=50001, test_case_iid=test_case.iid, result='passed', executed_at=datetime.now(timezone.utc))
+        exec_record = GTMTestExecutionRecord(project_id=50001, test_case_iid=test_case.iid, result='passed', executed_at=datetime.now(UTC))
         session.add(exec_record)
         session.commit()
         session.refresh(test_case)
         assert test_case.execution_count == 1
         print('  - TestCase Execution Count (Hybrid Attribute) verified.')
         print('Scenario 9: Service Desk SLA Logic...')
-        support_issue = Issue(id=80001, iid=20, project_id=50001, title='Production down!', labels=['priority::P0'], created_at=datetime.now(timezone.utc) - timedelta(hours=9), author_id=user_uuid)
+        support_issue = Issue(id=80001, iid=20, project_id=50001, title='Production down!', labels=['priority::P0'], created_at=datetime.now(UTC) - timedelta(hours=9), author_id=user_uuid)
         session.add(support_issue)
         session.commit()
         assert support_issue.priority_level == 0
@@ -188,14 +206,14 @@ def run_integration_test():
         assert support_issue.is_sla_violated == True
         assert support_issue.sla_status == 'WARNING'
         print('  - SLA Violation detection (P0 @ 9h) verified.')
-        p3_issue = Issue(id=80002, iid=21, project_id=50001, title='Minor bug', labels=['priority::P3'], created_at=datetime.now(timezone.utc) - timedelta(hours=10), author_id=user_uuid)
+        p3_issue = Issue(id=80002, iid=21, project_id=50001, title='Minor bug', labels=['priority::P3'], created_at=datetime.now(UTC) - timedelta(hours=10), author_id=user_uuid)
         session.add(p3_issue)
         session.commit()
         assert p3_issue.sla_limit_seconds == 432000
         assert p3_issue.is_sla_violated == False
         print('  - SLA P3 threshold (120h from config) verified.')
         agent_uuid = uuid.uuid4()
-        response_note = Note(id=55555, project_id=50001, noteable_type='Issue', noteable_iid=20, author_id=agent_uuid, body='I am looking into it.', created_at=datetime.now(timezone.utc))
+        response_note = Note(id=55555, project_id=50001, noteable_type='Issue', noteable_iid=20, author_id=agent_uuid, body='I am looking into it.', created_at=datetime.now(UTC))
         session.add(response_note)
         session.commit()
         session.refresh(support_issue)
@@ -203,8 +221,8 @@ def run_integration_test():
         assert support_issue.sla_status == 'VIOLATED'
         print('  - Event-driven first_response_at update and Final SLA status verified.')
         print('Scenario 10: SonarQube Quality Gate Hybrids...')
-        measure_1 = SonarMeasure(project_id=sonar_project.id, analysis_date=datetime.now(timezone.utc) - timedelta(days=1), bugs=10, quality_gate_status='ERROR')
-        measure_2 = SonarMeasure(project_id=sonar_project.id, analysis_date=datetime.now(timezone.utc), bugs=0, quality_gate_status='OK')
+        measure_1 = SonarMeasure(project_id=sonar_project.id, analysis_date=datetime.now(UTC) - timedelta(days=1), bugs=10, quality_gate_status='ERROR')
+        measure_2 = SonarMeasure(project_id=sonar_project.id, analysis_date=datetime.now(UTC), bugs=0, quality_gate_status='OK')
         session.add_all([measure_1, measure_2])
         session.commit()
         session.refresh(sonar_project)
@@ -214,7 +232,7 @@ def run_integration_test():
         print('  - SonarProject Quality Hybrids (latest_measure delegation) verified.')
         print('Scenario 11: Global Identity Auto-linking (Historical Traceability)...')
         ghost_email = 'john.doe@example.com'
-        ghost_commit = Commit(id='ghost_sha', project_id=50001, author_email=ghost_email, author_name='Ghost Rider', message='Ghostly commit', authored_date=datetime.now(timezone.utc))
+        ghost_commit = Commit(id='ghost_sha', project_id=50001, author_email=ghost_email, author_name='Ghost Rider', message='Ghostly commit', authored_date=datetime.now(UTC))
         session.add(ghost_commit)
         session.commit()
         assert ghost_commit.gitlab_user_id is None
@@ -225,10 +243,10 @@ def run_integration_test():
         assert ghost_commit.gitlab_user_id == user_uuid
         print('  - Global Event (IdentityMapping -> Commit auto-link) verified.')
         print('Scenario 12: DORA MTTR & Change Failure Rate (Hybrid Aggregates)...')
-        deploy = Deployment(id=90001, project_id=50001, environment='production', status='success', created_at=datetime.now(timezone.utc))
+        deploy = Deployment(id=90001, project_id=50001, environment='production', status='success', created_at=datetime.now(UTC))
         session.add(deploy)
-        incident_issue = Issue(id=90002, iid=30, project_id=50001, title='Production outage', labels=['incident'], created_at=datetime.now(timezone.utc) - timedelta(hours=5), closed_at=datetime.now(timezone.utc) - timedelta(hours=3), state='closed')
-        cf_issue = Issue(id=90003, iid=31, project_id=50001, title='Rollback required', labels=['rollback'], created_at=datetime.now(timezone.utc))
+        incident_issue = Issue(id=90002, iid=30, project_id=50001, title='Production outage', labels=['incident'], created_at=datetime.now(UTC) - timedelta(hours=5), closed_at=datetime.now(UTC) - timedelta(hours=3), state='closed')
+        cf_issue = Issue(id=90003, iid=31, project_id=50001, title='Rollback required', labels=['rollback'], created_at=datetime.now(UTC))
         session.add_all([incident_issue, cf_issue])
         session.commit()
         session.refresh(gitlab_project)
@@ -236,11 +254,11 @@ def run_integration_test():
         assert gitlab_project.change_failure_rate == 50.0
         print('  - DORA MTTR (7200s) and CFR (50%) verified.')
         print('Scenario 13: Deep Traceability & MR Risk Assessment...')
-        feat_issue = Issue(id=90010, iid=50, project_id=50001, title='Cool New Feature', created_at=datetime.now(timezone.utc))
+        feat_issue = Issue(id=90010, iid=50, project_id=50001, title='Cool New Feature', created_at=datetime.now(UTC))
         session.add(feat_issue)
         feat_mr = MergeRequest(id=90011, iid=5, project_id=50001, title='Add cool feature', merge_commit_sha='feat_sha_123', external_issue_id='50', review_cycles=3, quality_gate_status='passed', raw_data={'stats': {'additions': 400, 'deletions': 100}})
         session.add(feat_mr)
-        prod_deploy = Deployment(id=90012, project_id=50001, environment='production', status='success', sha='feat_sha_123', created_at=datetime.now(timezone.utc))
+        prod_deploy = Deployment(id=90012, project_id=50001, environment='production', status='success', sha='feat_sha_123', created_at=datetime.now(UTC))
         session.add(prod_deploy)
         session.commit()
         session.refresh(feat_issue)
@@ -296,7 +314,7 @@ def run_integration_test():
         except sqlalchemy.exc.IntegrityError:
             session.rollback()
             print('  - Unique Constraint (project, build, test_level) verified.')
-        
+
         print('\nALL INTEGRATION TESTS (INCLUDING ROI, AI TECH & JENKINS MODELS) PASSED SUCCESSFULLY!')
     except Exception as e:
         print(f'\nINTEGRATION TEST FAILED: {str(e)}')

@@ -1,17 +1,20 @@
 """手动触发禅道数据同步脚本 (支持 Task 与 Effort)"""
+import logging
 import os
 import sys
-import logging
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 
 # 添加项目根目录到路径
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
 from devops_collector.plugins.zentao.client import ZenTaoClient
-from devops_collector.plugins.zentao.worker import ZenTaoWorker
 from devops_collector.plugins.zentao.models import ZenTaoProduct
+from devops_collector.plugins.zentao.worker import ZenTaoWorker
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('SyncZenTao')
@@ -31,7 +34,7 @@ def sync_all_zentao_products():
 
         # 获取数据库中所有已注册的禅道产品
         products = session.query(ZenTaoProduct).all()
-        
+
         if not products:
             logger.info("数据库中未发现禅道产品，正在从 API 自动发现...")
             try:

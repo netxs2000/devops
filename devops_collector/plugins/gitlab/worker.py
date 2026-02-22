@@ -1,19 +1,23 @@
 """GitLab 数据采集 Worker 模块。"""
 import logging
-from datetime import datetime, timezone
-from typing import Optional, Any
+from typing import Any
+
 from sqlalchemy.orm import Session
+
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.registry import PluginRegistry
-from .models import GitLabProject, GitLabGroup, SyncLog
+
 from .identity_service import IdentityMatcher, UserResolver
+from .mixins.asset_mixin import AssetMixin
 from .mixins.base_mixin import BaseMixin
-from .mixins.traceability_mixin import TraceabilityMixin
 from .mixins.commit_mixin import CommitMixin
 from .mixins.issue_mixin import IssueMixin
 from .mixins.mr_mixin import MergeRequestMixin
 from .mixins.pipeline_mixin import PipelineMixin
-from .mixins.asset_mixin import AssetMixin
+from .mixins.traceability_mixin import TraceabilityMixin
+from .models import GitLabGroup, GitLabProject, SyncLog
+
+
 logger = logging.getLogger(__name__)
 
 class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueMixin, MergeRequestMixin, PipelineMixin, AssetMixin):
@@ -33,7 +37,7 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
         """
         if client is None:
             raise ValueError("Client must be provided")
-        
+
         super().__init__(session, client)
         self.enable_deep_analysis = enable_deep_analysis
         self.identity_matcher = IdentityMatcher(session)
@@ -67,7 +71,7 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
         self.session.add(sync_log)
         return stats
 
-    def _sync_project(self, project_id: int) -> Optional[GitLabProject]:
+    def _sync_project(self, project_id: int) -> GitLabProject | None:
         """同步项目元数据并自动维护 Group 关系。"""
         try:
             p_data = self.client.get_project(project_id)

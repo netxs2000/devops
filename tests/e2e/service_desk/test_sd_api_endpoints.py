@@ -10,9 +10,9 @@ Service Desk E2E Tests - API 端点验证测试
 用于快速验证后端接口正常工作。
 """
 
-import pytest
+
 import httpx
-from typing import Generator
+import pytest
 
 
 class TestServiceDeskAPIEndpoints:

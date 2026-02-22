@@ -12,17 +12,17 @@ Usage:
     docker-compose exec -T api python scripts/test_dashboard_pages.py
 """
 
-import os
 import re
 import sys
 from pathlib import Path
-from typing import Optional
+
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import ProgrammingError, OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
+
 from devops_collector.config import settings
 
 

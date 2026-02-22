@@ -8,17 +8,17 @@ Usage (in Docker):
     docker-compose exec api python scripts/seed_base_data.py
 """
 
-import sys
 import csv
-import io
 import hashlib
+import sys
 from pathlib import Path
-from datetime import datetime, timezone
+
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
+
 from devops_collector.config import settings
 from devops_collector.models.base_models import Organization, Product, User
 
@@ -39,7 +39,7 @@ def seed_organizations(session: Session, csv_path: Path):
     "所属体系" is saved as business_line attribute.
     """
     print(f"\n--- Seeding Organizations from {csv_path} ---")
-    
+
     if not csv_path.exists():
         print(f"WARN: {csv_path} not found, skipping.")
         return
@@ -52,7 +52,7 @@ def seed_organizations(session: Session, csv_path: Path):
     session.commit()
     print("Cleared existing organizations.")
 
-    with open(csv_path, 'r', encoding='utf-8-sig') as f:
+    with open(csv_path, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         rows = list(reader)
 
@@ -129,12 +129,12 @@ def seed_products(session: Session, csv_path: Path):
     CSV format: PRODUCT_ID, 产品名称, 节点类型, parent_product_id, 产品分类, ...
     """
     print(f"\n--- Seeding Products from {csv_path} ---")
-    
+
     if not csv_path.exists():
         print(f"WARN: {csv_path} not found, skipping.")
         return
 
-    with open(csv_path, 'r', encoding='utf-8-sig') as f:
+    with open(csv_path, encoding='utf-8-sig') as f:
         reader = csv.DictReader(f)
         rows = list(reader)
 
@@ -186,12 +186,12 @@ def seed_products(session: Session, csv_path: Path):
 
 def main():
     docs_dir = Path(__file__).parent.parent / 'docs'
-    
+
     engine = create_engine(settings.database.uri)
     with Session(engine) as session:
         seed_organizations(session, docs_dir / 'organizations.csv')
         seed_products(session, docs_dir / 'products.csv')
-    
+
     print("\n✅ Base data seeding complete.")
 
 

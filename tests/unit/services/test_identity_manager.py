@@ -3,10 +3,13 @@
 验证跨系统身份识别、用户对齐以及命名冲突处理逻辑。
 """
 import unittest
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from devops_collector.models.base_models import Base, User, IdentityMapping
+
 from devops_collector.core.identity_manager import IdentityManager
+from devops_collector.models.base_models import Base, IdentityMapping
+
 
 class TestIdentityManager(unittest.TestCase):
     """IdentityManager 逻辑测试类。"""

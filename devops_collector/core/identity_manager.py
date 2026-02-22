@@ -5,16 +5,19 @@
 """
 import logging
 import uuid
-from typing import Optional
+
 from sqlalchemy.orm import Session
-from devops_collector.models.base_models import User, IdentityMapping
+
+from devops_collector.models.base_models import IdentityMapping, User
+
+
 logger = logging.getLogger(__name__)
 
 class IdentityManager:
     """身份管理中心，提供跨系统的用户识别与映射能力。"""
 
     @staticmethod
-    def get_or_create_user(session: Session, source: str, external_id: str, email: Optional[str]=None, name: Optional[str]=None, employee_id: Optional[str]=None) -> User:
+    def get_or_create_user(session: Session, source: str, external_id: str, email: str | None=None, name: str | None=None, employee_id: str | None=None) -> User:
         """根据外部账号解析并获取全局用户实体。
         
         策略:
@@ -38,16 +41,16 @@ class IdentityManager:
         """
         email_lower = email.lower().strip() if email else None
         ext_id_str = str(external_id).strip()
-        
+
         # 1. 查找现有映射
         mapping = session.query(IdentityMapping).filter_by(
-            source_system=source, 
+            source_system=source,
             external_user_id=ext_id_str
         ).first()
-        
+
         if mapping:
             current_user = session.query(User).filter_by(
-                global_user_id=mapping.global_user_id, 
+                global_user_id=mapping.global_user_id,
                 is_current=True
             ).first()
             if current_user:
@@ -57,11 +60,11 @@ class IdentityManager:
         user = None
         if email_lower:
             user = session.query(User).filter_by(primary_email=email_lower, is_current=True).first()
-        
+
         # 3. 如果 Email 没中，试工号
         if not user and employee_id:
             user = session.query(User).filter_by(employee_id=employee_id, is_current=True).first()
-            
+
         # 4. 如果还没中，尝试通过姓名匹配 (仅限唯一匹配)
         if not user and name:
             potential_users = session.query(User).filter_by(full_name=name, is_current=True).all()
@@ -99,5 +102,5 @@ class IdentityManager:
             )
             session.add(mapping)
             session.flush()
-            
+
         return user

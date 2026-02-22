@@ -4,7 +4,7 @@ Base Page Object
 提供所有 Page Object 的基类，封装常用的页面操作方法。
 """
 
-from playwright.sync_api import Page, Locator, expect
+from playwright.sync_api import Locator, Page, expect
 
 
 class BasePage:

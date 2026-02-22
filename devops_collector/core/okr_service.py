@@ -4,12 +4,16 @@
 实现“数据驱动战略”的闭环逻辑。
 """
 import logging
-from typing import List, Optional
-from sqlalchemy.orm import Session
+
 from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 from devops_collector.models.base_models import OKRKeyResult, OKRObjective
+from devops_collector.plugins.gitlab.models import GitLabCommit as Commit
+from devops_collector.plugins.gitlab.models import GitLabIssue as Issue
 from devops_collector.plugins.sonarqube.models import SonarMeasure, SonarProject
-from devops_collector.plugins.gitlab.models import GitLabCommit as Commit, GitLabProject as Project, GitLabIssue as Issue
+
+
 logger = logging.getLogger(__name__)
 
 class OKRService:
@@ -101,7 +105,7 @@ class OKRService:
         except (ValueError, TypeError, ZeroDivisionError):
             return 0
 
-    def _get_sonar_metric(self, config: dict) -> Optional[float]:
+    def _get_sonar_metric(self, config: dict) -> float | None:
         """从 SonarQube 度量值中获取最新指标。
         
         Args:

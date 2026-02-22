@@ -2,15 +2,17 @@
 
 负责执行各插件的 Worker 同步任务，并由 Dagster 管理其依赖与调度。
 """
-from dagster import asset, AssetExecutionContext, Config
-from devops_collector.plugins.gitlab.worker import GitLabWorker
-from devops_collector.plugins.sonarqube.worker import SonarQubeWorker
-from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
-from devops_collector.plugins.sonarqube.client import SonarQubeClient
-from devops_collector.plugins.gitlab.models import Project as GitLabProject
-from devops_collector.plugins.sonarqube.models import SonarProject
+from dagster import AssetExecutionContext, Config, asset
+
 from dagster_repo.resources import DatabaseResource
 from devops_collector.config import settings
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+from devops_collector.plugins.gitlab.models import Project as GitLabProject
+from devops_collector.plugins.gitlab.worker import GitLabWorker
+from devops_collector.plugins.sonarqube.client import SonarQubeClient
+from devops_collector.plugins.sonarqube.models import SonarProject
+from devops_collector.plugins.sonarqube.worker import SonarQubeWorker
+
 
 class SyncConfig(Config):
     """同步配置。"""

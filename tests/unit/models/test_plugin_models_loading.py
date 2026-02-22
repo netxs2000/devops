@@ -1,7 +1,9 @@
 import pytest
 from sqlalchemy import create_engine, inspect
-from devops_collector.models.base_models import Base
+
 from devops_collector.core.plugin_loader import PluginLoader
+from devops_collector.models.base_models import Base
+
 
 @pytest.fixture(scope="module")
 def engine():
@@ -29,17 +31,17 @@ def test_create_tables(engine):
     """Test that all tables can be created without foreign key errors."""
     PluginLoader.autodiscover()
     PluginLoader.load_models()
-    
+
     # This will raise an exception if there are foreign key issues or mapping errors
     Base.metadata.create_all(engine)
-    
+
     inspector = inspect(engine)
     tables = inspector.get_table_names()
-    
+
     # Core tables
     assert "mdm_identities" in tables
     assert "mdm_organizations" in tables
-    
+
     # Plugin tables
     assert "gitlab_projects" in tables
     assert "gitlab_commits" in tables
@@ -49,11 +51,12 @@ def test_create_tables(engine):
 def test_gitlab_model_relations(engine):
     """Deep check for GitLab model relations."""
     from sqlalchemy.orm import sessionmaker
-    from devops_collector.plugins.gitlab.models import GitLabProject, GitLabCommit
-    
+
+    from devops_collector.plugins.gitlab.models import GitLabCommit, GitLabProject
+
     Session = sessionmaker(bind=engine)
     session = Session()
-    
+
     # Create a project
     project = GitLabProject(
         id=1,
@@ -62,7 +65,7 @@ def test_gitlab_model_relations(engine):
         star_count=0
     )
     session.add(project)
-    
+
     # Create a commit
     commit = GitLabCommit(
         id="abc123def",
@@ -74,10 +77,10 @@ def test_gitlab_model_relations(engine):
     )
     session.add(commit)
     session.commit()
-    
+
     # Test relationship
     fetched_project = session.query(GitLabProject).filter_by(id=1).first()
     assert len(fetched_project.commits) == 1
     assert fetched_project.commits[0].id == "abc123def"
-    
+
     session.close()

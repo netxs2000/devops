@@ -7,9 +7,12 @@
 """
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-from typing import Optional, Any, Callable
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.orm import Session
+
+
 logger = logging.getLogger(__name__)
 
 class BaseWorker(ABC):
@@ -31,7 +34,7 @@ class BaseWorker(ABC):
         """子类需实现此核心同步逻辑。"""
         pass
 
-    def run_sync(self, task: dict, model_cls: Optional[Any]=None, pk_field: str='id', pk_value: Optional[Any]=None) -> Any:
+    def run_sync(self, task: dict, model_cls: Any | None=None, pk_field: str='id', pk_value: Any | None=None) -> Any:
         """通用同步包装器，处理事务、日志和异常。
         
         该方法封装了标准的“开始-处理-成功提交-失败回退”流程。
@@ -60,7 +63,7 @@ class BaseWorker(ABC):
                     if hasattr(instance, 'sync_status'):
                         instance.sync_status = 'SUCCESS'
                     if hasattr(instance, 'last_synced_at'):
-                        instance.last_synced_at = datetime.now(timezone.utc)
+                        instance.last_synced_at = datetime.now(UTC)
             self.session.commit()
             self.log_success(f'{source} sync completed')
             return result
@@ -81,7 +84,7 @@ class BaseWorker(ABC):
         """记录成功日志。"""
         logger.info(f'[SUCCESS] {message}')
 
-    def log_failure(self, message: str, error: Optional[Exception] = None) -> None:
+    def log_failure(self, message: str, error: Exception | None = None) -> None:
         """记录失败日志并记录异常信息。"""
         if error:
             logger.error(f'[FAILURE] {message}: {error}')
@@ -95,9 +98,10 @@ class BaseWorker(ABC):
 
     def save_to_staging(self, source: str, entity_type: str, external_id: str, payload: dict, schema_version: str='1.0') -> None:
         """将原始数据保存到 Staging 层，消除重复的 Upsert 逻辑。"""
-        from devops_collector.models.base_models import RawDataStaging
         from sqlalchemy.dialects.postgresql import insert
-        data = {'source': source, 'entity_type': entity_type, 'external_id': str(external_id), 'payload': payload, 'schema_version': schema_version, 'collected_at': datetime.now(timezone.utc)}
+
+        from devops_collector.models.base_models import RawDataStaging
+        data = {'source': source, 'entity_type': entity_type, 'external_id': str(external_id), 'payload': payload, 'schema_version': schema_version, 'collected_at': datetime.now(UTC)}
         try:
             stmt = insert(RawDataStaging).values(**data)
             stmt = stmt.on_conflict_do_update(index_elements=['source', 'entity_type', 'external_id'], set_={'payload': data['payload'], 'schema_version': data['schema_version'], 'collected_at': data['collected_at']})

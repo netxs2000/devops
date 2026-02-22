@@ -1,10 +1,12 @@
 import csv
-import os
 import logging
+import os
+
 from sqlalchemy.orm import Session
+
 from devops_collector.models.database import SessionLocal
 from devops_collector.plugins.jenkins.models import JenkinsJob
-from devops_collector.models.base_models import ProjectMaster, Product
+
 
 # 配置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,7 +24,7 @@ def init_jenkins_links():
     try:
         logger.info("开始同步 Jenkins Job 关联...")
         mappings = []
-        with open(JENKINS_MAP_CSV, mode='r', encoding='utf-8-sig') as f:
+        with open(JENKINS_MAP_CSV, encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             for row in reader:
                 full_name = row.get('job_full_name', '').strip()

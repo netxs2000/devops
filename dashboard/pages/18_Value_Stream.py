@@ -7,12 +7,14 @@ This dashboard implements the Mik Kersten's Flow Framework metrics:
 - Flow Time: How fast is value delivered?
 - Flow Load: Is demand outstripping capacity? (WIP)
 """
-import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import streamlit as st
 from sqlalchemy import text
+
 from dashboard.common.db import get_db_engine
+
 
 st.set_page_config(page_title="Value Stream Management", page_icon="🌊", layout="wide")
 
@@ -40,20 +42,20 @@ st.markdown("""
 @st.cache_data(ttl=600)
 def load_flow_data():
     engine = get_db_engine()
-    
+
     try:
         # v3.0 Update: Use dws layer
         query = "SELECT * FROM public_marts.dws_flow_metrics_weekly"
         with engine.connect() as conn:
             df_weekly = pd.read_sql(text(query), conn)
-            
+
         # Raw items for scatter
         query_items = "SELECT * FROM public_marts.view_flow_items WHERE created_at >= CURRENT_DATE - INTERVAL '90 days'"
         with engine.connect() as conn:
             df_items = pd.read_sql(text(query_items), conn)
-            
+
         return df_weekly, df_items
-        
+
     except Exception as e:
         st.warning(f"无法加载价值流数据 (dws_flow_metrics_weekly)。请运行 dbt 模型。错误: {e}")
         return pd.DataFrame(), pd.DataFrame()
@@ -128,10 +130,10 @@ try:
         GROUP BY flow_type
         """
         wip_df = pd.read_sql(text(wip_query), conn)
-    
+
     if not wip_df.empty:
         fig_wip = px.pie(
-            wip_df, values='count', names='flow_type', 
+            wip_df, values='count', names='flow_type',
             color='flow_type',
             color_discrete_map={'Feature': '#5B9BD5', 'Defect': '#C00000', 'Debt': '#FFC000', 'Risk': '#ED7D31'},
             title="Current Active Work Breakdown",
@@ -143,7 +145,7 @@ try:
             st.write(wip_df.set_index('flow_type'))
         with c_wip2:
             st.plotly_chart(fig_wip, use_container_width=True)
-            
+
 except Exception as e:
     st.error(f"Error loading WIP: {e}")
 

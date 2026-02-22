@@ -7,14 +7,15 @@
 3. QualityMetrics: 质量指标转换逻辑
 """
 import fnmatch
-from datetime import datetime, timezone
-from typing import Optional, Dict, List, Any
+from datetime import datetime
+from typing import Any
+
 
 class AgileMetrics:
     """敏捷效能指标计算类。"""
 
     @staticmethod
-    def calculate_cycle_time(histories: List[Dict[str, Any]], start_status: str='In Progress', end_status: str='Done') -> Optional[float]:
+    def calculate_cycle_time(histories: list[dict[str, Any]], start_status: str='In Progress', end_status: str='Done') -> float | None:
         """计算 Cycle Time (周期时间)。
         
         Args:
@@ -40,7 +41,7 @@ class AgileMetrics:
         return None
 
     @staticmethod
-    def calculate_lead_time(created_at: datetime, resolved_at: Optional[datetime]) -> Optional[float]:
+    def calculate_lead_time(created_at: datetime, resolved_at: datetime | None) -> float | None:
         """计算 Lead Time (前置时间/总耗时)。
         
         Args:
@@ -69,10 +70,10 @@ class CodeMetrics:
         return False
 
     @classmethod
-    def analyze_diff(cls, diff_text: str, file_path: str) -> Dict[str, int]:
+    def analyze_diff(cls, diff_text: str, file_path: str) -> dict[str, int]:
         """分析 Git diff 文本，返回分类统计。"""
         stats = {'code_added': 0, 'code_deleted': 0, 'comment_added': 0, 'comment_deleted': 0, 'blank_added': 0, 'blank_deleted': 0}
-        ext = file_path.split('.')[-1].lower() if '.' in file_path else ''
+        ext = file_path.rsplit('.', maxsplit=1)[-1].lower() if '.' in file_path else ''
         symbol = cls.COMMENT_SYMBOLS.get(ext)
         for line in diff_text.split('\n'):
             if line.startswith('@@') or line.startswith('+++') or line.startswith('---'):
@@ -102,11 +103,11 @@ class CodeMetrics:
     def get_file_category(file_path: str) -> str:
         """根据文件路径和扩展名识别文件分类。"""
         path = file_path.lower()
-        if any((p in path for p in ['/test/', '/tests/', 'test_', '_test.'])):
+        if any(p in path for p in ['/test/', '/tests/', 'test_', '_test.']):
             return 'Test'
         iac_exts = {'.tf', '.yaml', '.yml', '.json', '.sh'}
         iac_dirs = {'terraform/', 'ansible/', 'k8s/', 'docker/', 'ci-scripts/', 'deploy/'}
-        if any((dir_path in path for dir_path in iac_dirs)) or path.endswith(tuple(iac_exts)):
+        if any(dir_path in path for dir_path in iac_dirs) or path.endswith(tuple(iac_exts)):
             if 'dockerfile' in path or 'jenkinsfile' in path or '.gitlab-ci' in path:
                 return 'IaC'
         config_exts = {'.conf', '.config', '.ini', '.env', '.properties', '.xml'}

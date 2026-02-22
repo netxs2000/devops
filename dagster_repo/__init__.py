@@ -5,13 +5,23 @@ for the Dagster orchestration of the DevOps data platform.
 """
 import os
 from pathlib import Path
-from dagster import Definitions, load_assets_from_modules, DefineAssetJob, AssetSelection, ScheduleDefinition
+
+from dagster import (
+    AssetSelection,
+    DefineAssetJob,
+    Definitions,
+    ScheduleDefinition,
+    load_assets_from_modules,
+)
+
+
 try:
     from dagster_dbt import DbtCliResource
 except ImportError:
     DbtCliResource = None
 from dagster_repo.assets import core, dbt, gitlab, quality, reports
 from dagster_repo.resources import get_db_resource
+
 
 DBT_PROJECT_DIR = Path(__file__).joinpath('..', '..', 'dbt_project').resolve()
 

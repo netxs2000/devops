@@ -3,14 +3,17 @@
 提供提交记录 (Commit) 的同步、落盘及 Diff 分析逻辑。
 """
 import logging
-from datetime import datetime
-from typing import List, Optional
-from devops_collector.core.utils import parse_iso8601
-from ..models import GitLabProject, GitLabCommit, GitLabCommitFileStats
-from devops_collector.core.analytics.eloc import ELOCAnalyzer, ELOCOptions
-from devops_collector.models.base_models import CommitMetrics # Import Core Model
+
 import pytz
 from dateutil import parser
+
+from devops_collector.core.analytics.eloc import ELOCAnalyzer
+from devops_collector.core.utils import parse_iso8601
+from devops_collector.models.base_models import CommitMetrics  # Import Core Model
+
+from ..models import GitLabCommit, GitLabCommitFileStats, GitLabProject
+
+
 logger = logging.getLogger(__name__)
 
 class CommitMixin:
@@ -19,7 +22,7 @@ class CommitMixin:
     包含提交记录的批量同步、Staging 落盘、Diff 代码量统计及行为特征分析。
     """
 
-    def _sync_commits(self, project: GitLabProject, since: Optional[str]) -> int:
+    def _sync_commits(self, project: GitLabProject, since: str | None) -> int:
         """同步项目的提交记录。
         
         使用生成器流式同步项目的 Git 提交。
@@ -33,7 +36,7 @@ class CommitMixin:
         """
         return self._process_generator(self.client.get_project_commits(project.id, since=since), lambda batch: self._save_commits_batch(project, batch))
 
-    def _save_commits_batch(self, project: GitLabProject, batch: List[dict]) -> None:
+    def _save_commits_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存提交记录，并触发追溯与行为分析。
 
         流程包括：
@@ -82,7 +85,7 @@ class CommitMixin:
         try:
             diffs = self.client.get_commit_diff(project.id, commit.id)
             analyzer = ELOCAnalyzer()
-            
+
             # Aggregators for CommitMetrics
             total_eloc = 0.0
             total_impact = 0.0
@@ -90,7 +93,7 @@ class CommitMixin:
             file_count = 0
             total_test_lines = 0.0
             total_comment_lines = 0.0
-            
+
             # Pre-fetch commit time for Churn calculation
             commit_time = commit.committed_date
             if commit_time and not commit_time.tzinfo:
@@ -98,7 +101,7 @@ class CommitMixin:
 
             for diff in diffs:
                 file_path = diff.get('new_path') or diff.get('old_path')
-                
+
                 # Basic Filtering
                 if not file_path: continue
                 # Use analyzer options to check if generated (basic check first to save API calls)
@@ -108,7 +111,7 @@ class CommitMixin:
                 last_commit = self.client.get_file_last_commit(project.id, file_path, commit.id)
                 last_mod_date = None
                 is_churn = False
-                
+
                 if last_commit:
                     try:
                         last_mod_date = last_commit.get('committed_date')
@@ -116,7 +119,7 @@ class CommitMixin:
                         if commit_time and last_mod_date:
                             prev_date = parser.isoparse(str(last_mod_date))
                             if not prev_date.tzinfo: prev_date = prev_date.replace(tzinfo=pytz.UTC)
-                            
+
                             if (commit_time - prev_date).days <= 21 and (commit_time - prev_date).days >= 0:
                                 is_churn = True
                     except Exception:
@@ -125,7 +128,7 @@ class CommitMixin:
                 # --- 2. Run ELOC Analysis ---
                 diff_text = diff.get('diff', '')
                 diff_lines = diff_text.split('\n')
-                
+
                 # Call Core Algorithm
                 result = analyzer.analyze_commit_diff(
                     file_path=file_path,
@@ -133,7 +136,7 @@ class CommitMixin:
                     file_last_modified_date=last_mod_date,
                     is_churn_commit=is_churn
                 )
-                
+
                 # --- 3. Save File Stats (Legacy Plugin Model - Optional but kept for compatibility) ---
                 # mapping ELOC result back to old GitLabCommitFileStats fields where possible
                 # Note: This is partial mapping as old mode didn't have impact/churn.
@@ -142,13 +145,13 @@ class CommitMixin:
                     commit_id=commit.id,
                     file_path=file_path,
                     language=None, # DiffAnalyzer had this, ELOCAnalyzer currently infers basic types
-                    file_type_category='Test' if result.test_lines > 0 else 'Source', 
+                    file_type_category='Test' if result.test_lines > 0 else 'Source',
                     code_added=result.raw_additions,
                     code_deleted=result.raw_deletions,
                     comment_added=result.comment_lines
                 )
                 self.session.add(file_stats)
-                
+
                 # --- 4. Aggregate Totals ---
                 total_eloc += result.eloc_score
                 total_impact += result.impact_score
@@ -163,13 +166,13 @@ class CommitMixin:
             metrics = self.session.query(CommitMetrics).filter_by(commit_id=commit.id).first()
             if not metrics:
                 metrics = CommitMetrics(commit_id=commit.id)
-            
+
             metrics.project_id = str(project.id) # Ensure string format
             metrics.author_email = commit.author_email
             metrics.committed_at = commit.committed_date
             metrics.raw_additions = commit.additions
             metrics.raw_deletions = commit.deletions
-            
+
             # New Advanced Metrics
             metrics.eloc_score = total_eloc
             metrics.impact_score = total_impact
@@ -177,13 +180,13 @@ class CommitMixin:
             metrics.file_count = file_count
             metrics.test_lines = int(total_test_lines)
             metrics.comment_lines = int(total_comment_lines)
-            
+
             # Simple Refactor Ratio Approximation (Deletions / Total Changes)
             total_changes = commit.additions + commit.deletions
             metrics.refactor_ratio = (commit.deletions / total_changes) if total_changes > 0 else 0.0
-            
+
             self.session.add(metrics)
-            
+
             # Also update the original GitLabCommit object with summary data if needed
             commit.total = total_changes
 

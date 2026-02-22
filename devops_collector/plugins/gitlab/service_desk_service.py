@@ -1,9 +1,12 @@
 """Service Desk 业务服务层。"""
 import logging
-from typing import List, Optional, Any
+from typing import Any
+
 from sqlalchemy.orm import Session
+
 from devops_collector.models.service_desk import ServiceDeskTicket
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -11,7 +14,7 @@ logger = logging.getLogger(__name__)
 class ServiceDeskService:
     """Service Desk 业务逻辑服务。"""
 
-    def __init__(self, client: Optional[GitLabClient] = None):
+    def __init__(self, client: GitLabClient | None = None):
         """初始化服务。
         
         Args:
@@ -27,10 +30,10 @@ class ServiceDeskService:
             description: str,
             issue_type: str,
             requester: Any,
-            attachments: List[str] = None,
+            attachments: list[str] = None,
             bug_category: str = None,
             req_type: str = None
-    ) -> Optional[ServiceDeskTicket]:
+    ) -> ServiceDeskTicket | None:
         """创建工单（同步到 GitLab Issue）。
         
         Args:
@@ -50,7 +53,7 @@ class ServiceDeskService:
         if not self.client:
             logger.error("GitLab client not initialized")
             return None
-            
+
         try:
             # 1. Create GitLab Issue
             # Attachments logic would go here
@@ -70,7 +73,7 @@ class ServiceDeskService:
                 'labels': labels
             }
             gitlab_issue = self.client.create_issue(project_id, issue_data)
-            
+
             # 2. Save to DB
             origin_dept_id = getattr(requester, 'department_id', None)
             origin_dept_name = None
@@ -99,13 +102,13 @@ class ServiceDeskService:
             logger.error("Failed to create service desk ticket: %s", e)
             return None
 
-    def get_user_tickets(self, db: Session, user: Any) -> List[ServiceDeskTicket]:
+    def get_user_tickets(self, db: Session, user: Any) -> list[ServiceDeskTicket]:
         """获取用户相关的工单。"""
         return db.query(ServiceDeskTicket).filter(
             ServiceDeskTicket.requester_id == user.global_user_id
         ).all()
 
-    def get_ticket_by_id(self, db: Session, ticket_id: int) -> Optional[ServiceDeskTicket]:
+    def get_ticket_by_id(self, db: Session, ticket_id: int) -> ServiceDeskTicket | None:
         """根据 ID 获取工单。"""
         return db.query(ServiceDeskTicket).filter(ServiceDeskTicket.id == ticket_id).first()
 
@@ -123,22 +126,22 @@ class ServiceDeskService:
         ticket = self.get_ticket_by_id(db, ticket_id)
         if not ticket:
             return False
-            
+
         logger.info("User %s updating ticket %d status to %s", operator_name, ticket_id, new_status)
         ticket.status = new_status
-        
+
         # Sync to GitLab if client available
         if self.client:
             if new_status == 'closed':
                 self.client.update_issue(
-                    ticket.gitlab_project_id, 
-                    ticket.gitlab_issue_iid, 
+                    ticket.gitlab_project_id,
+                    ticket.gitlab_issue_iid,
                     {'state_event': 'close'}
                 )
             elif new_status == 'opened':
                 self.client.update_issue(
-                    ticket.gitlab_project_id, 
-                    ticket.gitlab_issue_iid, 
+                    ticket.gitlab_project_id,
+                    ticket.gitlab_issue_iid,
                     {'state_event': 'reopen'}
                 )
         db.commit()

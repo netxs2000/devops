@@ -5,7 +5,9 @@ such as database connections.
 """
 from dagster import ConfigurableResource
 from sqlalchemy import create_engine
+
 from devops_collector.config import settings
+
 
 class DatabaseResource(ConfigurableResource):
     """Resource for interacting with the DevOps database.

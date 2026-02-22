@@ -5,17 +5,19 @@
 """
 
 import uuid
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from devops_portal.main import app
-from devops_collector.auth.auth_database import get_auth_db
-from devops_collector.models.base_models import Base, User, UserCredential
 from devops_collector.auth import auth_service
+from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.config import settings
+from devops_collector.models.base_models import Base, User, UserCredential
+from devops_portal.main import app
+
 
 # 使用内存数据库进行集成测试，确保环境纯净
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -241,7 +243,7 @@ def test_auth_gitlab_bind_redirect(client, db_session):
     # 获取重定向 (不使用 follow_redirects 以便检查 Location)
     headers = {"Authorization": f"Bearer {token}"}
     bind_response = client.get("/auth/gitlab/bind", headers=headers, follow_redirects=False)
-    
+
     assert bind_response.status_code == 307  # RedirectResponse 默认状态码
     location = bind_response.headers["Location"]
     assert "gitlab.example.com" in location

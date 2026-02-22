@@ -2,12 +2,15 @@
 
 支持 Jira 的基础认证、分页获取项目、看板、Sprint 和 Issue。
 """
-import requests
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any
+
+
 logger = logging.getLogger(__name__)
-from devops_collector.core.base_client import BaseClient
 import base64
+
+from devops_collector.core.base_client import BaseClient
+
 
 class JiraClient(BaseClient):
     """Jira API 客户端。"""
@@ -25,7 +28,7 @@ class JiraClient(BaseClient):
         encoded_auth = base64.b64encode(auth_str.encode()).decode()
         super().__init__(base_url=url.rstrip('/'), auth_headers={'Authorization': f'Basic {encoded_auth}', 'Accept': 'application/json', 'Content-Type': 'application/json'}, rate_limit=rate_limit)
 
-    def get_projects(self) -> List[Dict[str, Any]]:
+    def get_projects(self) -> list[dict[str, Any]]:
         """获取所有项目。"""
         response = self._get('/rest/api/3/project')
         return response.json()
@@ -38,7 +41,7 @@ class JiraClient(BaseClient):
         except Exception:
             return False
 
-    def get_boards(self, project_key: Optional[str]=None) -> List[Dict[str, Any]]:
+    def get_boards(self, project_key: str | None=None) -> list[dict[str, Any]]:
         """获取敏捷看板。"""
         params = {}
         if project_key:
@@ -57,7 +60,7 @@ class JiraClient(BaseClient):
             start_at += max_results
         return boards
 
-    def get_sprints(self, board_id: int) -> List[Dict[str, Any]]:
+    def get_sprints(self, board_id: int) -> list[dict[str, Any]]:
         """获取看板下的所有 Sprint。"""
         sprints = []
         start_at = 0
@@ -72,7 +75,7 @@ class JiraClient(BaseClient):
             start_at += max_results
         return sprints
 
-    def get_issues(self, jql: str) -> List[Dict[str, Any]]:
+    def get_issues(self, jql: str) -> list[dict[str, Any]]:
         """根据 JQL 查询获取 Issue。"""
         issues = []
         start_at = 0
@@ -88,12 +91,12 @@ class JiraClient(BaseClient):
                 break
         return issues
 
-    def get_groups(self) -> List[Dict[str, Any]]:
+    def get_groups(self) -> list[dict[str, Any]]:
         """获取全量用户组列表。"""
         response = self._get('/rest/api/3/groups/picker', params={'maxResults': 1000})
         return response.json().get('groups', [])
 
-    def get_all_users(self) -> List[Dict[str, Any]]:
+    def get_all_users(self) -> list[dict[str, Any]]:
         """获取活跃用户列表。"""
         response = self._get('/rest/api/3/users/search', params={'query': '', 'maxResults': 1000})
         return response.json()

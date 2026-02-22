@@ -4,8 +4,10 @@
 API 文档: https://www.jenkins.io/doc/book/using/remote-access-api/
 """
 import base64
-from typing import List, Dict, Optional, Any
+from typing import Any
+
 from devops_collector.core.base_client import BaseClient
+
 
 class JenkinsClient(BaseClient):
     """Jenkins Remote API 客户端。
@@ -44,7 +46,7 @@ class JenkinsClient(BaseClient):
         except Exception:
             return False
 
-    def get_jobs(self, folder: Optional[str]=None) -> List[dict]:
+    def get_jobs(self, folder: str | None=None) -> list[dict]:
         """获取指定文件夹下的 Job 列表。
         
         Args:
@@ -62,7 +64,7 @@ class JenkinsClient(BaseClient):
         response = self._get(endpoint, params=params)
         return response.json().get('jobs', [])
 
-    def get_all_jobs_recursive(self, folder: Optional[str]=None) -> List[dict]:
+    def get_all_jobs_recursive(self, folder: str | None=None) -> list[dict]:
         """递归获取所有 Job (包括子文件夹下的)。
         
         注意：当前实现主要依赖 `get_jobs`，对于深层嵌套可能需要进一步完善递归逻辑。
@@ -79,7 +81,7 @@ class JenkinsClient(BaseClient):
             all_jobs.append(job)
         return all_jobs
 
-    def get_job_details(self, job_full_name: str) -> Dict[str, Any]:
+    def get_job_details(self, job_full_name: str) -> dict[str, Any]:
         """获取单个 Job 的详细配置信息。
         
         Args:
@@ -94,7 +96,7 @@ class JenkinsClient(BaseClient):
         response = self._get(endpoint)
         return response.json()
 
-    def get_builds(self, job_full_name: str, limit: int=100) -> List[dict]:
+    def get_builds(self, job_full_name: str, limit: int=100) -> list[dict]:
         """获取指定 Job 的构建历史列表。
         
         Args:
@@ -111,7 +113,7 @@ class JenkinsClient(BaseClient):
         response = self._get(endpoint, params=params)
         return response.json().get('builds', [])
 
-    def get_build_details(self, build_url: str) -> Dict[str, Any]:
+    def get_build_details(self, build_url: str) -> dict[str, Any]:
         """获取单次构建的详细信息。
         
         Args:
@@ -125,7 +127,7 @@ class JenkinsClient(BaseClient):
         response = self._get(endpoint)
         return response.json()
 
-    def get_test_report(self, build_url: str) -> Optional[Dict[str, Any]]:
+    def get_test_report(self, build_url: str) -> dict[str, Any] | None:
         """获取构建的自动化测试报告详情。
         
         对应 API: BUILD_URL/testReport/api/json

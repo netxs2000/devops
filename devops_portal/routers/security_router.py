@@ -1,18 +1,19 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
-from sqlalchemy.orm import Session
-from devops_collector.auth.auth_database import get_auth_db
-from devops_portal import schemas
-from devops_portal.schemas import DependencyScanResult
-from devops_collector.plugins.dependency_check.worker import DependencyCheckWorker
-from devops_collector.models.dependency import DependencyScan
-from devops_collector.plugins.gitlab.models import GitLabProject
-from devops_portal.dependencies import get_current_user
-from devops_collector.models import User
-from devops_collector.core import security
-from devops_collector.core.exceptions import BusinessException, ValidationException
-from typing import List
 import json
 import logging
+
+from fastapi import APIRouter, Depends, File, Form, UploadFile
+from sqlalchemy.orm import Session
+
+from devops_collector.auth.auth_database import get_auth_db
+from devops_collector.core import security
+from devops_collector.core.exceptions import BusinessException, ValidationException
+from devops_collector.models import User
+from devops_collector.models.dependency import DependencyScan
+from devops_collector.plugins.dependency_check.worker import DependencyCheckWorker
+from devops_collector.plugins.gitlab.models import GitLabProject
+from devops_portal import schemas
+from devops_portal.dependencies import get_current_user
+from devops_portal.schemas import DependencyScanResult
 
 
 logger = logging.getLogger(__name__)
@@ -83,7 +84,7 @@ async def upload_dependency_report(
         raise BusinessException(f"Upload failed internal error: {str(e)}", status_code=500)
 
 
-@router.get("/dependency-scans", response_model=List[schemas.DependencyScanSummary])
+@router.get("/dependency-scans", response_model=list[schemas.DependencyScanSummary])
 async def list_dependency_scans(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_auth_db)
 ):
