@@ -1,5 +1,7 @@
-from playwright.sync_api import sync_playwright
 import os
+
+from playwright.sync_api import sync_playwright
+
 
 # 示例：使用 file:// URL 自动化与静态 HTML 文件的交互
 

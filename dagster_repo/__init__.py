@@ -3,9 +3,19 @@
 This module centralizes the loading of assets, resources, and job definitions
 for the Dagster orchestration of the DevOps data platform.
 """
+
 import os
 from pathlib import Path
-from dagster import Definitions, load_assets_from_modules, DefineAssetJob, AssetSelection, ScheduleDefinition
+
+from dagster import (
+    AssetSelection,
+    DefineAssetJob,
+    Definitions,
+    ScheduleDefinition,
+    load_assets_from_modules,
+)
+
+
 try:
     from dagster_dbt import DbtCliResource
 except ImportError:
@@ -13,29 +23,29 @@ except ImportError:
 from dagster_repo.assets import core, dbt, gitlab, quality, reports
 from dagster_repo.resources import get_db_resource
 
-DBT_PROJECT_DIR = Path(__file__).joinpath('..', '..', 'dbt_project').resolve()
+
+DBT_PROJECT_DIR = Path(__file__).joinpath("..", "..", "dbt_project").resolve()
 
 all_assets = load_assets_from_modules([core, gitlab, reports])
 all_checks = load_assets_from_modules([quality])
 
 try:
     from dagster_repo.assets.dbt import devops_dbt_assets
+
     all_assets.append(devops_dbt_assets)
 except ImportError:
     pass
 
-resources = {'db': get_db_resource()}
+resources = {"db": get_db_resource()}
 if DbtCliResource:
-    resources['dbt'] = DbtCliResource(project_dir=os.fspath(DBT_PROJECT_DIR))
+    resources["dbt"] = DbtCliResource(project_dir=os.fspath(DBT_PROJECT_DIR))
 else:
     from unittest.mock import MagicMock
-    resources['dbt'] = MagicMock()
+
+    resources["dbt"] = MagicMock()
 
 # Define Job: Run all assets including the executive report
-audit_report_job = DefineAssetJob(
-    name="executive_audit_job",
-    selection=AssetSelection.all()
-)
+audit_report_job = DefineAssetJob(name="executive_audit_job", selection=AssetSelection.all())
 
 # Define Schedule: Every Monday at 9:00 AM
 audit_report_schedule = ScheduleDefinition(
@@ -48,5 +58,5 @@ defs = Definitions(
     asset_checks=all_checks,
     resources=resources,
     jobs=[audit_report_job],
-    schedules=[audit_report_schedule]
+    schedules=[audit_report_schedule],
 )

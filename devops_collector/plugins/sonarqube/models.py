@@ -2,17 +2,20 @@
 
 定义 SonarQube 相关的 SQLAlchemy ORM 模型。
 """
-from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Boolean
+
+from datetime import UTC, datetime
+
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from devops_collector.models.base_models import Base
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.sql import func, select
+from sqlalchemy.orm import relationship
+
+from devops_collector.models.base_models import Base
+
 
 class SonarProject(Base):
     """SonarQube 项目模型 (sonar_projects)。
-    
+
     存储 SonarQube 项目信息，支持与 GitLab 项目关联。
 
     Attributes:
@@ -27,108 +30,120 @@ class SonarProject(Base):
         measures (List[SonarMeasure]): 关联的指标快照列表。
         issues (List[SonarIssue]): 关联的问题详情列表。
     """
-    __tablename__ = 'sonar_projects'
+
+    __tablename__ = "sonar_projects"
     id = Column(Integer, primary_key=True, autoincrement=True)
     key = Column(String(500), unique=True, nullable=False)
     name = Column(String(255))
     qualifier = Column(String(10))
-    gitlab_project_id = Column(Integer, ForeignKey('gitlab_projects.id'), nullable=True)
+    gitlab_project_id = Column(Integer, ForeignKey("gitlab_projects.id"), nullable=True)
     # MDM 拓扑关联
-    mdm_project_id = Column(String(100), ForeignKey('mdm_projects.project_id'), nullable=True, comment='关联的 MDM 项目 ID')
-    mdm_product_id = Column(String(100), ForeignKey('mdm_product.product_id'), nullable=True, comment='关联的 MDM 产品 ID')
-    
+    mdm_project_id = Column(
+        String(100), ForeignKey("mdm_projects.project_id"), nullable=True, comment="关联的 MDM 项目 ID"
+    )
+    mdm_product_id = Column(
+        String(100), ForeignKey("mdm_product.product_id"), nullable=True, comment="关联的 MDM 产品 ID"
+    )
+
     last_analysis_date = Column(DateTime(timezone=True))
     last_synced_at = Column(DateTime(timezone=True))
-    sync_status = Column(String(20), default='PENDING')
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
-    gitlab_project = relationship('GitLabProject', back_populates='sonar_projects')
-    measures = relationship('SonarMeasure', back_populates='project', cascade='all, delete-orphan')
-    issues = relationship('SonarIssue', back_populates='project', cascade='all, delete-orphan')
-    latest_measure = relationship('SonarMeasure', primaryjoin='and_(SonarProject.id==SonarMeasure.project_id)', order_by='desc(SonarMeasure.analysis_date)', viewonly=True, uselist=False)
+    sync_status = Column(String(20), default="PENDING")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC))
+    gitlab_project = relationship("GitLabProject", back_populates="sonar_projects")
+    measures = relationship("SonarMeasure", back_populates="project", cascade="all, delete-orphan")
+    issues = relationship("SonarIssue", back_populates="project", cascade="all, delete-orphan")
+    latest_measure = relationship(
+        "SonarMeasure",
+        primaryjoin="and_(SonarProject.id==SonarMeasure.project_id)",
+        order_by="desc(SonarMeasure.analysis_date)",
+        viewonly=True,
+        uselist=False,
+    )
 
     @hybrid_property
     def bugs(self):
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return self.latest_measure.bugs if self.latest_measure else 0
 
     @hybrid_property
     def vulnerabilities(self):
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return self.latest_measure.vulnerabilities if self.latest_measure else 0
 
     @hybrid_property
     def coverage(self):
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return self.latest_measure.coverage if self.latest_measure else 0.0
 
     @hybrid_property
     def quality_gate(self):
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
-        return self.latest_measure.quality_gate_status if self.latest_measure else 'UNKNOWN'
+        Raises:
+            TODO
+        """'''
+        return self.latest_measure.quality_gate_status if self.latest_measure else "UNKNOWN"
 
     @hybrid_property
     def is_clean(self):
         """质量门禁是否通过。"""
-        return self.quality_gate == 'OK'
+        return self.quality_gate == "OK"
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<SonarProject(key='{self.key}', name='{self.name}')>"
+
 
 class SonarMeasure(Base):
     """SonarQube 指标快照模型 (sonar_measures)。
-    
+
     每次代码分析后记录一条快照，用于追踪质量趋势。
 
     Attributes:
@@ -151,9 +166,10 @@ class SonarMeasure(Base):
         quality_gate_status (str): 质量门禁状态 (OK, WARN, ERROR)。
         project (SonarProject): 关联的项目对象。
     """
-    __tablename__ = 'sonar_measures'
+
+    __tablename__ = "sonar_measures"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('sonar_projects.id'), nullable=False)
+    project_id = Column(Integer, ForeignKey("sonar_projects.id"), nullable=False)
     analysis_date = Column(DateTime(timezone=True), nullable=False)
     files = Column(Integer)
     lines = Column(Integer)
@@ -188,31 +204,32 @@ class SonarMeasure(Base):
     reliability_rating = Column(String(1))
     security_rating = Column(String(1))
     sqale_rating = Column(String(1))
-    
+
     # --- 增量代码 (New Code) 指标，用于流水线质量门禁 ---
-    new_coverage = Column(Float, comment='新增代码覆盖率')
-    new_bugs = Column(Integer, comment='新增 Bug 数')
-    new_vulnerabilities = Column(Integer, comment='新增漏洞数')
-    new_reliability_rating = Column(String(1), comment='新增可靠性评级')
-    new_security_rating = Column(String(1), comment='新增安全性评级')
-    
+    new_coverage = Column(Float, comment="新增代码覆盖率")
+    new_bugs = Column(Integer, comment="新增 Bug 数")
+    new_vulnerabilities = Column(Integer, comment="新增漏洞数")
+    new_reliability_rating = Column(String(1), comment="新增可靠性评级")
+    new_security_rating = Column(String(1), comment="新增安全性评级")
+
     quality_gate_status = Column(String(10))
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    project = relationship('SonarProject', back_populates='measures')
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    project = relationship("SonarProject", back_populates="measures")
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<SonarMeasure(project_id={self.project_id}, date='{self.analysis_date}')>"
+
 
 class SonarIssue(Base):
     """SonarQube 问题详情模型 (sonar_issues)。
@@ -231,10 +248,11 @@ class SonarIssue(Base):
         author_user_id (UUID): 作者的 OneID。
         project (SonarProject): 关联的项目对象。
     """
-    __tablename__ = 'sonar_issues'
+
+    __tablename__ = "sonar_issues"
     id = Column(Integer, primary_key=True, autoincrement=True)
     issue_key = Column(String(50), unique=True, nullable=False)
-    project_id = Column(Integer, ForeignKey('sonar_projects.id'), nullable=False)
+    project_id = Column(Integer, ForeignKey("sonar_projects.id"), nullable=False)
     type = Column(String(20))
     severity = Column(String(20))
     status = Column(String(20))
@@ -250,21 +268,21 @@ class SonarIssue(Base):
     close_date = Column(DateTime(timezone=True))
     assignee = Column(String(100))
     author = Column(String(100))
-    assignee_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
-    author_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
+    assignee_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
+    author_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
     raw_data = Column(JSON)
-    project = relationship('SonarProject', back_populates='issues')
+    project = relationship("SonarProject", back_populates="issues")
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<SonarIssue(key='{self.issue_key}', severity='{self.severity}')>"

@@ -1,7 +1,10 @@
 """初始化脚本共享工具函数。"""
+
 import logging
 from collections import defaultdict
+
 from sqlalchemy.orm import Session
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +18,9 @@ def build_user_indexes(session: Session):
             - name_idx: {full_name: [global_user_id, ...]}
     """
     from devops_collector.models import User
+
     all_users = session.query(User).filter_by(is_current=True).all()
-    email_idx = {u.primary_email.lower(): u.global_user_id
-                 for u in all_users if u.primary_email}
+    email_idx = {u.primary_email.lower(): u.global_user_id for u in all_users if u.primary_email}
     name_idx = defaultdict(list)
     for u in all_users:
         if u.full_name:
@@ -25,7 +28,7 @@ def build_user_indexes(session: Session):
     return email_idx, name_idx
 
 
-def resolve_user(value, email_idx, name_idx, field_label=''):
+def resolve_user(value, email_idx, name_idx, field_label=""):
     """尝试将 CSV 值解析为 global_user_id。优先邮箱匹配，降级姓名唯一匹配。
 
     Args:
@@ -44,7 +47,7 @@ def resolve_user(value, email_idx, name_idx, field_label=''):
     if val_lower in email_idx:
         return email_idx[val_lower]
     # 策略2: 姓名唯一匹配 (仅当不含 @ 时尝试)
-    if '@' not in value and value in name_idx:
+    if "@" not in value and value in name_idx:
         candidates = name_idx[value]
         if len(candidates) == 1:
             return candidates[0]

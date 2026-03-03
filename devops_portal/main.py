@@ -7,42 +7,34 @@ Typical Usage:
     uvicorn devops_portal.main:app --reload --port 8000
 """
 
-import json
-import logging
 import asyncio
-from typing import Dict, List, Optional, Any
-from pathlib import Path
-import uvicorn
-import httpx
-from fastapi import FastAPI, Depends, Request, HTTPException
-from fastapi.responses import RedirectResponse, FileResponse, StreamingResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
+import logging
 from contextlib import asynccontextmanager
-from sqlalchemy.orm import Session
-from devops_collector.config import settings, Config
-from devops_collector.auth import auth_router, auth_service, auth_schema
-from devops_collector.auth.auth_database import AuthSessionLocal
-from devops_collector.models import User
-from devops_collector.core import security
+
+import httpx
+import uvicorn
+from fastapi import Depends, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+
+from devops_collector.auth import auth_router
+from devops_collector.config import Config, settings
 from devops_collector.core.exceptions import BusinessException
-from devops_portal import schemas
-
-
-from devops_portal.state import NOTIFICATION_QUEUES, PIPELINE_STATUS
-from devops_portal.events import push_notification
 from devops_portal.dependencies import get_current_user
 from devops_portal.routers import (
-    quality_router,
-    service_desk_router,
-    test_management_router,
-    iteration_plan_router,
     admin_router,
     devex_pulse_router,
-    security_router,
-    webhook_router,
+    iteration_plan_router,
     plugin_router,
+    quality_router,
+    security_router,
+    service_desk_router,
+    test_management_router,
+    webhook_router,
 )
+from devops_portal.state import NOTIFICATION_QUEUES
+
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +117,8 @@ async def notification_stream(current_user=Depends(get_current_user)):
             NOTIFICATION_QUEUES[user_id] = []
         NOTIFICATION_QUEUES[user_id].append(queue)
         try:
-            yield f"data: {json.dumps({'message': 'System Connected', 'type': 'success'})}\n\n"
+            # 发送一条 SSE 注释作为心跳/连接确认，不会触发前端的 onmessage 弹窗
+            yield ": connected\n\n"
             while True:
                 data = await queue.get()
                 yield f"data: {data}\n\n"

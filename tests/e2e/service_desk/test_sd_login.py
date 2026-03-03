@@ -85,10 +85,7 @@ class TestServiceDeskLogin:
         expect(error).to_be_visible()
 
     @pytest.mark.smoke
-    def test_successful_login_should_hide_modal_and_show_sidebar(
-        self,
-        test_user_credentials: dict
-    ):
+    def test_successful_login_should_hide_modal_and_show_sidebar(self, test_user_credentials: dict):
         """
         场景：正确凭据登录
         期望：隐藏登录模态框，显示侧边栏和用户信息

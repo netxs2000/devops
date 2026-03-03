@@ -3,6 +3,7 @@
 提供基于 SQLite 的 db_session 和 FastAPI TestClient，
 供需要跨模块交互验证的集成测试使用。
 """
+
 import os
 import uuid
 
@@ -10,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+
 
 # Mock environment variables BEFORE any other imports
 os.environ.setdefault("DB_URI", "sqlite:///:memory:")
@@ -19,12 +20,9 @@ os.environ.setdefault("GITLAB_TOKEN", "testtoken")
 os.environ.setdefault("JWT_SECRET_KEY", "testsecret")
 os.environ.setdefault("JWT_ALGORITHM", "HS256")
 
-from devops_collector.models.base_models import Base, User, SysRole
-from devops_portal.main import app
-from devops_portal.dependencies import get_current_user
 from devops_collector.auth.auth_database import get_auth_db
-from devops_collector.auth import auth_service
-from devops_collector.core import security
+from devops_collector.models.base_models import Base
+from devops_portal.main import app
 
 
 @pytest.fixture(scope="function")
@@ -34,9 +32,7 @@ def db_session():
     db_url = f"sqlite:///{db_file}"
 
     _engine = create_engine(db_url, connect_args={"check_same_thread": False})
-    _SessionLocal = sessionmaker(
-        autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False
-    )
+    _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False)
 
     Base.metadata.create_all(bind=_engine)
     db = _SessionLocal()
@@ -55,6 +51,7 @@ def db_session():
 @pytest.fixture(scope="function")
 def client(db_session):
     """Create a TestClient with a database session."""
+
     def override_get_auth_db():
         try:
             yield db_session

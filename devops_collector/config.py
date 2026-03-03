@@ -11,8 +11,8 @@
 """
 
 import os
-from typing import List, Optional, Union
-from pydantic import BaseModel, Field, HttpUrl, RedisDsn, PostgresDsn, field_validator
+
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -74,13 +74,12 @@ class RabbitMQSettings(BaseModel):
 
 class AnalysisSettings(BaseModel):
     """Code analysis configuration."""
+
     enable_deep_analysis: bool = False
-    ignored_file_patterns: Union[str, List[str]] = [
-        "*.lock", "*.min.js", "*.min.css", "node_modules/*", "dist/*"
-    ]
-    production_env_mapping: Union[str, List[str]] = ["prod", "production", "prd", "main"]
-    incident_label_patterns: Union[str, List[str]] = ["incident", "production-error", "P0", "P1"]
-    change_failure_label_patterns: Union[str, List[str]] = ["change-failure", "rollback"]
+    ignored_file_patterns: str | list[str] = ["*.lock", "*.min.js", "*.min.css", "node_modules/*", "dist/*"]
+    production_env_mapping: str | list[str] = ["prod", "production", "prd", "main"]
+    incident_label_patterns: str | list[str] = ["incident", "production-error", "P0", "P1"]
+    change_failure_label_patterns: str | list[str] = ["change-failure", "rollback"]
 
     @field_validator(
         "ignored_file_patterns",
@@ -233,7 +232,8 @@ class SLASettings(BaseModel):
 
 class AuthSettings(BaseModel):
     """认证相关配置。"""
-    allowed_domains: Union[str, List[str]] = Field(default_factory=list, description="允许注册的邮箱域名列表")
+
+    allowed_domains: str | list[str] = Field(default_factory=list, description="允许注册的邮箱域名列表")
     secret_key: str = "your-secret-key-keep-it-secret"
     admin_api_token: str = "admin_secret_token_2025"
 

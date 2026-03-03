@@ -3,9 +3,11 @@ Service Desk E2E Tests - Specific Fixtures
 """
 
 import os
+from collections.abc import Generator
+
 import pytest
 from playwright.sync_api import Page
-from typing import Generator
+
 
 @pytest.fixture
 def rd_authenticated_page(
@@ -30,6 +32,7 @@ def rd_authenticated_page(
 
     yield page
 
+
 @pytest.fixture
 def seed_test_product(app_server: str, test_user_credentials: dict) -> Generator[dict, None, None]:
     yield {
@@ -37,6 +40,7 @@ def seed_test_product(app_server: str, test_user_credentials: dict) -> Generator
         "product_name": "E2E Test Product",
         "project_id": "E2E_PROJ_001",
     }
+
 
 @pytest.fixture
 def seed_pending_ticket(app_server: str) -> Generator[dict, None, None]:

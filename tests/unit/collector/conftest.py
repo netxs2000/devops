@@ -1,8 +1,8 @@
-import os
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+
 
 # Setup in-memory SQLite database
 # Use check_same_thread=False for SQLite
@@ -17,15 +17,18 @@ engine = create_engine(
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
+
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
+
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 from devops_collector.models.base_models import Base
+
 
 @pytest.fixture(scope="function")
 def db_session():
@@ -41,11 +44,11 @@ def db_session():
         # Disable foreign keys for cleanup
         with engine.connect() as conn:
             conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
-        
+
         # Drop all tables after test
         Base.metadata.drop_all(bind=engine)
-        
-        # Re-enable foreign keys (though strictly engine-level listener handles new connections, 
+
+        # Re-enable foreign keys (though strictly engine-level listener handles new connections,
         # this is for good measure if we reused connections, but we use StaticPool so...)
         with engine.connect() as conn:
             conn.exec_driver_sql("PRAGMA foreign_keys=ON")

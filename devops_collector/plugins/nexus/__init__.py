@@ -4,14 +4,17 @@
 
 本模块在导入时自动完成插件注册。
 """
+
 from devops_collector.core.registry import PluginRegistry
+
 from .client import NexusClient
-from .worker import NexusWorker
 from .config import get_config
+from .worker import NexusWorker
+
 
 # 自注册
-PluginRegistry.register_client('nexus', NexusClient)
-PluginRegistry.register_worker('nexus', NexusWorker)
-PluginRegistry.register_config('nexus', get_config)
+PluginRegistry.register_client("nexus", NexusClient)
+PluginRegistry.register_worker("nexus", NexusWorker)
+PluginRegistry.register_config("nexus", get_config)
 
-__all__ = ['NexusClient', 'NexusWorker', 'get_config']
+__all__ = ["NexusClient", "NexusWorker", "get_config"]

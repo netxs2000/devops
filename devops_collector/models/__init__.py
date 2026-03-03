@@ -7,53 +7,156 @@
     - 第1层: base_models.py 定义公共基础模型
     - 第2层: 核心功能模块 (dependency, test_management)
 """
+
 from .base_models import (
-    Base, Organization, User, Location, Calendar, SyncLog, RawDataStaging, 
-    IdentityMapping, Product, OKRObjective, OKRKeyResult, TraceabilityLink, 
-    JenkinsTestExecution, Incident, ResourceCost, 
-    Service, ServiceProjectMapping, SLO, TimestampMixin, RawDataMixin, ProjectMaster, 
-    ContractPaymentNode, RevenueContract, PurchaseContract, UserCredential, UserOAuthToken, 
-    MetricDefinition, SystemRegistry, EntityTopology, Company, Vendor, EpicMaster, 
-    ComplianceIssue, CommitMetrics, DailyDevStats, Team, TeamMember, 
-    SysRole, SysMenu, SysRoleMenu, SysRoleDept, OwnableMixin,
-    UserRole, LaborRateConfig, CostCode, ProjectProductRelation,
-    BusinessSystem
+    SLO,
+    Base,
+    BusinessSystem,
+    Calendar,
+    CommitMetrics,
+    Company,
+    ComplianceIssue,
+    ContractPaymentNode,
+    CostCode,
+    DailyDevStats,
+    EntityTopology,
+    EpicMaster,
+    IdentityMapping,
+    Incident,
+    JenkinsTestExecution,
+    LaborRateConfig,
+    Location,
+    MetricDefinition,
+    OKRKeyResult,
+    OKRObjective,
+    Organization,
+    OwnableMixin,
+    Product,
+    ProjectMaster,
+    ProjectProductRelation,
+    PurchaseContract,
+    RawDataMixin,
+    RawDataStaging,
+    ResourceCost,
+    RevenueContract,
+    Service,
+    ServiceProjectMapping,
+    SyncLog,
+    SysMenu,
+    SysRole,
+    SysRoleDept,
+    SysRoleMenu,
+    SystemRegistry,
+    Team,
+    TeamMember,
+    TimestampMixin,
+    TraceabilityLink,
+    User,
+    UserCredential,
+    UserOAuthToken,
+    UserRole,
+    Vendor,
+)
+from .dependency import Dependency, DependencyCVE, DependencyScan, LicenseRiskRule
+from .service_desk import ServiceDeskTicket
+from .test_management import (
+    GTMRequirement,
+    GTMTestCase,
+    GTMTestCaseIssueLink,
+    GTMTestExecutionRecord,
 )
 
-from .dependency import DependencyScan, LicenseRiskRule, Dependency, DependencyCVE
-from .test_management import GTMTestCase, GTMTestCaseIssueLink, GTMRequirement, GTMTestExecutionRecord
-from .service_desk import ServiceDeskTicket
 
 # 核心插件模型导入 (用于模型注册)
 try:
     from devops_collector.plugins.gitlab.models import (
-        GitLabProject, GitLabGroup, GitLabProjectMember, GitLabGroupMember,
-        GitLabCommit, GitLabMergeRequest, GitLabIssue, GitLabPipeline,
-        GitLabDeployment, GitLabTag, GitLabBranch, GitLabMilestone,
-        GitLabRelease, GitLabPackage, GitLabNote
+        GitLabBranch,
+        GitLabCommit,
+        GitLabDeployment,
+        GitLabGroup,
+        GitLabGroupMember,
+        GitLabIssue,
+        GitLabMergeRequest,
+        GitLabMilestone,
+        GitLabNote,
+        GitLabPackage,
+        GitLabPipeline,
+        GitLabProject,
+        GitLabProjectMember,
+        GitLabRelease,
+        GitLabTag,
     )
-    from devops_collector.plugins.sonarqube.models import SonarProject, SonarMeasure, SonarIssue
+    from devops_collector.plugins.sonarqube.models import SonarIssue, SonarMeasure, SonarProject
+
     try:
-        from devops_collector.plugins.jira.models import JiraProject, JiraIssue, JiraSprint, JiraBoard
+        from devops_collector.plugins.jira.models import (
+            JiraBoard,
+            JiraIssue,
+            JiraProject,
+            JiraSprint,
+        )
     except ImportError:
         pass
 except ImportError:
     pass
 
 __all__ = [
-    'Base', 'Organization', 'User', 'Location', 'Calendar', 'SyncLog', 'RawDataStaging', 
-    'IdentityMapping', 'Product', 'OKRObjective', 'OKRKeyResult', 'TraceabilityLink', 
-    'JenkinsTestExecution', 'Incident', 'ResourceCost', 
-    'Service', 'ServiceProjectMapping', 'SLO', 'TimestampMixin', 'RawDataMixin', 'ProjectMaster', 
-    'ContractPaymentNode', 'RevenueContract', 'PurchaseContract', 'UserCredential', 'UserOAuthToken', 
-    'MetricDefinition', 'SystemRegistry', 'EntityTopology', 'Company', 'Vendor', 'EpicMaster', 
-    'ComplianceIssue', 'CommitMetrics', 'DailyDevStats', 'Team', 'TeamMember', 
-    'SysRole', 'SysMenu', 'SysRoleMenu', 'SysRoleDept', 'OwnableMixin',
-    'UserRole', 'LaborRateConfig', 'CostCode', 'ProjectProductRelation',
-    'BusinessSystem',
-    'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE',
-    'GTMTestCase', 'GTMTestCaseIssueLink', 'GTMRequirement', 'GTMTestExecutionRecord',
-    'ServiceDeskTicket'
+    "Base",
+    "Organization",
+    "User",
+    "Location",
+    "Calendar",
+    "SyncLog",
+    "RawDataStaging",
+    "IdentityMapping",
+    "Product",
+    "OKRObjective",
+    "OKRKeyResult",
+    "TraceabilityLink",
+    "JenkinsTestExecution",
+    "Incident",
+    "ResourceCost",
+    "Service",
+    "ServiceProjectMapping",
+    "SLO",
+    "TimestampMixin",
+    "RawDataMixin",
+    "ProjectMaster",
+    "ContractPaymentNode",
+    "RevenueContract",
+    "PurchaseContract",
+    "UserCredential",
+    "UserOAuthToken",
+    "MetricDefinition",
+    "SystemRegistry",
+    "EntityTopology",
+    "Company",
+    "Vendor",
+    "EpicMaster",
+    "ComplianceIssue",
+    "CommitMetrics",
+    "DailyDevStats",
+    "Team",
+    "TeamMember",
+    "SysRole",
+    "SysMenu",
+    "SysRoleMenu",
+    "SysRoleDept",
+    "OwnableMixin",
+    "UserRole",
+    "LaborRateConfig",
+    "CostCode",
+    "ProjectProductRelation",
+    "BusinessSystem",
+    "DependencyScan",
+    "LicenseRiskRule",
+    "Dependency",
+    "DependencyCVE",
+    "GTMTestCase",
+    "GTMTestCaseIssueLink",
+    "GTMRequirement",
+    "GTMTestExecutionRecord",
+    "ServiceDeskTicket",
 ]
 
 from . import events

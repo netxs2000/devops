@@ -159,11 +159,13 @@ class AdmProductSelector extends HTMLElement {
                 <div class="select-wrapper">
                     <select id="main-select">
                         <option value="">请选择${selectedType === 'product' ? '产品' : '部门'}...</option>
-                        ${options.map(opt => `
-                            <option value="${opt[idKey]}" ${selectedId === opt[idKey] ? 'selected' : ''}>
-                                ${opt[nameKey]}
-                            </option>
-                        `).join('')}
+                        ${options.map(opt => {
+            let displayName = opt[nameKey];
+            if (selectedType === 'org' && opt.org_level > 1) {
+                displayName = '&nbsp;&nbsp;'.repeat(opt.org_level - 1) + '├─ ' + displayName;
+            }
+            return `<option value="${opt[idKey]}" ${selectedId === opt[idKey] ? 'selected' : ''}>${displayName}</option>`;
+        }).join('')}
                     </select>
                 </div>
             </div>

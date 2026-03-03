@@ -5,18 +5,32 @@
 2. 虚拟团队与成员管理
 3. 业务主项目 (MDM) 与仓库关联管理
 """
-import logging
-import uuid
+
 import csv
 import io
-from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+import logging
+import uuid
+from datetime import UTC, datetime
+from typing import Any
+
 from sqlalchemy.orm import Session, joinedload
-from devops_collector.models.base_models import Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember, UserRole, Product, ProjectProductRelation, OKRObjective, OKRKeyResult
+
+from devops_collector.models.base_models import (
+    OKRObjective,
+    Organization,
+    Product,
+    ProjectMaster,
+    ProjectProductRelation,
+    Team,
+    TeamMember,
+    User,
+)
 from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_portal import schemas
 
+
 logger = logging.getLogger(__name__)
+
 
 class AdminService:
     """系统管理业务逻辑服务。"""
@@ -34,23 +48,25 @@ class AdminService:
         user = self.session.query(User).filter(User.global_user_id == user_id).first()
         if not user:
             return None
-        
+
         identities = []
         for m in user.identities:
             view = schemas.IdentityMappingView.model_validate(m)
             view.user_name = user.full_name
             view.hr_relationship = user.hr_relationship
             identities.append(view)
-            
+
         teams = []
         for tm in user.team_memberships:
-            teams.append({
-                "team_id": tm.team.id,
-                "team_name": tm.team.name,
-                "role": tm.role_code,
-                "allocation": tm.allocation_ratio
-            })
-            
+            teams.append(
+                {
+                    "team_id": tm.team.id,
+                    "team_name": tm.team.name,
+                    "role": tm.role_code,
+                    "allocation": tm.allocation_ratio,
+                }
+            )
+
         return schemas.UserFullProfile(
             global_user_id=user.global_user_id,
             full_name=user.full_name,
@@ -61,7 +77,7 @@ class AdminService:
             is_active=user.is_active,
             hr_relationship=user.hr_relationship,
             identities=identities,
-            teams=teams
+            teams=teams,
         )
 
     def create_team(self, data: schemas.TeamCreate) -> Team:
@@ -72,7 +88,7 @@ class AdminService:
             description=data.description,
             parent_id=data.parent_id,
             org_id=data.org_id,
-            leader_id=data.leader_id
+            leader_id=data.leader_id,
         )
         self.session.add(new_team)
         self.session.commit()
@@ -81,22 +97,20 @@ class AdminService:
 
     def add_team_member(self, team_id: int, data: schemas.TeamMemberCreate) -> bool:
         """添加团队成员。"""
-        existing = self.session.query(TeamMember).filter(
-            TeamMember.team_id == team_id, 
-            TeamMember.user_id == data.user_id
-        ).first()
+        existing = (
+            self.session.query(TeamMember)
+            .filter(TeamMember.team_id == team_id, TeamMember.user_id == data.user_id)
+            .first()
+        )
         if existing:
             existing.role_code = data.role_code
             existing.allocation_ratio = data.allocation_ratio
         else:
             new_member = TeamMember(
-                team_id=team_id,
-                user_id=data.user_id,
-                role_code=data.role_code,
-                allocation_ratio=data.allocation_ratio
+                team_id=team_id, user_id=data.user_id, role_code=data.role_code, allocation_ratio=data.allocation_ratio
             )
             self.session.add(new_member)
-        
+
         self.session.commit()
         return True
 
@@ -106,7 +120,7 @@ class AdminService:
         mdm_p = self.session.query(ProjectMaster).filter(ProjectMaster.project_id == mdm_project_id).first()
         if not repo or not mdm_p:
             return False
-        
+
         repo.mdm_project_id = mdm_p.project_id
         repo.organization_id = mdm_p.org_id
         if is_lead:
@@ -114,7 +128,7 @@ class AdminService:
         self.session.commit()
         return True
 
-    def list_products(self) -> List[Product]:
+    def list_products(self) -> list[Product]:
         """列出所有产品。"""
         return self.session.query(Product).all()
 
@@ -127,7 +141,7 @@ class AdminService:
             category=data.category,
             version_schema=data.version_schema,
             owner_team_id=data.owner_team_id,
-            product_manager_id=data.product_manager_id
+            product_manager_id=data.product_manager_id,
         )
         self.session.add(new_product)
         self.session.commit()
@@ -139,16 +153,20 @@ class AdminService:
         project = self.session.query(ProjectMaster).filter(ProjectMaster.project_id == data.project_id).first()
         if not project:
             raise ValueError(f"Project {data.project_id} not found")
-        
+
         org_id = project.org_id
         if not org_id:
             raise ValueError(f"Project {data.project_id} does not belong to any organization")
 
-        relation = self.session.query(ProjectProductRelation).filter(
-            ProjectProductRelation.project_id == data.project_id,
-            ProjectProductRelation.product_id == data.product_id
-        ).first()
-        
+        relation = (
+            self.session.query(ProjectProductRelation)
+            .filter(
+                ProjectProductRelation.project_id == data.project_id,
+                ProjectProductRelation.product_id == data.product_id,
+            )
+            .first()
+        )
+
         if relation:
             relation.relation_type = data.relation_type
             relation.allocation_ratio = data.allocation_ratio
@@ -159,21 +177,24 @@ class AdminService:
                 product_id=data.product_id,
                 relation_type=data.relation_type,
                 allocation_ratio=data.allocation_ratio,
-                org_id=org_id
+                org_id=org_id,
             )
             self.session.add(relation)
-        
+
         self.session.commit()
         self.session.refresh(relation)
         return relation
 
-    def list_all_organizations(self) -> List[schemas.OrganizationView]:
+    def list_all_organizations(self) -> list[schemas.OrganizationView]:
         """列出所有组织架构（包含负责人和父级名称），按层级排序。"""
-        orgs = self.session.query(Organization).options(
-            joinedload(Organization.manager),
-            joinedload(Organization.parent)
-        ).filter(Organization.is_current == True).order_by(Organization.org_level.asc()).all()
-        
+        orgs = (
+            self.session.query(Organization)
+            .options(joinedload(Organization.manager), joinedload(Organization.parent))
+            .filter(Organization.is_current == True)
+            .order_by(Organization.org_level.asc())
+            .all()
+        )
+
         results = []
         for o in orgs:
             view = schemas.OrganizationView.model_validate(o)
@@ -193,7 +214,7 @@ class AdminService:
             cost_center=data.cost_center,
             is_active=data.is_active,
             is_current=True,
-            sync_version=1
+            sync_version=1,
         )
         self.session.add(new_org)
         self.session.commit()
@@ -205,21 +226,21 @@ class AdminService:
         f = io.StringIO(csv_content)
         reader = csv.DictReader(f)
         summary = schemas.ImportSummary(total_processed=0, success_count=0, failure_count=0)
-        
+
         for row in reader:
-            emp_id = row.get('工号') or row.get('employee_id')
-            name = row.get('姓名') or row.get('full_name')
-            email = row.get('邮箱') or row.get('email')
-            
+            emp_id = row.get("工号") or row.get("employee_id")
+            name = row.get("姓名") or row.get("full_name")
+            email = row.get("邮箱") or row.get("email")
+
             # 跳过空行或缺少核心信息的记录
             if not any(row.values()) or (not emp_id and not name):
                 continue
-                
+
             summary.total_processed += 1
             try:
-                dept_id = row.get('部门ID') or row.get('department_id')
-                hr_rel = row.get('人事关系') or row.get('hr_relationship')
-                
+                dept_id = row.get("部门ID") or row.get("department_id")
+                hr_rel = row.get("人事关系") or row.get("hr_relationship")
+
                 if not emp_id or not name or not email:
                     raise ValueError("Missing mandatory fields: employee_id, full_name, or email")
 
@@ -229,7 +250,7 @@ class AdminService:
                     user.primary_email = email
                     user.department_id = dept_id
                     user.hr_relationship = hr_rel
-                    user.updated_at = datetime.now(timezone.utc)
+                    user.updated_at = datetime.now(UTC)
                 else:
                     user = User(
                         global_user_id=uuid.uuid4(),
@@ -240,7 +261,7 @@ class AdminService:
                         hr_relationship=hr_rel,
                         is_active=True,
                         is_current=True,
-                        sync_version=1
+                        sync_version=1,
                     )
                     self.session.add(user)
                 summary.success_count += 1
@@ -256,21 +277,21 @@ class AdminService:
         f = io.StringIO(csv_content)
         reader = csv.DictReader(f)
         summary = schemas.ImportSummary(total_processed=0, success_count=0, failure_count=0)
-        
+
         for row in reader:
-            org_id = row.get('组织ID') or row.get('org_id')
-            name = row.get('组织名称') or row.get('org_name')
-            
+            org_id = row.get("组织ID") or row.get("org_id")
+            name = row.get("组织名称") or row.get("org_name")
+
             # 跳过空行
             if not any(row.values()) or (not org_id and not name):
                 continue
 
             summary.total_processed += 1
             try:
-                level = int(row.get('层级') or row.get('org_level') or 2)
-                parent_id = row.get('上级ID') or row.get('parent_org_id')
-                mgr_name = row.get('负责人') or row.get('manager_name')
-                
+                level = int(row.get("层级") or row.get("org_level") or 2)
+                parent_id = row.get("上级ID") or row.get("parent_org_id")
+                mgr_name = row.get("负责人") or row.get("manager_name")
+
                 if not org_id or not name:
                     raise ValueError("Missing mandatory fields: org_id or org_name")
 
@@ -283,10 +304,12 @@ class AdminService:
                         pass
                     elif len(mgr_users) > 1:
                         # Ambiguous match
-                        summary.errors.append({
-                            "row": summary.total_processed, 
-                            "error": f"负责人 '{mgr_name}' 不唯一 (存在多名同名员工)，已跳过自动关联"
-                        })
+                        summary.errors.append(
+                            {
+                                "row": summary.total_processed,
+                                "error": f"负责人 '{mgr_name}' 不唯一 (存在多名同名员工)，已跳过自动关联",
+                            }
+                        )
                     else:
                         mgr_uid = mgr_users[0].global_user_id
 
@@ -296,7 +319,7 @@ class AdminService:
                     org.org_level = level
                     org.parent_org_id = parent_id
                     org.manager_user_id = mgr_uid
-                    org.updated_at = datetime.now(timezone.utc)
+                    org.updated_at = datetime.now(UTC)
                 else:
                     org = Organization(
                         org_id=org_id,
@@ -306,7 +329,7 @@ class AdminService:
                         manager_user_id=mgr_uid,
                         is_active=True,
                         is_current=True,
-                        sync_version=1
+                        sync_version=1,
                     )
                     self.session.add(org)
                 summary.success_count += 1
@@ -319,22 +342,39 @@ class AdminService:
 
     def export_products(self) -> str:
         """导出所有产品数据为 CSV（包含层级与负责人映射）。"""
-        products = self.session.query(Product).options(
-            joinedload(Product.product_manager),
-            joinedload(Product.parent)
-        ).all()
-        
+        products = (
+            self.session.query(Product).options(joinedload(Product.product_manager), joinedload(Product.parent)).all()
+        )
+
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['product_id', 'product_name', 'node_type', 'parent_product_id', 
-                         'category', 'version_schema', 'owner_team_id', 'pm_email'])
-        
+        writer.writerow(
+            [
+                "product_id",
+                "product_name",
+                "node_type",
+                "parent_product_id",
+                "category",
+                "version_schema",
+                "owner_team_id",
+                "pm_email",
+            ]
+        )
+
         for p in products:
-            pm_email = p.product_manager.primary_email if p.product_manager else ''
-            writer.writerow([
-                p.product_id, p.product_name, p.node_type, p.parent_product_id,
-                p.category, p.version_schema, p.owner_team_id, pm_email
-            ])
+            pm_email = p.product_manager.primary_email if p.product_manager else ""
+            writer.writerow(
+                [
+                    p.product_id,
+                    p.product_name,
+                    p.node_type,
+                    p.parent_product_id,
+                    p.category,
+                    p.version_schema,
+                    p.owner_team_id,
+                    pm_email,
+                ]
+            )
         return output.getvalue()
 
     def import_products(self, csv_content: str) -> schemas.ImportSummary:
@@ -342,55 +382,57 @@ class AdminService:
         f = io.StringIO(csv_content)
         reader = list(csv.DictReader(f))
         summary = schemas.ImportSummary(total_processed=0, success_count=0, failure_count=0)
-        
+
         # 阶段1：先创建所有节点（暂不设 parent_id），确保 ID 存在
         # 阶段2：更新 parent_id 关系
-        
+
         # 预加载所有用户邮箱映射以减少查询
         user_map = {u.primary_email: u for u in self.session.query(User).filter(User.is_current == True).all()}
-        
+
         for phase in [1, 2]:
             for row in reader:
                 if phase == 1:
                     summary.total_processed += 1
-                    
-                pid = row.get('product_id')
-                name = row.get('product_name')
-                
+
+                pid = row.get("product_id")
+                name = row.get("product_name")
+
                 if not pid or not name:
                     if phase == 1:
                         summary.failure_count += 1
-                        summary.errors.append({"row": summary.total_processed, "error": "Missing product_id or product_name"})
+                        summary.errors.append(
+                            {"row": summary.total_processed, "error": "Missing product_id or product_name"}
+                        )
                     continue
 
                 try:
                     product = self.session.query(Product).filter(Product.product_id == pid).first()
-                    
+
                     if phase == 1:
                         # 基础信息 Upsert
-                        pm_email = row.get('pm_email')
+                        pm_email = row.get("pm_email")
                         pm_uid = user_map.get(pm_email).global_user_id if pm_email and pm_email in user_map else None
-                        
+
                         if not product:
                             product = Product(product_id=pid)
                             self.session.add(product)
-                        
+
                         product.product_name = name
-                        product.node_type = row.get('node_type', 'APP')
-                        product.category = row.get('category')
-                        product.version_schema = row.get('version_schema', 'SemVer')
-                        product.owner_team_id = row.get('owner_team_id')
+                        product.node_type = row.get("node_type", "APP")
+                        product.category = row.get("category")
+                        product.version_schema = row.get("version_schema", "SemVer")
+                        product.owner_team_id = row.get("owner_team_id")
                         product.product_manager_id = pm_uid
-                        product.updated_at = datetime.now(timezone.utc)
-                        
+                        product.updated_at = datetime.now(UTC)
+
                     elif phase == 2 and product:
                         # 关系链接
-                        parent_id = row.get('parent_product_id')
+                        parent_id = row.get("parent_product_id")
                         if parent_id:
                             # 校验父节点是否存在
                             if self.session.query(Product).filter(Product.product_id == parent_id).count() > 0:
                                 product.parent_product_id = parent_id
-                
+
                 except Exception as e:
                     if phase == 1:
                         summary.failure_count += 1
@@ -398,7 +440,7 @@ class AdminService:
 
             # 阶段提交
             self.session.flush()
-        
+
         self.session.commit()
         # 修正计数逻辑：phase 2 不累计
         summary.success_count = summary.total_processed - summary.failure_count
@@ -406,24 +448,29 @@ class AdminService:
 
     def export_product_mappings(self) -> str:
         """导出产品-项目关联矩阵。"""
-        relations = self.session.query(ProjectProductRelation).options(
-            joinedload(ProjectProductRelation.project),
-            joinedload(ProjectProductRelation.product)
-        ).all()
-        
+        relations = (
+            self.session.query(ProjectProductRelation)
+            .options(joinedload(ProjectProductRelation.project), joinedload(ProjectProductRelation.product))
+            .all()
+        )
+
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(['project_id', 'project_name', 'product_id', 'product_name', 'relation_type', 'allocation_ratio'])
-        
+        writer.writerow(
+            ["project_id", "project_name", "product_id", "product_name", "relation_type", "allocation_ratio"]
+        )
+
         for r in relations:
-            writer.writerow([
-                r.project_id, 
-                r.project.project_name if r.project else 'Unknown',
-                r.product_id, 
-                r.product.product_name if r.product else 'Unknown',
-                r.relation_type, 
-                r.allocation_ratio
-            ])
+            writer.writerow(
+                [
+                    r.project_id,
+                    r.project.project_name if r.project else "Unknown",
+                    r.product_id,
+                    r.product.product_name if r.product else "Unknown",
+                    r.relation_type,
+                    r.allocation_ratio,
+                ]
+            )
         return output.getvalue()
 
     def import_product_mappings(self, csv_content: str) -> schemas.ImportSummary:
@@ -431,36 +478,37 @@ class AdminService:
         f = io.StringIO(csv_content)
         reader = csv.DictReader(f)
         summary = schemas.ImportSummary(total_processed=0, success_count=0, failure_count=0)
-        
+
         for row in reader:
             summary.total_processed += 1
-            proj_id = row.get('project_id')
-            prod_id = row.get('product_id')
-            
+            proj_id = row.get("project_id")
+            prod_id = row.get("product_id")
+
             if not proj_id or not prod_id:
                 summary.failure_count += 1
                 continue
-                
+
             try:
                 # 校验实体存在性
                 project = self.session.query(ProjectMaster).filter(ProjectMaster.project_id == proj_id).first()
                 if not project:
                     raise ValueError(f"Project {proj_id} not found")
-                    
+
                 # 查找或创建关联
-                rel = self.session.query(ProjectProductRelation).filter(
-                    ProjectProductRelation.project_id == proj_id,
-                    ProjectProductRelation.product_id == prod_id
-                ).first()
-                
+                rel = (
+                    self.session.query(ProjectProductRelation)
+                    .filter(ProjectProductRelation.project_id == proj_id, ProjectProductRelation.product_id == prod_id)
+                    .first()
+                )
+
                 if not rel:
                     rel = ProjectProductRelation(project_id=proj_id, product_id=prod_id)
                     self.session.add(rel)
-                
-                rel.relation_type = row.get('relation_type', 'PRIMARY')
-                rel.allocation_ratio = float(row.get('allocation_ratio', 1.0))
+
+                rel.relation_type = row.get("relation_type", "PRIMARY")
+                rel.allocation_ratio = float(row.get("allocation_ratio", 1.0))
                 rel.org_id = project.org_id  # 继承项目组织
-                
+
                 summary.success_count += 1
             except Exception as e:
                 summary.failure_count += 1
@@ -468,91 +516,115 @@ class AdminService:
 
         self.session.commit()
         return summary
-    def export_okrs(self, period: Optional[str] = None, status: Optional[str] = None) -> str:
+
+    def export_okrs(self, period: str | None = None, status: str | None = None) -> str:
         """导出全量 OKR 数据为 CSV (支持周期与状态过滤)。"""
         query = self.session.query(OKRObjective).options(
-            joinedload(OKRObjective.owner),
-            joinedload(OKRObjective.organization),
-            joinedload(OKRObjective.key_results)
+            joinedload(OKRObjective.owner), joinedload(OKRObjective.organization), joinedload(OKRObjective.key_results)
         )
-        
+
         if period:
             query = query.filter(OKRObjective.period == period)
         if status:
             query = query.filter(OKRObjective.status == status)
-            
+
         objectives = query.all()
-        
+
         output = io.StringIO()
         writer = csv.writer(output)
         # 表头对齐 okrs.csv 并增加进度展示
-        writer.writerow([
-            '目标标题', '目标描述', '组织名称', '负责人', '周期', '目标进度%',
-            '关键结果标题', '目标值', '当前值', '单位', 'KR进度%'
-        ])
-        
+        writer.writerow(
+            [
+                "目标标题",
+                "目标描述",
+                "组织名称",
+                "负责人",
+                "周期",
+                "目标进度%",
+                "关键结果标题",
+                "目标值",
+                "当前值",
+                "单位",
+                "KR进度%",
+            ]
+        )
+
         for obj in objectives:
-            org_name = obj.organization.org_name if obj.organization else 'Unknown'
-            owner_name = obj.owner.full_name if obj.owner else 'Unknown'
-            
+            org_name = obj.organization.org_name if obj.organization else "Unknown"
+            owner_name = obj.owner.full_name if obj.owner else "Unknown"
+
             # 目标进度: 优先使用冗余字段，若为0则动态计算 KR 平均值
             obj_progress = 0
             if obj.progress:
                 obj_progress = round(obj.progress * 100, 2)
             elif obj.key_results:
                 # KR progress 存储的是 0.0-1.0，计算平均值后需 * 100
-                obj_progress = round((sum(kr.progress or 0.0 for kr in obj.key_results) / len(obj.key_results)) * 100, 2)
-            
+                obj_progress = round(
+                    (sum(kr.progress or 0.0 for kr in obj.key_results) / len(obj.key_results)) * 100, 2
+                )
+
             # 如果没有 KR，导出一行 Objective
             if not obj.key_results:
-                writer.writerow([
-                    obj.title, obj.description or '', org_name, owner_name, obj.period, 
-                    f"{obj_progress}%", '', '', '', '', ''
-                ])
+                writer.writerow(
+                    [
+                        obj.title,
+                        obj.description or "",
+                        org_name,
+                        owner_name,
+                        obj.period,
+                        f"{obj_progress}%",
+                        "",
+                        "",
+                        "",
+                        "",
+                        "",
+                    ]
+                )
                 continue
-                
+
             for kr in obj.key_results:
                 kr_progress = round((kr.progress or 0.0) * 100, 2)
-                writer.writerow([
-                    obj.title,
-                    obj.description or '',
-                    org_name,
-                    owner_name,
-                    obj.period,
-                    f"{obj_progress}%",
-                    kr.title,
-                    kr.target_value,
-                    kr.current_value,
-                    kr.unit or '',
-                    f"{kr_progress}%"
-                ])
-                
+                writer.writerow(
+                    [
+                        obj.title,
+                        obj.description or "",
+                        org_name,
+                        owner_name,
+                        obj.period,
+                        f"{obj_progress}%",
+                        kr.title,
+                        kr.target_value,
+                        kr.current_value,
+                        kr.unit or "",
+                        f"{kr_progress}%",
+                    ]
+                )
+
         return output.getvalue()
 
-    def list_okrs(self, period: Optional[str] = None, status: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    def list_okrs(self, period: str | None = None, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         """获取 OKR 列表用于前端预览。"""
         query = self.session.query(OKRObjective).options(
-            joinedload(OKRObjective.owner),
-            joinedload(OKRObjective.key_results)
+            joinedload(OKRObjective.owner), joinedload(OKRObjective.key_results)
         )
         if period:
             query = query.filter(OKRObjective.period == period)
         if status:
             query = query.filter(OKRObjective.status == status)
-            
+
         objectives = query.limit(limit).all()
         results = []
         for obj in objectives:
             # 简化版数据结构
-            results.append({
-                "id": obj.id,
-                "title": obj.title,
-                "owner_name": obj.owner.full_name if obj.owner else "Unknown",
-                "period": obj.period,
-                "status": obj.status,
-                "progress": obj.progress,
-                "key_results": [
-                    {"title": kr.title, "progress": kr.progress} for kr in obj.key_results
-                ]
-            })
+            results.append(
+                {
+                    "id": obj.id,
+                    "title": obj.title,
+                    "owner_name": obj.owner.full_name if obj.owner else "Unknown",
+                    "period": obj.period,
+                    "status": obj.status,
+                    "progress": obj.progress,
+                    "key_results": [{"title": kr.title, "progress": kr.progress} for kr in obj.key_results],
+                }
+            )
         return results

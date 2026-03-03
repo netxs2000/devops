@@ -3,13 +3,16 @@ import glob
 import os
 import re
 import sys
+
 import pandas as pd
 from sqlalchemy import create_engine, text
+
 
 # Add project root to path
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
+
 
 def get_db_engine():
     # Force localhost for script execution outside docker
@@ -18,11 +21,11 @@ def get_db_engine():
 
 def extract_sql_queries(file_path):
     print(f"Scanning {os.path.basename(file_path)}...")
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         tree = ast.parse(f.read())
 
     queries = []
-    
+
     class QueryVisitor(ast.NodeVisitor):
         def visit_Call(self, node):
             # Check for run_query(...) calls
@@ -35,7 +38,7 @@ def extract_sql_queries(file_path):
                 if node.args:
                     arg = node.args[0]
                     self._process_arg(arg)
-            
+
             self.generic_visit(node)
 
         def _process_arg(self, arg):
@@ -50,7 +53,7 @@ def extract_sql_queries(file_path):
                     if isinstance(part, ast.Constant):
                         raw_sql += part.value
                     elif isinstance(part, ast.FormattedValue):
-                        # Replace variable interpolation with a dummy 0 or 'dummy' 
+                        # Replace variable interpolation with a dummy 0 or 'dummy'
                         # This is risky but often works for LIMIT {x} or similar.
                         # For WHERE clauses it might break syntax.
                         # Let's try to be smart: if it looks like a number, use 1.
@@ -65,30 +68,30 @@ def extract_sql_queries(file_path):
 def validate_query(engine, sql):
     # Try to EXPLAIN the query to check validity without running it fully
     # Or just run with LIMIT 0
-    
+
     # Clean up common f-string artifacts if we can
     # e.g. "SELECT * FROM table LIMIT NULL" might fail syntax
-    
+
     # For now, simplistic check: valid SQL?
     try:
         # We wrap in a transaction that rolls back
         with engine.connect() as conn:
             # We add LIMIT 0 to avoid fetching data, but wrapping valid SQL is hard if it already has limit
             # Just try to prepare it.
-            
+
             # Heuristic: if dynamic, we might skip or warn
-            if "NULL" in sql: 
+            if "NULL" in sql:
                # Simple f-string reconstruction often produces invalid SQL (e.g. LIMIT NULL)
                # user provided queries often use {limit}.
                # Let's replace NULL with 1 for likely integer spots
                temp_sql = sql.replace("LIMIT NULL", "LIMIT 1")
-               
+
                # If it was IN ({...}) -> IN (NULL) -> might be valid?
                # Let's try running it
                conn.execute(text(temp_sql))
             else:
                conn.execute(text(f"EXPLAIN {sql}"))
-            
+
             return True, None
     except Exception as e:
         return False, str(e)
@@ -114,17 +117,17 @@ def main():
     results = []
 
     print(f"Scanning dashboard pages in {pages_dir}...")
-    
+
     files = glob.glob(os.path.join(pages_dir, "*.py"))
-    
+
     for file_path in files:
         filename = os.path.basename(file_path)
         queries = extract_sql_queries(file_path)
-        
+
         for q in queries:
             status = "UNKNOWN"
             error = None
-            
+
             if q['type'] == 'static':
                 valid, err = validate_query(engine, q['sql'])
                 if valid:
@@ -140,14 +143,14 @@ def main():
                 for t in tables:
                     if not check_table_exists(engine, t):
                         missing_tables.append(t)
-                
+
                 if missing_tables:
                     status = "FAIL"
                     error = f"Missing tables: {', '.join(missing_tables)}"
                 else:
                     status = "WARN (Dynamic)"
                     error = "Dynamic query detected - verify logic manually"
-            
+
             results.append({
                 "page": filename,
                 "type": q['type'],
@@ -160,7 +163,7 @@ def main():
     print("\n" + "="*80)
     print("DASHBOARD SQL INTEGRITY REPORT")
     print("="*80)
-    
+
     df = pd.DataFrame(results)
     if not df.empty:
         # Group by Status

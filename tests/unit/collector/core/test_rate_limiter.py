@@ -2,9 +2,12 @@
 
 验证 RateLimiter (令牌桶算法) 的限流准确性。
 """
-import unittest
+
 import time
+import unittest
+
 from devops_collector.core.base_client import RateLimiter
+
 
 class TestRateLimiter(unittest.TestCase):
     """RateLimiter 限流逻辑测试类。"""
@@ -29,5 +32,7 @@ class TestRateLimiter(unittest.TestCase):
         end_time = time.time()
         duration = end_time - start_time
         self.assertGreaterEqual(duration, 0.8)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

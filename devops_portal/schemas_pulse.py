@@ -1,6 +1,3 @@
-from datetime import date
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -12,9 +9,10 @@ class PulseSubmission(BaseModel):
         score: 分数 (1-5)。
         note: 可选的备注信息。
     """
+
     user_email: str
     score: int
-    note: Optional[str] = None
+    note: str | None = None
 
 
 class PulseStatus(BaseModel):
@@ -24,5 +22,6 @@ class PulseStatus(BaseModel):
         submitted: 是否已提交。
         message: 返回的消息内容。
     """
+
     submitted: bool
-    message: Optional[str] = None
+    message: str | None = None

@@ -1,126 +1,158 @@
-from typing import List, Optional
+import csv
+import io
+import uuid
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException, Body, File, UploadFile
+
+from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload, selectinload
+
 from devops_collector.auth.auth_database import get_auth_db
+from devops_collector.core.admin_service import AdminService
 from devops_collector.models.base_models import (
-    Organization, User, ProjectMaster, IdentityMapping, Team, TeamMember,
-    Product, ProjectProductRelation, SysRole
+    IdentityMapping,
+    Organization,
+    ProjectMaster,
+    ProjectProductRelation,
+    Team,
+    TeamMember,
+    User,
 )
 from devops_collector.plugins.gitlab.models import GitLabProject
-from devops_collector.core.admin_service import AdminService
-from devops_portal.dependencies import get_current_user, RoleRequired, PermissionRequired, DataScopeFilter
-from devops_portal.schemas import (
-    TeamCreate, TeamView, TeamMemberCreate, UserFullProfile,
-    ProductView, ProductCreate, ProjectProductRelationView, ProjectProductRelationCreate,
-    IdentityMappingView, IdentityMappingCreate, IdentityMappingUpdateStatus,
-    OrganizationCreate, OrganizationView, ImportSummary
+from devops_portal.dependencies import (
+    DataScopeFilter,
+    PermissionRequired,
+    RoleRequired,
 )
-from pydantic import BaseModel
-import uuid
-import io
-import csv
+from devops_portal.schemas import (
+    IdentityMappingCreate,
+    IdentityMappingUpdateStatus,
+    IdentityMappingView,
+    ImportSummary,
+    OrganizationCreate,
+    OrganizationView,
+    ProductCreate,
+    ProductView,
+    ProjectProductRelationCreate,
+    ProjectProductRelationView,
+    TeamCreate,
+    TeamMemberCreate,
+    TeamView,
+    UserFullProfile,
+)
+
 
 def get_admin_service(db: Session = Depends(get_auth_db)):
     """获取 AdminService 实例的依赖项。"""
     return AdminService(db)
 
-router = APIRouter(prefix='/admin', tags=['administration'])
-@router.get('/export/organizations')
+
+router = APIRouter(prefix="/admin", tags=["administration"])
+
+
+@router.get("/export/organizations")
 async def export_organizations(
-    db: Session = Depends(get_auth_db),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))
 ):
     """导出所有组织机构为 CSV。"""
-    orgs = db.query(Organization).options(joinedload(Organization.manager)).filter(Organization.is_current == True).all()
+    orgs = (
+        db.query(Organization).options(joinedload(Organization.manager)).filter(Organization.is_current == True).all()
+    )
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['org_id', 'org_name', 'org_level', 'parent_org_id', '负责人'])
+    writer.writerow(["org_id", "org_name", "org_level", "parent_org_id", "负责人"])
     for o in orgs:
-        writer.writerow([o.org_id, o.org_name, o.org_level, o.parent_org_id, o.manager.full_name if o.manager else ''])
-    
+        writer.writerow([o.org_id, o.org_name, o.org_level, o.parent_org_id, o.manager.full_name if o.manager else ""])
+
     output.seek(0)
     return StreamingResponse(
-        io.BytesIO(output.getvalue().encode('utf-8-sig')),
-        media_type='text/csv',
-        headers={"Content-Disposition": "attachment; filename=orgs_export.csv"}
+        io.BytesIO(output.getvalue().encode("utf-8-sig")),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=orgs_export.csv"},
     )
 
-@router.get('/organizations', response_model=List[OrganizationView])
+
+@router.get("/organizations", response_model=list[OrganizationView])
 async def list_organizations(service: AdminService = Depends(get_admin_service)):
     """获取详细组织机构列表。"""
     return service.list_all_organizations()
 
-@router.post('/organizations', response_model=OrganizationView)
+
+@router.post("/organizations", response_model=OrganizationView)
 async def create_organization(
     payload: OrganizationCreate,
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """创建新组织。"""
     org = service.create_organization(payload)
     return OrganizationView.model_validate(org)
 
-@router.post('/import/users', response_model=ImportSummary)
+
+@router.post("/import/users", response_model=ImportSummary)
 async def import_users(
     file: UploadFile = File(...),
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """从 CSV 导入用户。"""
     content = await file.read()
-    return service.import_users(content.decode('utf-8'))
+    return service.import_users(content.decode("utf-8"))
 
-@router.post('/import/organizations', response_model=ImportSummary)
+
+@router.post("/import/organizations", response_model=ImportSummary)
 async def import_organizations(
     file: UploadFile = File(...),
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """从 CSV 导入组织机构。"""
     content = await file.read()
-    return service.import_organizations(content.decode('utf-8'))
+    return service.import_organizations(content.decode("utf-8"))
 
-@router.get('/export/users')
-async def export_users(
-    db: Session = Depends(get_auth_db),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
-):
+
+@router.get("/export/users")
+async def export_users(db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
     """导出所有用户为 CSV。"""
     users = db.query(User).filter(User.is_current == True).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['global_user_id', 'employee_id', 'full_name', 'email', 'department_id', '人事关系'])
+    writer.writerow(["global_user_id", "employee_id", "full_name", "email", "department_id", "人事关系"])
     for u in users:
-        writer.writerow([str(u.global_user_id), u.employee_id, u.full_name, u.primary_email, u.department_id, u.hr_relationship])
-    
+        writer.writerow(
+            [str(u.global_user_id), u.employee_id, u.full_name, u.primary_email, u.department_id, u.hr_relationship]
+        )
+
     output.seek(0)
     return StreamingResponse(
-        io.BytesIO(output.getvalue().encode('utf-8-sig')),
-        media_type='text/csv',
-        headers={"Content-Disposition": "attachment; filename=users_export.csv"}
+        io.BytesIO(output.getvalue().encode("utf-8-sig")),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=users_export.csv"},
     )
+
 
 def get_admin_service(db: Session = Depends(get_auth_db)) -> AdminService:
     """获取系统管理服务实例。"""
     return AdminService(db)
 
-@router.get('/users', response_model=List[dict])
+
+@router.get("/users", response_model=list[dict])
 async def list_users(
     filter: DataScopeFilter = Depends(),
-    db: Session=Depends(get_auth_db),
-    current_user: User=Depends(PermissionRequired(['system:user:list']))
+    db: Session = Depends(get_auth_db),
+    current_user: User = Depends(PermissionRequired(["system:user:list"])),
 ):
     """获取所有全局用户简要列表。"""
     query = db.query(User).filter(User.is_current == True)
-    # User 表通常不需要 RLS 过滤（基础数据），或者仅过滤非本部门? 
+    # User 表通常不需要 RLS 过滤（基础数据），或者仅过滤非本部门?
     # 此处假设用户管理列表需要遵循 RLS，比如部门经理只能看本部门员工
-    query = filter.apply(db, query, User, current_user, dept_field='department_id')
+    query = filter.apply(db, query, User, current_user, dept_field="department_id")
     users = query.all()
-    return [{'user_id': str(u.global_user_id), 'full_name': u.full_name, 'email': u.primary_email} for u in users]
+    return [{"user_id": str(u.global_user_id), "full_name": u.full_name, "email": u.primary_email} for u in users]
 
-@router.get('/users/{user_id}', response_model=UserFullProfile)
+
+@router.get("/users/{user_id}", response_model=UserFullProfile)
 async def get_user_profile(user_id: uuid.UUID, service: AdminService = Depends(get_admin_service)):
     """获取用户全景画像，包含 HR 信息、身份映射及所属团队。"""
     profile = service.get_user_full_profile(user_id)
@@ -128,8 +160,9 @@ async def get_user_profile(user_id: uuid.UUID, service: AdminService = Depends(g
         raise HTTPException(status_code=404, detail="User not found")
     return profile
 
-@router.get('/identity-mappings', response_model=List[IdentityMappingView])
-async def list_identity_mappings(db: Session=Depends(get_auth_db)):
+
+@router.get("/identity-mappings", response_model=list[IdentityMappingView])
+async def list_identity_mappings(db: Session = Depends(get_auth_db)):
     """获取所有外部身份映射。"""
     mappings = db.query(IdentityMapping).options(joinedload(IdentityMapping.user)).all()
     results = []
@@ -140,11 +173,12 @@ async def list_identity_mappings(db: Session=Depends(get_auth_db)):
         results.append(view)
     return results
 
-@router.post('/identity-mappings')
+
+@router.post("/identity-mappings")
 async def create_identity_mapping(
     payload: IdentityMappingCreate,
-    db: Session=Depends(get_auth_db),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    db: Session = Depends(get_auth_db),
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """创建新的外部身份映射。"""
     # 已通过 RoleRequired 校验权限
@@ -153,54 +187,55 @@ async def create_identity_mapping(
         source_system=payload.source_system,
         external_user_id=payload.external_user_id,
         external_username=payload.external_username,
-        external_email=payload.external_email
+        external_email=payload.external_email,
     )
     db.add(new_mapping)
     db.commit()
-    return {'status': 'success', 'id': new_mapping.id}
+    return {"status": "success", "id": new_mapping.id}
 
-@router.delete('/identity-mappings/{mapping_id}')
+
+@router.delete("/identity-mappings/{mapping_id}")
 async def delete_identity_mapping(
-    mapping_id: int,
-    db: Session=Depends(get_auth_db),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    mapping_id: int, db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))
 ):
     """删除指定的身份映射。"""
     # 已通过 RoleRequired 校验权限
     mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
     if not mapping:
-        raise HTTPException(status_code=404, detail='Mapping not found')
-    
+        raise HTTPException(status_code=404, detail="Mapping not found")
+
     db.delete(mapping)
     db.commit()
-    return {'status': 'success'}
+    return {"status": "success"}
 
-@router.patch('/identity-mappings/{mapping_id}/status')
+
+@router.patch("/identity-mappings/{mapping_id}/status")
 async def update_identity_mapping_status(
-    mapping_id: int, 
-    payload: IdentityMappingUpdateStatus, 
-    db: Session=Depends(get_auth_db), 
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    mapping_id: int,
+    payload: IdentityMappingUpdateStatus,
+    db: Session = Depends(get_auth_db),
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """更新身份映射的状态（治理操作）。"""
     # 已通过 RoleRequired 校验权限
     mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
     if not mapping:
-        raise HTTPException(status_code=404, detail='Mapping not found')
-        
+        raise HTTPException(status_code=404, detail="Mapping not found")
+
     mapping.mapping_status = payload.mapping_status
     db.commit()
-    return {'status': 'success', 'mapping_status': mapping.mapping_status}
+    return {"status": "success", "mapping_status": mapping.mapping_status}
+
 
 # --- Virtual Team Management ---
 
-@router.get('/teams', response_model=List[TeamView])
-async def list_teams(db: Session=Depends(get_auth_db)):
+
+@router.get("/teams", response_model=list[TeamView])
+async def list_teams(db: Session = Depends(get_auth_db)):
     """列出所有虚拟业务团队。"""
-    teams = db.query(Team).options(
-        selectinload(Team.members).joinedload(TeamMember.user),
-        joinedload(Team.leader)
-    ).all()
+    teams = (
+        db.query(Team).options(selectinload(Team.members).joinedload(TeamMember.user), joinedload(Team.leader)).all()
+    )
     results = []
     for t in teams:
         members = [
@@ -208,108 +243,128 @@ async def list_teams(db: Session=Depends(get_auth_db)):
                 "user_id": str(m.user_id),
                 "full_name": m.user.full_name,
                 "role_code": m.role_code,
-                "allocation_ratio": m.allocation_ratio
-            } for m in t.members
+                "allocation_ratio": m.allocation_ratio,
+            }
+            for m in t.members
         ]
-        results.append(TeamView(
-            id=t.id,
-            name=t.name,
-            team_code=t.team_code,
-            description=t.description,
-            parent_id=t.parent_id,
-            org_id=t.org_id,
-            leader_id=str(t.leader_id) if t.leader_id else None,
-            leader_name=t.leader.full_name if t.leader else None,
-            members=members
-        ))
+        results.append(
+            TeamView(
+                id=t.id,
+                name=t.name,
+                team_code=t.team_code,
+                description=t.description,
+                parent_id=t.parent_id,
+                org_id=t.org_id,
+                leader_id=str(t.leader_id) if t.leader_id else None,
+                leader_name=t.leader.full_name if t.leader else None,
+                members=members,
+            )
+        )
     return results
 
-@router.post('/teams', response_model=TeamView)
+
+@router.post("/teams", response_model=TeamView)
 async def create_team(
     payload: TeamCreate,
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """创建新的虚拟团队。"""
     # 已通过 RoleRequired 校验权限
     new_team = service.create_team(payload)
     return TeamView(id=new_team.id, name=new_team.name, team_code=new_team.team_code, members=[])
 
-@router.post('/teams/{team_id}/members')
+
+@router.post("/teams/{team_id}/members")
 async def add_team_member(
     team_id: int,
     payload: TeamMemberCreate,
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """向虚拟团队添加成员。"""
     # 已通过 RoleRequired 校验权限
-        
+
     service.add_team_member(team_id, payload)
-    return {'status': 'success'}
+    return {"status": "success"}
+
 
 class MDMProjectCreate(BaseModel):
     '''"""TODO: Add class description."""'''
+
     project_id: str
     project_name: str
     org_id: str
-    project_type: Optional[str] = 'SPRINT'
-    status: Optional[str] = 'PLAN'
-    pm_user_id: Optional[str] = None
-    plan_start_date: Optional[date] = None
-    plan_end_date: Optional[date] = None
-    budget_code: Optional[str] = None
-    budget_type: Optional[str] = None
-    description: Optional[str] = None
+    project_type: str | None = "SPRINT"
+    status: str | None = "PLAN"
+    pm_user_id: str | None = None
+    plan_start_date: date | None = None
+    plan_end_date: date | None = None
+    budget_code: str | None = None
+    budget_type: str | None = None
+    description: str | None = None
+
 
 class RepoLinkRequest(BaseModel):
     '''"""TODO: Add class description."""'''
+
     mdm_project_id: str
     gitlab_project_id: int
-    is_lead: Optional[bool] = False
+    is_lead: bool | None = False
 
-@router.get('/mdm-projects')
+
+@router.get("/mdm-projects")
 async def list_mdm_projects(
     filter: DataScopeFilter = Depends(),
-    db: Session=Depends(get_auth_db),
-    current_user: User=Depends(PermissionRequired(['system:project:mapping']))
+    db: Session = Depends(get_auth_db),
+    current_user: User = Depends(PermissionRequired(["system:project:mapping"])),
 ):
     """获取所有业务主项目。"""
-    query = db.query(ProjectMaster).options(
-        joinedload(ProjectMaster.organization),
-        selectinload(ProjectMaster.gitlab_repos),
-        selectinload(ProjectMaster.product_relations).joinedload(ProjectProductRelation.product)
-    ).filter(ProjectMaster.is_current == True)
-    
-    # 应用 RLS: 
+    query = (
+        db.query(ProjectMaster)
+        .options(
+            joinedload(ProjectMaster.organization),
+            selectinload(ProjectMaster.gitlab_repos),
+            selectinload(ProjectMaster.product_relations).joinedload(ProjectProductRelation.product),
+        )
+        .filter(ProjectMaster.is_current == True)
+    )
+
+    # 应用 RLS:
     # - 部门权限基于 org_id
     # - 个人权限自动推断 (OwnableMixin.get_owner_column -> pm_user_id)
-    query = filter.apply(db, query, ProjectMaster, current_user, dept_field='org_id')
-    
-    projects = query.all()
-    
-    return [{
-        'project_id': p.project_id, 
-        'project_name': p.project_name, 
-        'project_type': p.project_type, 
-        'status': p.status, 
-        'org_name': p.organization.org_name if p.organization else '未指派', 
-        'repo_count': len(p.gitlab_repos), 
-        'lead_repo_id': p.lead_repo_id,
-        'products': [
-            {
-                'product_id': r.product.product_id, 
-                'product_name': r.product.product_name,
-                'relation_type': r.relation_type
-            } for r in p.product_relations if r.product
-        ]
-    } for p in projects]
+    query = filter.apply(db, query, ProjectMaster, current_user, dept_field="org_id")
 
-@router.post('/mdm-projects')
+    projects = query.all()
+
+    return [
+        {
+            "project_id": p.project_id,
+            "project_name": p.project_name,
+            "project_type": p.project_type,
+            "status": p.status,
+            "org_name": p.organization.org_name if p.organization else "未指派",
+            "repo_count": len(p.gitlab_repos),
+            "lead_repo_id": p.lead_repo_id,
+            "products": [
+                {
+                    "product_id": r.product.product_id,
+                    "product_name": r.product.product_name,
+                    "relation_type": r.relation_type,
+                }
+                for r in p.product_relations
+                if r.product
+            ],
+        }
+        for p in projects
+    ]
+
+
+@router.post("/mdm-projects")
 async def create_mdm_project(
     payload: MDMProjectCreate,
-    db: Session=Depends(get_auth_db),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    db: Session = Depends(get_auth_db),
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """创建新的业务主项目。"""
     # 已通过 RoleRequired 校验权限
@@ -324,147 +379,152 @@ async def create_mdm_project(
         plan_end_date=payload.plan_end_date,
         budget_code=payload.budget_code,
         budget_type=payload.budget_type,
-        description=payload.description
+        description=payload.description,
     )
     db.add(new_p)
     db.commit()
-    return {'status': 'success', 'project_id': new_p.project_id}
+    return {"status": "success", "project_id": new_p.project_id}
 
-@router.get('/unlinked-repos')
-async def list_unlinked_repos(db: Session=Depends(get_auth_db)):
+
+@router.get("/unlinked-repos")
+async def list_unlinked_repos(db: Session = Depends(get_auth_db)):
     """列出尚未关联主项目的 GitLab 仓库。"""
     repos = db.query(GitLabProject).filter(GitLabProject.mdm_project_id == None).all()
-    return [{'id': r.id, 'name': r.name, 'path': r.path_with_namespace} for r in repos]
+    return [{"id": r.id, "name": r.name, "path": r.path_with_namespace} for r in repos]
 
-@router.post('/link-repo')
+
+@router.post("/link-repo")
 async def link_repo_to_project(
     payload: RepoLinkRequest,
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """将 GitLab 仓库关联到业务主项目。"""
     # 已通过 RoleRequired 校验权限
     success = service.link_repo_to_mdm_project(payload.mdm_project_id, payload.gitlab_project_id, payload.is_lead)
     if not success:
-        raise HTTPException(status_code=404, detail='Entity not found')
-    return {'status': 'success'}
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return {"status": "success"}
 
-@router.post('/mdm-projects/{project_id}/set-lead')
+
+@router.post("/mdm-projects/{project_id}/set-lead")
 async def set_lead_repo(
     project_id: str,
-    gitlab_project_id: int=Body(..., embed=True),
-    db: Session=Depends(get_auth_db),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    gitlab_project_id: int = Body(..., embed=True),
+    db: Session = Depends(get_auth_db),
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """设置主项目的受理中心仓库。"""
     # 已通过 RoleRequired 校验权限
     mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == project_id).first()
     if not mdm_p:
-        raise HTTPException(status_code=404, detail='MDM Project not found')
+        raise HTTPException(status_code=404, detail="MDM Project not found")
     mdm_p.lead_repo_id = gitlab_project_id
     db.commit()
-    return {'status': 'success'}
+    return {"status": "success"}
 
-@router.get('/products', response_model=List[ProductView])
+
+@router.get("/products", response_model=list[ProductView])
 async def list_products(service: AdminService = Depends(get_admin_service)):
     """获取所有产品列表。"""
     return service.list_products()
 
-@router.post('/products', response_model=ProductView)
+
+@router.post("/products", response_model=ProductView)
 async def create_product(
     payload: ProductCreate,
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """创建新产品。"""
     # 已通过 RoleRequired 校验权限
     return service.create_product(payload)
 
-@router.post('/link-product', response_model=ProjectProductRelationView)
+
+@router.post("/link-product", response_model=ProjectProductRelationView)
 async def link_product_to_project(
     payload: ProjectProductRelationCreate,
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """建立产品与项目的关联。"""
     # 已通过 RoleRequired 校验权限
     return service.link_product_to_project(payload)
 
-@router.get('/organizations')
-async def list_organizations(db: Session=Depends(get_auth_db)):
-    """获取组织机构列表。"""
-    orgs = db.query(Organization).filter(Organization.is_current == True).all()
-    return [{'org_id': o.org_id, 'org_name': o.org_name} for o in orgs]
-
 
 # --- Product Import/Export ---
 
-@router.get('/export/products')
+
+@router.get("/export/products")
 async def export_products(
-    service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))
 ):
     """导出产品数据为 CSV。"""
     csv_data = service.export_products()
     return StreamingResponse(
-        io.BytesIO(csv_data.encode('utf-8-sig')),
-        media_type='text/csv',
-        headers={"Content-Disposition": "attachment; filename=products_export.csv"}
+        io.BytesIO(csv_data.encode("utf-8-sig")),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=products_export.csv"},
     )
 
-@router.post('/import/products', response_model=ImportSummary)
+
+@router.post("/import/products", response_model=ImportSummary)
 async def import_products(
     file: UploadFile = File(...),
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """从 CSV 导入产品数据 (支持层级)。"""
     content = await file.read()
-    return service.import_products(content.decode('utf-8'))
+    return service.import_products(content.decode("utf-8"))
 
-@router.get('/export/product-mappings')
+
+@router.get("/export/product-mappings")
 async def export_product_mappings(
-    service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))
 ):
     """导出产品-项目关联矩阵为 CSV。"""
     csv_data = service.export_product_mappings()
     return StreamingResponse(
-        io.BytesIO(csv_data.encode('utf-8-sig')),
-        media_type='text/csv',
-        headers={"Content-Disposition": "attachment; filename=product_mappings_export.csv"}
+        io.BytesIO(csv_data.encode("utf-8-sig")),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=product_mappings_export.csv"},
     )
 
-@router.post('/import/product-mappings', response_model=ImportSummary)
+
+@router.post("/import/product-mappings", response_model=ImportSummary)
 async def import_product_mappings(
     file: UploadFile = File(...),
     service: AdminService = Depends(get_admin_service),
-    admin_user: User=Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """从 CSV 导入产品-项目关联矩阵。"""
     content = await file.read()
-    return service.import_product_mappings(content.decode('utf-8'))
-@router.get('/okrs')
+    return service.import_product_mappings(content.decode("utf-8"))
+
+
+@router.get("/okrs")
 async def list_okrs(
-    period: Optional[str] = None,
-    status: Optional[str] = None,
+    period: str | None = None,
+    status: str | None = None,
     service: AdminService = Depends(get_admin_service),
-    admin_user: User = Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """获取 OKR 列表（仅供管理预览）。"""
     return service.list_okrs(period=period, status=status)
 
-@router.get('/export/okrs')
+
+@router.get("/export/okrs")
 async def export_okrs(
-    period: Optional[str] = None,
-    status: Optional[str] = None,
+    period: str | None = None,
+    status: str | None = None,
     service: AdminService = Depends(get_admin_service),
-    admin_user: User = Depends(RoleRequired(['SYSTEM_ADMIN']))
+    admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """导出 OKR 全量数据为 CSV。"""
     csv_data = service.export_okrs(period=period, status=status)
     return StreamingResponse(
-        io.BytesIO(csv_data.encode('utf-8-sig')),
-        media_type='text/csv',
-        headers={"Content-Disposition": "attachment; filename=okr_export.csv"}
+        io.BytesIO(csv_data.encode("utf-8-sig")),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=okr_export.csv"},
     )

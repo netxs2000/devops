@@ -1,8 +1,8 @@
-import streamlit as st
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import pandas as pd
-from utils import set_page_config, run_query
+import streamlit as st
+from utils import run_query, set_page_config
 
 
 def safe_float(val, default=0.0):
@@ -16,11 +16,13 @@ def safe_float(val, default=0.0):
     except (ValueError, TypeError):
         return default
 
+
 # --- Premium Page Configuration ---
 set_page_config()
 
 # Custom CSS for Premium Aesthetics (Glassmorphism & Vibrant Elements)
-st.markdown("""
+st.markdown(
+    """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
     
@@ -73,7 +75,9 @@ st.markdown("""
     .badge-warning { background: rgba(255, 171, 0, 0.2); color: #ffab00; border: 1px solid #ffab00; }
     .badge-danger { background: rgba(255, 0, 0, 0.2); color: #ff3333; border: 1px solid #ff3333; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 st.title("🛡️ 研发作战指挥中心 (Executive Cockpit)")
 st.caption("Strategic Intelligence for Engineering Leaders | v3.0 Powered by dbt & MDM")
@@ -81,9 +85,11 @@ st.caption("Strategic Intelligence for Engineering Leaders | v3.0 Powered by dbt
 # --- Strategic Data Ingestion ---
 try:
     # 1. Overall Portfolio Health
-    health_data = run_query("SELECT avg(health_score) as avg_score, count(*) as project_count FROM public_marts.fct_project_delivery_health")
-    avg_health = safe_float(health_data['avg_score'][0]) if not health_data.empty else 0
-    total_projects = int(health_data['project_count'][0]) if not health_data.empty else 0
+    health_data = run_query(
+        "SELECT avg(health_score) as avg_score, count(*) as project_count FROM public_marts.fct_project_delivery_health"
+    )
+    avg_health = safe_float(health_data["avg_score"][0]) if not health_data.empty else 0
+    total_projects = int(health_data["project_count"][0]) if not health_data.empty else 0
 
     # 2. DORA Aggregates (Current Month)
     dora_data = run_query("""
@@ -94,7 +100,7 @@ try:
         FROM public_marts.fct_dora_metrics
         WHERE month = date_trunc('month', current_date)::date
     """)
-    if dora_data.empty or pd.isna(dora_data['freq'][0]):
+    if dora_data.empty or pd.isna(dora_data["freq"][0]):
         # Fallback to last known month if current is empty
         dora_data = run_query("""
             SELECT 
@@ -131,42 +137,54 @@ except Exception as e:
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div class="glass-card">
         <div class="kpi-title">体系健康分</div>
         <div class="kpi-value">{avg_health:.1f}</div>
         <div class="kpi-delta"><span style="color:#00ff7f;">▲ 2.4%</span> vs 上月</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 with c2:
-    freq = safe_float(dora_data['freq'][0]) if not dora_data.empty else 0
-    st.markdown(f"""
+    freq = safe_float(dora_data["freq"][0]) if not dora_data.empty else 0
+    st.markdown(
+        f"""
     <div class="glass-card">
         <div class="kpi-title">部署频率 (Avg)</div>
         <div class="kpi-value">{freq:.1f}</div>
         <div class="status-badge badge-success">HIGH PERFORMER</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 with c3:
-    cfr = safe_float(dora_data['cfr'][0]) if not dora_data.empty else 0
-    st.markdown(f"""
+    cfr = safe_float(dora_data["cfr"][0]) if not dora_data.empty else 0
+    st.markdown(
+        f"""
     <div class="glass-card">
         <div class="kpi-title">变更失败率</div>
         <div class="kpi-value">{cfr:.1f}%</div>
         <div class="status-badge badge-warning">THRESHOLD 15%</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 with c4:
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div class="glass-card">
         <div class="kpi-title">资产存量</div>
         <div class="kpi-value">{total_projects}</div>
         <div class="kpi-delta">纳管仓库 & 集成服务</div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 # --- Second Row: Mixed Intelligence ---
 col_left, col_right = st.columns([1.5, 1])
@@ -174,44 +192,49 @@ col_left, col_right = st.columns([1.5, 1])
 with col_left:
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     st.markdown("#### 🧭 产研投入雷达 (Investment Mix)")
-    
+
     if not fin_data.empty:
         fig_pie = px.pie(
-            fin_data, values='total_cost', names='category',
+            fin_data,
+            values="total_cost",
+            names="category",
             hole=0.6,
-            color_discrete_sequence=['#00d4ff', '#3366ff', '#8F00FF', '#ffab00'],
-            template='plotly_dark'
+            color_discrete_sequence=["#00d4ff", "#3366ff", "#8F00FF", "#ffab00"],
+            template="plotly_dark",
         )
         fig_pie.update_layout(
             margin=dict(t=30, b=30, l=30, r=30),
             showlegend=True,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
         )
         st.plotly_chart(fig_pie, use_container_width=True)
     else:
         st.info("暂无财务审计数据，请确保已运行数据同步和 dbt build")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with col_right:
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
     st.markdown("#### 🚨 核心架构风险 (Brittleness Top 5)")
     if not brittleness_data.empty:
         for idx, row in brittleness_data.iterrows():
-            status = row['architectural_health_status'] or 'NORMAL'
-            brittleness_idx = safe_float(row['brittleness_index'])
-            badge_class = "badge-danger" if status == 'CRITICAL_BRITTLE_CORE' else "badge-warning"
-            st.markdown(f"""
+            status = row["architectural_health_status"] or "NORMAL"
+            brittleness_idx = safe_float(row["brittleness_index"])
+            badge_class = "badge-danger" if status == "CRITICAL_BRITTLE_CORE" else "badge-warning"
+            st.markdown(
+                f"""
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding:8px; background:rgba(255,255,255,0.03); border-radius:10px;">
                     <div>
-                        <div style="font-size:0.85rem; color:#eee;">{row['project_name']}</div>
+                        <div style="font-size:0.85rem; color:#eee;">{row["project_name"]}</div>
                         <div style="font-size:0.7rem; color:#888;">Index: {brittleness_idx:.2f}</div>
                     </div>
                     <span class="status-badge {badge_class}">{status}</span>
                 </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
     else:
         st.info("架构分析引擎未识别到高危模块。")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # --- Third Row: Trend Analysis ---
 st.markdown('<div class="glass-card">', unsafe_allow_html=True)
@@ -221,25 +244,35 @@ trend_df = run_query(trend_query)
 
 if not trend_df.empty:
     fig_trend = go.Figure()
-    fig_trend.add_trace(go.Scatter(
-        x=trend_df['month'], y=trend_df['freq'],
-        name='发布频率', line=dict(color='#00d4ff', width=3),
-        fill='tozeroy', fillcolor='rgba(0, 212, 255, 0.1)'
-    ))
-    fig_trend.add_trace(go.Scatter(
-        x=trend_df['month'], y=trend_df['lead_time'],
-        name='前置时间', yaxis='y2', line=dict(color='#8F00FF', width=3, dash='dot')
-    ))
-    
+    fig_trend.add_trace(
+        go.Scatter(
+            x=trend_df["month"],
+            y=trend_df["freq"],
+            name="发布频率",
+            line=dict(color="#00d4ff", width=3),
+            fill="tozeroy",
+            fillcolor="rgba(0, 212, 255, 0.1)",
+        )
+    )
+    fig_trend.add_trace(
+        go.Scatter(
+            x=trend_df["month"],
+            y=trend_df["lead_time"],
+            name="前置时间",
+            yaxis="y2",
+            line=dict(color="#8F00FF", width=3, dash="dot"),
+        )
+    )
+
     fig_trend.update_layout(
-        template='plotly_dark',
-        yaxis=dict(title='发布次数 (次/月)'),
-        yaxis2=dict(title='前置时间 (分钟)', overlaying='y', side='right'),
+        template="plotly_dark",
+        yaxis=dict(title="发布次数 (次/月)"),
+        yaxis2=dict(title="前置时间 (分钟)", overlaying="y", side="right"),
         margin=dict(t=20, b=20, l=20, r=20),
-        legend=dict(orientation="h", x=0.5, y=1.1, xanchor="center")
+        legend=dict(orientation="h", x=0.5, y=1.1, xanchor="center"),
     )
     st.plotly_chart(fig_trend, use_container_width=True)
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
 # --- NEW: Strategic Portfolio Battle Map (The 18-Module Classification) ---
 st.divider()
@@ -248,7 +281,8 @@ st.subheader("🗺️ 研发治理资产全景图 (Asset Battle Map)")
 cat_efficiency, cat_quality, cat_governance, cat_economics = st.columns(4)
 
 with cat_efficiency:
-    st.markdown("""
+    st.markdown(
+        """
     <div class="glass-card" style="border-top: 3px solid #00d4ff; height: 350px;">
         <div class="kpi-title" style="color:#00d4ff; margin-bottom:15px;">🚀 效能与交付频率</div>
         <ul style="list-style-type: none; padding: 0; font-size: 0.85rem; color: #ccc;">
@@ -260,10 +294,13 @@ with cat_efficiency:
             <li style="margin-bottom:8px;">🔹 <a href="/Value_Stream" target="_self" style="color:#eee;text-decoration:none;">价值流图谱分析</a></li>
         </ul>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 with cat_quality:
-    st.markdown("""
+    st.markdown(
+        """
     <div class="glass-card" style="border-top: 3px solid #00ff7f; height: 350px;">
         <div class="kpi-title" style="color:#00ff7f; margin-bottom:15px;">🛡️ 质量保证与稳健性</div>
         <ul style="list-style-type: none; padding: 0; font-size: 0.85rem; color: #ccc;">
@@ -273,10 +310,13 @@ with cat_quality:
             <li style="margin-bottom:8px;">✅ <a href="/Michael_Feathers_Code_Hotspots" target="_self" style="color:#eee;text-decoration:none;">代码高危热点分析</a></li>
         </ul>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 with cat_governance:
-    st.markdown("""
+    st.markdown(
+        """
     <div class="glass-card" style="border-top: 3px solid #8F00FF; height: 350px;">
         <div class="kpi-title" style="color:#8F00FF; margin-bottom:15px;">🏛️ 资产治理与身份</div>
         <ul style="list-style-type: none; padding: 0; font-size: 0.85rem; color: #ccc;">
@@ -287,10 +327,13 @@ with cat_governance:
             <li style="margin-bottom:8px;">💠 <a href="/Metadata_Governance" target="_self" style="color:#eee;text-decoration:none;">元数据血缘治理</a></li>
         </ul>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 with cat_economics:
-    st.markdown("""
+    st.markdown(
+        """
     <div class="glass-card" style="border-top: 3px solid #ffab00; height: 350px;">
         <div class="kpi-title" style="color:#ffab00; margin-bottom:15px;">💰 研发经济与成本</div>
         <ul style="list-style-type: none; padding: 0; font-size: 0.85rem; color: #ccc;">
@@ -305,11 +348,16 @@ with cat_economics:
             </svg>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 # --- Footer Actionable Insights ---
-st.markdown("""
+st.markdown(
+    """
 <div style="text-align:center; color:#888; font-size:0.8rem; margin-top:20px;">
     🚀 <strong>Insight:</strong> 发现 <code>fct_capitalization_audit</code> 中技术债成本占比较高 (35%)，建议下月优先关注 <code>fct_architectural_brittleness</code> 中的核心模块重构。
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)

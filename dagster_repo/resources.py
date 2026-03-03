@@ -3,9 +3,12 @@
 This module defines the shared resources used by Dagster assets and jobs,
 such as database connections.
 """
+
 from dagster import ConfigurableResource
 from sqlalchemy import create_engine
+
 from devops_collector.config import settings
+
 
 class DatabaseResource(ConfigurableResource):
     """Resource for interacting with the DevOps database.
@@ -13,6 +16,7 @@ class DatabaseResource(ConfigurableResource):
     Attributes:
         connection_string: The SQLAlchemy connection URI for the database.
     """
+
     connection_string: str
 
     def get_engine(self):
@@ -22,6 +26,7 @@ class DatabaseResource(ConfigurableResource):
             A SQLAlchemy Engine instance.
         """
         return create_engine(self.connection_string)
+
 
 def get_db_resource():
     """Factory function to create a DatabaseResource instance.

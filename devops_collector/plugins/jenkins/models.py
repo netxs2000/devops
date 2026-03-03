@@ -3,20 +3,22 @@
 定义 Jenkins 相关的 SQLAlchemy ORM 模型，包括 Job 和 Build 详情。
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
     Column,
-    Integer,
-    String,
     DateTime,
     ForeignKey,
+    Integer,
+    String,
     Text,
-    JSON,
-    Boolean,
-    BigInteger,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+
 from devops_collector.models.base_models import Base
 
 
@@ -64,8 +66,8 @@ class JenkinsJob(Base):
 
     last_synced_at = Column(DateTime(timezone=True))
     sync_status = Column(String(20), default="PENDING")
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC))
     raw_data = Column(JSON)
     builds = relationship("JenkinsBuild", back_populates="job", cascade="all, delete-orphan")
 
@@ -121,15 +123,13 @@ class JenkinsBuild(Base):
     executor = Column(String(255))
     trigger_type = Column(String(50))
     trigger_user = Column(String(100))
-    trigger_user_id = Column(
-        UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True
-    )
+    trigger_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
     commit_sha = Column(String(100))
     raw_data = Column(JSON)
     gitlab_mr_iid = Column(Integer)
     artifact_id = Column(String(200))
     artifact_type = Column(String(50))
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     job = relationship("JenkinsJob", back_populates="builds")
 
     def __repr__(self) -> str:

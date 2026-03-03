@@ -4,12 +4,15 @@
 
 本模块在导入时自动完成插件注册。
 """
+
 from devops_collector.core.registry import PluginRegistry
-from .worker import DependencyCheckWorker
+
 from .config import get_config
+from .worker import DependencyCheckWorker
+
 
 # 自注册
-PluginRegistry.register_worker('dependency_check', DependencyCheckWorker)
-PluginRegistry.register_config('dependency_check', get_config)
+PluginRegistry.register_worker("dependency_check", DependencyCheckWorker)
+PluginRegistry.register_config("dependency_check", get_config)
 
-__all__ = ['DependencyCheckWorker', 'get_config']
+__all__ = ["DependencyCheckWorker", "get_config"]

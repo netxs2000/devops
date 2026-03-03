@@ -12,17 +12,17 @@ Usage:
     docker-compose exec -T api python scripts/test_dashboard_pages.py
 """
 
-import os
 import re
 import sys
 from pathlib import Path
-from typing import Optional
+
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.exc import ProgrammingError, OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
+
 from devops_collector.config import settings
 
 
@@ -57,7 +57,7 @@ class DashboardPageTester:
             # 清理 SQL
             sql = sql.strip()
             if sql:
-                queries.append((f"Query_{i+1}", sql))
+                queries.append((f"Query_{i + 1}", sql))
 
         # 匹配三引号字符串中的 SQL
         triple_pattern = r'run_query\s*\(\s*"""(.*?)"""\s*\)'
@@ -66,7 +66,7 @@ class DashboardPageTester:
         for i, sql in enumerate(triple_matches):
             sql = sql.strip()
             if sql:
-                queries.append((f"TripleQuery_{i+1}", sql))
+                queries.append((f"TripleQuery_{i + 1}", sql))
 
         return queries
 
@@ -86,7 +86,7 @@ class DashboardPageTester:
             "query": query_name,
             "sql": sql[:100] + "..." if len(sql) > 100 else sql,
             "status": "PASS",
-            "error": None
+            "error": None,
         }
 
         try:
@@ -106,7 +106,7 @@ class DashboardPageTester:
 
         except ProgrammingError as e:
             result["status"] = "FAIL"
-            error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
+            error_msg = str(e.orig) if hasattr(e, "orig") else str(e)
             result["error"] = error_msg
 
         except OperationalError as e:
@@ -134,24 +134,12 @@ class DashboardPageTester:
         try:
             content = page_path.read_text(encoding="utf-8")
         except Exception as e:
-            return [{
-                "page": page_name,
-                "query": "N/A",
-                "sql": "N/A",
-                "status": "ERROR",
-                "error": f"无法读取文件: {e}"
-            }]
+            return [{"page": page_name, "query": "N/A", "sql": "N/A", "status": "ERROR", "error": f"无法读取文件: {e}"}]
 
         queries = self.extract_sql_queries(content)
 
         if not queries:
-            return [{
-                "page": page_name,
-                "query": "N/A",
-                "sql": "N/A",
-                "status": "SKIP",
-                "error": "未检测到 SQL 查询"
-            }]
+            return [{"page": page_name, "query": "N/A", "sql": "N/A", "status": "SKIP", "error": "未检测到 SQL 查询"}]
 
         for query_name, sql in queries:
             result = self.test_sql_query(sql, page_name, query_name)
@@ -189,7 +177,7 @@ class DashboardPageTester:
                     "FAIL": "[FAIL]",
                     "WARN": "[WARN]",
                     "SKIP": "[SKIP]",
-                    "ERROR": "[ERROR]"
+                    "ERROR": "[ERROR]",
                 }.get(r["status"], "[?]")
 
                 print(f"{status_icon} {r['page']}: {r['query']}")

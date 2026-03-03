@@ -4,26 +4,29 @@
 执行方式:
     python scripts/init_organizations.py
 """
-import sys
-import os
-import logging
-import uuid
+
 import csv
+import logging
+import sys
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from pathlib import Path
+
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
-from devops_collector.models import Base, Organization, User
+from devops_collector.models import Base, Organization
 from scripts.utils import build_user_indexes, resolve_user
 
+
 # 日志配置
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-CSV_FILE = Path(__file__).parent.parent / 'docs' / 'organizations.csv'
+CSV_FILE = Path(__file__).parent.parent / "docs" / "organizations.csv"
+
 
 def init_organizations_from_csv(session: Session):
     """从 CSV 文件加载组织架构。"""
@@ -31,29 +34,29 @@ def init_organizations_from_csv(session: Session):
         logger.warning(f"跳过组织初始化：找不到 CSV 文件 {CSV_FILE}")
         return
 
-    logger.info(f'开始从 {CSV_FILE} 同步组织架构...')
+    logger.info(f"开始从 {CSV_FILE} 同步组织架构...")
 
     # 预加载用户索引 (邮箱 + 姓名)
     email_idx, name_idx = build_user_indexes(session)
 
     # 创建公司根节点 (L1)
-    root_id = 'ORG-HQ'
+    root_id = "ORG-HQ"
     root_org = session.query(Organization).filter_by(org_id=root_id).first()
     if not root_org:
-        root_org = Organization(org_id=root_id, org_name='HQ', org_level=1)
+        root_org = Organization(org_id=root_id, org_name="HQ", org_level=1)
         session.add(root_org)
         session.flush()
         logger.info(f"创建公司根节点: {root_id}")
 
-    with open(CSV_FILE, mode='r', encoding='utf-8-sig') as f:
+    with open(CSV_FILE, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            system = row.get('体系', '').strip()
-            center = row.get('中心', '').strip()
-            dept = row.get('部门', '').strip()
-            manager_val = row.get('负责人', row.get('负责人邮箱', '')).strip()
+            system = row.get("体系", "").strip()
+            center = row.get("中心", "").strip()
+            dept = row.get("部门", "").strip()
+            manager_val = row.get("负责人", row.get("负责人邮箱", "")).strip()
 
-            manager_id = resolve_user(manager_val, email_idx, name_idx, '负责人')
+            manager_id = resolve_user(manager_val, email_idx, name_idx, "负责人")
 
             parent_id = root_id
 
@@ -63,8 +66,7 @@ def init_organizations_from_csv(session: Session):
                 org_l2 = session.query(Organization).filter_by(org_id=org_id_l2).first()
                 if not org_l2:
                     org_l2 = Organization(
-                        org_id=org_id_l2, org_name=center, org_level=2,
-                        parent_org_id=root_id, business_line=system
+                        org_id=org_id_l2, org_name=center, org_level=2, parent_org_id=root_id, business_line=system
                     )
                     session.add(org_l2)
 
@@ -80,8 +82,7 @@ def init_organizations_from_csv(session: Session):
                 org_l3 = session.query(Organization).filter_by(org_id=org_id_l3).first()
                 if not org_l3:
                     org_l3 = Organization(
-                        org_id=org_id_l3, org_name=dept, org_level=3,
-                        parent_org_id=parent_id, business_line=system
+                        org_id=org_id_l3, org_name=dept, org_level=3, parent_org_id=parent_id, business_line=system
                     )
                     session.add(org_l3)
 
@@ -91,11 +92,13 @@ def init_organizations_from_csv(session: Session):
     session.commit()
     logger.info("组织架构同步完成！")
 
+
 def main():
     engine = create_engine(settings.database.uri)
     Base.metadata.create_all(engine)
     with Session(engine) as session:
         init_organizations_from_csv(session)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

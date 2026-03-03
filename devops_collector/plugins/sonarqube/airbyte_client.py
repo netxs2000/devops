@@ -4,38 +4,40 @@
 """
 
 import logging
-from typing import Any, Dict, Optional, Generator
+from collections.abc import Generator
+from typing import Any
+
 import airbyte as ab
+
 from devops_collector.core.base_client import BaseClient
+
 
 logger = logging.getLogger(__name__)
 
+
 class AirbyteSonarQubeClient(BaseClient):
     """基于 PyAirbyte 的 SonarQube 客户端适配器。
-    
+
     该客户端通过封装 'source-sonarqube' 连接器，提供流式数据获取能力，
     消除了手动处理分页和复杂 API 结构的成本。
     """
 
     def __init__(self, url: str, token: str):
         """初始化 PyAirbyte SonarQube 客户端。
-        
+
         Args:
             url (str): SonarQube 实例 URL。
             token (str): 认证 Token。
         """
-        super().__init__(base_url=url, auth_headers={'Authorization': f'Bearer {token}'})
-        
+        super().__init__(base_url=url, auth_headers={"Authorization": f"Bearer {token}"})
+
         # Airbyte SonarQube Connector Config
         # 根据官方文档：https://docs.airbyte.com/integrations/sources/sonarqube
         self.source_config = {
-            "host_url": url.rstrip('/'),
-            "credentials": {
-                "auth_type": "user_token",
-                "user_token": token
-            }
+            "host_url": url.rstrip("/"),
+            "credentials": {"auth_type": "user_token", "user_token": token},
         }
-        self._source: Optional[ab.Source] = None
+        self._source: ab.Source | None = None
 
     @property
     def source(self) -> ab.Source:
@@ -53,32 +55,32 @@ class AirbyteSonarQubeClient(BaseClient):
             logger.error(f"PyAirbyte SonarQube connection check failed: {e}")
             return False
 
-    def get_stream_records(self, stream_name: str) -> Generator[Dict[str, Any], None, None]:
+    def get_stream_records(self, stream_name: str) -> Generator[dict[str, Any], None, None]:
         """流式获取指定 stream 的原始记录。
-        
+
         Available streams usually include: projects, issues, components, measures.
         """
         logger.info(f"正在从 SonarQube 流 '{stream_name}' 读取数据...")
         self.source.select_streams([stream_name])
         read_result = self.source.read()
-        
+
         for record in read_result[stream_name]:
             yield record.to_dict()
 
     # --- 兼容旧接口的适配逻辑 ---
-    
+
     def get_all_projects(self) -> list:
         """兼容接口：获取所有项目。"""
         return list(self.get_stream_records("projects"))
 
-    def get_project(self, key: str) -> Optional[dict]:
+    def get_project(self, key: str) -> dict | None:
         """兼容接口：获取单个项目。"""
         for p in self.get_stream_records("projects"):
             if p.get("key") == key:
                 return p
         return None
 
-    def get_measures(self, project_key: str) -> Dict[str, Any]:
+    def get_measures(self, project_key: str) -> dict[str, Any]:
         """兼容接口：获取项目指标。"""
         # 注意：Airbyte 的 measures 流通常包含历史或详细数据，需按需聚合
         # 此处简化为获取该项目关联的记录

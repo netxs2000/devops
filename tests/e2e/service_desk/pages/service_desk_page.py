@@ -7,7 +7,8 @@ Service Desk Page Object
 - Support Center 视图
 """
 
-from playwright.sync_api import Page, Locator, expect
+from playwright.sync_api import Locator, expect
+
 from .base_page import BasePage
 
 
@@ -194,7 +195,7 @@ class ServicePortalPage(BasePage):
         # 如果在表单页
         form_select = self.page.locator(f"{self.SD_REQUEST_FORM} #product_id")
         if form_select.is_visible():
-            form_select.select_option(label=product_id) # 可能是 Label 也可能是 Value
+            form_select.select_option(label=product_id)  # 可能是 Label 也可能是 Value
             return
 
         # 如果在 Landing 页 (card 模式)
@@ -251,7 +252,7 @@ class ServicePortalPage(BasePage):
         # 由于目前逻辑是提交后 navigate('landing')，我们可能需要检查 Toast 或直接跳过这个断言。
         # 简单等待 Toast 即可。
         toast = self.wait_for_toast("successful", timeout=10000)
-        return "SUCCESS" # 模拟返回
+        return "SUCCESS"  # 模拟返回
 
     # =========================================================================
     # 我的工单操作

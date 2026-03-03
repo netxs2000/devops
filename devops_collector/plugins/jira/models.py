@@ -2,15 +2,28 @@
 
 定义 Jira 相关的 SQLAlchemy ORM 模型，包括项目、看板、Sprint 和 Issue。
 """
-from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, JSON, Boolean, BigInteger
-from sqlalchemy.orm import relationship
+
+from datetime import UTC, datetime
+
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+
 from devops_collector.models.base_models import Base
+
 
 class JiraProject(Base):
     """Jira 项目模型 (jira_projects)。
-    
+
     Attributes:
         id (int): 自增内部主键。
         key (str): Jira 项目的唯一标识符 (e.g. 'PROJ')。
@@ -23,35 +36,37 @@ class JiraProject(Base):
         boards (List[JiraBoard]): 关联的看板列表。
         issues (List[JiraIssue]): 关联的问题列表。
     """
-    __tablename__ = 'jira_projects'
+
+    __tablename__ = "jira_projects"
     id = Column(Integer, primary_key=True, autoincrement=True)
     key = Column(String(50), unique=True, nullable=False)
     name = Column(String(255), nullable=False)
     description = Column(Text)
     lead_name = Column(String(255))
-    gitlab_project_id = Column(Integer, ForeignKey('gitlab_projects.id'), nullable=True)
-    gitlab_project = relationship('GitLabProject', back_populates='jira_projects')
+    gitlab_project_id = Column(Integer, ForeignKey("gitlab_projects.id"), nullable=True)
+    gitlab_project = relationship("GitLabProject", back_populates="jira_projects")
     last_synced_at = Column(DateTime(timezone=True))
-    sync_status = Column(String(20), default='PENDING')
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(timezone.utc))
+    sync_status = Column(String(20), default="PENDING")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC))
     raw_data = Column(JSON)
-    boards = relationship('JiraBoard', back_populates='project', cascade='all, delete-orphan')
-    issues = relationship('JiraIssue', back_populates='project', cascade='all, delete-orphan')
+    boards = relationship("JiraBoard", back_populates="project", cascade="all, delete-orphan")
+    issues = relationship("JiraIssue", back_populates="project", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JiraProject(key='{self.key}', name='{self.name}')>"
+
 
 class JiraBoard(Base):
     """Jira 看板模型 (jira_boards)。
@@ -64,28 +79,30 @@ class JiraBoard(Base):
         project (JiraProject): 关联的项目。
         sprints (List[JiraSprint]): 关联的迭代列表。
     """
-    __tablename__ = 'jira_boards'
+
+    __tablename__ = "jira_boards"
     id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('jira_projects.id'), nullable=False)
+    project_id = Column(Integer, ForeignKey("jira_projects.id"), nullable=False)
     name = Column(String(255))
     type = Column(String(50))
-    project = relationship('JiraProject', back_populates='boards')
-    sprints = relationship('JiraSprint', back_populates='board', cascade='all, delete-orphan')
+    project = relationship("JiraProject", back_populates="boards")
+    sprints = relationship("JiraSprint", back_populates="board", cascade="all, delete-orphan")
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JiraBoard(id={self.id}, name='{self.name}')>"
+
 
 class JiraSprint(Base):
     """Jira Sprint (迭代) 模型 (jira_sprints)。
@@ -101,31 +118,33 @@ class JiraSprint(Base):
         board (JiraBoard): 关联的看板。
         issues (List[JiraIssue]): 关联的问题列表。
     """
-    __tablename__ = 'jira_sprints'
+
+    __tablename__ = "jira_sprints"
     id = Column(Integer, primary_key=True)
-    board_id = Column(Integer, ForeignKey('jira_boards.id'), nullable=False)
+    board_id = Column(Integer, ForeignKey("jira_boards.id"), nullable=False)
     name = Column(String(255))
     state = Column(String(20))
     start_date = Column(DateTime(timezone=True))
     end_date = Column(DateTime(timezone=True))
     complete_date = Column(DateTime(timezone=True))
-    board = relationship('JiraBoard', back_populates='sprints')
-    issues = relationship('JiraIssue', back_populates='sprint')
+    board = relationship("JiraBoard", back_populates="sprints")
+    issues = relationship("JiraIssue", back_populates="sprint")
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JiraSprint(id={self.id}, name='{self.name}', state='{self.state}')>"
+
 
 class JiraIssue(Base):
     """Jira Issue (问题/任务) 详情模型 (jira_issues)。
@@ -150,11 +169,12 @@ class JiraIssue(Base):
         labels (list): 标签列表 (JSON)。
         fix_versions (list): 修复版本列表 (JSON)。
     """
-    __tablename__ = 'jira_issues'
+
+    __tablename__ = "jira_issues"
     id = Column(Integer, primary_key=True)
     key = Column(String(50), unique=True, nullable=False)
-    project_id = Column(Integer, ForeignKey('jira_projects.id'), nullable=False)
-    sprint_id = Column(Integer, ForeignKey('jira_sprints.id'), nullable=True)
+    project_id = Column(Integer, ForeignKey("jira_projects.id"), nullable=False)
+    sprint_id = Column(Integer, ForeignKey("jira_sprints.id"), nullable=True)
     summary = Column(String(500))
     description = Column(Text)
     status = Column(String(50))
@@ -163,10 +183,10 @@ class JiraIssue(Base):
     assignee_name = Column(String(255))
     reporter_name = Column(String(255))
     creator_name = Column(String(255))
-    assignee_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
-    reporter_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
-    creator_user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
-    user_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'), nullable=True)
+    assignee_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
+    reporter_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
+    creator_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
     created_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True))
     resolved_at = Column(DateTime(timezone=True))
@@ -180,23 +200,24 @@ class JiraIssue(Base):
     remaining_estimate = Column(BigInteger)
     labels = Column(JSON)
     fix_versions = Column(JSON)
-    project = relationship('JiraProject', back_populates='issues')
-    history = relationship('JiraIssueHistory', back_populates='issue', cascade='all, delete-orphan')
-    sprint = relationship('JiraSprint', back_populates='issues')
+    project = relationship("JiraProject", back_populates="issues")
+    history = relationship("JiraIssueHistory", back_populates="issue", cascade="all, delete-orphan")
+    sprint = relationship("JiraSprint", back_populates="issues")
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JiraIssue(key='{self.key}', summary='{self.summary[:20]}...')>"
+
 
 class JiraIssueHistory(Base):
     """Jira 问题变更历史表 (jira_issue_histories)。
@@ -209,27 +230,28 @@ class JiraIssueHistory(Base):
         from_string (str): 变更前的值。
         to_string (str): 变更后的值。
     """
-    __tablename__ = 'jira_issue_histories'
+
+    __tablename__ = "jira_issue_histories"
     id = Column(String(50), primary_key=True)
-    issue_id = Column(Integer, ForeignKey('jira_issues.id'), nullable=False)
+    issue_id = Column(Integer, ForeignKey("jira_issues.id"), nullable=False)
     author_name = Column(String(100))
     created_at = Column(DateTime(timezone=True))
     field = Column(String(100))
     from_string = Column(Text)
     to_string = Column(Text)
-    issue = relationship('JiraIssue', back_populates='history')
+    issue = relationship("JiraIssue", back_populates="history")
     raw_data = Column(JSON)
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JiraIssueHistory(issue_id={self.issue_id}, field='{self.field}')>"

@@ -6,6 +6,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+
 class TestPyAirbyteGitLabIntegration(unittest.TestCase):
     """测试 PyAirbyte 数据适配逻辑。"""
 
@@ -18,15 +19,15 @@ class TestPyAirbyteGitLabIntegration(unittest.TestCase):
         # 1. 模拟 Airbyte 返回的记录
         mock_source = MagicMock()
         mock_get_source.return_value = mock_source
-        
+
         mock_record = MagicMock()
         mock_record.to_dict.return_value = {
             "id": "sha-123",
             "project_id": 456,
             "title": "Test Commit",
-            "author_name": "Antigravity"
+            "author_name": "Antigravity",
         }
-        
+
         mock_read_result = MagicMock()
         # 兼容 dict 风格访问
         mock_read_result.__getitem__.side_effect = lambda key: [mock_record] if key == "commits" else []
@@ -41,6 +42,7 @@ class TestPyAirbyteGitLabIntegration(unittest.TestCase):
         self.assertEqual(records[0]["id"], "sha-123")
         self.assertEqual(records[0]["author_name"], "Antigravity")
         mock_source.select_streams.assert_called_with(["commits"])
+
 
 if __name__ == "__main__":
     unittest.main()

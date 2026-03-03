@@ -5,7 +5,9 @@ Admin Page Object
 """
 
 from playwright.sync_api import Page, expect
+
 from tests.e2e.service_desk.pages.base_page import BasePage
+
 
 class AdminPage(BasePage):
     """管理后台 Page Object"""
@@ -30,17 +32,17 @@ class AdminPage(BasePage):
     def click_sidebar_link(self, label: str):
         """增强版点击侧边栏链接，自动处理分组展开"""
         self.wait_for_sidebar()
-        
+
         # 定位包含该链接的分组
         group = self.page.locator(".nav-group").filter(has=self.page.locator(f".nav-link:has-text('{label}')"))
-        
+
         # 检查是否已展开（expanded 类）
         is_expanded = group.evaluate("(el) => el.classList.contains('expanded')")
         if not is_expanded:
             group.locator(".js-nav-group-title").click()
             # 等待展开动画
             self.page.wait_for_timeout(300)
-        
+
         link = group.locator(f".nav-link:has-text('{label}')")
         link.click()
 
@@ -96,7 +98,7 @@ class AdminPage(BasePage):
     def navigate_to_okrs(self):
         """导航到 OKR 治理中心 (使用 Hash 路由)"""
         self.page.goto(f"{self.base_url}/static/index.html#admin_okrs")
-        self.page.reload() # 确保触发 hashchange 如果已经在页面上
+        self.page.reload()  # 确保触发 hashchange 如果已经在页面上
         expect(self.page.locator("#adm-okrs-view")).to_be_visible()
         # 等待数据加载完成
         expect(self.page.locator("#sys-loading-overlay")).to_be_hidden()

@@ -36,8 +36,8 @@ export const QAService = {
     /**
      * Execute a test case
      */
-    async executeTest(projectId, iid, result) {
-        return await Api.post(`/projects/${projectId}/test-cases/${iid}/execute?result=${result}`);
+    async executeTest(projectId, iid, result, report = null) {
+        return await Api.post(`/projects/${projectId}/test-cases/${iid}/execute?result=${result}`, report || {});
     },
 
     /**

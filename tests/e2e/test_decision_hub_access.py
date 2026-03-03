@@ -1,11 +1,12 @@
-
-import unittest
 import time
+import unittest
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
 
 class TestDecisionHubAccess(unittest.TestCase):
     """
@@ -16,19 +17,20 @@ class TestDecisionHubAccess(unittest.TestCase):
         # Configure Chrome options
         options = webdriver.ChromeOptions()
         # options.add_argument('--headless')  # Run in headless mode for CI/CD
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--ignore-certificate-errors')
-        options.add_argument('--ignore-ssl-errors')
-        
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--ignore-certificate-errors")
+        options.add_argument("--ignore-ssl-errors")
+
         # Initialize WebDriver
         try:
             self.driver = webdriver.Chrome(options=options)
         except Exception:
-            from webdriver_manager.chrome import ChromeDriverManager
             from selenium.webdriver.chrome.service import Service
+            from webdriver_manager.chrome import ChromeDriverManager
+
             self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-            
+
         self.driver.maximize_window()
         self.base_url = "http://127.0.0.1:8000"
 
@@ -73,11 +75,11 @@ class TestDecisionHubAccess(unittest.TestCase):
                     document.body.setAttribute('data-login-error', err.toString());
                 });
             """)
-            
+
             # Reset login_btn variable for safety if needed later, though we are bypassing click
-            login_btn = None 
-            time.sleep(2.0) # Wait for fetch and redirect
-            
+            login_btn = None
+            time.sleep(2.0)  # Wait for fetch and redirect
+
         except Exception as e:
             driver.save_screenshot("login_failure.png")
             self.fail(f"Login interaction failed: {str(e)}")
@@ -109,23 +111,23 @@ class TestDecisionHubAccess(unittest.TestCase):
         try:
             # Wait for the view to be visible
             wait.until(EC.visibility_of_element_located((By.ID, "decisionHubView")))
-            
+
             iframe = driver.find_element(By.ID, "decisionHubFrame")
             src = iframe.get_attribute("src")
             print(f"Iframe Source: {src}")
-            
+
             self.assertIn("localhost:8501", src, "Iframe source should point to Streamlit port 8501")
 
-            # Note: We cannot easily check if the content INSIDE the iframe loaded successfully 
-            # if it's a "Connection Refused" page because that is a browser error page, 
+            # Note: We cannot easily check if the content INSIDE the iframe loaded successfully
+            # if it's a "Connection Refused" page because that is a browser error page,
             # not a DOM element we can easily inspect without switching context.
             # But we can try to switch context.
-            
+
             driver.switch_to.frame(iframe)
             # If connection is refused, usually the body is empty or contains specific chrome error text.
             # However, catching "Connection Refused" via Selenium is tricky directly.
             # We assume if we can find a known Streamlit element, it passed.
-            
+
             # Try to find a Streamlit specific element (generic)
             # This might fail immediately if the page didn't load.
             try:
@@ -144,6 +146,7 @@ class TestDecisionHubAccess(unittest.TestCase):
     def tearDown(self):
         if self.driver:
             self.driver.quit()
+
 
 if __name__ == "__main__":
     unittest.main()

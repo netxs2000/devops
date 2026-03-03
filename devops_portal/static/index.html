@@ -98,7 +98,7 @@
             <header id="sys-header">
                 <div class="page-info">
                     <div class="u-align-center u-gap-15">
-                        <h1>Test Repository</h1>
+                        <h1 id="page-main-title">Test Repository</h1>
                         <span class="sys-tag">Beta</span>
                         <span id="data-scope-badge" class="scope-badge u-hide">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -111,32 +111,34 @@
                     </div>
                     <p id="projectTitle" class="u-text-dim">Select a project to view test execution insights</p>
                 </div>
-                <div class="u-align-center u-gap-15">
-                    <div class="input-wrapper">
-                        <input type="number" id="projectId" placeholder="GitLab Project ID" value="">
-                    </div>
-                    <button class="btn-primary js-btn-load-repo">Load Repository</button>
-                    <button class="btn-primary js-btn-create-req">
-                        + Req
-                    </button>
-                    <button class="btn-ghost js-btn-open-create-modal">
-                        + Case
-                    </button>
-                    <button class="btn-success btn-icon-text js-btn-batch-pass">
+                <div id="qa-repo-ops-toolbar" class="u-align-center u-gap-15">
+                    <button class="btn-primary js-btn-open-create-modal">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <polyline points="20 6 9 17 4 12"></polyline>
+                            stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
                         </svg>
-                        Batch Pass
+                        New Case
                     </button>
-                    <div class="header-actions">
-                        <button class="btn-ghost btn-icon-text js-btn-open-req-modal">
+
+                    <div class="header-actions u-gap-10">
+                        <button class="btn-ghost btn-icon-text js-btn-open-import-modal">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
                             </svg>
-                            Add Requirement
+                            Import
+                        </button>
+                        <button class="btn-ghost btn-icon-text js-btn-export-report">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Export
                         </button>
                         <button class="btn-ghost btn-icon-text js-btn-sync-req">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -148,49 +150,6 @@
                             Sync
                         </button>
                     </div>
-                    <button class="btn-ghost btn-icon-text js-btn-dedup-scan">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path
-                                d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
-                            </path>
-                        </svg>
-                        Clean Up
-                    </button>
-                    <button class="btn-ghost btn-icon-text js-btn-export-rtm">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                        </svg>
-                        Export RTM
-                    </button>
-                    <button class="btn-primary btn-icon-text js-btn-browse-assets">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
-                            </path>
-                        </svg>
-                        Browse Assets
-                    </button>
-                    <button class="btn-warning btn-icon-text js-btn-open-import-modal">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                        Bulk Import
-                    </button>
-                    <button class="btn-ghost btn-icon-text js-btn-export-report">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        Export
-                    </button>
                 </div>
             </header>
 
@@ -237,15 +196,53 @@
                     </div>
                 </div>
 
-                <div class="test-list" id="qa-test-results">
-                    <div class="empty-state">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)"
-                            stroke-width="1.5" class="u-mb-20">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                        </svg>
-                        <p>Enter a Project ID to explore structured test suites.</p>
+                <!-- Filter Toolbar for Test Cases -->
+                <div id="qa-filter-toolbar" class="u-flex u-flex-wrap u-gap-16 u-align-center u-mb-16 g-glass-panel u-p-16 u-hide">
+                    <div class="search-input-group" style="width: 280px;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="qa-tc-search" class="form-control" placeholder="搜索 ID、标题...">
+                    </div>
+
+                    <div class="u-border-l-subtle u-h-24"></div>
+
+                    <select id="qa-tc-filter-status" class="form-control" style="width: 140px;">
+                        <option value="all">所有状态</option>
+                        <option value="passed">🟢 Passed</option>
+                        <option value="failed">🔴 Failed</option>
+                        <option value="pending">⚪ Pending</option>
+                        <option value="blocked">🟠 Blocked</option>
+                    </select>
+
+                    <select id="qa-tc-filter-priority" class="form-control" style="width: 130px;">
+                        <option value="all">所有优先级</option>
+                        <option value="P0">🔴 P0 紧急</option>
+                        <option value="P1">🟠 P1 高</option>
+                        <option value="P2">🔵 P2 中</option>
+                        <option value="P3">⚪ P3 低</option>
+                    </select>
+
+                    <div class="u-ml-auto u-text-dim u-text-small">
+                        显示 <strong id="qa-tc-count-display">0</strong> / <strong id="qa-tc-total-display">0</strong> 条用例
+                    </div>
+                </div>
+
+                <!-- Dual-Pane Split View for Test Cases -->
+                <div id="qa-test-cases-dual-pane" class="u-flex u-h-auto-fill u-overflow-hidden u-mt-24">
+                    <div class="test-list u-flex-1" id="qa-test-results" style="margin-top: 0;">
+                        <div class="empty-state">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)"
+                                stroke-width="1.5" class="u-mb-20">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <p>Enter a Project ID to explore structured test suites.</p>
+                        </div>
+                    </div>
+
+                    <div id="qa-test-case-detail-pane" class="u-hide"
+                        style="width: 45%; border-left: 1px solid var(--sys-border-subtle); background: var(--sys-bg-sidebar); overflow-y: auto; padding: 0;">
+                        <!-- detail component injected here -->
                     </div>
                 </div>
             </div> <!-- End of qa-dashboard-view -->

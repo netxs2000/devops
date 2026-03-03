@@ -1,13 +1,15 @@
 """TODO: Add module description."""
-from sqlalchemy import Column, Integer, String, DateTime, JSON, ForeignKey, BigInteger, Float, and_
-from sqlalchemy.orm import relationship
+
+from sqlalchemy import JSON, BigInteger, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
-from datetime import datetime, timezone
-from devops_collector.models.base_models import Base, User, Product
+from sqlalchemy.orm import relationship
+
+from devops_collector.models.base_models import Base
+
 
 class JFrogArtifact(Base):
     """JFrog 制品模型 (jfrog_artifacts)。
-    
+
     存储从 Artifactory 采集的制品元数据，支持 SLSA 溯源。
 
     Attributes:
@@ -36,7 +38,8 @@ class JFrogArtifact(Base):
         created_by (User): 关联的用户对象。
         product (Product): 关联的产品对象。
     """
-    __tablename__ = 'jfrog_artifacts'
+
+    __tablename__ = "jfrog_artifacts"
     id = Column(Integer, primary_key=True, autoincrement=True)
     repo = Column(String(100), nullable=False)
     path = Column(String(500), nullable=False)
@@ -60,11 +63,13 @@ class JFrogArtifact(Base):
     build_ended_at = Column(DateTime(timezone=True))
     promotion_status = Column(String(50))
     properties = Column(JSON)
-    created_by_id = Column(UUID(as_uuid=True), ForeignKey('mdm_identities.global_user_id'))
+    created_by_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"))
     created_by_name = Column(String(100))
-    product_id = Column(String(100), ForeignKey('mdm_product.product_id'))
-    created_by = relationship('User', primaryjoin='and_(User.global_user_id==JFrogArtifact.created_by_id, User.is_current==True)')
-    product = relationship('Product')
+    product_id = Column(String(100), ForeignKey("mdm_product.product_id"))
+    created_by = relationship(
+        "User", primaryjoin="and_(User.global_user_id==JFrogArtifact.created_by_id, User.is_current==True)"
+    )
+    product = relationship("Product")
     created_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True))
     raw_data = Column(JSON)
@@ -72,16 +77,17 @@ class JFrogArtifact(Base):
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JFrogArtifact(name='{self.name}', version='{self.version}')>"
+
 
 class JFrogScan(Base):
     """JFrog Xray 扫描结果模型。
@@ -98,9 +104,10 @@ class JFrogScan(Base):
         scan_time (datetime): 扫描时间。
         artifact (JFrogArtifact): 关联的制品。
     """
-    __tablename__ = 'jfrog_scans'
+
+    __tablename__ = "jfrog_scans"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    artifact_id = Column(Integer, ForeignKey('jfrog_artifacts.id'))
+    artifact_id = Column(Integer, ForeignKey("jfrog_artifacts.id"))
     critical_count = Column(Integer, default=0)
     high_count = Column(Integer, default=0)
     medium_count = Column(Integer, default=0)
@@ -109,21 +116,22 @@ class JFrogScan(Base):
     is_compliant = Column(Integer)
     scan_time = Column(DateTime(timezone=True))
     raw_data = Column(JSON)
-    artifact = relationship('JFrogArtifact')
+    artifact = relationship("JFrogArtifact")
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
-        return f'<JFrogScan(artifact_id={self.artifact_id}, compliant={self.is_compliant})>'
+        Raises:
+            TODO
+        """'''
+        return f"<JFrogScan(artifact_id={self.artifact_id}, compliant={self.is_compliant})>"
+
 
 class JFrogVulnerabilityDetail(Base):
     """漏洞详情明细表。
@@ -138,30 +146,32 @@ class JFrogVulnerabilityDetail(Base):
         fixed_version (str): 修复版本。
         description (str): 漏洞描述。
     """
-    __tablename__ = 'jfrog_vulnerability_details'
+
+    __tablename__ = "jfrog_vulnerability_details"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    artifact_id = Column(Integer, ForeignKey('jfrog_artifacts.id'))
+    artifact_id = Column(Integer, ForeignKey("jfrog_artifacts.id"))
     cve_id = Column(String(50), index=True)
     severity = Column(String(20))
     cvss_score = Column(Float)
     component = Column(String(200))
     fixed_version = Column(String(100))
     description = Column(String)
-    artifact = relationship('JFrogArtifact')
+    artifact = relationship("JFrogArtifact")
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JFrogVulnerabilityDetail(cve='{self.cve_id}', severity='{self.severity}')>"
+
 
 class JFrogDependency(Base):
     """制品依赖树模型 (SBoM)。
@@ -174,25 +184,26 @@ class JFrogDependency(Base):
         package_type (str): 包类型。
         scope (str): 依赖范围 (compile, runtime 等)。
     """
-    __tablename__ = 'jfrog_dependencies'
+
+    __tablename__ = "jfrog_dependencies"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    artifact_id = Column(Integer, ForeignKey('jfrog_artifacts.id'))
+    artifact_id = Column(Integer, ForeignKey("jfrog_artifacts.id"))
     name = Column(String(200), nullable=False)
     version = Column(String(100))
     package_type = Column(String(50))
     scope = Column(String(50))
-    artifact = relationship('JFrogArtifact')
+    artifact = relationship("JFrogArtifact")
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         return f"<JFrogDependency(name='{self.name}', version='{self.version}')>"

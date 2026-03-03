@@ -10,9 +10,8 @@ Service Desk E2E Tests - API 端点验证测试
 用于快速验证后端接口正常工作。
 """
 
-import pytest
 import httpx
-from typing import Generator
+import pytest
 
 
 class TestServiceDeskAPIEndpoints:
@@ -32,7 +31,7 @@ class TestServiceDeskAPIEndpoints:
             data={
                 "username": test_user_credentials["email"],
                 "password": test_user_credentials["password"],
-            }
+            },
         )
         if response.status_code == 200:
             return response.json().get("access_token", "")
@@ -157,14 +156,12 @@ class TestServiceDeskAPIEndpoints:
         期望：返回 400 Bad Request
         """
         response = self.client.patch(
-            "/service-desk/tickets/1/status",
-            params={"new_status": "invalid_status"},
-            headers=auth_headers
+            "/service-desk/tickets/1/status", params={"new_status": "invalid_status"}, headers=auth_headers
         )
         # 可能返回 400 或 422
         assert response.status_code in [400, 422, 404]
 
     def teardown_method(self, method):
         """测试后清理"""
-        if hasattr(self, 'client'):
+        if hasattr(self, "client"):
             self.client.close()

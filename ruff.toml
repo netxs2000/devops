@@ -1,0 +1,67 @@
+# Ruff 配置文件 (实验性 - feat/qa-gitlab-style-ui)
+# 目标：复刻 Flake8, Pylint 并整合 isort 功能
+
+# 基础设置
+line-length = 120
+target-version = "py312"
+exclude = [
+    ".git",
+    ".ruff_cache",
+    ".vscode",
+    "build",
+    "dist",
+    "archived",
+    ".agent",
+]
+
+[lint]
+# 开启的规则集
+# E, W: pycodestyle
+# F: Pyflakes
+# I: isort (Import 排序)
+# UP: pyupgrade (语法升级)
+# PL: Pylint (逻辑检查)
+# B: flake8-bugbear (逻辑漏洞)
+# ERA: eradicate (清理僵尸代码)
+select = ["E", "W", "F", "I", "UP", "PL", "B", "ERA"]
+
+# 忽略的特定规则 (与其主要工具逻辑对齐)
+ignore = [
+    "E203",    # 与 Black 冲突的空格
+    "PLR0913", # 参数过多
+    "PLR0914", # 变量过多
+    "PLR2004", # 魔术值比较
+    "B008",    # FastAPI Depends 中常见的函数调用默认值
+    "PLC0415", # 允许在函数内 import (解决循环引用或插件按需加载)
+    "E402",    # 允许 import 在代码之后 (某些脚本初始化逻辑需要)
+]
+
+# 允许自动修复的规则
+fixable = ["ALL"]
+
+[lint.per-file-ignores]
+# 保护插件注册逻辑：__init__.py 中的 unused imports 通常是有意为之的（用于 API 暴露或插件注册）
+"__init__.py" = ["F401"]
+
+[lint.isort]
+# isort 专属配置
+# 强制将本地模块识别为本地库，确保排序正确
+known-first-party = ["devops_collector", "devops_portal"]
+# 分组之间的空行
+lines-after-imports = 2
+# 与现有格式化器对齐
+force-single-line = false
+
+[lint.pylint]
+# 复刻 .pylintrc 中的部分严格限制
+max-args = 8
+max-returns = 6
+max-branches = 15
+max-statements = 60
+
+[format]
+# 格式化器设置，复刻 Black 行为
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

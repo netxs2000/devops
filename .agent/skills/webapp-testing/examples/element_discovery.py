@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 
+
 # 示例：发现页面上的按钮和其他元素
 
 with sync_playwright() as p:

@@ -7,11 +7,12 @@
 使用方式:
     from devops_collector.plugins import gitlab, sonarqube
     from devops_collector.core import PluginRegistry
-    
+
     # 获取已注册的客户端
     GitLabClient = PluginRegistry.get_client('gitlab')
     SonarQubeClient = PluginRegistry.get_client('sonarqube')
 """
-__version__ = '2.0.0'
-__author__ = 'DevOps Team'
+
+__version__ = "2.0.0"
+__author__ = "DevOps Team"
 from . import core

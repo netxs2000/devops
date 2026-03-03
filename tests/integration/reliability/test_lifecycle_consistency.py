@@ -4,7 +4,7 @@ Data Lifecycle Consistency Test
 
 Target:
 Verify that the GitLabWorker correctly handles UPDATES to existing data.
-The system should not only insert new records but also reflect changes 
+The system should not only insert new records but also reflect changes
 (e.g., status changes, description updates) from the source system.
 
 Scenarios:
@@ -19,10 +19,10 @@ Scenarios:
     - Update message in source (force push scenario or amend).
     - Re-sync.
     - Assert: DB record message updates.
-    
-    *Note*: GitLab API implies commits are immutable by ID, but sometimes 
-    metadata attached (like pipeline status on a commit) changes. 
-    However, for standard Commits, the ID changes if content changes. 
+
+    *Note*: GitLab API implies commits are immutable by ID, but sometimes
+    metadata attached (like pipeline status on a commit) changes.
+    However, for standard Commits, the ID changes if content changes.
     So we focus on **Mutable Entities** like MRs and Issues.
 
 3.  **Issue Scope Change**:
@@ -31,23 +31,29 @@ Scenarios:
     - Re-sync.
     - Assert: DB Labels update.
 """
-import unittest
+
 import logging
-from unittest.mock import MagicMock
-import sys
 import os
-from datetime import datetime
+import sys
+import unittest
+from unittest.mock import MagicMock
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
+
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 from devops_collector.models.base_models import Base
-from devops_collector.plugins.gitlab.models import GitLabProject as Project, GitLabMergeRequest as MergeRequest, GitLabIssue as Issue
-from devops_collector.plugins.gitlab.worker import GitLabWorker
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+from devops_collector.plugins.gitlab.models import GitLabMergeRequest as MergeRequest
+from devops_collector.plugins.gitlab.worker import GitLabWorker
+
+
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger('TestLifecycle')
+logger = logging.getLogger("TestLifecycle")
+
 
 class TestLifecycleConsistency(unittest.TestCase):
     '''"""TODO: Add class description."""'''
@@ -55,21 +61,26 @@ class TestLifecycleConsistency(unittest.TestCase):
     def setUp(self):
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
-        self.engine = create_engine('sqlite:///:memory:')
+        Raises:
+            TODO
+        """'''
+        self.engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
         self.session = self.Session()
         self.client = MagicMock(spec=GitLabClient)
-        self.client.get_project.return_value = {'id': 100, 'name': 'Lifecycle Project', 'namespace': {'id': 10, 'name': 'G'}, 'created_at': '2024-01-01T00:00:00Z'}
+        self.client.get_project.return_value = {
+            "id": 100,
+            "name": "Lifecycle Project",
+            "namespace": {"id": 10, "name": "G"},
+            "created_at": "2024-01-01T00:00:00Z",
+        }
         self.client.get_project_commits.return_value = []
         self.client.get_project_pipelines.return_value = []
         self.worker = GitLabWorker(self.session, self.client)
@@ -77,37 +88,60 @@ Raises:
     def tearDown(self):
         '''"""TODO: Add description.
 
-Args:
-    self: TODO
+        Args:
+            self: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
+        Raises:
+            TODO
+        """'''
         self.session.close()
 
     def test_merge_request_update_logic(self):
         """Verify MR status updates are persisted."""
-        logger.info('>>> Testing Merge Request Update Logic')
-        mr_v1 = {'id': 500, 'iid': 1, 'project_id': 100, 'title': 'WIP Feature', 'description': 'Draft', 'state': 'opened', 'created_at': '2024-01-01T10:00:00Z', 'updated_at': '2024-01-01T10:00:00Z', 'author': {'id': 1, 'username': 'dev'}, 'target_branch': 'main', 'source_branch': 'feat', 'sha': 'abc', 'merge_commit_sha': None}
+        logger.info(">>> Testing Merge Request Update Logic")
+        mr_v1 = {
+            "id": 500,
+            "iid": 1,
+            "project_id": 100,
+            "title": "WIP Feature",
+            "description": "Draft",
+            "state": "opened",
+            "created_at": "2024-01-01T10:00:00Z",
+            "updated_at": "2024-01-01T10:00:00Z",
+            "author": {"id": 1, "username": "dev"},
+            "target_branch": "main",
+            "source_branch": "feat",
+            "sha": "abc",
+            "merge_commit_sha": None,
+        }
         self.client.get_project_merge_requests.return_value = [mr_v1]
-        self.worker.process_task({'project_id': 100})
+        self.worker.process_task({"project_id": 100})
         mr_db_1 = self.session.query(MergeRequest).get(500)
-        self.assertEqual(mr_db_1.state, 'opened')
-        self.assertEqual(mr_db_1.title, 'WIP Feature')
-        logger.info('--- Source Data Updated (Opened -> Merged) ---')
+        self.assertEqual(mr_db_1.state, "opened")
+        self.assertEqual(mr_db_1.title, "WIP Feature")
+        logger.info("--- Source Data Updated (Opened -> Merged) ---")
         mr_v2 = mr_v1.copy()
-        mr_v2.update({'title': 'Completed Feature', 'state': 'merged', 'updated_at': '2024-01-02T10:00:00Z', 'merge_commit_sha': 'def123'})
+        mr_v2.update(
+            {
+                "title": "Completed Feature",
+                "state": "merged",
+                "updated_at": "2024-01-02T10:00:00Z",
+                "merge_commit_sha": "def123",
+            }
+        )
         self.client.get_project_merge_requests.return_value = [mr_v2]
-        self.worker.process_task({'project_id': 100})
+        self.worker.process_task({"project_id": 100})
         self.session.expire_all()
         mr_db_2 = self.session.query(MergeRequest).get(500)
-        logger.info(f'DB State after update: {mr_db_2.state}')
-        if mr_db_2.state != 'merged':
+        logger.info(f"DB State after update: {mr_db_2.state}")
+        if mr_db_2.state != "merged":
             logger.warning("!! TEST FAILED: MR state did not update to 'merged' !!")
-        self.assertEqual(mr_db_2.state, 'merged', 'MR State should update to merged')
-        self.assertEqual(mr_db_2.title, 'Completed Feature', 'MR Title should update')
-if __name__ == '__main__':
+        self.assertEqual(mr_db_2.state, "merged", "MR State should update to merged")
+        self.assertEqual(mr_db_2.title, "Completed Feature", "MR Title should update")
+
+
+if __name__ == "__main__":
     unittest.main()

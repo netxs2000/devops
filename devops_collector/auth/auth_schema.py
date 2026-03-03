@@ -2,13 +2,15 @@
 
 采用 Pydantic V2 定义全链路一致的请求与响应格式。
 """
-from pydantic import BaseModel, EmailStr, ConfigDict
-from typing import Optional, List
+
 from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, EmailStr
+
 
 class AuthRegisterRequest(BaseModel):
     """用户注册请求数据。
-    
+
     Attributes:
         email: 用户注册邮箱。
         password: 登录密码。
@@ -16,67 +18,79 @@ class AuthRegisterRequest(BaseModel):
         employee_id: 员工工号（可选）。
         department_code: 所属部门编码（可选）。
     """
+
     email: EmailStr
     password: str
     full_name: str
-    employee_id: Optional[str] = None
-    department_code: Optional[str] = None
+    employee_id: str | None = None
+    department_code: str | None = None
+
 
 class AuthLoginRequest(BaseModel):
     """用户登录请求数据。
-    
+
     Attributes:
         email: 用户邮箱。
         password: 登录密码。
     """
+
     email: str
     password: str
 
+
 class AuthToken(BaseModel):
     """认证令牌响应数据。
-    
+
     Attributes:
         access_token: JWT 访问令牌。
         token_type: 令牌类型 (通常为 bearer)。
     """
+
     access_token: str
     token_type: str
 
+
 class AuthTokenData(BaseModel):
     """令牌载荷数据。
-    
+
     Attributes:
         username: 从令牌中提取的用户名（通常是邮箱）。
     """
-    username: Optional[str] = None
+
+    username: str | None = None
+
 
 class AuthLocationInfo(BaseModel):
     """地域信息对齐模型。
-    
+
     Attributes:
         location_id: 地点 ID。
         location_name: 地点名称。
         region: 所属大区（可选）。
     """
+
     location_id: str
     location_name: str
-    region: Optional[str] = None
+    region: str | None = None
     model_config = ConfigDict(from_attributes=True)
+
 
 class AuthDepartmentInfo(BaseModel):
     """部门信息对齐模型。
-    
+
     Attributes:
         org_id: 组织 ID。
         org_name: 组织名称。
     """
+
     org_id: str
     org_name: str
     model_config = ConfigDict(from_attributes=True)
 
+
 class AuthUserResponse(BaseModel):
     """用户核心信息响应模型。
-    
+
     Attributes:
         global_user_id: 全局唯一用户 ID。
         email: 用户主邮箱。
@@ -87,14 +101,15 @@ class AuthUserResponse(BaseModel):
         department: 部门信息。
         gitlab_connected: 是否已绑定 GitLab。
     """
+
     global_user_id: UUID
     email: str
     full_name: str
-    employee_id: Optional[str]
+    employee_id: str | None
     is_active: bool
-    location: Optional[AuthLocationInfo] = None
-    department: Optional[AuthDepartmentInfo] = None
-    roles: List[dict] = []
+    location: AuthLocationInfo | None = None
+    department: AuthDepartmentInfo | None = None
+    roles: list[dict] = []
     gitlab_connected: bool = False
 
     model_config = ConfigDict(from_attributes=True)

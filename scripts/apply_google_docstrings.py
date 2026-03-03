@@ -1,6 +1,6 @@
 import ast
-import os
 from pathlib import Path
+
 
 MODULE_PLACEHOLDER = """TODO: Add module description."""
 PLACEHOLDER = '''"""TODO: Add description.
@@ -15,10 +15,12 @@ Raises:
     TODO
 """'''
 
+
 def format_args(args):
     if not args:
-        return 'TODO'
-    return '\n    '.join([f"{a}: TODO" for a in args])
+        return "TODO"
+    return "\n    ".join([f"{a}: TODO" for a in args])
+
 
 class DocstringInserter(ast.NodeTransformer):
     def visit_FunctionDef(self, node):
@@ -41,9 +43,10 @@ class DocstringInserter(ast.NodeTransformer):
             node.body.insert(0, doc_node)
         return node
 
+
 def process_file(file_path: Path):
     try:
-        source = file_path.read_text(encoding='utf-8')
+        source = file_path.read_text(encoding="utf-8")
         tree = ast.parse(source)
         # Insert module docstring if missing
         if not (tree.body and isinstance(tree.body[0], ast.Expr) and isinstance(tree.body[0].value, ast.Constant)):
@@ -53,19 +56,21 @@ def process_file(file_path: Path):
         new_tree = inserter.visit(tree)
         ast.fix_missing_locations(new_tree)
         new_source = ast.unparse(new_tree)
-        file_path.write_text(new_source, encoding='utf-8')
+        file_path.write_text(new_source, encoding="utf-8")
         print(f"Processed {file_path}")
     except Exception as e:
         print(f"Failed {file_path}: {e}")
 
+
 def main():
     root = Path(__file__).parents[2]  # project root (devops)
-    for py_file in root.rglob('*.py'):
-        if any(part.startswith('.') for part in py_file.parts):
+    for py_file in root.rglob("*.py"):
+        if any(part.startswith(".") for part in py_file.parts):
             continue
-        if py_file.name == 'apply_google_docstrings.py':
+        if py_file.name == "apply_google_docstrings.py":
             continue
         process_file(py_file)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
