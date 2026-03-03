@@ -43,6 +43,7 @@ def diagnose_db():
         print(f"✗ 数据库检查失败: {e}")
         return False
 
+
 if __name__ == "__main__":
     success = diagnose_db()
     sys.exit(0 if success else 1)

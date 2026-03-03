@@ -2,6 +2,7 @@
 模型层冒烟测试脚本
 用于验证重构后的 SQLAlchemy 模型元数据、关系映射和表结构一致性。
 """
+
 import os
 import sys
 
@@ -9,7 +10,7 @@ from sqlalchemy import create_engine
 
 
 # 添加项目根目录到路径
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from devops_collector.core.plugin_loader import PluginLoader
 from devops_collector.models.base_models import Base
@@ -39,7 +40,7 @@ def run_smoke_test():
     # 3. 尝试在内存 SQLite 中创建所有表
     print("[3/3] 正在尝试创建表结构 (验证 ORM 关系一致性)...")
     try:
-        engine = create_engine('sqlite:///:memory:')
+        engine = create_engine("sqlite:///:memory:")
         Base.metadata.create_all(engine)
         print("表结构创建成功！所有关系映射校验通过。")
 
@@ -52,11 +53,13 @@ def run_smoke_test():
         print(f"\n[ERROR] 表结构创建失败或关系冲突: {e}")
         # 这里有助于调试具体的错误信息
         import traceback
+
         traceback.print_exc()
         return False
 
     print("\n结论: 模型层冒烟测试成功！重构没有破坏元数据完整性。")
     return True
+
 
 if __name__ == "__main__":
     success = run_smoke_test()

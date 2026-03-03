@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -9,13 +8,16 @@ from devops_portal.schemas_pulse import PulseStatus, PulseSubmission
 
 router = APIRouter(prefix="/devex-pulse", tags=["DevEx Pulse"])
 
+
 def get_devex_pulse_service(db: Session = Depends(get_auth_db)) -> DevexPulseService:
     """获取心情指数服务实例。"""
     return DevexPulseService(db)
 
+
 @router.post("/submit", response_model=PulseStatus)
-async def submit_pulse_feedback(submission: PulseSubmission,
-                                service: DevexPulseService = Depends(get_devex_pulse_service)):
+async def submit_pulse_feedback(
+    submission: PulseSubmission, service: DevexPulseService = Depends(get_devex_pulse_service)
+):
     """提交每日心情指数反馈。
 
     Args:

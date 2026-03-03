@@ -2,6 +2,7 @@
 
 验证 GitLab 登录跳转、回调处理以及自动创建待审批用户等核心逻辑。
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,6 +26,7 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 @pytest.fixture(name="db_session")
 def fixture_db_session():
     """创建干净的数据库会话。"""
@@ -36,9 +38,11 @@ def fixture_db_session():
         db.close()
         Base.metadata.drop_all(bind=engine)
 
+
 @pytest.fixture(name="client")
 def fixture_client(db_session):
     """创建测试客户端并注入数据库会话。"""
+
     def override_get_auth_db():
         try:
             yield db_session
@@ -50,6 +54,7 @@ def fixture_client(db_session):
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
+
 
 def test_gitlab_login_redirect(client):
     """验证 /auth/gitlab/login 是否正确重定向到 GitLab。"""
@@ -64,12 +69,13 @@ def test_gitlab_login_redirect(client):
 
 def test_callback_compat_redirect(client):
     """验证外部回调 `/callback` 被正确重定向到 `/auth/gitlab/callback` 并保留查询参数。"""
-    response = client.get('/callback?code=abc123&state=login_flow', follow_redirects=False)
+    response = client.get("/callback?code=abc123&state=login_flow", follow_redirects=False)
     assert response.status_code == 307
-    location = response.headers['location']
-    assert location.startswith('/auth/gitlab/callback')
-    assert 'code=abc123' in location
-    assert 'state=login_flow' in location
+    location = response.headers["location"]
+    assert location.startswith("/auth/gitlab/callback")
+    assert "code=abc123" in location
+    assert "state=login_flow" in location
+
 
 @patch("httpx.AsyncClient.post")
 @patch("httpx.AsyncClient.get")
@@ -83,18 +89,14 @@ def test_gitlab_callback_new_user(mock_get, mock_post, client, db_session):
             "access_token": "mock_gitlab_token",
             "token_type": "Bearer",
             "expires_in": 3600,
-            "refresh_token": "mock_refresh_token"
-        }
+            "refresh_token": "mock_refresh_token",
+        },
     )
 
     # 2. 模拟 GitLab 用户信息响应
     mock_get.return_value = MagicMock(
         status_code=200,
-        json=lambda: {
-            "email": "new_oauth_user@tjhq.com",
-            "name": "OAuth Tester",
-            "username": "oauth_tester"
-        }
+        json=lambda: {"email": "new_oauth_user@tjhq.com", "name": "OAuth Tester", "username": "oauth_tester"},
     )
 
     # 执行回调
@@ -110,6 +112,7 @@ def test_gitlab_callback_new_user(mock_get, mock_post, client, db_session):
     assert user.full_name == "OAuth Tester"
     assert user.is_active is False  # 应为待审批状态
 
+
 @patch("httpx.AsyncClient.post")
 @patch("httpx.AsyncClient.get")
 def test_gitlab_callback_existing_user(mock_get, mock_post, client, db_session):
@@ -119,9 +122,9 @@ def test_gitlab_callback_existing_user(mock_get, mock_post, client, db_session):
     # 预先创建一个已激活用户
     from devops_collector.auth import auth_service
     from devops_collector.auth.auth_schema import AuthRegisterRequest
+
     auth_service.auth_create_user(
-        db_session,
-        AuthRegisterRequest(email=email, password="somepassword", full_name="Existing User")
+        db_session, AuthRegisterRequest(email=email, password="somepassword", full_name="Existing User")
     )
     user = db_session.query(User).filter_by(primary_email=email).first()
     user.is_active = True
@@ -140,13 +143,14 @@ def test_gitlab_callback_existing_user(mock_get, mock_post, client, db_session):
     assert "access_token=" in location
     assert "#login_success" in location
 
+
 def test_gitlab_callback_domain_not_allowed(client):
     """测试 GitLab 回调：邮箱域名不允许。"""
-    with patch("httpx.AsyncClient.post") as mock_post, \
-         patch("httpx.AsyncClient.get") as mock_get:
-
+    with patch("httpx.AsyncClient.post") as mock_post, patch("httpx.AsyncClient.get") as mock_get:
         mock_post.return_value = MagicMock(status_code=200, json=lambda: {"access_token": "abc"})
-        mock_get.return_value = MagicMock(status_code=200, json=lambda: {"email": "stranger@hacker.com", "name": "Hacker"})
+        mock_get.return_value = MagicMock(
+            status_code=200, json=lambda: {"email": "stranger@hacker.com", "name": "Hacker"}
+        )
 
         response = client.get("/auth/gitlab/callback?code=mock_code&state=login_flow", follow_redirects=False)
         assert response.status_code == 307

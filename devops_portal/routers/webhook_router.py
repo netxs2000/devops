@@ -15,9 +15,11 @@ from devops_portal.state import PIPELINE_STATUS
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
 
+
 def get_system_gitlab_client() -> GitLabClient:
     """获取使用系统级令牌的 GitLab 客户端。"""
     return GitLabClient(url=settings.gitlab.url, token=settings.gitlab.private_token)
+
 
 async def get_requirement_author(project_id: int, issue_iid: int) -> str | None:
     """获取需求发起人 ID (使用系统令牌)。"""
@@ -33,10 +35,12 @@ async def get_requirement_author(project_id: int, issue_iid: int) -> str | None:
     finally:
         db.close()
 
+
 def get_project_stakeholders_helper(project_id: int) -> list[str]:
     """获取项目干系人 ID 列表 (模拟实现，后续应从 MDM 获取)。"""
     # TODO: 实现从数据库获取项目干系人的逻辑
     return []
+
 
 @router.post("/gitlab")
 async def gitlab_webhook(request: Request):
@@ -48,10 +52,7 @@ async def gitlab_webhook(request: Request):
         if event_type == "Issue Hook":
             object_attr = payload.get("object_attributes", {})
             labels = [l.get("title") for l in payload.get("labels", [])]
-            old_labels = [
-                l.get("title")
-                for l in payload.get("changes", {}).get("labels", {}).get("previous", [])
-            ]
+            old_labels = [l.get("title") for l in payload.get("changes", {}).get("labels", {}).get("previous", [])]
             issue_iid = object_attr.get("iid")
             action = object_attr.get("action")
             p_id = payload.get("project", {}).get("id")
@@ -61,14 +62,14 @@ async def gitlab_webhook(request: Request):
 
             if "type::requirement" in labels:
                 review_state = next(
-                    (l.replace("review-state::", "") for l in labels if l.startswith("review-state::")),
-                    "draft"
+                    (l.replace("review-state::", "") for l in labels if l.startswith("review-state::")), "draft"
                 )
                 old_review_state = next(
-                    (l.replace("review-state::", "") for l in old_labels if l.startswith("review-state::")),
-                    None
+                    (l.replace("review-state::", "") for l in old_labels if l.startswith("review-state::")), None
                 )
-                logger.info(f"Requirement Sync: #{issue_iid} - Action: {action}, Review: {old_review_state} -> {review_state}")
+                logger.info(
+                    f"Requirement Sync: #{issue_iid} - Action: {action}, Review: {old_review_state} -> {review_state}"
+                )
 
                 if action == "update" and old_review_state and (old_review_state != review_state):
                     try:
@@ -79,18 +80,20 @@ async def gitlab_webhook(request: Request):
                             notify_targets.add(author_id)
 
                         if notify_targets:
-                            asyncio.create_task(push_notification(
-                                list(notify_targets),
-                                f"📢 需求评审状态更新: #{issue_iid} 已流转至 [{review_state}]",
-                                "info",
-                                metadata={
-                                    "project_id": p_id,
-                                    "issue_iid": issue_iid,
-                                    "event_type": "requirement_review_sync",
-                                    "new_state": review_state,
-                                    "previous_state": old_review_state
-                                }
-                            ))
+                            asyncio.create_task(
+                                push_notification(
+                                    list(notify_targets),
+                                    f"📢 需求评审状态更新: #{issue_iid} 已流转至 [{review_state}]",
+                                    "info",
+                                    metadata={
+                                        "project_id": p_id,
+                                        "issue_iid": issue_iid,
+                                        "event_type": "requirement_review_sync",
+                                        "new_state": review_state,
+                                        "previous_state": old_review_state,
+                                    },
+                                )
+                            )
                     except Exception as e:
                         logger.error(f"Failed to send review notification: {e}")
 
@@ -104,7 +107,7 @@ async def gitlab_webhook(request: Request):
                     "ref": obj.get("ref"),
                     "sha": obj.get("sha")[:8] if obj.get("sha") else "N/A",
                     "finished_at": obj.get("finished_at"),
-                    "user_name": payload.get("user_name")
+                    "user_name": payload.get("user_name"),
                 }
                 logger.info(f"Pipeline Sync: Project {p_id} is now {obj.get('status')}")
 

@@ -2,6 +2,7 @@
 
 测试包括密码哈希验证、用户认证核心逻辑以及 JWT 令牌生成。
 """
+
 import uuid
 from datetime import timedelta
 
@@ -19,6 +20,7 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 @pytest.fixture(name="db_session")
 def fixture_db_session():
     """创建干净的数据库会话。"""
@@ -35,6 +37,7 @@ def fixture_db_session():
         with engine.begin() as conn:
             conn.exec_driver_sql("PRAGMA foreign_keys=ON")
 
+
 def test_password_hashing():
     """测试密码哈希生成与校验。"""
     password = "test_password_123"
@@ -42,6 +45,7 @@ def test_password_hashing():
     assert hashed != password
     assert services.auth_verify_password(password, hashed) is True
     assert services.auth_verify_password("wrong_password", hashed) is False
+
 
 def test_create_access_token():
     """测试 JWT 访问令牌生成。"""
@@ -53,6 +57,7 @@ def test_create_access_token():
     assert payload["sub"] == data["sub"]
     assert payload["user_id"] == data["user_id"]
     assert "exp" in payload
+
 
 def test_authenticate_user_success(db_session):
     """测试用户认证成功场景。"""
@@ -67,15 +72,12 @@ def test_authenticate_user_success(db_session):
         full_name="Auth Test User",
         is_active=True,
         is_current=True,
-        is_deleted=False
+        is_deleted=False,
     )
     db_session.add(user)
     db_session.flush()
 
-    cred = UserCredential(
-        user_id=user_id,
-        password_hash=services.auth_get_password_hash(password)
-    )
+    cred = UserCredential(user_id=user_id, password_hash=services.auth_get_password_hash(password))
     db_session.add(cred)
     db_session.commit()
 
@@ -83,6 +85,7 @@ def test_authenticate_user_success(db_session):
     authenticated_user = services.auth_authenticate_user(db_session, email, password)
     assert authenticated_user is not False
     assert authenticated_user.primary_email == email
+
 
 def test_authenticate_user_failure(db_session):
     """测试用户认证失败场景。"""
@@ -94,21 +97,12 @@ def test_authenticate_user_failure(db_session):
 
     # 注册用户
     user_id = uuid.uuid4()
-    user = User(
-        global_user_id=user_id,
-        primary_email=email,
-        is_active=True,
-        is_current=True,
-        is_deleted=False
-    )
+    user = User(global_user_id=user_id, primary_email=email, is_active=True, is_current=True, is_deleted=False)
     db_session.add(user)
     db_session.flush()
 
     # 场景 2: 密码错误
-    cred = UserCredential(
-        user_id=user_id,
-        password_hash=services.auth_get_password_hash(password)
-    )
+    cred = UserCredential(user_id=user_id, password_hash=services.auth_get_password_hash(password))
     db_session.add(cred)
     db_session.commit()
 

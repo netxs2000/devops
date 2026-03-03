@@ -7,6 +7,7 @@
     - 第1层: base_models.py 定义公共基础模型
     - 第2层: 核心功能模块 (dependency, test_management)
 """
+
 from .base_models import (
     SLO,
     Base,
@@ -86,6 +87,7 @@ try:
         GitLabTag,
     )
     from devops_collector.plugins.sonarqube.models import SonarIssue, SonarMeasure, SonarProject
+
     try:
         from devops_collector.plugins.jira.models import (
             JiraBoard,
@@ -99,19 +101,62 @@ except ImportError:
     pass
 
 __all__ = [
-    'Base', 'Organization', 'User', 'Location', 'Calendar', 'SyncLog', 'RawDataStaging',
-    'IdentityMapping', 'Product', 'OKRObjective', 'OKRKeyResult', 'TraceabilityLink',
-    'JenkinsTestExecution', 'Incident', 'ResourceCost',
-    'Service', 'ServiceProjectMapping', 'SLO', 'TimestampMixin', 'RawDataMixin', 'ProjectMaster',
-    'ContractPaymentNode', 'RevenueContract', 'PurchaseContract', 'UserCredential', 'UserOAuthToken',
-    'MetricDefinition', 'SystemRegistry', 'EntityTopology', 'Company', 'Vendor', 'EpicMaster',
-    'ComplianceIssue', 'CommitMetrics', 'DailyDevStats', 'Team', 'TeamMember',
-    'SysRole', 'SysMenu', 'SysRoleMenu', 'SysRoleDept', 'OwnableMixin',
-    'UserRole', 'LaborRateConfig', 'CostCode', 'ProjectProductRelation',
-    'BusinessSystem',
-    'DependencyScan', 'LicenseRiskRule', 'Dependency', 'DependencyCVE',
-    'GTMTestCase', 'GTMTestCaseIssueLink', 'GTMRequirement', 'GTMTestExecutionRecord',
-    'ServiceDeskTicket'
+    "Base",
+    "Organization",
+    "User",
+    "Location",
+    "Calendar",
+    "SyncLog",
+    "RawDataStaging",
+    "IdentityMapping",
+    "Product",
+    "OKRObjective",
+    "OKRKeyResult",
+    "TraceabilityLink",
+    "JenkinsTestExecution",
+    "Incident",
+    "ResourceCost",
+    "Service",
+    "ServiceProjectMapping",
+    "SLO",
+    "TimestampMixin",
+    "RawDataMixin",
+    "ProjectMaster",
+    "ContractPaymentNode",
+    "RevenueContract",
+    "PurchaseContract",
+    "UserCredential",
+    "UserOAuthToken",
+    "MetricDefinition",
+    "SystemRegistry",
+    "EntityTopology",
+    "Company",
+    "Vendor",
+    "EpicMaster",
+    "ComplianceIssue",
+    "CommitMetrics",
+    "DailyDevStats",
+    "Team",
+    "TeamMember",
+    "SysRole",
+    "SysMenu",
+    "SysRoleMenu",
+    "SysRoleDept",
+    "OwnableMixin",
+    "UserRole",
+    "LaborRateConfig",
+    "CostCode",
+    "ProjectProductRelation",
+    "BusinessSystem",
+    "DependencyScan",
+    "LicenseRiskRule",
+    "Dependency",
+    "DependencyCVE",
+    "GTMTestCase",
+    "GTMTestCaseIssueLink",
+    "GTMRequirement",
+    "GTMTestExecutionRecord",
+    "ServiceDeskTicket",
 ]
 
 from . import events

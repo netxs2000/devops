@@ -2,6 +2,7 @@
 
 Handles SSE notifications and real-time event dispatching.
 """
+
 import json
 import logging
 from datetime import datetime
@@ -12,9 +13,12 @@ from devops_portal.state import NOTIFICATION_QUEUES
 
 logger = logging.getLogger(__name__)
 
-async def push_notification(user_ids: str | list[str], message: str, type: str='info', metadata: dict[str, Any] | None=None):
+
+async def push_notification(
+    user_ids: str | list[str], message: str, type: str = "info", metadata: dict[str, Any] | None = None
+):
     """推送通知到 SSE（支持单播/多播/广播）。
-    
+
     Args:
         user_ids: 接收者ID（单个str或List，特殊值 "ALL" 表示全员广播）
         message: 通知消息内容
@@ -22,14 +26,16 @@ async def push_notification(user_ids: str | list[str], message: str, type: str='
         metadata: 附加元数据（如关联的 issue_id, project_id 等）
     """
     if isinstance(user_ids, str):
-        if user_ids == 'ALL':
+        if user_ids == "ALL":
             target_users = list(NOTIFICATION_QUEUES.keys())
-            logger.info(f'Broadcasting notification to all {len(target_users)} connected users')
+            logger.info(f"Broadcasting notification to all {len(target_users)} connected users")
         else:
             target_users = [user_ids]
     else:
         target_users = user_ids
-    data = json.dumps({'message': message, 'type': type, 'metadata': metadata or {}, 'timestamp': datetime.now().isoformat()})
+    data = json.dumps(
+        {"message": message, "type": type, "metadata": metadata or {}, "timestamp": datetime.now().isoformat()}
+    )
     success_count = 0
     total_queues = 0
     for user_id in target_users:
@@ -40,8 +46,10 @@ async def push_notification(user_ids: str | list[str], message: str, type: str='
                     await q.put(data)
                     success_count += 1
                 except Exception as e:
-                    logger.error(f'Failed to push notification to user {user_id}: {e}')
+                    logger.error(f"Failed to push notification to user {user_id}: {e}")
         else:
-            logger.debug(f'User {user_id} not connected to SSE stream, skipping')
+            logger.debug(f"User {user_id} not connected to SSE stream, skipping")
     if total_queues > 0:
-        logger.info(f'Notification result: {success_count}/{total_queues} queues successful (Targets: {len(target_users)} users)')
+        logger.info(
+            f"Notification result: {success_count}/{total_queues} queues successful (Targets: {len(target_users)} users)"
+        )

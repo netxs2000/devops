@@ -21,6 +21,7 @@ def session():
     yield session
     session.close()
 
+
 @pytest.fixture
 def mock_user(session):
     dept = Organization(org_id="DEPT001", org_name="IT Dept")
@@ -31,21 +32,20 @@ def mock_user(session):
         username="int_test_user",
         primary_email="int_test@example.com",
         full_name="Integration User",
-        department_id="DEPT001"
+        department_id="DEPT001",
     )
     session.add(user)
     session.commit()
     return user
 
+
 @pytest.fixture
 def mock_gitlab_client():
     mock = MagicMock()
     # Setup create_issue return
-    mock.create_issue.return_value = {
-        'iid': 888,
-        'web_url': 'http://gitlab/issue/888'
-    }
+    mock.create_issue.return_value = {"iid": 888, "web_url": "http://gitlab/issue/888"}
     return mock
+
 
 @pytest.mark.asyncio
 async def test_service_desk_full_flow(session, mock_user, mock_gitlab_client):
@@ -67,21 +67,21 @@ async def test_service_desk_full_flow(session, mock_user, mock_gitlab_client):
         description="Testing flow",
         issue_type="bug",
         requester=mock_user,
-        attachments=["log.txt"]
+        attachments=["log.txt"],
     )
 
     assert ticket is not None
     assert ticket.id is not None
     assert ticket.gitlab_issue_iid == 888
     assert ticket.title == "Integration Test Ticket"
-    assert ticket.origin_dept_name == "IT Dept" # From mock_user relation
+    assert ticket.origin_dept_name == "IT Dept"  # From mock_user relation
 
     # Verify Client Call
     mock_gitlab_client.create_issue.assert_called_once()
     args, kwargs = mock_gitlab_client.create_issue.call_args
-    assert args[0] == 100 # project_id
-    assert args[1]['title'] == "Integration Test Ticket"
-    assert "log.txt" in args[1]['description']
+    assert args[0] == 100  # project_id
+    assert args[1]["title"] == "Integration Test Ticket"
+    assert "log.txt" in args[1]["description"]
 
     # 3. Retrieve Tickets
     tickets = service.get_user_tickets(session, mock_user)
@@ -90,10 +90,7 @@ async def test_service_desk_full_flow(session, mock_user, mock_gitlab_client):
 
     # 4. Update Status (Close)
     success = await service.update_ticket_status(
-        db=session,
-        ticket_id=ticket.id,
-        new_status="closed",
-        operator_name="Admin"
+        db=session, ticket_id=ticket.id, new_status="closed", operator_name="Admin"
     )
 
     assert success is True
@@ -105,6 +102,6 @@ async def test_service_desk_full_flow(session, mock_user, mock_gitlab_client):
     # Verify Client Call
     mock_gitlab_client.update_issue.assert_called_once()
     args, kwargs = mock_gitlab_client.update_issue.call_args
-    assert args[0] == 100 # project_id
-    assert args[1] == 888 # iid
-    assert args[2] == {'state_event': 'close'}
+    assert args[0] == 100  # project_id
+    assert args[1] == 888  # iid
+    assert args[2] == {"state_event": "close"}

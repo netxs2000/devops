@@ -23,6 +23,8 @@ MANIFEST
 # Build and Deploy
 build/
 dist/
+out/
+artifacts/
 *.egg-info/
 Dockerfile
 docker-compose.yml
@@ -123,3 +125,7 @@ docs/gitlab-user.csv
 docs/zentao-user.csv
 *.csv
 *.tar
+
+# Trae config file
+.traerc
+trae.lock

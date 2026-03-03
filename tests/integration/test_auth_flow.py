@@ -32,9 +32,9 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 @pytest.fixture(name="db_session")
 def fixture_db_session():
     """认证模块集成测试数据库会话 Fixture。
-    
+
     创建所有表并提供一个干净的会话，测试结束后删除所有表。
-    
+
     Yields:
         Session: SQLAlchemy 数据库会话。
     """
@@ -55,10 +55,10 @@ def fixture_db_session():
 @pytest.fixture(name="client")
 def fixture_client(db_session):
     """创建测试客户端并注入数据库会话。
-    
+
     Args:
         db_session: 由 db_session fixture 提供的数据库会话。
-        
+
     Yields:
         TestClient: FastAPI 测试客户端。
     """
@@ -77,7 +77,7 @@ def fixture_client(db_session):
 
 def test_auth_register_success(client):
     """测试合法邮箱域名的用户注册流程。
-    
+
     预期行为：注册成功，返回 200 状态码及用户信息。
     """
     payload = {
@@ -95,7 +95,7 @@ def test_auth_register_success(client):
 
 def test_auth_register_invalid_domain(client):
     """测试非法邮箱域名的注册拦截。
-    
+
     预期行为：注册失败，返回 400 状态码及提示信息。
     """
     payload = {
@@ -111,7 +111,7 @@ def test_auth_register_invalid_domain(client):
 
 def test_auth_login_success(client, db_session):
     """测试合法用户凭据登录。
-    
+
     预期行为：成功返回 JWT 访问令牌。
     """
     email = "login_success@tjhq.com"
@@ -144,7 +144,7 @@ def test_auth_login_success(client, db_session):
 
 def test_auth_login_fail_wrong_password(client, db_session):
     """测试错误密码登录请求。
-    
+
     预期行为：登录失败，返回 401 状态码。
     """
     email = "login_fail@tjhq.com"
@@ -162,11 +162,7 @@ def test_auth_login_fail_wrong_password(client, db_session):
     )
     db_session.add(user)
     db_session.flush()
-    db_session.add(
-        UserCredential(
-            user_id=user_id, password_hash=auth_service.auth_get_password_hash(password)
-        )
-    )
+    db_session.add(UserCredential(user_id=user_id, password_hash=auth_service.auth_get_password_hash(password)))
     db_session.commit()
 
     # 使用错误密码尝试登录
@@ -177,7 +173,7 @@ def test_auth_login_fail_wrong_password(client, db_session):
 
 def test_auth_get_me_flow(client, db_session):
     """测试获取当前登录用户信息全链路。
-    
+
     流程：注册 -> 登录 -> 使用 Token 访问 /auth/me。
     预期行为：全流程成功，最终返回正确的用户信息。
     """
@@ -206,7 +202,7 @@ def test_auth_get_me_flow(client, db_session):
 
 def test_auth_gitlab_bind_redirect(client, db_session):
     """测试获取 GitLab 绑定重定向地址。
-    
+
     预期行为：正确重定向到 GitLab 授权页面，且包含正确的 client_id 和 state。
     """
     # 模拟环境配置 (如果尚未配置)
@@ -229,11 +225,7 @@ def test_auth_gitlab_bind_redirect(client, db_session):
     )
     db_session.add(user)
     db_session.flush()
-    db_session.add(
-        UserCredential(
-            user_id=user_id, password_hash=auth_service.auth_get_password_hash(password)
-        )
-    )
+    db_session.add(UserCredential(user_id=user_id, password_hash=auth_service.auth_get_password_hash(password)))
     db_session.commit()
 
     # 登录获取 Token

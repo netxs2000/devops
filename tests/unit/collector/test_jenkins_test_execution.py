@@ -17,7 +17,7 @@ def test_create_jenkins_test_execution(db_session):
         skipped_count=5,
         pass_rate=90.0,
         duration_ms=5000,
-        raw_data={"some": "data"}
+        raw_data={"some": "data"},
     )
     db_session.add(execution)
     db_session.commit()
@@ -29,25 +29,16 @@ def test_create_jenkins_test_execution(db_session):
     assert execution.test_level == "Unit"
     assert execution.pass_rate == 90.0
 
+
 def test_jenkins_test_execution_uniqueness(db_session):
     """Test the unique constraint on (project_id, build_id, test_level)."""
     # Create first record
-    execution1 = JenkinsTestExecution(
-        project_id=202,
-        build_id="build-888",
-        test_level="Integration",
-        pass_rate=95.0
-    )
+    execution1 = JenkinsTestExecution(project_id=202, build_id="build-888", test_level="Integration", pass_rate=95.0)
     db_session.add(execution1)
     db_session.commit()
 
     # Try to create duplicate record
-    execution2 = JenkinsTestExecution(
-        project_id=202,
-        build_id="build-888",
-        test_level="Integration",
-        pass_rate=0.0
-    )
+    execution2 = JenkinsTestExecution(project_id=202, build_id="build-888", test_level="Integration", pass_rate=0.0)
     db_session.add(execution2)
 
     with pytest.raises(IntegrityError):
@@ -55,22 +46,13 @@ def test_jenkins_test_execution_uniqueness(db_session):
 
     db_session.rollback()
 
+
 def test_jenkins_test_execution_allow_different_levels(db_session):
     """Test that same project and build can have different test levels."""
     # Unit Test Record
-    unit_test = JenkinsTestExecution(
-        project_id=303,
-        build_id="build-999",
-        test_level="Unit",
-        pass_rate=100.0
-    )
+    unit_test = JenkinsTestExecution(project_id=303, build_id="build-999", test_level="Unit", pass_rate=100.0)
     # UI Test Record
-    ui_test = JenkinsTestExecution(
-        project_id=303,
-        build_id="build-999",
-        test_level="UI",
-        pass_rate=80.0
-    )
+    ui_test = JenkinsTestExecution(project_id=303, build_id="build-999", test_level="UI", pass_rate=80.0)
 
     db_session.add(unit_test)
     db_session.add(ui_test)

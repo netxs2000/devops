@@ -6,6 +6,7 @@
 数据来源参考: ISO 3166-2:CN 及常见业务定义。
 对应 GitLab Template: .gitlab/issue_templates/Bug.md 中的 `province::xxx` 标签。
 """
+
 import logging
 import sys
 from pathlib import Path
@@ -22,8 +23,9 @@ from devops_collector.models.base_models import Location
 
 
 # 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 def init_locations():
     """初始化位置数据"""
@@ -43,15 +45,13 @@ def init_locations():
             "short_name": "全国",
             "location_type": "region",
             "region": "全国",
-            "parent_id": None
+            "parent_id": None,
         },
-
         # --- 直辖市 ---
         {"code": "beijing", "name": "北京市", "short": "北京", "region": "华北"},
         {"code": "shanghai", "name": "上海市", "short": "上海", "region": "华东"},
         {"code": "tianjin", "name": "天津市", "short": "天津", "region": "华北"},
         {"code": "chongqing", "name": "重庆市", "short": "重庆", "region": "西南"},
-
         # --- 省份 ---
         {"code": "anhui", "name": "安徽省", "short": "安徽", "region": "华东"},
         {"code": "fujian", "name": "福建省", "short": "福建", "region": "华东"},
@@ -75,14 +75,12 @@ def init_locations():
         {"code": "sichuan", "name": "四川省", "short": "四川", "region": "西南"},
         {"code": "yunnan", "name": "云南省", "short": "云南", "region": "西南"},
         {"code": "zhejiang", "name": "浙江省", "short": "浙江", "region": "华东"},
-
         # --- 自治区 ---
         {"code": "guangxi", "name": "广西壮族自治区", "short": "广西", "region": "华南"},
         {"code": "neimenggu", "name": "内蒙古自治区", "short": "内蒙古", "region": "华北"},
         {"code": "ningxia", "name": "宁夏回族自治区", "short": "宁夏", "region": "西北"},
         {"code": "xinjiang", "name": "新疆维吾尔自治区", "short": "新疆", "region": "西北"},
         {"code": "xizang", "name": "西藏自治区", "short": "西藏", "region": "西南"},
-
         # --- 特别行政区 (可选) ---
         {"code": "hongkong", "name": "香港特别行政区", "short": "香港", "region": "华南"},
         {"code": "macau", "name": "澳门特别行政区", "short": "澳门", "region": "华南"},
@@ -93,21 +91,21 @@ def init_locations():
         count = 0
         for item in locations_data:
             # 处理数据格式差异
-            if 'location_id' in item:
+            if "location_id" in item:
                 # 已完整定义的形式 (Nationwide)
-                match_code = item['code']
+                match_code = item["code"]
                 data_dict = item
             else:
                 # 简写形式 (需转换)
-                match_code = item['code']
+                match_code = item["code"]
                 data_dict = {
                     "location_id": f"LOC-{match_code.upper()}",
                     "code": match_code,
-                    "location_name": item['name'],
-                    "short_name": item['short'],
+                    "location_name": item["name"],
+                    "short_name": item["short"],
                     "location_type": "province",
-                    "region": item['region'],
-                    "parent_id": "LOC-NATIONWIDE"
+                    "region": item["region"],
+                    "parent_id": "LOC-NATIONWIDE",
                 }
 
             # 检查是否存在
@@ -132,5 +130,6 @@ def init_locations():
     finally:
         session.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     init_locations()

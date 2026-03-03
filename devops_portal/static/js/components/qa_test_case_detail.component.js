@@ -214,10 +214,23 @@ class QaTestCaseDetail extends HTMLElement {
                     gap: 8px;
                     transition: all 0.2s;
                 }
+                .btn-exec:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
                 .btn-pass:hover { background: #E6F4EA; border-color: #1E8E3E; color: #1E8E3E; }
                 .btn-fail:hover { background: #FCE8E6; border-color: #D93025; color: #D93025; }
                 .btn-bug { background: #1d1d1f; color: white; border: none; }
                 .btn-bug:hover { opacity: 0.9; }
+
+                .exec-env-selector {
+                    width: 100%;
+                    padding: 8px 10px;
+                    border-radius: 8px;
+                    border: 1px solid #D2D2D7;
+                    background: white;
+                    font-size: 13px;
+                    color: #1d1d1f;
+                    margin-bottom: 12px;
+                    cursor: pointer;
+                }
             </style>
 
             <div class="detail-container">
@@ -288,8 +301,16 @@ class QaTestCaseDetail extends HTMLElement {
                     </div>
 
                     <div class="exec-toolbar">
-                        <div class="sidebar-label" style="text-align: center; margin-bottom: 4px;">Quick Execute</div>
-                        <textarea class="exec-comment js-exec-comment" placeholder="Add execution notes or evidence (optional)..."></textarea>
+                        <div class="sidebar-label" style="text-align: center; margin-bottom: 8px;">Execution Feedback</div>
+                        
+                        <select class="exec-env-selector js-exec-env">
+                            <option value="Dev">Environment: Development</option>
+                            <option value="QA" selected>Environment: QA / Testing</option>
+                            <option value="Pre-prod">Environment: Pre-production</option>
+                            <option value="Prod">Environment: Production</option>
+                        </select>
+
+                        <textarea class="exec-comment js-exec-comment" placeholder="Add execution notes or evidence (required for failure)..."></textarea>
                         
                         <button class="btn-exec btn-pass js-exec" data-result="passed">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -339,13 +360,20 @@ class QaTestCaseDetail extends HTMLElement {
         this.shadowRoot.querySelectorAll('.js-exec').forEach(btn => {
             btn.onclick = () => {
                 const comment = this.shadowRoot.querySelector('.js-exec-comment').value;
+                const env = this.shadowRoot.querySelector('.js-exec-env').value;
+
+                // Validation: Failure requires a comment
+                if (btn.dataset.result === 'failed' && !comment.trim()) {
+                    return UI.showToast("Comment is required for failures", "error");
+                }
+
                 this.dispatchEvent(new CustomEvent('execute', {
                     detail: {
                         iid: this.item.iid,
                         result: btn.dataset.result,
                         report: {
                             comment: comment,
-                            environment: 'Web Portal'
+                            environment: env
                         }
                     },
                     bubbles: true,

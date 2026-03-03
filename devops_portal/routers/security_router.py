@@ -58,9 +58,7 @@ async def upload_dependency_report(
         # 查询结果
         scan = db.query(DependencyScan).get(scan_id)
         if not scan:
-            raise BusinessException(
-                "Scan record creation failed", code="CREATE_FAILED", status_code=500
-            )
+            raise BusinessException("Scan record creation failed", code="CREATE_FAILED", status_code=500)
 
         return {
             "scan_id": scan.id,
@@ -85,9 +83,7 @@ async def upload_dependency_report(
 
 
 @router.get("/dependency-scans", response_model=list[schemas.DependencyScanSummary])
-async def list_dependency_scans(
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_auth_db)
-):
+async def list_dependency_scans(current_user: User = Depends(get_current_user), db: Session = Depends(get_auth_db)):
     """[P5] 获取 Dependency Check 扫描结果（支持组织隔离）。"""
 
     # 动态构建查询

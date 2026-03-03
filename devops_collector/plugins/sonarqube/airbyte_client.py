@@ -14,30 +14,28 @@ from devops_collector.core.base_client import BaseClient
 
 logger = logging.getLogger(__name__)
 
+
 class AirbyteSonarQubeClient(BaseClient):
     """基于 PyAirbyte 的 SonarQube 客户端适配器。
-    
+
     该客户端通过封装 'source-sonarqube' 连接器，提供流式数据获取能力，
     消除了手动处理分页和复杂 API 结构的成本。
     """
 
     def __init__(self, url: str, token: str):
         """初始化 PyAirbyte SonarQube 客户端。
-        
+
         Args:
             url (str): SonarQube 实例 URL。
             token (str): 认证 Token。
         """
-        super().__init__(base_url=url, auth_headers={'Authorization': f'Bearer {token}'})
+        super().__init__(base_url=url, auth_headers={"Authorization": f"Bearer {token}"})
 
         # Airbyte SonarQube Connector Config
         # 根据官方文档：https://docs.airbyte.com/integrations/sources/sonarqube
         self.source_config = {
-            "host_url": url.rstrip('/'),
-            "credentials": {
-                "auth_type": "user_token",
-                "user_token": token
-            }
+            "host_url": url.rstrip("/"),
+            "credentials": {"auth_type": "user_token", "user_token": token},
         }
         self._source: ab.Source | None = None
 
@@ -59,7 +57,7 @@ class AirbyteSonarQubeClient(BaseClient):
 
     def get_stream_records(self, stream_name: str) -> Generator[dict[str, Any], None, None]:
         """流式获取指定 stream 的原始记录。
-        
+
         Available streams usually include: projects, issues, components, measures.
         """
         logger.info(f"正在从 SonarQube 流 '{stream_name}' 读取数据...")

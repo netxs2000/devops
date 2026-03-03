@@ -32,6 +32,7 @@ def rd_authenticated_page(
 
     yield page
 
+
 @pytest.fixture
 def seed_test_product(app_server: str, test_user_credentials: dict) -> Generator[dict, None, None]:
     yield {
@@ -39,6 +40,7 @@ def seed_test_product(app_server: str, test_user_credentials: dict) -> Generator
         "product_name": "E2E Test Product",
         "project_id": "E2E_PROJ_001",
     }
+
 
 @pytest.fixture
 def seed_pending_ticket(app_server: str) -> Generator[dict, None, None]:

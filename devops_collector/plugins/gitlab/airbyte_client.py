@@ -15,31 +15,29 @@ from devops_collector.core.base_client import BaseClient
 
 logger = logging.getLogger(__name__)
 
+
 class AirbyteGitLabClient(BaseClient):
     """基于 PyAirbyte 的 GitLab 客户端适配器。
-    
+
     该客户端通过封装 'source-gitlab' 连接器，提供流式数据获取能力，
     无需手动处理分页、速率限制和 API 映射。
     """
 
     def __init__(self, url: str, token: str, start_date: str = "2024-01-01T00:00:00Z"):
         """初始化 PyAirbyte GitLab 客户端。
-        
+
         Args:
             url (str): GitLab 实例 URL。
             token (str): Private Token 或 Access Token。
             start_date (str): 增量同步的最早起始时间。
         """
         # 调用父类初始化，虽然底层主要由 airbyte 库处理，但保留基类结构以兼容 BaseWorker
-        super().__init__(base_url=url, auth_headers={'PRIVATE-TOKEN': token})
+        super().__init__(base_url=url, auth_headers={"PRIVATE-TOKEN": token})
 
         self.source_config = {
             "api_url": url,
-            "credentials": {
-                "auth_type": "access_token",
-                "access_token": token
-            },
-            "start_date": start_date
+            "credentials": {"auth_type": "access_token", "access_token": token},
+            "start_date": start_date,
         }
         self._source: ab.Source | None = None
 
@@ -59,13 +57,15 @@ class AirbyteGitLabClient(BaseClient):
             logger.error(f"PyAirbyte GitLab connection check failed: {e}")
             return False
 
-    def get_stream_records(self, stream_name: str, project_ids: list | None = None) -> Generator[dict[str, Any], None, None]:
+    def get_stream_records(
+        self, stream_name: str, project_ids: list | None = None
+    ) -> Generator[dict[str, Any], None, None]:
         """流式获取指定 stream 的原始记录。
-        
+
         Args:
             stream_name (str): Airbyte 数据流名称 (如 'commits', 'issues', 'merge_requests')。
             project_ids (list): 可选，过滤特定的项目 ID 列表。
-            
+
         Yields:
             Generator[Dict[str, Any]]: 原始记录字典生成器。
         """

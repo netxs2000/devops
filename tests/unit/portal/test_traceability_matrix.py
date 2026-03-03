@@ -1,4 +1,3 @@
-
 from unittest.mock import MagicMock
 
 import pytest
@@ -42,15 +41,15 @@ async def test_get_aggregated_requirements_service_logic():
 
     # 6. Mock Traceability Links
     link_mr = MagicMock()
-    link_mr.target_type = 'merge_request'
-    link_mr.target_id = '123'
+    link_mr.target_type = "merge_request"
+    link_mr.target_id = "123"
 
     # 7. Mock GTMTestCase (New)
     mock_case = MagicMock()
     mock_case.id = 701
     mock_case.iid = 1
     mock_case.project_id = 101
-    mock_case.title = "Verify User Login #5001" # Contains Req ID
+    mock_case.title = "Verify User Login #5001"  # Contains Req ID
     mock_case.description = "Test steps"
     mock_case.execution_count = 1
     mock_case.project.name = "GitLab Proj A"
@@ -69,13 +68,13 @@ async def test_get_aggregated_requirements_service_logic():
     # 7. TraceabilityLink (filter by source_id)
 
     filter_mock.all.side_effect = [
-        [mock_relation],       # 1
-        [mock_gp],             # 2
-        [mock_zp_git],             # 3
-        [mock_zp_code],        # 4
-        [mock_issue],          # 5
-        [mock_case],           # 6 (Found Test Cases)
-        [link_mr]              # 7 (Links for Issue 5001)
+        [mock_relation],  # 1
+        [mock_gp],  # 2
+        [mock_zp_git],  # 3
+        [mock_zp_code],  # 4
+        [mock_issue],  # 5
+        [mock_case],  # 6 (Found Test Cases)
+        [link_mr],  # 7 (Links for Issue 5001)
     ]
 
     # --- Execute ---
@@ -91,4 +90,4 @@ async def test_get_aggregated_requirements_service_logic():
     assert item.test_cases[0].title == "Verify User Login #5001"
 
     assert len(item.merge_requests) == 1
-    assert item.merge_requests[0]['iid'] == '123'
+    assert item.merge_requests[0]["iid"] == "123"

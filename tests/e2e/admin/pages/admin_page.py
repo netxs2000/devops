@@ -98,7 +98,7 @@ class AdminPage(BasePage):
     def navigate_to_okrs(self):
         """导航到 OKR 治理中心 (使用 Hash 路由)"""
         self.page.goto(f"{self.base_url}/static/index.html#admin_okrs")
-        self.page.reload() # 确保触发 hashchange 如果已经在页面上
+        self.page.reload()  # 确保触发 hashchange 如果已经在页面上
         expect(self.page.locator("#adm-okrs-view")).to_be_visible()
         # 等待数据加载完成
         expect(self.page.locator("#sys-loading-overlay")).to_be_hidden()

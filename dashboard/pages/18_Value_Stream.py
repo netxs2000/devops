@@ -1,4 +1,3 @@
-
 """Value Stream Management Dashboard (Flow Framework).
 
 This dashboard implements the Mik Kersten's Flow Framework metrics:
@@ -7,6 +6,7 @@ This dashboard implements the Mik Kersten's Flow Framework metrics:
 - Flow Time: How fast is value delivered?
 - Flow Load: Is demand outstripping capacity? (WIP)
 """
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -21,7 +21,8 @@ st.set_page_config(page_title="Value Stream Management", page_icon="🌊", layou
 st.title("🌊 Value Stream Management (Flow Framework)")
 st.caption("Visualizing the flow of business value through the software delivery lifecycle.")
 
-st.markdown("""
+st.markdown(
+    """
 <style>
     .glass-card {
         background: rgba(255, 255, 255, 0.05);
@@ -36,7 +37,10 @@ st.markdown("""
     .flow-debt { color: #FFC000; font-weight: bold; }
     .flow-risk { color: #ED7D31; font-weight: bold; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
+
 
 # --- Data Loading ---
 @st.cache_data(ttl=600)
@@ -60,6 +64,7 @@ def load_flow_data():
         st.warning(f"无法加载价值流数据 (dws_flow_metrics_weekly)。请运行 dbt 模型。错误: {e}")
         return pd.DataFrame(), pd.DataFrame()
 
+
 df_weekly, df_items = load_flow_data()
 
 if df_weekly.empty:
@@ -67,25 +72,35 @@ if df_weekly.empty:
     st.stop()
 
 # --- Sidebar Filters ---
-projects = df_weekly['project_id'].unique() # Note: View returns ID, usually join name in View or here
-if 'project_id' in df_weekly.columns:
-     # Simple filter if logic complex
-     pass
+projects = df_weekly["project_id"].unique()  # Note: View returns ID, usually join name in View or here
+if "project_id" in df_weekly.columns:
+    # Simple filter if logic complex
+    pass
 
 # --- 1. Flow Distribution (Allocation) ---
 st.subheader("1. Flow Distribution (Allocations)")
 st.caption("Are we investing enough in Debt and Risk? Or drowning in Defects?")
 
 # Prepare Stacked Data
-fd_chart_data = df_weekly.sort_values('metric_week')
+fd_chart_data = df_weekly.sort_values("metric_week")
 
 fig_dist = go.Figure()
-fig_dist.add_trace(go.Bar(name='Features', x=fd_chart_data['metric_week'], y=fd_chart_data['closed_features'], marker_color='#5B9BD5'))
-fig_dist.add_trace(go.Bar(name='Defects', x=fd_chart_data['metric_week'], y=fd_chart_data['closed_defects'], marker_color='#C00000'))
-fig_dist.add_trace(go.Bar(name='Debts', x=fd_chart_data['metric_week'], y=fd_chart_data['closed_debts'], marker_color='#FFC000'))
-fig_dist.add_trace(go.Bar(name='Risks', x=fd_chart_data['metric_week'], y=fd_chart_data['closed_risks'], marker_color='#ED7D31'))
+fig_dist.add_trace(
+    go.Bar(name="Features", x=fd_chart_data["metric_week"], y=fd_chart_data["closed_features"], marker_color="#5B9BD5")
+)
+fig_dist.add_trace(
+    go.Bar(name="Defects", x=fd_chart_data["metric_week"], y=fd_chart_data["closed_defects"], marker_color="#C00000")
+)
+fig_dist.add_trace(
+    go.Bar(name="Debts", x=fd_chart_data["metric_week"], y=fd_chart_data["closed_debts"], marker_color="#FFC000")
+)
+fig_dist.add_trace(
+    go.Bar(name="Risks", x=fd_chart_data["metric_week"], y=fd_chart_data["closed_risks"], marker_color="#ED7D31")
+)
 
-fig_dist.update_layout(barmode='stack', title="Weekly Work Distribution", height=400, xaxis_title="Week", yaxis_title="Items Completed")
+fig_dist.update_layout(
+    barmode="stack", title="Weekly Work Distribution", height=400, xaxis_title="Week", yaxis_title="Items Completed"
+)
 st.plotly_chart(fig_dist, use_container_width=True)
 
 # --- 2. Flow Velocity & Time ---
@@ -94,8 +109,8 @@ c1, c2 = st.columns(2)
 with c1:
     st.subheader("2. Flow Velocity")
     st.caption("Throughput of value delivered per week.")
-    fig_vel = px.line(fd_chart_data, x='metric_week', y='flow_velocity', markers=True, title="Items Completed per Week")
-    fig_vel.update_traces(line_color='#00B050', line_width=3)
+    fig_vel = px.line(fd_chart_data, x="metric_week", y="flow_velocity", markers=True, title="Items Completed per Week")
+    fig_vel.update_traces(line_color="#00B050", line_width=3)
     st.plotly_chart(fig_vel, use_container_width=True)
 
 with c2:
@@ -104,10 +119,13 @@ with c2:
     if not df_items.empty:
         # Scatter plot of recent items
         fig_time = px.scatter(
-            df_items, x='closed_at', y='flow_time_days', color='flow_type',
-            color_discrete_map={'Feature': '#5B9BD5', 'Defect': '#C00000', 'Debt': '#FFC000', 'Risk': '#ED7D31'},
-            hover_data=['title', 'project_name'],
-            title="Time to Close (Days) by Item"
+            df_items,
+            x="closed_at",
+            y="flow_time_days",
+            color="flow_type",
+            color_discrete_map={"Feature": "#5B9BD5", "Defect": "#C00000", "Debt": "#FFC000", "Risk": "#ED7D31"},
+            hover_data=["title", "project_name"],
+            title="Time to Close (Days) by Item",
         )
         st.plotly_chart(fig_time, use_container_width=True)
     else:
@@ -133,16 +151,18 @@ try:
 
     if not wip_df.empty:
         fig_wip = px.pie(
-            wip_df, values='count', names='flow_type',
-            color='flow_type',
-            color_discrete_map={'Feature': '#5B9BD5', 'Defect': '#C00000', 'Debt': '#FFC000', 'Risk': '#ED7D31'},
+            wip_df,
+            values="count",
+            names="flow_type",
+            color="flow_type",
+            color_discrete_map={"Feature": "#5B9BD5", "Defect": "#C00000", "Debt": "#FFC000", "Risk": "#ED7D31"},
             title="Current Active Work Breakdown",
-            hole=0.4
+            hole=0.4,
         )
         c_wip1, c_wip2 = st.columns([1, 2])
         with c_wip1:
-            st.metric("Total WIP Items", wip_df['count'].sum())
-            st.write(wip_df.set_index('flow_type'))
+            st.metric("Total WIP Items", wip_df["count"].sum())
+            st.write(wip_df.set_index("flow_type"))
         with c_wip2:
             st.plotly_chart(fig_wip, use_container_width=True)
 
@@ -154,16 +174,22 @@ st.divider()
 st.markdown("### 🧠 Value Stream Insights")
 
 # Logic-based insights
-total_items = fd_chart_data['flow_velocity'].sum()
-defect_ratio = fd_chart_data['closed_defects'].sum() / total_items if total_items > 0 else 0
-debt_ratio = fd_chart_data['closed_debts'].sum() / total_items if total_items > 0 else 0
+total_items = fd_chart_data["flow_velocity"].sum()
+defect_ratio = fd_chart_data["closed_defects"].sum() / total_items if total_items > 0 else 0
+debt_ratio = fd_chart_data["closed_debts"].sum() / total_items if total_items > 0 else 0
 
 if defect_ratio > 0.4:
-    st.error(f"🚨 **Quality Crisis**: {defect_ratio:.1%} of recent work is Defects (Target: < 20%). Innovation is stalled.")
+    st.error(
+        f"🚨 **Quality Crisis**: {defect_ratio:.1%} of recent work is Defects (Target: < 20%). Innovation is stalled."
+    )
 elif defect_ratio > 0.2:
     st.warning(f"⚠️ **High Failure Demand**: {defect_ratio:.1%} is Defects. Investigate testing practices.")
 
 if debt_ratio < 0.1:
-    st.warning(f"⚠️ **Tech Debt Pile-up**: Only {debt_ratio:.1%} invested in Debt/Refactoring. Future velocity is at risk.")
+    st.warning(
+        f"⚠️ **Tech Debt Pile-up**: Only {debt_ratio:.1%} invested in Debt/Refactoring. Future velocity is at risk."
+    )
 
-st.success(f"ℹ️ **Feature Allocation**: {1 - defect_ratio - debt_ratio:.1%} of capacity is delivering new business value.")
+st.success(
+    f"ℹ️ **Feature Allocation**: {1 - defect_ratio - debt_ratio:.1%} of capacity is delivering new business value."
+)

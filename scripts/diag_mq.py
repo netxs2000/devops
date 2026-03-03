@@ -42,6 +42,7 @@ def diagnose_mq():
         print(f"✗ RabbitMQ 连接失败: {e}")
         return False
 
+
 if __name__ == "__main__":
     success = diagnose_mq()
     sys.exit(0 if success else 1)

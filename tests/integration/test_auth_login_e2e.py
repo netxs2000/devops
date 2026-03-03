@@ -44,7 +44,7 @@ def test_login_e2e_flow(client, db_session):
         full_name="E2E Test User",
         is_active=True,
         is_current=True,
-        is_deleted=False
+        is_deleted=False,
     )
     db_session.add(user)
     db_session.flush()
@@ -72,10 +72,7 @@ def test_login_e2e_flow(client, db_session):
 
     # 4. 验证令牌可以访问其他受保护端点
     # 例如访问质量分析接口（需要认证）
-    quality_response = client.get(
-        "/quality/projects/1/province-quality",
-        headers=headers
-    )
+    quality_response = client.get("/quality/projects/1/province-quality", headers=headers)
     # 即使项目不存在，也应该返回200或适当的错误状态码
     # 主要是验证认证中间件允许访问
     assert quality_response.status_code in [200, 404, 500]
@@ -99,7 +96,7 @@ def test_login_with_invalid_credentials(client, db_session):
         full_name="Valid User",
         is_active=True,
         is_current=True,
-        is_deleted=False
+        is_deleted=False,
     )
     db_session.add(user)
     db_session.flush()
@@ -148,7 +145,7 @@ def test_login_and_frontend_flow(client, db_session):
         full_name="Frontend Test User",
         is_active=True,
         is_current=True,
-        is_deleted=False
+        is_deleted=False,
     )
     db_session.add(user)
     db_session.flush()

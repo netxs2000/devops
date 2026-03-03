@@ -67,7 +67,7 @@ class TestServiceDeskPortalSubmit:
         self.portal_page.fill_bug_form(
             title=bug_title,
             actual_result="E2E automation test: System crashed on startup",
-            steps="1. Run E2E test\n2. Observe result"
+            steps="1. Run E2E test\n2. Observe result",
         )
 
         # 4. 提交

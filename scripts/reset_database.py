@@ -2,6 +2,7 @@
 
 作用：强制清空公共 Schema 下的所有表，解决 SQLAlchemy drop_all 在循环外键下的限制。
 """
+
 import logging
 import os
 import sys
@@ -14,8 +15,9 @@ from devops_collector.config import settings
 from devops_collector.models.base_models import Base
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('DBReset')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("DBReset")
+
 
 def reset_database():
     engine = create_engine(settings.database.uri)
@@ -25,7 +27,7 @@ def reset_database():
     try:
         with engine.connect() as conn:
             # 1. 强制断开其他连接
-            db_name = settings.database.uri.split('/')[-1]
+            db_name = settings.database.uri.split("/")[-1]
             terminate_sql = f"""
             SELECT pg_terminate_backend(pg_stat_activity.pid)
             FROM pg_stat_activity
@@ -55,6 +57,7 @@ def reset_database():
     except Exception as e:
         logger.error(f"数据库重置失败: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     reset_database()

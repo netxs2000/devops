@@ -1,4 +1,3 @@
-
 import pytest
 from playwright.sync_api import expect
 
@@ -25,6 +24,7 @@ def test_okr_governance_view_loading(admin_page: AdminPage):
     expect(admin_page.page.locator("#adm-okrs-view th:has-text('目标标题')")).to_be_visible()
     expect(admin_page.page.locator("#adm-okrs-view th:has-text('目标进度')")).to_be_visible()
 
+
 def test_okr_export_button_link(admin_page: AdminPage):
     """验证 OKR 导出按钮是否触发下载请求 (检查 URL 构造)"""
     admin_page.goto_static()
@@ -49,6 +49,7 @@ def test_okr_export_button_link(admin_page: AdminPage):
 
     # 可以在这里保存下载的文件供后续内容校验
     # download.save_as("test-results/okr_export.csv")
+
 
 def test_okr_preview_empty_state(admin_page: AdminPage):
     """验证无数据时的预览表格状态"""

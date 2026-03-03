@@ -48,9 +48,7 @@ class DependencyScan(Base, TimestampMixin, SCDMixin):
 
     __tablename__ = "dependency_scans"
     id = Column(Integer, primary_key=True)
-    project_id = Column(
-        Integer, ForeignKey("gitlab_projects.id", ondelete="CASCADE"), nullable=False
-    )
+    project_id = Column(Integer, ForeignKey("gitlab_projects.id", ondelete="CASCADE"), nullable=False)
     scan_date = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     scanner_name = Column(String(50), nullable=False, default="OWASP Dependency-Check")
     scanner_version = Column(String(20))
@@ -146,15 +144,11 @@ class Dependency(Base, TimestampMixin):
 
     __tablename__ = "dependencies"
     __table_args__ = (
-        UniqueConstraint(
-            "scan_id", "package_name", "package_version", name="uq_dependency_scan_package"
-        ),
+        UniqueConstraint("scan_id", "package_name", "package_version", name="uq_dependency_scan_package"),
     )
     id = Column(Integer, primary_key=True)
     scan_id = Column(Integer, ForeignKey("dependency_scans.id", ondelete="CASCADE"), nullable=False)
-    project_id = Column(
-        Integer, ForeignKey("gitlab_projects.id", ondelete="CASCADE"), nullable=False
-    )
+    project_id = Column(Integer, ForeignKey("gitlab_projects.id", ondelete="CASCADE"), nullable=False)
     package_name = Column(String(500), nullable=False)
     package_version = Column(String(100))
     package_manager = Column(String(50))
@@ -209,9 +203,7 @@ class DependencyCVE(Base, TimestampMixin):
     __tablename__ = "dependency_cves"
     __table_args__ = (UniqueConstraint("dependency_id", "cve_id", name="uq_dependency_cve"),)
     id = Column(Integer, primary_key=True)
-    dependency_id = Column(
-        Integer, ForeignKey("dependencies.id", ondelete="CASCADE"), nullable=False
-    )
+    dependency_id = Column(Integer, ForeignKey("dependencies.id", ondelete="CASCADE"), nullable=False)
     cve_id = Column(String(50), nullable=False)
     cvss_score = Column(Float)
     cvss_vector = Column(String(200))

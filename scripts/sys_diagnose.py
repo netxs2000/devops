@@ -8,9 +8,10 @@ import httpx
 # 将当前目录添加到系统路径
 sys.path.insert(0, os.getcwd())
 
+
 async def diagnose():
     """系统综合诊断脚本。
-    
+
     检查项目：
     1. API 连通性 (Health Check)
     2. 数据库连接 & 基础数据 (Identity Check)
@@ -61,6 +62,7 @@ async def diagnose():
     print("\n[3/3] 检查 GitLab OAuth 配置...")
     try:
         from devops_collector.config import settings
+
         gl = settings.gitlab
         print(f"   GitLab URL: {gl.url}")
         if gl.client_id and gl.client_secret and gl.redirect_uri:
@@ -76,6 +78,7 @@ async def diagnose():
     print("\n" + "=" * 60)
     print("诊断完成")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     asyncio.run(diagnose())

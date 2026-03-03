@@ -14,18 +14,18 @@ from pathlib import Path
 
 
 # 设置控制台输出为 UTF-8 (解决 Windows GBK 编码问题)
-if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # 配置文件路径
-DOCS_DIR = Path(__file__).parent.parent / 'docs'
-EMPLOYEES_CSV = DOCS_DIR / 'employees.csv'
-GITLAB_CSV = DOCS_DIR / 'gitlab-user.csv'
-ZENTAO_CSV = DOCS_DIR / 'zentao-user.csv'
+DOCS_DIR = Path(__file__).parent.parent / "docs"
+EMPLOYEES_CSV = DOCS_DIR / "employees.csv"
+GITLAB_CSV = DOCS_DIR / "gitlab-user.csv"
+ZENTAO_CSV = DOCS_DIR / "zentao-user.csv"
 
 
 def load_employees():
@@ -37,25 +37,17 @@ def load_employees():
         print(f"❌ 员工主数据文件不存在: {EMPLOYEES_CSV}")
         return employees_by_email, employees_by_id
 
-    with open(EMPLOYEES_CSV, encoding='utf-8-sig') as f:
+    with open(EMPLOYEES_CSV, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            emp_id = row.get('工号', '').strip()
-            name = row.get('姓名', '').strip()
-            email = row.get('邮箱', '').strip().lower()
+            emp_id = row.get("工号", "").strip()
+            name = row.get("姓名", "").strip()
+            email = row.get("邮箱", "").strip().lower()
 
             if email:
-                employees_by_email[email] = {
-                    'employee_id': emp_id,
-                    'name': name,
-                    'email': email
-                }
+                employees_by_email[email] = {"employee_id": emp_id, "name": name, "email": email}
             if emp_id:
-                employees_by_id[emp_id] = {
-                    'employee_id': emp_id,
-                    'name': name,
-                    'email': email
-                }
+                employees_by_id[emp_id] = {"employee_id": emp_id, "name": name, "email": email}
 
     return employees_by_email, employees_by_id
 
@@ -72,13 +64,13 @@ def check_gitlab_alignment(employees_by_email, employees_by_id):
     matched = 0
     unmatched = 0
 
-    with open(GITLAB_CSV, encoding='utf-8-sig') as f:
+    with open(GITLAB_CSV, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            gitlab_id = row.get('GitLab用户ID', '').strip()
-            username = row.get('用户名', '').strip()
-            full_name = row.get('全名', '').strip()
-            email = row.get('Email', '').strip().lower()
+            gitlab_id = row.get("GitLab用户ID", "").strip()
+            username = row.get("用户名", "").strip()
+            full_name = row.get("全名", "").strip()
+            email = row.get("Email", "").strip().lower()
 
             if not gitlab_id or not email:
                 continue
@@ -86,47 +78,49 @@ def check_gitlab_alignment(employees_by_email, employees_by_id):
             # 检查邮箱是否在员工主数据中
             if email in employees_by_email:
                 emp = employees_by_email[email]
-                if emp['name'] != full_name:
-                    issues.append({
-                        'type': '姓名不一致',
-                        'gitlab_id': gitlab_id,
-                        'username': username,
-                        'gitlab_name': full_name,
-                        'mdm_name': emp['name'],
-                        'email': email
-                    })
+                if emp["name"] != full_name:
+                    issues.append(
+                        {
+                            "type": "姓名不一致",
+                            "gitlab_id": gitlab_id,
+                            "username": username,
+                            "gitlab_name": full_name,
+                            "mdm_name": emp["name"],
+                            "email": email,
+                        }
+                    )
                 else:
                     matched += 1
             else:
                 # 尝试通过用户名推断邮箱
-                possible_emails = [
-                    f"{username}@tjhq.com",
-                    f"{username}@szlongtu.com",
-                    f"{username}@mofit.com.cn"
-                ]
+                possible_emails = [f"{username}@tjhq.com", f"{username}@szlongtu.com", f"{username}@mofit.com.cn"]
                 found = False
                 for pe in possible_emails:
                     if pe in employees_by_email:
-                        issues.append({
-                            'type': '邮箱不匹配',
-                            'gitlab_id': gitlab_id,
-                            'username': username,
-                            'gitlab_name': full_name,
-                            'gitlab_email': email,
-                            'suggested_email': pe
-                        })
+                        issues.append(
+                            {
+                                "type": "邮箱不匹配",
+                                "gitlab_id": gitlab_id,
+                                "username": username,
+                                "gitlab_name": full_name,
+                                "gitlab_email": email,
+                                "suggested_email": pe,
+                            }
+                        )
                         found = True
                         break
 
                 if not found:
                     unmatched += 1
-                    issues.append({
-                        'type': '未匹配主数据',
-                        'gitlab_id': gitlab_id,
-                        'username': username,
-                        'gitlab_name': full_name,
-                        'gitlab_email': email
-                    })
+                    issues.append(
+                        {
+                            "type": "未匹配主数据",
+                            "gitlab_id": gitlab_id,
+                            "username": username,
+                            "gitlab_name": full_name,
+                            "gitlab_email": email,
+                        }
+                    )
 
     # 输出结果
     print(f"✅ 匹配成功: {matched} 条")
@@ -136,11 +130,11 @@ def check_gitlab_alignment(employees_by_email, employees_by_id):
     if issues:
         print("\n问题详情:")
         for idx, issue in enumerate(issues[:20], 1):  # 只显示前20条
-            if issue['type'] == '邮箱不匹配':
+            if issue["type"] == "邮箱不匹配":
                 print(f"  {idx}. [{issue['type']}] {issue['gitlab_name']} ({issue['username']})")
                 print(f"      GitLab邮箱: {issue['gitlab_email']}")
                 print(f"      建议邮箱: {issue['suggested_email']}")
-            elif issue['type'] == '姓名不一致':
+            elif issue["type"] == "姓名不一致":
                 print(f"  {idx}. [{issue['type']}] GitLab: {issue['gitlab_name']} vs MDM: {issue['mdm_name']}")
             else:
                 print(f"  {idx}. [{issue['type']}] {issue['gitlab_name']} ({issue['gitlab_email']})")
@@ -162,12 +156,12 @@ def check_zentao_alignment(employees_by_email, employees_by_id):
     issues = []
     matched = 0
 
-    with open(ZENTAO_CSV, encoding='utf-8-sig') as f:
+    with open(ZENTAO_CSV, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            emp_id = row.get('工号', '').strip()
-            name = row.get('姓名', '').strip()
-            email = row.get('邮箱', '').strip().lower()
+            emp_id = row.get("工号", "").strip()
+            name = row.get("姓名", "").strip()
+            email = row.get("邮箱", "").strip().lower()
 
             if not emp_id and not email:
                 continue
@@ -176,42 +170,38 @@ def check_zentao_alignment(employees_by_email, employees_by_id):
             if emp_id and emp_id in employees_by_id:
                 mdm = employees_by_id[emp_id]
                 # 检查邮箱是否一致
-                if email and mdm['email'] and email != mdm['email']:
-                    issues.append({
-                        'type': '邮箱不一致',
-                        'employee_id': emp_id,
-                        'name': name,
-                        'zentao_email': email,
-                        'mdm_email': mdm['email']
-                    })
-                elif mdm['name'] != name:
-                    issues.append({
-                        'type': '姓名不一致',
-                        'employee_id': emp_id,
-                        'zentao_name': name,
-                        'mdm_name': mdm['name']
-                    })
+                if email and mdm["email"] and email != mdm["email"]:
+                    issues.append(
+                        {
+                            "type": "邮箱不一致",
+                            "employee_id": emp_id,
+                            "name": name,
+                            "zentao_email": email,
+                            "mdm_email": mdm["email"],
+                        }
+                    )
+                elif mdm["name"] != name:
+                    issues.append(
+                        {"type": "姓名不一致", "employee_id": emp_id, "zentao_name": name, "mdm_name": mdm["name"]}
+                    )
                 else:
                     matched += 1
             elif email and email in employees_by_email:
                 mdm = employees_by_email[email]
-                if mdm['employee_id'] and emp_id and mdm['employee_id'] != emp_id:
-                    issues.append({
-                        'type': '工号不一致',
-                        'name': name,
-                        'zentao_id': emp_id,
-                        'mdm_id': mdm['employee_id'],
-                        'email': email
-                    })
+                if mdm["employee_id"] and emp_id and mdm["employee_id"] != emp_id:
+                    issues.append(
+                        {
+                            "type": "工号不一致",
+                            "name": name,
+                            "zentao_id": emp_id,
+                            "mdm_id": mdm["employee_id"],
+                            "email": email,
+                        }
+                    )
                 else:
                     matched += 1
             else:
-                issues.append({
-                    'type': '未匹配主数据',
-                    'employee_id': emp_id,
-                    'name': name,
-                    'email': email
-                })
+                issues.append({"type": "未匹配主数据", "employee_id": emp_id, "name": name, "email": email})
 
     # 输出结果
     print(f"✅ 匹配成功: {matched} 条")
@@ -220,14 +210,14 @@ def check_zentao_alignment(employees_by_email, employees_by_id):
     if issues:
         print("\n问题详情:")
         for idx, issue in enumerate(issues[:20], 1):
-            if issue['type'] == '邮箱不一致':
+            if issue["type"] == "邮箱不一致":
                 print(f"  {idx}. [{issue['type']}] {issue['name']} ({issue['employee_id']})")
                 print(f"      禅道邮箱: {issue['zentao_email']}")
                 print(f"      主数据邮箱: {issue['mdm_email']}")
-            elif issue['type'] == '工号不一致':
+            elif issue["type"] == "工号不一致":
                 print(f"  {idx}. [{issue['type']}] {issue['name']}")
                 print(f"      禅道工号: {issue['zentao_id']} vs 主数据工号: {issue['mdm_id']}")
-            elif issue['type'] == '姓名不一致':
+            elif issue["type"] == "姓名不一致":
                 print(f"  {idx}. [{issue['type']}] 禅道: {issue['zentao_name']} vs 主数据: {issue['mdm_name']}")
             else:
                 print(f"  {idx}. [{issue['type']}] {issue['name']} ({issue['employee_id']})")
@@ -267,5 +257,5 @@ def main():
     print("=" * 50)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

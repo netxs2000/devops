@@ -36,15 +36,12 @@ def seed_e2e_admin():
                 primary_email=email,
                 is_active=True,
                 is_current=True,
-                sync_version=1
+                sync_version=1,
             )
             session.add(user)
             session.flush()
 
-            cred = UserCredential(
-                user_id=user.global_user_id,
-                password_hash=auth_get_password_hash(password)
-            )
+            cred = UserCredential(user_id=user.global_user_id, password_hash=auth_get_password_hash(password))
             session.add(cred)
             print(f"Created E2E user: {email}")
         else:
@@ -52,13 +49,9 @@ def seed_e2e_admin():
             print(f"E2E user already exists: {email}")
 
         # Ensure SYSTEM_ADMIN role
-        admin_role = session.query(SysRole).filter_by(role_key='SYSTEM_ADMIN').first()
+        admin_role = session.query(SysRole).filter_by(role_key="SYSTEM_ADMIN").first()
         if not admin_role:
-            admin_role = SysRole(
-                role_key='SYSTEM_ADMIN',
-                role_name='系统管理员',
-                is_active=True
-            )
+            admin_role = SysRole(role_key="SYSTEM_ADMIN", role_name="系统管理员", is_active=True)
             session.add(admin_role)
             session.flush()
             print("Created SYSTEM_ADMIN role")
@@ -73,5 +66,6 @@ def seed_e2e_admin():
         session.commit()
         print("Done.")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     seed_e2e_admin()

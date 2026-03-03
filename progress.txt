@@ -3,24 +3,50 @@
 ## 🎯 当前状态 (Current Focus)
 [阶段：执行中]
 分支：feat/qa-gitlab-style-ui
-任务：完成测试用例模块 UI 的交互细节优化（步骤检查、回执评论），并同步 Ruff 规则至全量代码。
+任务：验证全链路 Nexus (192.168.5.64) 镜像与依赖加速方案，确保本地环境与 Docker 容器环境一致。
 
 ## 🏗️ 进行中 (In Progress)
 
-- [x] [P1] 测试用例模块 UI 重构与交互升级 (GitLab 风格) (2026-02-23)
-    - 结果：成功复刻 GitLab 列表+详情双栏布局，并新增交互反馈。
+- [x] [P0] Nexus 仓库全链路迁移与部署验证 (2026-03-03)
+    - 结果：镜像与依赖拉取逻辑已成功切换至新 Nexus (192.168.5.64:8082)。
     - 实现：
-        1. 引入 Web Components 实现双栏同步。
-        2. 支持测试步骤交互式 Checkbox 标记与实时进度条。
-        3. 增加执行评论回传与环境标识，打通后端全链路执行 API。
-    - 分支：开发于 `feat/qa-gitlab-style-ui` 分支，验证通过。
+        1. 修复了 `.env`、`Makefile` 及 `Dockerfile` 中的旧 IP/端口硬编码。
+        2. 完成了 `python:3.11-slim-bookworm` 基础镜像的本地驻留与 Nexus Push 验证。
+        3. 优化了 `Makefile` 构建指令，解决了隔离网络环境下的 `setuptools` 隔离构建问题。
+    - 验证：通过 `make deploy` 完成端到端验证，所有服务健康，初始化数据全量加载。
+    - [Hygiene]: 已清理临时调试文件。
+
+
+- [x] [P1] 测试用例模块 UI 的交互细节优化与 Ruff 全量同步 (2026-03-03)
+    - 结果：完成了“步骤检查”与“回执评论”的深度交互升级，全量代码通过 Ruff 格式化。
+    - 实现：
+        1. **前端**：在 `qa-test-case-detail` 组件中新增了“环境选择器”和“评论内容校验”，优化了执行工具栏。
+        2. **后端**：更新了 `TestManagementService`，将执行备注和环境信息同步至 GitLab Note。
+        3. **质量**：引入 Ruff 工具链，完成 287 个文件的自动代码格式化，并优化了 `ruff.toml` 配置。
+    - 验证：`make deploy` 后手动测试执行功能，GitLab 评论区成功回传格式化后的审计记录。
+    - [Hygiene]: 已清理 `.ruff_cache` 及所有格式化产生的临时残留。
+
 📅 接下来 (Backlog)
 
 - [ ] [P1] 待禅道服务器上线后执行端到端全量数据同步验证 (2026-02-20)
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[P3] Ruff 极致性能工具链迁移实验 (isort 整合)** (2026-02-23)
+1. **[P0] 基础设施迁移：Nexus 5.64 适配与 BuildKit 优化** (2026-03-03)
+    - 成果：彻底解决了 Docker Hub 官方源连接不稳定的问题，拉取核心基础镜像实现“内网级”极速响应。
+    - 改进：在 `Dockerfile` 中移除了 `syntax=docker/dockerfile:1` 避免在离线环境下触发 BuildKit Frontend 下载报错。
+    - 兼容性：`make install` 增加 `--no-build-isolation` 标志，确保容器内安装链路无需访问互联网外源。
+    - 验证：`make deploy` 耗时显著降低（从 10min+ 降至 2min 内完成全量编译与初始化）。
+
+2. **[P1] 测试用例模块 UI 重构 (GitLab 风格)** (2026-02-23)
+    - 结果：成功复刻 GitLab 列表+详情双栏布局，并新增交互反馈。
+    - 实现：
+        1. 引入 Web Components 实现双栏同步。
+        2. 支持测试步骤交互式 Checkbox 标记与实时进度条。
+        3. 增加执行评论回传与环境标识，打通后端全链路执行 API。
+    - 分支：开发于 `feat/qa-gitlab-style-ui` 分支，验证通过。
+
+3. **[P3] Ruff 极致性能工具链迁移实验 (isort 整合)** (2026-02-23)
     - 成果：替代原有 `isort` + `flake8-import-order`。单次运行全量（266 文件）排序修复耗时 < 0.5s。
     - 风险控制：通过 `[lint.per-file-ignores]` 机制保护了 `__init__.py` 中的插件注册逻辑，解决了初始化导致的 `ModuleNotFoundError`。
     - 配置：新增 `ruff.toml` 影子运行，已执行 `ruff check --select I --fix` 完成全量 Import 规范化。

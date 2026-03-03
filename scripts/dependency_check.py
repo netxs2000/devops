@@ -1,4 +1,5 @@
 """TODO: Add module description."""
+
 import csv
 import logging
 import os
@@ -6,7 +7,8 @@ import os
 from bs4 import BeautifulSoup
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+
 
 def find_html_file(directory):
     """
@@ -15,10 +17,11 @@ def find_html_file(directory):
     :return: HTML文件路径或None
     """
     for filename in os.listdir(directory):
-        if filename.endswith('.html'):
+        if filename.endswith(".html"):
             return os.path.join(directory, filename)
-    logging.error('No HTML file found in the directory.')
+    logging.error("No HTML file found in the directory.")
     return None
+
 
 def parse_html_report(html_file):
     """
@@ -26,41 +29,48 @@ def parse_html_report(html_file):
     :param html_file: HTML报告文件路径
     :return: 包含Dependency, Severity, CVE Count字段的信息列表
     """
-    with open(html_file, encoding='utf-8') as file:
-        soup = BeautifulSoup(file, 'html.parser')
+    with open(html_file, encoding="utf-8") as file:
+        soup = BeautifulSoup(file, "html.parser")
     vulnerabilities = []
-    vulnerability_table = soup.find('table', id='summaryTable')
+    vulnerability_table = soup.find("table", id="summaryTable")
     if not vulnerability_table:
-        logging.error('Vulnerability table not found in the HTML file.')
+        logging.error("Vulnerability table not found in the HTML file.")
         return []
-    headers = [header.text.strip().replace('\xa0', ' ').lower() for header in vulnerability_table.find('thead').find_all('th')]
-    logging.debug(f'Headers: {headers}')
+    headers = [
+        header.text.strip().replace("\xa0", " ").lower() for header in vulnerability_table.find("thead").find_all("th")
+    ]
+    logging.debug(f"Headers: {headers}")
     try:
-        dependency_idx = headers.index('dependency')
-        severity_idx = headers.index('highest severity')
-        cve_count_idx = headers.index('cve count')
+        dependency_idx = headers.index("dependency")
+        severity_idx = headers.index("highest severity")
+        cve_count_idx = headers.index("cve count")
     except ValueError as e:
-        logging.error(f'Missing required header: {e}')
+        logging.error(f"Missing required header: {e}")
         return []
-    rows = vulnerability_table.find('tbody').find_all('tr') if vulnerability_table.find('tbody') else vulnerability_table.find_all('tr')[1:]
+    rows = (
+        vulnerability_table.find("tbody").find_all("tr")
+        if vulnerability_table.find("tbody")
+        else vulnerability_table.find_all("tr")[1:]
+    )
     for row in rows:
-        cells = row.find_all('td')
+        cells = row.find_all("td")
         if len(cells) != len(headers):
-            logging.warning(f'Incomplete vulnerability information: {row}')
+            logging.warning(f"Incomplete vulnerability information: {row}")
             continue
         vuln_info = {}
         for idx, cell in enumerate(cells):
             key = headers[idx]
-            value = cell.text.strip().replace('\xa0', ' ')
+            value = cell.text.strip().replace("\xa0", " ")
             vuln_info[key] = value
-        dependency = vuln_info.get(headers[dependency_idx], '')
-        severity = vuln_info.get(headers[severity_idx], '')
-        cve_count = vuln_info.get(headers[cve_count_idx], '0')
+        dependency = vuln_info.get(headers[dependency_idx], "")
+        severity = vuln_info.get(headers[severity_idx], "")
+        cve_count = vuln_info.get(headers[cve_count_idx], "0")
         if dependency and severity and cve_count:
-            vulnerabilities.append({'Dependency': dependency, 'Severity': severity, 'CVE Count': cve_count})
+            vulnerabilities.append({"Dependency": dependency, "Severity": severity, "CVE Count": cve_count})
         else:
-            logging.warning(f'Skipping vulnerability with missing fields: {vuln_info}')
+            logging.warning(f"Skipping vulnerability with missing fields: {vuln_info}")
     return vulnerabilities
+
 
 def write_csv_file(vulnerabilities, output_file):
     """
@@ -68,35 +78,38 @@ def write_csv_file(vulnerabilities, output_file):
     :param vulnerabilities: 包含漏洞信息的列表
     :param output_file: 输出文件路径
     """
-    with open(output_file, 'w', encoding='utf-8', newline='') as file:
-        fieldnames = ['Dependency', 'Severity', 'CVE Count']
+    with open(output_file, "w", encoding="utf-8", newline="") as file:
+        fieldnames = ["Dependency", "Severity", "CVE Count"]
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         for vuln in vulnerabilities:
             writer.writerow(vuln)
 
+
 def main():
     '''"""TODO: Add description.
 
-Args:
-    TODO
+    Args:
+        TODO
 
-Returns:
-    TODO
+    Returns:
+        TODO
 
-Raises:
-    TODO
-"""'''
-    reports_dir = os.path.join(os.getcwd(), 'reports')
+    Raises:
+        TODO
+    """'''
+    reports_dir = os.path.join(os.getcwd(), "reports")
     os.makedirs(reports_dir, exist_ok=True)
     html_file_path = find_html_file(reports_dir)
     if not html_file_path:
-        logging.error('No HTML file found in the reports directory.')
+        logging.error("No HTML file found in the reports directory.")
         return
-    default_output_file_path = os.path.join(reports_dir, 'DependencyCheck_report.csv')
+    default_output_file_path = os.path.join(reports_dir, "DependencyCheck_report.csv")
     vulnerabilities = parse_html_report(html_file_path)
-    logging.info(f'Found {len(vulnerabilities)} vulnerabilities with complete information.')
+    logging.info(f"Found {len(vulnerabilities)} vulnerabilities with complete information.")
     write_csv_file(vulnerabilities, default_output_file_path)
-    logging.info(f'CSV file written to {default_output_file_path}')
-if __name__ == '__main__':
+    logging.info(f"CSV file written to {default_output_file_path}")
+
+
+if __name__ == "__main__":
     main()

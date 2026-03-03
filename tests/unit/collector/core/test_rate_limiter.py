@@ -2,6 +2,7 @@
 
 验证 RateLimiter (令牌桶算法) 的限流准确性。
 """
+
 import time
 import unittest
 
@@ -31,5 +32,7 @@ class TestRateLimiter(unittest.TestCase):
         end_time = time.time()
         duration = end_time - start_time
         self.assertGreaterEqual(duration, 0.8)
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     unittest.main()

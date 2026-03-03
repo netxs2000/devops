@@ -3,6 +3,7 @@
 用于对 Raw Data Staging 层提取出的原始 JSON 进行二次校验和结构化。
 提供类型提示、默认值填充以及数据清洗功能。
 """
+
 from datetime import datetime
 from typing import Any
 
@@ -11,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class GitLabUserSchema(BaseModel):
     """GitLab 用户原始数据结构校验
-    
+
     Attributes:
         id: 用户 ID
         username: 用户名
@@ -20,17 +21,19 @@ class GitLabUserSchema(BaseModel):
         state: 用户状态 (active/blocked)
         skype: Skype ID (alias for skypeid. equals department)
     """
+
     id: int
     username: str
     name: str
     email: str | None = None
-    state: str = 'active'
-    skype: str | None = Field(None, alias='skypeid')
+    state: str = "active"
+    skype: str | None = Field(None, alias="skypeid")
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
 
 class GitLabMRSchema(BaseModel):
     """GitLab Merge Request 原始数据结构校验
-    
+
     Attributes:
         id: MR 全局 ID
         iid: 项目内 MR 编号
@@ -42,40 +45,42 @@ class GitLabMRSchema(BaseModel):
         created_at: 创建时间
         merged_at: 合并时间
     """
+
     id: int
     iid: int
     project_id: int
     title: str
-    description: str | None = ''
+    description: str | None = ""
     state: str
     author: GitLabUserSchema
     created_at: datetime
     merged_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
 
-    @field_validator('state')
+    @field_validator("state")
     @classmethod
     def validate_state(cls, v):
         '''"""TODO: Add description.
 
-Args:
-    cls: TODO
-    v: TODO
+        Args:
+            cls: TODO
+            v: TODO
 
-Returns:
-    TODO
+        Returns:
+            TODO
 
-Raises:
-    TODO
-"""'''
-        allowed = {'opened', 'closed', 'merged', 'locked'}
+        Raises:
+            TODO
+        """'''
+        allowed = {"opened", "closed", "merged", "locked"}
         if v not in allowed:
-            raise ValueError(f'Invalid MR state: {v}')
+            raise ValueError(f"Invalid MR state: {v}")
         return v
+
 
 class StagingDataBundle(BaseModel):
     """Staging 层数据包通用包装
-    
+
     Attributes:
         source: 数据源名称
         entity_type: 实体类型
@@ -83,18 +88,20 @@ class StagingDataBundle(BaseModel):
         payload: 原始 JSON 数据
         collected_at: 采集时间
     """
+
     source: str
     entity_type: str
     external_id: str
     payload: dict[str, Any]
     collected_at: datetime = Field(default_factory=datetime.utcnow)
 
+
 def validate_gitlab_mr(raw_payload: dict[str, Any]) -> GitLabMRSchema:
     """工具函数：验证并转换 GitLab MR
-    
+
     Args:
         raw_payload: 原始字典数据
-        
+
     Returns:
         GitLabMRSchema: 验证后的 Pydantic 对象
     """

@@ -2,6 +2,7 @@
 
 提供提交记录 (Commit) 的同步、落盘及 Diff 分析逻辑。
 """
+
 import logging
 
 import pytz
@@ -16,25 +17,29 @@ from ..models import GitLabCommit, GitLabCommitFileStats, GitLabProject
 
 logger = logging.getLogger(__name__)
 
+
 class CommitMixin:
     """提供 GitLabCommit 相关的同步逻辑。
-    
+
     包含提交记录的批量同步、Staging 落盘、Diff 代码量统计及行为特征分析。
     """
 
     def _sync_commits(self, project: GitLabProject, since: str | None) -> int:
         """同步项目的提交记录。
-        
+
         使用生成器流式同步项目的 Git 提交。
-        
+
         Args:
             project (GitLabProject): 项目实体对象。
             since (Optional[str]): ISO 格式的时间字符串，仅同步该时间之后的提交。
-            
+
         Returns:
             int: 本次成功处理的提交总数。
         """
-        return self._process_generator(self.client.get_project_commits(project.id, since=since), lambda batch: self._save_commits_batch(project, batch))
+        return self._process_generator(
+            self.client.get_project_commits(project.id, since=since),
+            lambda batch: self._save_commits_batch(project, batch),
+        )
 
     def _save_commits_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存提交记录，并触发追溯与行为分析。
@@ -45,25 +50,39 @@ class CommitMixin:
         3. 触发 Traceability 提取 (关联 Issue)。
         4. 触发行为特征分析 (加班识别)。
         5. (可选) 触发深度 Diff 分析。
-        
+
         Args:
             project (GitLabProject): 关联的项目实体。
             batch (List[dict]): 从 API 获取的原始提交数据列表。
         """
-        existing = self.session.query(GitLabCommit.id).filter(GitLabCommit.project_id == project.id, GitLabCommit.id.in_([c['id'] for c in batch])).all()
+        existing = (
+            self.session.query(GitLabCommit.id)
+            .filter(GitLabCommit.project_id == project.id, GitLabCommit.id.in_([c["id"] for c in batch]))
+            .all()
+        )
         existing_ids = {c.id for c in existing}
         new_commits = []
         for data in batch:
-            if data['id'] in existing_ids:
+            if data["id"] in existing_ids:
                 continue
-            commit = GitLabCommit(id=data['id'], project_id=project.id, short_id=data['short_id'], title=data['title'], author_name=data['author_name'], author_email=data['author_email'], message=data['message'], authored_date=parse_iso8601(data['authored_date']), committed_date=parse_iso8601(data['committed_date']))
-            stats = data.get('stats', {})
-            commit.additions = stats.get('additions', 0)
-            commit.deletions = stats.get('deletions', 0)
-            commit.total = stats.get('total', 0)
+            commit = GitLabCommit(
+                id=data["id"],
+                project_id=project.id,
+                short_id=data["short_id"],
+                title=data["title"],
+                author_name=data["author_name"],
+                author_email=data["author_email"],
+                message=data["message"],
+                authored_date=parse_iso8601(data["authored_date"]),
+                committed_date=parse_iso8601(data["committed_date"]),
+            )
+            stats = data.get("stats", {})
+            commit.additions = stats.get("additions", 0)
+            commit.deletions = stats.get("deletions", 0)
+            commit.total = stats.get("total", 0)
             self.session.add(commit)
             new_commits.append(commit)
-            if hasattr(self, '_apply_traceability_extraction'):
+            if hasattr(self, "_apply_traceability_extraction"):
                 self._apply_traceability_extraction(commit)
             self._apply_commit_behavior_analysis(commit)
         if self.enable_deep_analysis and new_commits:
@@ -72,12 +91,12 @@ class CommitMixin:
 
     def _process_commit_diffs(self, project: GitLabProject, commit: GitLabCommit) -> None:
         """分析 GitLabCommit 的 Diff 并计算 ELOC / Impact / Churn。
-        
+
         升级版逻辑 (v2.0)：
         1. 使用 ELOCAnalyzer 替代简单的 DiffAnalyzer。
         2. 调用 get_file_last_commit 获取文件上次变更时间，用于判定 Churn (短期重写) 和 Legacy (老代码)。
         3. 聚合计算结果并写入核心数据表 commit_metrics (供 Streamlit 看板使用)。
-        
+
         Args:
             project (GitLabProject): 关联的项目实体。
             commit (GitLabCommit): 需要分析的提交对象。
@@ -100,12 +119,14 @@ class CommitMixin:
                 commit_time = commit_time.replace(tzinfo=pytz.UTC)
 
             for diff in diffs:
-                file_path = diff.get('new_path') or diff.get('old_path')
+                file_path = diff.get("new_path") or diff.get("old_path")
 
                 # Basic Filtering
-                if not file_path: continue
+                if not file_path:
+                    continue
                 # Use analyzer options to check if generated (basic check first to save API calls)
-                if analyzer._is_generated(file_path): continue
+                if analyzer._is_generated(file_path):
+                    continue
 
                 # --- 1. Fetch History for Churn/Legacy ---
                 last_commit = self.client.get_file_last_commit(project.id, file_path, commit.id)
@@ -114,11 +135,12 @@ class CommitMixin:
 
                 if last_commit:
                     try:
-                        last_mod_date = last_commit.get('committed_date')
+                        last_mod_date = last_commit.get("committed_date")
                         # Check Churn: Modified within 21 days (approx 3 weeks)
                         if commit_time and last_mod_date:
                             prev_date = parser.isoparse(str(last_mod_date))
-                            if not prev_date.tzinfo: prev_date = prev_date.replace(tzinfo=pytz.UTC)
+                            if not prev_date.tzinfo:
+                                prev_date = prev_date.replace(tzinfo=pytz.UTC)
 
                             if (commit_time - prev_date).days <= 21 and (commit_time - prev_date).days >= 0:
                                 is_churn = True
@@ -126,15 +148,15 @@ class CommitMixin:
                         pass
 
                 # --- 2. Run ELOC Analysis ---
-                diff_text = diff.get('diff', '')
-                diff_lines = diff_text.split('\n')
+                diff_text = diff.get("diff", "")
+                diff_lines = diff_text.split("\n")
 
                 # Call Core Algorithm
                 result = analyzer.analyze_commit_diff(
                     file_path=file_path,
                     diff_lines=diff_lines,
                     file_last_modified_date=last_mod_date,
-                    is_churn_commit=is_churn
+                    is_churn_commit=is_churn,
                 )
 
                 # --- 3. Save File Stats (Legacy Plugin Model - Optional but kept for compatibility) ---
@@ -144,11 +166,11 @@ class CommitMixin:
                 file_stats = GitLabCommitFileStats(
                     commit_id=commit.id,
                     file_path=file_path,
-                    language=None, # DiffAnalyzer had this, ELOCAnalyzer currently infers basic types
-                    file_type_category='Test' if result.test_lines > 0 else 'Source',
+                    language=None,  # DiffAnalyzer had this, ELOCAnalyzer currently infers basic types
+                    file_type_category="Test" if result.test_lines > 0 else "Source",
                     code_added=result.raw_additions,
                     code_deleted=result.raw_deletions,
-                    comment_added=result.comment_lines
+                    comment_added=result.comment_lines,
                 )
                 self.session.add(file_stats)
 
@@ -167,7 +189,7 @@ class CommitMixin:
             if not metrics:
                 metrics = CommitMetrics(commit_id=commit.id)
 
-            metrics.project_id = str(project.id) # Ensure string format
+            metrics.project_id = str(project.id)  # Ensure string format
             metrics.author_email = commit.author_email
             metrics.committed_at = commit.committed_date
             metrics.raw_additions = commit.additions
@@ -191,7 +213,7 @@ class CommitMixin:
             commit.total = total_changes
 
         except Exception as e:
-            logger.warning(f'Failed to analyze diff for commit {commit.id}: {e}')
+            logger.warning(f"Failed to analyze diff for commit {commit.id}: {e}")
 
     def _apply_commit_behavior_analysis(self, commit: GitLabCommit) -> None:
         """分析 GitLabCommit 的行为特征（主要检测是否为非工作时间提交）。

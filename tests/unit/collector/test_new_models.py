@@ -1,4 +1,3 @@
-
 import pytest
 from sqlalchemy.exc import IntegrityError
 
@@ -14,10 +13,7 @@ from devops_collector.models.base_models import (
 def test_create_business_system(db_session):
     """Test creating a BusinessSystem."""
     system = BusinessSystem(
-        code="trade-core",
-        name="Trading System",
-        description="The core trading platform",
-        domain="E-Commerce"
+        code="trade-core", name="Trading System", description="The core trading platform", domain="E-Commerce"
     )
     db_session.add(system)
     db_session.commit()
@@ -26,6 +22,7 @@ def test_create_business_system(db_session):
     assert system.id is not None
     assert system.code == "trade-core"
     assert system.name == "Trading System"
+
 
 def test_create_system_registry(db_session):
     """Test creating a SystemRegistry entry."""
@@ -36,7 +33,7 @@ def test_create_system_registry(db_session):
         base_url="https://gitlab.example.com",
         api_version="v4",
         auth_type="Token",
-        is_active=True
+        is_active=True,
     )
     db_session.add(registry)
     db_session.commit()
@@ -44,6 +41,7 @@ def test_create_system_registry(db_session):
 
     assert registry.system_code == "GITLAB_CORP"
     assert registry.base_url == "https://gitlab.example.com"
+
 
 def test_link_service_to_business_system(db_session):
     """Test linking a Service to a BusinessSystem."""
@@ -58,7 +56,7 @@ def test_link_service_to_business_system(db_session):
         system_id=biz_system.id,
         component_type="service",
         lifecycle="production",
-        tags=["java", "critical"]
+        tags=["java", "critical"],
     )
     db_session.add(service)
     db_session.commit()
@@ -70,6 +68,7 @@ def test_link_service_to_business_system(db_session):
     # Verify reverse relationship
     assert len(biz_system.services) == 1
     assert biz_system.services[0].name == "payment-service"
+
 
 def test_entity_topology_integration(db_session):
     """Test the full chain: Service -> EntityTopology -> SystemRegistry."""
@@ -88,7 +87,7 @@ def test_entity_topology_integration(db_session):
         system_code=tool.system_code,
         external_resource_id="project-key-abc",
         element_type="quality-gate",
-        meta_info={"branch": "main"}
+        meta_info={"branch": "main"},
     )
     db_session.add(topo)
     db_session.commit()
@@ -102,6 +101,7 @@ def test_entity_topology_integration(db_session):
     db_session.refresh(service)
     assert len(service.resources) == 1
     assert service.resources[0].external_resource_id == "project-key-abc"
+
 
 def test_cascade_delete_service(db_session):
     """Test that deleting a Service also deletes its Topology links."""
@@ -130,6 +130,7 @@ def test_cascade_delete_service(db_session):
     assert db_session.query(EntityTopology).count() == 0
     # Logic: Service.resources relationship has cascade='all, delete-orphan'
 
+
 def test_topology_integrity_constraint(db_session):
     """Test that creating Topology with invalid system_code fails."""
     service = Service(name="test-service")
@@ -139,14 +140,15 @@ def test_topology_integrity_constraint(db_session):
     # Try to link to non-existent system
     topo = EntityTopology(
         service_id=service.id,
-        system_code="INVALID_SYSTEM_CODE", # Does not exist in SystemRegistry
-        external_resource_id="123"
+        system_code="INVALID_SYSTEM_CODE",  # Does not exist in SystemRegistry
+        external_resource_id="123",
     )
     db_session.add(topo)
 
     # Expect IntegrityError due to FK constraint
     with pytest.raises(IntegrityError):
         db_session.commit()
+
 
 def test_entity_topology_project_link(db_session):
     """Test EntityTopology linked to ProjectMaster (without service_id)."""
@@ -156,12 +158,7 @@ def test_entity_topology_project_link(db_session):
     db_session.flush()
 
     # 2. Create ProjectMaster
-    project = ProjectMaster(
-        project_id="PROJ-TEST-001",
-        project_name="Test Project",
-        status="ACTIVE",
-        is_current=True
-    )
+    project = ProjectMaster(project_id="PROJ-TEST-001", project_name="Test Project", status="ACTIVE", is_current=True)
     db_session.add(project)
     db_session.flush()
 
@@ -173,7 +170,7 @@ def test_entity_topology_project_link(db_session):
         external_resource_id="https://gitlab.example.com/test/repo.git",
         resource_name="repo",
         element_type="source-code",
-        is_active=True
+        is_active=True,
     )
     db_session.add(topo)
     db_session.commit()

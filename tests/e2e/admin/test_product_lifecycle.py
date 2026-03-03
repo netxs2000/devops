@@ -1,4 +1,3 @@
-
 import os
 
 import pytest
@@ -42,6 +41,7 @@ def test_product_import_flow(authenticated_page: Page):
         authenticated_page.wait_for_timeout(1000)
         cards = authenticated_page.locator("adm-product-card")
         assert cards.count() > 0, "No product cards found after import"
+
 
 @pytest.mark.smoke
 def test_product_export_trigger(authenticated_page: Page):

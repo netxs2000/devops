@@ -3,6 +3,7 @@
 提供基于 SQLite 的 db_session 和 FastAPI TestClient，
 供需要跨模块交互验证的集成测试使用。
 """
+
 import os
 import uuid
 
@@ -31,9 +32,7 @@ def db_session():
     db_url = f"sqlite:///{db_file}"
 
     _engine = create_engine(db_url, connect_args={"check_same_thread": False})
-    _SessionLocal = sessionmaker(
-        autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False
-    )
+    _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False)
 
     Base.metadata.create_all(bind=_engine)
     db = _SessionLocal()
@@ -52,6 +51,7 @@ def db_session():
 @pytest.fixture(scope="function")
 def client(db_session):
     """Create a TestClient with a database session."""
+
     def override_get_auth_db():
         try:
             yield db_session

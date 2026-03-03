@@ -1,14 +1,12 @@
-
 import sqlite3
 import unittest
 from datetime import datetime, timedelta
 
 
 class TestNewFrameworksLogic(unittest.TestCase):
-
     def setUp(self):
         # 1. Setup In-Memory Database
-        self.conn = sqlite3.connect(':memory:')
+        self.conn = sqlite3.connect(":memory:")
         self.cursor = self.conn.cursor()
 
         # 2. Schema Setup (Mocking the real tables needed for Views)
@@ -29,7 +27,6 @@ class TestNewFrameworksLogic(unittest.TestCase):
                 closed_at DATETIME
             );
         """)
-
 
         # Satisfaction Table (Source for SPACE - S)
         self.cursor.execute("""
@@ -71,7 +68,9 @@ class TestNewFrameworksLogic(unittest.TestCase):
 
         # --- Hotspot Analysis Tables ---
         self.cursor.execute("CREATE TABLE commits (id TEXT PRIMARY KEY, project_id INTEGER, committed_date DATETIME);")
-        self.cursor.execute("CREATE TABLE commit_file_stats (id INTEGER PRIMARY KEY, commit_id TEXT, file_path TEXT, code_added INTEGER, code_deleted INTEGER);")
+        self.cursor.execute(
+            "CREATE TABLE commit_file_stats (id INTEGER PRIMARY KEY, commit_id TEXT, file_path TEXT, code_added INTEGER, code_deleted INTEGER);"
+        )
 
         # 3. Apply SQL Logics ( The Views )
 
@@ -164,7 +163,6 @@ class TestNewFrameworksLogic(unittest.TestCase):
     def tearDown(self):
         self.conn.close()
 
-
     def test_flow_item_categorization(self):
         """Test if Flow Framework correctly categorizes Items based on labels."""
         print("\n--- Testing Flow Framework: Categorization Logic ---")
@@ -183,10 +181,10 @@ class TestNewFrameworksLogic(unittest.TestCase):
         print(f"Distribution: {results}")
 
         # Assertions
-        self.assertEqual(results.get('Feature'), 1)
-        self.assertEqual(results.get('Defect'), 1)
-        self.assertEqual(results.get('Debt'), 1)
-        self.assertEqual(results.get('Risk'), 1) # Priority Check
+        self.assertEqual(results.get("Feature"), 1)
+        self.assertEqual(results.get("Defect"), 1)
+        self.assertEqual(results.get("Debt"), 1)
+        self.assertEqual(results.get("Risk"), 1)  # Priority Check
 
     def test_flow_metrics_aggregation(self):
         """Test Flow Velocity and Distribution calculations."""
@@ -196,12 +194,15 @@ class TestNewFrameworksLogic(unittest.TestCase):
 
         # Insert 3 Features closed last week
         for _ in range(3):
-            self.cursor.execute("INSERT INTO issues (created_at, closed_at, labels, state) VALUES (?, ?, 'feature', 'closed')",
-                                (last_week, now))
+            self.cursor.execute(
+                "INSERT INTO issues (created_at, closed_at, labels, state) VALUES (?, ?, 'feature', 'closed')",
+                (last_week, now),
+            )
 
         # Insert 1 Defect closed last week
-        self.cursor.execute("INSERT INTO issues (created_at, closed_at, labels, state) VALUES (?, ?, 'bug', 'closed')",
-                                (last_week, now))
+        self.cursor.execute(
+            "INSERT INTO issues (created_at, closed_at, labels, state) VALUES (?, ?, 'bug', 'closed')", (last_week, now)
+        )
 
         self.conn.commit()
 
@@ -211,9 +212,9 @@ class TestNewFrameworksLogic(unittest.TestCase):
         print(f"Metrics Row: {row}")
 
         # row structure based on SELECT: (velocity, features, defects)
-        self.assertEqual(row[0], 4, "Should satisfy complete velocity") # velocity
-        self.assertEqual(row[1], 3) # features
-        self.assertEqual(row[2], 1) # defects
+        self.assertEqual(row[0], 4, "Should satisfy complete velocity")  # velocity
+        self.assertEqual(row[1], 3)  # features
+        self.assertEqual(row[2], 1)  # defects
 
     def test_space_satisfaction_aggregation(self):
         """Test SPACE Framework (Satisfaction) SQL aggregation."""
@@ -250,22 +251,33 @@ class TestNewFrameworksLogic(unittest.TestCase):
         # 1. Commit A: ANCIENT History (120 days ago) - Initial Create
         # Should NOT count towards Churn (90d window), but counts towards LOC.
         self.cursor.execute("INSERT INTO commits (id, committed_date) VALUES ('c1', ?)", (day_120_ago,))
-        self.cursor.execute("INSERT INTO commit_file_stats (commit_id, file_path, code_added, code_deleted) VALUES ('c1', ?, 100, 0)", (file_target,))
+        self.cursor.execute(
+            "INSERT INTO commit_file_stats (commit_id, file_path, code_added, code_deleted) VALUES ('c1', ?, 100, 0)",
+            (file_target,),
+        )
 
         # 2. Commit B: RECENT History (10 days ago) - Feature Add
         # Counts towards Churn AND LOC.
         self.cursor.execute("INSERT INTO commits (id, committed_date) VALUES ('c2', ?)", (day_10_ago,))
-        self.cursor.execute("INSERT INTO commit_file_stats (commit_id, file_path, code_added, code_deleted) VALUES ('c2', ?, 50, 0)", (file_target,))
+        self.cursor.execute(
+            "INSERT INTO commit_file_stats (commit_id, file_path, code_added, code_deleted) VALUES ('c2', ?, 50, 0)",
+            (file_target,),
+        )
 
         # 3. Commit C: RECENT History (5 days ago) - Refactor (Delete)
         # Counts towards Churn. LOC should reduce.
         self.cursor.execute("INSERT INTO commits (id, committed_date) VALUES ('c3', ?)", (day_5_ago,))
-        self.cursor.execute("INSERT INTO commit_file_stats (commit_id, file_path, code_added, code_deleted) VALUES ('c3', ?, 0, 20)", (file_target,))
+        self.cursor.execute(
+            "INSERT INTO commit_file_stats (commit_id, file_path, code_added, code_deleted) VALUES ('c3', ?, 0, 20)",
+            (file_target,),
+        )
 
         self.conn.commit()
 
         # Verify View
-        self.cursor.execute("SELECT file_path, churn_90d, estimated_loc FROM view_file_hotspots WHERE file_path = ?", (file_target,))
+        self.cursor.execute(
+            "SELECT file_path, churn_90d, estimated_loc FROM view_file_hotspots WHERE file_path = ?", (file_target,)
+        )
         res = self.cursor.fetchone()
 
         print(f"Hotspot Result: {res}")
@@ -286,29 +298,44 @@ class TestNewFrameworksLogic(unittest.TestCase):
         yesterday = today - timedelta(days=1)
 
         # 1. Setup User
-        self.cursor.execute("INSERT INTO mdm_identities (global_user_id, full_name, primary_email) VALUES ('u1', 'Test Dev', ?)", (email,))
+        self.cursor.execute(
+            "INSERT INTO mdm_identities (global_user_id, full_name, primary_email) VALUES ('u1', 'Test Dev', ?)",
+            (email,),
+        )
 
         # 2. Setup Commits
         # Today: 2 commits (should be 1 active day)
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             INSERT INTO commit_metrics (commit_id, author_email, committed_at, eloc_score, impact_score, churn_lines, raw_additions)
             VALUES ('c1', ?, ?, 10.0, 15.0, 0, 100)
-        """, (email, today.strftime("%Y-%m-%d %H:%M:%S")))
-        self.cursor.execute("""
+        """,
+            (email, today.strftime("%Y-%m-%d %H:%M:%S")),
+        )
+        self.cursor.execute(
+            """
             INSERT INTO commit_metrics (commit_id, author_email, committed_at, eloc_score, impact_score, churn_lines, raw_additions)
             VALUES ('c2', ?, ?, 5.0, 5.0, 2, 50)
-        """, (email, today.strftime("%Y-%m-%d %H:%M:%S")))
+        """,
+            (email, today.strftime("%Y-%m-%d %H:%M:%S")),
+        )
 
         # Yesterday: 1 commit (should be another active day)
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             INSERT INTO commit_metrics (commit_id, author_email, committed_at, eloc_score, impact_score, churn_lines, raw_additions)
             VALUES ('c3', ?, ?, 20.0, 30.0, 0, 200)
-        """, (email, yesterday.strftime("%Y-%m-%d %H:%M:%S")))
+        """,
+            (email, yesterday.strftime("%Y-%m-%d %H:%M:%S")),
+        )
 
         self.conn.commit()
 
         # Verify View
-        self.cursor.execute("SELECT active_days, total_impact, total_eloc, churn_rate_percent FROM view_gitprime_metrics WHERE primary_email = ?", (email,))
+        self.cursor.execute(
+            "SELECT active_days, total_impact, total_eloc, churn_rate_percent FROM view_gitprime_metrics WHERE primary_email = ?",
+            (email,),
+        )
         res = self.cursor.fetchone()
 
         print(f"GitPrime Result: {res}")
@@ -323,5 +350,6 @@ class TestNewFrameworksLogic(unittest.TestCase):
         # Churn Rate: (2 / (100+50+200)) * 100 = 2/350 * 100 = 0.57... -> 0.6
         self.assertAlmostEqual(res[3], 0.6, delta=0.1, msg="Churn Rate calculation failed")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

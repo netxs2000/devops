@@ -1,4 +1,3 @@
-
 import os
 import sys
 
@@ -18,7 +17,7 @@ def check_admin():
     Session = sessionmaker(bind=engine)
     session = Session()
 
-    admin_email = 'admin@tjhq.com'
+    admin_email = "admin@tjhq.com"
     user = session.query(User).filter_by(primary_email=admin_email, is_current=True).first()
 
     if not user:
@@ -34,6 +33,7 @@ def check_admin():
 
     if not roles:
         print("No roles assigned to this user.")
+
 
 if __name__ == "__main__":
     check_admin()

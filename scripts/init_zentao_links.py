@@ -26,25 +26,22 @@ from devops_collector.plugins.zentao.models import ZenTaoExecution, ZenTaoProduc
 
 
 # 日志配置
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('InitZenTaoLinks')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("InitZenTaoLinks")
 
-PRODUCT_MAP_CSV = 'docs/zentao_product_map.csv'
-PROJECT_MAP_CSV = 'docs/zentao_project_map.csv'
+PRODUCT_MAP_CSV = "docs/zentao_product_map.csv"
+PROJECT_MAP_CSV = "docs/zentao_project_map.csv"
+
 
 def ensure_system_registry(session: Session):
     """确保禅道系统在注册表中。"""
-    system = session.query(SystemRegistry).filter_by(system_code='zentao').first()
+    system = session.query(SystemRegistry).filter_by(system_code="zentao").first()
     if not system:
-        system = SystemRegistry(
-            system_code='zentao',
-            system_name='ZenTao ALM',
-            system_type='TICKET',
-            is_active=True
-        )
+        system = SystemRegistry(system_code="zentao", system_name="ZenTao ALM", system_type="TICKET", is_active=True)
         session.add(system)
         session.flush()
     return system
+
 
 def init_product_links(session: Session):
     """同步产品关联。"""
@@ -53,13 +50,14 @@ def init_product_links(session: Session):
         return
 
     logger.info("开始同步禅道产品关联...")
-    with open(PRODUCT_MAP_CSV, encoding='utf-8-sig') as f:
+    with open(PRODUCT_MAP_CSV, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            zt_pid = row.get('zentao_product_id', '').strip()
-            mdm_pid = row.get('mdm_product_id', '').strip()
+            zt_pid = row.get("zentao_product_id", "").strip()
+            mdm_pid = row.get("mdm_product_id", "").strip()
 
-            if not zt_pid or not mdm_pid: continue
+            if not zt_pid or not mdm_pid:
+                continue
 
             # 1. 验证 MDM 产品是否存在
             mdm_product = session.query(Product).filter_by(product_id=mdm_pid).first()
@@ -76,23 +74,24 @@ def init_product_links(session: Session):
             zt_product.mdm_product_id = mdm_pid
 
             # 3. 更新 EntityTopology (用于 DORA/反向查询)
-            topology = session.query(EntityTopology).filter_by(
-                system_code='zentao',
-                external_resource_id=zt_pid,
-                element_type='issue-tracker-product'
-            ).first()
+            topology = (
+                session.query(EntityTopology)
+                .filter_by(system_code="zentao", external_resource_id=zt_pid, element_type="issue-tracker-product")
+                .first()
+            )
 
             if not topology:
                 topology = EntityTopology(
-                    system_code='zentao',
+                    system_code="zentao",
                     external_resource_id=zt_pid,
                     resource_name=mdm_product.product_name,
-                    element_type='issue-tracker-product',
-                    is_active=True
+                    element_type="issue-tracker-product",
+                    is_active=True,
                 )
                 session.add(topology)
 
             logger.info(f"建立关联: ZenTao Product {zt_pid} -> MDM Product {mdm_pid}")
+
 
 def init_project_links(session: Session):
     """同步项目关联，并处理 20.0 版本的父子层级继承逻辑。"""
@@ -102,11 +101,11 @@ def init_project_links(session: Session):
 
     logger.info("开始同步禅道项目/执行关联...")
     mappings = []
-    with open(PROJECT_MAP_CSV, encoding='utf-8-sig') as f:
+    with open(PROJECT_MAP_CSV, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            zt_eid = row.get('zentao_execution_id', '').strip()
-            mdm_proj_id = row.get('mdm_project_id', '').strip()
+            zt_eid = row.get("zentao_execution_id", "").strip()
+            mdm_proj_id = row.get("mdm_project_id", "").strip()
             if zt_eid and mdm_proj_id:
                 mappings.append((int(zt_eid), mdm_proj_id))
 
@@ -126,10 +125,11 @@ def init_project_links(session: Session):
             # 3. 继承逻辑 (Inheritance): 利用 path 字段查找所有子孙节点
             # 禅道 path 格式通常为 ",1,5,10,"，如果我们要找 5 的子孙，匹配 "%,5,%"
             search_pattern = f"%,{zt_id},%"
-            children = session.query(ZenTaoExecution).filter(
-                ZenTaoExecution.path.like(search_pattern),
-                ZenTaoExecution.id != zt_id
-            ).all()
+            children = (
+                session.query(ZenTaoExecution)
+                .filter(ZenTaoExecution.path.like(search_pattern), ZenTaoExecution.id != zt_id)
+                .all()
+            )
 
             for child in children:
                 # 只有当子节点没有被 CSV 明确指定其他项目时，才进行继承
@@ -140,23 +140,25 @@ def init_project_links(session: Session):
             logger.info(f"ZenTao 节点 {zt_id} 尚未同步到本地表，仅建立拓扑映射。")
 
         # 4. 更新 EntityTopology (作为所有查询的根源)
-        topology = session.query(EntityTopology).filter_by(
-            project_id=mdm_id,
-            system_code='zentao',
-            external_resource_id=str(zt_id),
-            element_type='issue-tracker'
-        ).first()
+        topology = (
+            session.query(EntityTopology)
+            .filter_by(
+                project_id=mdm_id, system_code="zentao", external_resource_id=str(zt_id), element_type="issue-tracker"
+            )
+            .first()
+        )
 
         if not topology:
             topology = EntityTopology(
                 project_id=mdm_id,
-                system_code='zentao',
+                system_code="zentao",
                 external_resource_id=str(zt_id),
                 resource_name=mdm_project.project_name,
-                element_type='issue-tracker',
-                is_active=True
+                element_type="issue-tracker",
+                is_active=True,
             )
             session.add(topology)
+
 
 def main():
     engine = create_engine(settings.database.uri)
@@ -173,5 +175,6 @@ def main():
             logger.error(f"同步失败: {e}")
             raise
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

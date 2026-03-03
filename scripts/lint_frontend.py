@@ -2,19 +2,19 @@ import os
 import sys
 
 
-def check_line_limits(directory, limit=300, extensions=('.js', '.css', '.html')):
+def check_line_limits(directory, limit=300, extensions=(".js", ".css", ".html")):
     """检查指定目录下的文件行数是否超过限制。"""
     errors = []
     for root, _, files in os.walk(directory):
         # 排除外部库或压缩文件
-        if any(x in root for x in ['vendor', 'lib', 'dist', 'node_modules']):
+        if any(x in root for x in ["vendor", "lib", "dist", "node_modules"]):
             continue
 
         for file in files:
             if file.endswith(extensions):
                 filepath = os.path.join(root, file)
                 try:
-                    with open(filepath, encoding='utf-8') as f:
+                    with open(filepath, encoding="utf-8") as f:
                         lines = f.readlines()
                         if len(lines) > limit:
                             errors.append(f"{filepath}: {len(lines)} lines (Limit: {limit})")
@@ -23,9 +23,10 @@ def check_line_limits(directory, limit=300, extensions=('.js', '.css', '.html'))
 
     return errors
 
+
 if __name__ == "__main__":
     print("Checking frontend file line limits (300 line law)...")
-    frontend_dir = 'devops_portal/static'
+    frontend_dir = "devops_portal/static"
     limit_errors = check_line_limits(frontend_dir)
 
     if limit_errors:

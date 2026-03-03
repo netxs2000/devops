@@ -191,6 +191,11 @@
 
 ### 12.1 本项目验证规范 (Project-Specific Verification)
 - **验证前置 (Validation First)**: 任何开发计划必须包含 `[Verification]` 环节。严禁只有开发逻辑而无测试方案的计划汇报。
+- **证据驱动状态 (Evidence-Based Status) [NEW]**: 
+    - 在更新 `progress.txt` 或回复“当前项目状态/分支”前，**强制**调用 `git branch`、`ls` 或 `docker ps` 等工具进行实时取证。
+    - **严禁**基于逻辑推测（如“按规范本应在某分支”）来填写分支名、文件名或服务状态。
+    - **Physical Truth Over Logical Consistency**: 物理事实（工具输出）优先级高于逻辑一致性（规范推论）。
+- **取证溯源 (Traceability of Status) [NEW]**: 告知进度时，必须在回复或 Commit Message 中隐含/显式对应到本次对话中的工具输出 ID。
 - **伴生测试 (Companion Tests)**: 修改代码必须同步产出测试，且测试必须持久化到 `tests/` 目录，严禁在验证后删除。
 - **证据交付 (Evidence-Based Delivery)**: 告知任务完成时，必须包含 `Evidence of Testing` 模块，清晰列出执行的验证脚本、命令及结果日志。
 - **验证驱动测试**: Agent 在修改核心 `core/` 或 `models/` 代码后，必须主动执行相关模块的集成测试。
@@ -269,6 +274,8 @@
 - **文档层面**: `contexts.md`, `project_summary.md` 及 API 文档 (如有变更) 已同步更新。
 - **部署层面**: `make deploy` 在容器环境中验证通过，无回滚风险。
 - **证据交付**: 必须附带验证证据日志（录屏、截图或 pytest 结果）。
+- **环境卫生清理 (Cleanup on Exit)**: 任务交付前，必须执行 `make clean` 或手动删除所有调试生成的脚本、临时日志 (.log, .txt, debug_*.py, traceback.txt)；确保 `git status` 洁净并更新 `progress.txt` 标记 `[Hygiene]: 已清理临时调试文件`。
+
 
 
 ## 15. 禅道集成规范与元数据对齐 (ZenTao Integration & Metadata)

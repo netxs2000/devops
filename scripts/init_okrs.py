@@ -2,6 +2,7 @@
 
 重构说明：已移除所有硬编码 OKR_DATA，改为从 docs/okrs.csv 动态加载。
 """
+
 import csv
 import logging
 import os
@@ -19,10 +20,11 @@ from devops_collector.models import Base, OKRKeyResult, OKRObjective, Organizati
 from scripts.utils import build_user_indexes, resolve_user
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('InitOKR')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("InitOKR")
 
-CSV_FILE = os.path.join('docs', 'okrs.csv')
+CSV_FILE = os.path.join("docs", "okrs.csv")
+
 
 def init_okrs():
     engine = create_engine(settings.database.uri)
@@ -36,9 +38,9 @@ def init_okrs():
             logger.warning(f"跳过 OKR 初始化：未找到 {CSV_FILE}")
             return
 
-        logger.info(f'开始从 {CSV_FILE} 同步 OKR 数据...')
+        logger.info(f"开始从 {CSV_FILE} 同步 OKR 数据...")
 
-        with open(CSV_FILE, encoding='utf-8-sig') as f:
+        with open(CSV_FILE, encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
             # 记录已处理的 Objective，避免重复创建
             processed_objectives = {}
@@ -49,19 +51,19 @@ def init_okrs():
             all_users_map = {u.global_user_id: u for u in session.query(User).filter_by(is_current=True).all()}
 
             for row in reader:
-                o_title = row['目标标题'].strip()
-                o_desc = row['目标描述'].strip()
-                org_name = row['组织名称'].strip()
-                owner_val = row.get('负责人', row.get('负责人邮箱', '')).strip()
-                period = row['周期'].strip()
-                kr_title = row['关键结果标题'].strip()
-                target = float(row['目标值'])
-                current = float(row['当前值'])
-                unit = row['单位'].strip()
+                o_title = row["目标标题"].strip()
+                o_desc = row["目标描述"].strip()
+                org_name = row["组织名称"].strip()
+                owner_val = row.get("负责人", row.get("负责人邮箱", "")).strip()
+                period = row["周期"].strip()
+                kr_title = row["关键结果标题"].strip()
+                target = float(row["目标值"])
+                current = float(row["当前值"])
+                unit = row["单位"].strip()
 
                 # 1. 查找组织和负责人
                 org = session.query(Organization).filter(Organization.org_name == org_name).first()
-                owner_id = resolve_user(owner_val, email_idx, name_idx, '负责人')
+                owner_id = resolve_user(owner_val, email_idx, name_idx, "负责人")
 
                 if not org or not owner_id:
                     logger.warning(f"跳过 KR '{kr_title}'：未找到组织 {org_name} 或负责人 {owner_val}")
@@ -79,7 +81,7 @@ def init_okrs():
                             period=period,
                             owner_id=owner_id,
                             org_id=org.org_id,
-                            status='ACTIVE'
+                            status="ACTIVE",
                         )
                         session.add(obj)
                         session.flush()
@@ -100,7 +102,7 @@ def init_okrs():
                         current_value=current,
                         unit=unit,
                         owner_id=owner_id,
-                        progress=progress
+                        progress=progress,
                     )
                     session.add(kr)
                 else:
@@ -108,7 +110,7 @@ def init_okrs():
                     kr.progress = progress
 
         session.commit()
-        logger.info('✅ OKR 数据初始化完成！')
+        logger.info("✅ OKR 数据初始化完成！")
 
     except Exception as e:
         session.rollback()
@@ -117,5 +119,6 @@ def init_okrs():
     finally:
         session.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     init_okrs()

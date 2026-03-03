@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # 第一阶段：编译环境
 FROM python:3.11-slim-bookworm AS builder
 
@@ -18,7 +17,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --prefix=/install --default-timeout=5 \
-    -i http://192.168.1.168:8081/repository/pypi-all/simple --trusted-host 192.168.1.168 -r requirements.txt || \
+    -i http://192.168.5.64:8082/repository/group-pypi/simple --trusted-host 192.168.5.64 -r requirements.txt || \
     pip install --prefix=/install --default-timeout=30 -r requirements.txt || \
     pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --default-timeout=60 --prefix=/install -r requirements.txt
 

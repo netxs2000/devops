@@ -30,7 +30,7 @@ def generate_org_id(name: str) -> str:
 
 def seed_organizations(session: Session, csv_path: Path):
     """Import hierarchical organizations from CSV.
-    
+
     CSV format: 中心, 部门, 负责人, 所属体系
     Maps to 3 levels:
       Level 1: 公司 (Root)
@@ -52,7 +52,7 @@ def seed_organizations(session: Session, csv_path: Path):
     session.commit()
     print("Cleared existing organizations.")
 
-    with open(csv_path, encoding='utf-8-sig') as f:
+    with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
 
@@ -65,19 +65,24 @@ def seed_organizations(session: Session, csv_path: Path):
     # --- Level 1: 公司 (Root) ---
     root_org_id = generate_org_id("公司")
     root_org = Organization(
-        org_id=root_org_id, org_name="公司", org_level=1,
-        parent_org_id=None, business_line=None,
-        is_active=True, is_current=True, sync_version=1
+        org_id=root_org_id,
+        org_name="公司",
+        org_level=1,
+        parent_org_id=None,
+        business_line=None,
+        is_active=True,
+        is_current=True,
+        sync_version=1,
     )
     session.add(root_org)
     created_orgs["公司"] = root_org_id
     stats["created"] += 1
 
     for row in rows:
-        tixi = (row.get('所属体系') or '').strip()
-        center = (row.get('中心') or '').strip()
-        dept = (row.get('部门') or '').strip()
-        manager_name = (row.get('负责人') or '').strip()
+        tixi = (row.get("所属体系") or "").strip()
+        center = (row.get("中心") or "").strip()
+        dept = (row.get("部门") or "").strip()
+        manager_name = (row.get("负责人") or "").strip()
 
         if not center:
             continue
@@ -92,10 +97,15 @@ def seed_organizations(session: Session, csv_path: Path):
                 mgr_uid = users[manager_name].global_user_id
 
             org = Organization(
-                org_id=org_id, org_name=center, org_level=2,
-                parent_org_id=parent_id, manager_user_id=mgr_uid,
+                org_id=org_id,
+                org_name=center,
+                org_level=2,
+                parent_org_id=parent_id,
+                manager_user_id=mgr_uid,
                 business_line=tixi or None,
-                is_active=True, is_current=True, sync_version=1
+                is_active=True,
+                is_current=True,
+                sync_version=1,
             )
             session.add(org)
             stats["created"] += 1
@@ -110,10 +120,15 @@ def seed_organizations(session: Session, csv_path: Path):
                 mgr_uid = users[manager_name].global_user_id
 
             org = Organization(
-                org_id=org_id, org_name=dept, org_level=3,
-                parent_org_id=parent_id, manager_user_id=mgr_uid,
+                org_id=org_id,
+                org_name=dept,
+                org_level=3,
+                parent_org_id=parent_id,
+                manager_user_id=mgr_uid,
                 business_line=tixi or None,
-                is_active=True, is_current=True, sync_version=1
+                is_active=True,
+                is_current=True,
+                sync_version=1,
             )
             session.add(org)
             stats["created"] += 1
@@ -125,7 +140,7 @@ def seed_organizations(session: Session, csv_path: Path):
 
 def seed_products(session: Session, csv_path: Path):
     """Import products from CSV.
-    
+
     CSV format: PRODUCT_ID, 产品名称, 节点类型, parent_product_id, 产品分类, ...
     """
     print(f"\n--- Seeding Products from {csv_path} ---")
@@ -134,26 +149,25 @@ def seed_products(session: Session, csv_path: Path):
         print(f"WARN: {csv_path} not found, skipping.")
         return
 
-    with open(csv_path, encoding='utf-8-sig') as f:
+    with open(csv_path, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
 
     # Build org name -> org_id map for owner_team lookup
     org_name_map = {
-        o.org_name: o.org_id
-        for o in session.query(Organization).filter(Organization.is_current == True).all()
+        o.org_name: o.org_id for o in session.query(Organization).filter(Organization.is_current == True).all()
     }
 
     stats = {"created": 0, "skipped": 0}
 
     for row in rows:
-        pid = (row.get('PRODUCT_ID') or row.get('product_id') or '').strip()
-        name = (row.get('产品名称') or row.get('product_name') or '').strip()
-        node_type = (row.get('节点类型') or row.get('node_type') or 'APP').strip()
-        parent_id = (row.get('parent_product_id') or '').strip() or None
-        category = (row.get('产品分类') or row.get('category') or '').strip() or None
-        version_schema = (row.get('version_schema') or 'SemVer').strip()
-        owner_team_name = (row.get('负责团队') or row.get('owner_team_id') or '').strip() or None
+        pid = (row.get("PRODUCT_ID") or row.get("product_id") or "").strip()
+        name = (row.get("产品名称") or row.get("product_name") or "").strip()
+        node_type = (row.get("节点类型") or row.get("node_type") or "APP").strip()
+        parent_id = (row.get("parent_product_id") or "").strip() or None
+        category = (row.get("产品分类") or row.get("category") or "").strip() or None
+        version_schema = (row.get("version_schema") or "SemVer").strip()
+        owner_team_name = (row.get("负责团队") or row.get("owner_team_id") or "").strip() or None
 
         # Resolve team name to org_id FK, set None if not found
         owner_team_id = org_name_map.get(owner_team_name) if owner_team_name else None
@@ -175,7 +189,7 @@ def seed_products(session: Session, csv_path: Path):
             category=category,
             version_schema=version_schema,
             owner_team_id=owner_team_id,
-            lifecycle_status='active'
+            lifecycle_status="active",
         )
         session.add(product)
         stats["created"] += 1
@@ -185,15 +199,15 @@ def seed_products(session: Session, csv_path: Path):
 
 
 def main():
-    docs_dir = Path(__file__).parent.parent / 'docs'
+    docs_dir = Path(__file__).parent.parent / "docs"
 
     engine = create_engine(settings.database.uri)
     with Session(engine) as session:
-        seed_organizations(session, docs_dir / 'organizations.csv')
-        seed_products(session, docs_dir / 'products.csv')
+        seed_organizations(session, docs_dir / "organizations.csv")
+        seed_products(session, docs_dir / "products.csv")
 
     print("\n✅ Base data seeding complete.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

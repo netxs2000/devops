@@ -19,9 +19,11 @@ load_dotenv()
 BASE_URL = os.getenv("E2E_BASE_URL", "http://127.0.0.1:8000")
 APP_STARTUP_TIMEOUT = 30
 
+
 def is_port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('127.0.0.1', port)) == 0
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
 
 def wait_for_server(url: str, timeout: int = 30) -> bool:
     start = time.time()
@@ -35,6 +37,7 @@ def wait_for_server(url: str, timeout: int = 30) -> bool:
         time.sleep(1)
     return False
 
+
 @pytest.fixture(scope="session")
 def app_server() -> Generator[str, None, None]:
     if os.getenv("E2E_EXTERNAL_SERVER") == "1":
@@ -47,8 +50,7 @@ def app_server() -> Generator[str, None, None]:
 
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     proc = subprocess.Popen(
-        ["python", "-m", "uvicorn", "devops_portal.main:app",
-         "--host", "127.0.0.1", "--port", "8000"],
+        ["python", "-m", "uvicorn", "devops_portal.main:app", "--host", "127.0.0.1", "--port", "8000"],
         cwd=project_root,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -62,6 +64,7 @@ def app_server() -> Generator[str, None, None]:
     yield BASE_URL
     proc.terminate()
 
+
 @pytest.fixture
 def page_context(browser: Browser) -> Generator[BrowserContext, None, None]:
     context = browser.new_context(
@@ -71,11 +74,13 @@ def page_context(browser: Browser) -> Generator[BrowserContext, None, None]:
     yield context
     context.close()
 
+
 @pytest.fixture
 def page(page_context: BrowserContext) -> Generator[Page, None, None]:
     page = page_context.new_page()
     yield page
     page.close()
+
 
 @pytest.fixture
 def test_user_credentials() -> dict:
@@ -84,12 +89,9 @@ def test_user_credentials() -> dict:
         "password": os.getenv("E2E_TEST_USER_PASSWORD", "e2e_test_password"),
     }
 
+
 @pytest.fixture
-def authenticated_page(
-    page: Page,
-    app_server: str,
-    test_user_credentials: dict
-) -> Generator[Page, None, None]:
+def authenticated_page(page: Page, app_server: str, test_user_credentials: dict) -> Generator[Page, None, None]:
     page.on("console", lambda msg: print(f"  [BROWSER CONSOLE] {msg.type}: {msg.text}"))
 
     # 拦截外部网络请求，防止 Google Fonts 等超时阻塞测试

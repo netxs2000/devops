@@ -28,6 +28,7 @@ def test_user_table_hr_relationship_column(admin_page: AdminPage):
     if first_row_badge.is_visible():
         expect(first_row_badge).to_be_visible()
 
+
 @pytest.mark.smoke
 def test_organization_mgmt_view_and_default_level(admin_page: AdminPage):
     """验证研发组织管理视图及新增组织模态框的默认层级"""
@@ -47,6 +48,7 @@ def test_organization_mgmt_view_and_default_level(admin_page: AdminPage):
     # 验证下拉框选中的文本
     selected_text = admin_page.page.locator(".js-org-level-select option:checked").inner_text()
     assert "中心" in selected_text
+
 
 def test_organization_export_button_exists(admin_page: AdminPage):
     """验证导出按钮是否存在"""

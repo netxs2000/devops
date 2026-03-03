@@ -1,4 +1,3 @@
-
 import os
 import re
 import time
@@ -14,6 +13,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 DASHBOARD_URL = "http://localhost:8501"
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PAGES_DIR = os.path.join(BASE_DIR, "dashboard", "pages")
+
 
 def get_page_info():
     """Extract expected page names and numbers from the filesystem."""
@@ -34,6 +34,7 @@ def get_page_info():
     # Sort files based on the prefix number to match Streamlit's sidebar order
     pages.sort(key=lambda x: x["num"])
     return pages
+
 
 def run_test():
     pages = get_page_info()
@@ -67,7 +68,9 @@ def run_test():
                 # Find link in sidebar
                 # Streamlit sidebar nav usually has high-depth links
                 wait = WebDriverWait(driver, 10)
-                sidebar_nav = wait.until(EC.presence_of_element_located((By.XPATH, "//div[@data-testid='stSidebarNav']")))
+                sidebar_nav = wait.until(
+                    EC.presence_of_element_located((By.XPATH, "//div[@data-testid='stSidebarNav']"))
+                )
 
                 # Try to find the link multiple times with scrolling
                 target_link = None
@@ -89,7 +92,9 @@ def run_test():
                     time.sleep(1)
 
                 if not target_link:
-                    found_links = [l.text for l in driver.find_elements(By.XPATH, "//div[@data-testid='stSidebarNav']//a")]
+                    found_links = [
+                        l.text for l in driver.find_elements(By.XPATH, "//div[@data-testid='stSidebarNav']//a")
+                    ]
                     print(f"LINK NOT FOUND. Seen: {found_links[:5]}...")
                     results.append({"name": page_name, "status": "SKIPPED", "error": "Link not found in sidebar"})
                     continue
@@ -112,14 +117,16 @@ def run_test():
                 # Check for explicit exceptions
                 exceptions = driver.find_elements(By.CLASS_NAME, "stException")
                 for ex in exceptions:
-                    problems.append(ex.text.split('\n')[0]) # Get first line of error
+                    problems.append(ex.text.split("\n")[0])  # Get first line of error
 
                 # Check for error alerts
                 alerts = driver.find_elements(By.XPATH, "//div[contains(@class, 'stAlert')]")
                 for alert in alerts:
                     text = alert.text
-                    if any(kw in text for kw in ["Error", "Traceback", "KeyError", "ProgrammingError", "UndefinedColumn"]):
-                        problems.append(text.split('\n')[0])
+                    if any(
+                        kw in text for kw in ["Error", "Traceback", "KeyError", "ProgrammingError", "UndefinedColumn"]
+                    ):
+                        problems.append(text.split("\n")[0])
 
                 if problems:
                     error_msg = "; ".join(problems)
@@ -144,10 +151,13 @@ def run_test():
         f.write("| 模块名称 | 状态 | 错误信息 |\n")
         f.write("| :--- | :--- | :--- |\n")
         for r in results:
-            status_icon = "✅ PASS" if r["status"] == "PASS" else ("❌ FAILED" if r["status"] == "FAILED" else "⚠️ " + r["status"])
+            status_icon = (
+                "✅ PASS" if r["status"] == "PASS" else ("❌ FAILED" if r["status"] == "FAILED" else "⚠️ " + r["status"])
+            )
             f.write(f"| {r['name']} | {status_icon} | {r['error']} |\n")
 
     print(f"\nReport generated at: {report_path}")
+
 
 if __name__ == "__main__":
     run_test()

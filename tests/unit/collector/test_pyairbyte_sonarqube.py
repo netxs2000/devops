@@ -36,5 +36,6 @@ class TestPyAirbyteSonarQubeIntegration(unittest.TestCase):
         self.assertEqual(measures["coverage"], "85.0")
         self.assertEqual(measures["bugs"], "10")
 
+
 if __name__ == "__main__":
     unittest.main()

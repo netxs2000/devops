@@ -4,6 +4,7 @@
 
 本文件遵循 **Google Python Style Guide**，所有注释采用中文的 Google Docstring 风格。
 """
+
 from __future__ import annotations
 
 import logging
@@ -18,6 +19,7 @@ from devops_collector.models.base_models import Base
 
 log = logging.getLogger(__name__)
 
+
 class ConcurrencyError(RuntimeError):
     """乐观锁冲突异常。
 
@@ -25,7 +27,10 @@ class ConcurrencyError(RuntimeError):
     未能找到当前有效记录时抛出。业务层可捕获后决定重试或返回错误信息。
     """
 
-def close_current_and_insert_new(session: Session, model_cls: type[Base], natural_key: dict[str, Any], new_data: dict[str, Any]) -> Base:
+
+def close_current_and_insert_new(
+    session: Session, model_cls: type[Base], natural_key: dict[str, Any], new_data: dict[str, Any]
+) -> Base:
     """统一的 SCD Type2 更新函数。
 
     该函数在同一个事务中完成以下步骤：
@@ -58,22 +63,37 @@ def close_current_and_insert_new(session: Session, model_cls: type[Base], natura
     try:
         current = session.query(model_cls).filter_by(**natural_key, is_current=True).one()
     except NoResultFound as exc:
-        raise ConcurrencyError(f'未找到 {model_cls.__name__}（键 {natural_key}）的当前有效记录') from exc
-    expected_version = new_data.get('sync_version')
+        raise ConcurrencyError(f"未找到 {model_cls.__name__}（键 {natural_key}）的当前有效记录") from exc
+    expected_version = new_data.get("sync_version")
     if expected_version is None:
-        raise ConcurrencyError('new_data 必须包含 sync_version 用于乐观锁校验')
+        raise ConcurrencyError("new_data 必须包含 sync_version 用于乐观锁校验")
     if current.sync_version != expected_version:
-        raise ConcurrencyError(f'乐观锁冲突：当前版本 {current.sync_version} 与期望 {expected_version} 不匹配')
+        raise ConcurrencyError(f"乐观锁冲突：当前版本 {current.sync_version} 与期望 {expected_version} 不匹配")
     now = datetime.now(UTC)
     current.is_current = False
     current.effective_to = now
     session.add(current)
     insert_kwargs: dict[str, Any] = {**natural_key}
-    new_data_clean = {k: v for k, v in new_data.items() if k != 'sync_version'}
+    new_data_clean = {k: v for k, v in new_data.items() if k != "sync_version"}
     insert_kwargs.update(new_data_clean)
-    insert_kwargs.update({'sync_version': current.sync_version + 1, 'effective_from': now, 'effective_to': None, 'is_current': True, 'is_deleted': False})
+    insert_kwargs.update(
+        {
+            "sync_version": current.sync_version + 1,
+            "effective_from": now,
+            "effective_to": None,
+            "is_current": True,
+            "is_deleted": False,
+        }
+    )
     new_obj = model_cls(**insert_kwargs)
     session.add(new_obj)
     session.flush()
-    log.info('SCD Type2 更新 %s: %s -> %s (version %s→%s)', model_cls.__name__, natural_key, insert_kwargs, current.sync_version, new_obj.sync_version)
+    log.info(
+        "SCD Type2 更新 %s: %s -> %s (version %s→%s)",
+        model_cls.__name__,
+        natural_key,
+        insert_kwargs,
+        current.sync_version,
+        new_obj.sync_version,
+    )
     return new_obj

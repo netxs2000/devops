@@ -15,6 +15,7 @@
 - 多角色取并集: 用户拥有多角色时，取所有角色权限的并集
 - 数据范围取最大: 多角色时，取数值最小的 data_scope (权限最大)
 """
+
 import logging
 from typing import Any
 
@@ -35,15 +36,15 @@ from devops_collector.models.base_models import (
 logger = logging.getLogger(__name__)
 
 # 数据范围常量
-DATA_SCOPE_ALL = 1            # 全部数据权限
-DATA_SCOPE_CUSTOM = 2         # 自定义数据权限
-DATA_SCOPE_DEPT = 3           # 本部门数据权限
-DATA_SCOPE_DEPT_BELOW = 4     # 本部门及以下数据权限
-DATA_SCOPE_SELF = 5           # 仅本人数据权限
+DATA_SCOPE_ALL = 1  # 全部数据权限
+DATA_SCOPE_CUSTOM = 2  # 自定义数据权限
+DATA_SCOPE_DEPT = 3  # 本部门数据权限
+DATA_SCOPE_DEPT_BELOW = 4  # 本部门及以下数据权限
+DATA_SCOPE_SELF = 5  # 仅本人数据权限
 
 # 超管权限通配符
-ADMIN_PERMISSION_WILDCARD = '*'
-ADMIN_ROLE_KEY = 'SYSTEM_ADMIN'
+ADMIN_PERMISSION_WILDCARD = "*"
+ADMIN_ROLE_KEY = "SYSTEM_ADMIN"
 
 # 角色继承最大深度
 MAX_ROLE_HIERARCHY_DEPTH = 3
@@ -51,13 +52,14 @@ MAX_ROLE_HIERARCHY_DEPTH = 3
 
 def generate_random_password(length: int = 16) -> str:
     """生成安全的随机密码。
-    
+
     用于 OAuth 自动创建账户时分配初始占位密码。
     """
     import secrets
     import string
+
     alphabet = string.ascii_letters + string.digits + string.punctuation
-    return ''.join(secrets.choice(alphabet) for _ in range(length))
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
 def get_user_org_scope_ids(db: Session, user: User) -> list[str]:
@@ -70,7 +72,7 @@ def get_user_org_scope_ids(db: Session, user: User) -> list[str]:
     Returns:
         List[str]: 所有授权范围内的组织 ID 列表
     """
-    user_dept_id = getattr(user, 'department_id', None)
+    user_dept_id = getattr(user, "department_id", None)
     if not user_dept_id:
         return []
     scope_ids = [user_dept_id]
@@ -82,10 +84,11 @@ def get_user_org_scope_ids(db: Session, user: User) -> list[str]:
             parent_id: 父级组织 ID。
             db_session: 数据库会话。
         """
-        children = db_session.query(Organization.org_id).filter(
-            Organization.parent_org_id == parent_id,
-            Organization.is_current == True
-        ).all()
+        children = (
+            db_session.query(Organization.org_id)
+            .filter(Organization.parent_org_id == parent_id, Organization.is_current == True)
+            .all()
+        )
         for child_row in children:
             child_id = child_row[0]
             scope_ids.append(child_id)
@@ -95,9 +98,7 @@ def get_user_org_scope_ids(db: Session, user: User) -> list[str]:
 
     # --- [核心增强] 业务关联数据范围 ---
     # 额外加入该用户作为 manager 的所有组织及其下级项
-    managed_orgs = db.query(Organization.org_id).filter_by(
-        manager_user_id=user.global_user_id, is_current=True
-    ).all()
+    managed_orgs = db.query(Organization.org_id).filter_by(manager_user_id=user.global_user_id, is_current=True).all()
     for m_row in managed_orgs:
         m_id = m_row[0]
         if m_id not in scope_ids:
@@ -120,7 +121,7 @@ def get_role_hierarchy(db: Session, role: SysRole, depth: int = 1) -> list[SysRo
         角色继承链列表 (从当前角色到顶层父角色)
     """
     if depth > MAX_ROLE_HIERARCHY_DEPTH:
-        logger.warning(f'角色 {role.role_name} 继承深度超过 {MAX_ROLE_HIERARCHY_DEPTH} 级，截断处理')
+        logger.warning(f"角色 {role.role_name} 继承深度超过 {MAX_ROLE_HIERARCHY_DEPTH} 级，截断处理")
         return [role]
 
     chain = [role]
@@ -142,7 +143,7 @@ def get_user_effective_data_scope(db: Session, user: User) -> int:
     Returns:
         int: 有效的 data_scope 值 (1-5，数值越小权限越大)
     """
-    if not hasattr(user, 'roles') or not user.roles:
+    if not hasattr(user, "roles") or not user.roles:
         return DATA_SCOPE_SELF  # 默认仅本人
 
     min_scope = DATA_SCOPE_SELF
@@ -156,7 +157,7 @@ def get_user_effective_data_scope(db: Session, user: User) -> int:
     # --- [核心增强] 业务管理层自动提升 ---
     # 如果是部门负责人及以上，数据范围至少提升到“本部门及以下”
     dynamic_roles = business_auth.get_business_linked_roles(db, user.global_user_id)
-    if 'DEPT_MANAGER' in dynamic_roles or 'EXECUTIVE_MANAGER' in dynamic_roles:
+    if "DEPT_MANAGER" in dynamic_roles or "EXECUTIVE_MANAGER" in dynamic_roles:
         min_scope = min(min_scope, DATA_SCOPE_DEPT_BELOW)
     # ---------------------------
 
@@ -175,7 +176,7 @@ def get_custom_dept_ids(db: Session, user: User) -> list[str]:
     Returns:
         List[str]: 自定义授权的部门 ID 列表
     """
-    if not hasattr(user, 'roles') or not user.roles:
+    if not hasattr(user, "roles") or not user.roles:
         return []
 
     dept_ids: set[str] = set()
@@ -198,7 +199,7 @@ def get_user_permissions(db: Session, user: User) -> list[str]:
     Returns:
         List[str]: 权限标识列表
     """
-    if not hasattr(user, 'roles') or not user.roles:
+    if not hasattr(user, "roles") or not user.roles:
         return []
 
     permissions: set[str] = set()
@@ -211,14 +212,12 @@ def get_user_permissions(db: Session, user: User) -> list[str]:
         role_chain = get_role_hierarchy(db, role)
         for r in role_chain:
             # 获取角色关联的菜单权限
-            role_menus = db.query(SysMenu.perms).join(
-                SysRoleMenu, SysRoleMenu.menu_id == SysMenu.id
-            ).filter(
-                SysRoleMenu.role_id == r.id,
-                SysMenu.perms != None,
-                SysMenu.perms != '',
-                SysMenu.status == True
-            ).all()
+            role_menus = (
+                db.query(SysMenu.perms)
+                .join(SysRoleMenu, SysRoleMenu.menu_id == SysMenu.id)
+                .filter(SysRoleMenu.role_id == r.id, SysMenu.perms != None, SysMenu.perms != "", SysMenu.status == True)
+                .all()
+            )
 
             for menu in role_menus:
                 if menu[0]:
@@ -262,7 +261,7 @@ def is_admin(user: User) -> bool:
     Returns:
         bool: 是否为超管
     """
-    if not hasattr(user, 'roles') or not user.roles:
+    if not hasattr(user, "roles") or not user.roles:
         return False
 
     return any(r.role_key == ADMIN_ROLE_KEY for r in user.roles)
@@ -273,8 +272,8 @@ def apply_row_level_security(
     query: Query,
     model_class: Any,
     current_user: User,
-    dept_field: str = 'dept_id',
-    owner_field: str = 'create_by'
+    dept_field: str = "dept_id",
+    owner_field: str = "create_by",
 ) -> Query:
     """行级数据权限过滤器 (RLS)。
 
@@ -287,7 +286,7 @@ def apply_row_level_security(
         current_user: 当前用户
         dept_field: 部门字段名 (默认 dept_id)
         owner_field: (已废弃) 请即使重写 OwnableMixin.get_owner_column
-    
+
     Returns:
         Query: 过滤后的查询对象
     """
@@ -307,7 +306,7 @@ def apply_row_level_security(
         return query
 
     if data_scope == DATA_SCOPE_DEPT:
-        user_dept_id = getattr(current_user, 'department_id', None)
+        user_dept_id = getattr(current_user, "department_id", None)
         if user_dept_id and hasattr(model_class, dept_field):
             return query.filter(getattr(model_class, dept_field) == user_dept_id)
         return query
@@ -319,33 +318,29 @@ def apply_row_level_security(
         return query
 
     if data_scope == DATA_SCOPE_SELF:
-        user_id = getattr(current_user, 'global_user_id', None)
+        user_id = getattr(current_user, "global_user_id", None)
         owner_col = None
 
         # 1. 优先使用 OwnableMixin 接口
-        if hasattr(model_class, 'get_owner_column'):
+        if hasattr(model_class, "get_owner_column"):
             owner_col = model_class.get_owner_column()
 
         # 2. 回退到参数指定 (兼容)
         if owner_col is None and hasattr(model_class, owner_field):
-             owner_col = getattr(model_class, owner_field)
+            owner_col = getattr(model_class, owner_field)
 
         if user_id and owner_col is not None:
             return query.filter(owner_col == user_id)
 
         # [Security] Fail-closed
         from sqlalchemy import false
+
         return query.filter(false())
 
     return query
 
 
-def apply_plugin_privacy_filter(
-    db: Session,
-    query: Query,
-    model_class: Any,
-    current_user: User
-) -> Query:
+def apply_plugin_privacy_filter(db: Session, query: Query, model_class: Any, current_user: User) -> Query:
     """通用的插件数据隔离过滤器 (兼容旧版 API)。
 
     自动根据模型中存在的关联字段应用组织树递归隔离。
@@ -366,20 +361,21 @@ def apply_plugin_privacy_filter(
     # 优先使用新版 RLS
     scope_ids = get_user_org_scope_ids(db, current_user)
 
-    if hasattr(model_class, 'organization_id'):
+    if hasattr(model_class, "organization_id"):
         return query.filter(model_class.organization_id.in_(scope_ids))
 
-    if hasattr(model_class, 'org_id'):
+    if hasattr(model_class, "org_id"):
         return query.filter(model_class.org_id.in_(scope_ids))
 
-    if hasattr(model_class, 'dept_id'):
+    if hasattr(model_class, "dept_id"):
         return query.filter(model_class.dept_id.in_(scope_ids))
 
-    if hasattr(model_class, 'product_id'):
+    if hasattr(model_class, "product_id"):
         return query.join(Product).filter(Product.owner_team_id.in_(scope_ids))
 
-    if hasattr(model_class, 'gitlab_project_id'):
+    if hasattr(model_class, "gitlab_project_id"):
         from devops_collector.plugins.gitlab.models import GitLabProject
+
         return query.join(GitLabProject).filter(GitLabProject.organization_id.in_(scope_ids))
 
     if model_class == User:
@@ -393,7 +389,7 @@ def apply_plugin_privacy_filter(
 
 def get_user_data_scope_ids(user: User) -> list[str]:
     """[P4] 获取用户数据权限范围内的所有地点 ID (含子级)。"""
-    user_location = getattr(user, 'location', None)
+    user_location = getattr(user, "location", None)
     if not user_location:
         return []
     scope_ids = [user_location.location_id]
@@ -412,34 +408,30 @@ def get_user_data_scope_ids(user: User) -> list[str]:
     return scope_ids
 
 
-def filter_issues_by_province(
-    db: Session,
-    issues: list[dict],
-    current_user: User
-) -> list[dict]:
+def filter_issues_by_province(db: Session, issues: list[dict], current_user: User) -> list[dict]:
     """[P4 升级版] 基于 MDM Location 树进行数据权限隔离。
 
     - 全国权限 (Global): user.location 为空 -> 返回全量
     - 级联权限 (Regional): 返回用户所属地点及其所有下级地点的数据
     """
-    user_location = getattr(current_user, 'location', None)
+    user_location = getattr(current_user, "location", None)
     if not user_location:
         return issues
 
     scope_loc_ids = get_user_data_scope_ids(current_user)
     from devops_collector.models.base_models import Location
+
     scope_short_names = [
-        loc.short_name for loc in
-        db.query(Location.short_name).filter(Location.location_id.in_(scope_loc_ids)).all()
+        loc.short_name for loc in db.query(Location.short_name).filter(Location.location_id.in_(scope_loc_ids)).all()
     ]
 
     filtered = []
     for issue in issues:
-        labels = issue.get('labels', [])
-        province_tag = 'nationwide'
+        labels = issue.get("labels", [])
+        province_tag = "nationwide"
         for label in labels:
-            if label.startswith('province::'):
-                province_tag = label.split('::')[1]
+            if label.startswith("province::"):
+                province_tag = label.split("::")[1]
                 break
         if province_tag in scope_short_names:
             filtered.append(issue)
@@ -447,11 +439,7 @@ def filter_issues_by_province(
     return filtered
 
 
-def filter_issues_by_privacy(
-    db: Session,
-    issues: list[dict],
-    current_user: User
-) -> list[dict]:
+def filter_issues_by_privacy(db: Session, issues: list[dict], current_user: User) -> list[dict]:
     """综合维度数据权限隔离（地域 + 组织）。
 
     依据登录用户的 MDM 属性应用双重过滤机制：
@@ -460,7 +448,7 @@ def filter_issues_by_privacy(
     """
     filtered_by_loc = filter_issues_by_province(db, issues, current_user)
 
-    user_dept_id = getattr(current_user, 'department_id', None)
+    user_dept_id = getattr(current_user, "department_id", None)
     if not user_dept_id:
         return filtered_by_loc
 
@@ -468,11 +456,11 @@ def filter_issues_by_privacy(
 
     final_filtered = []
     for issue in filtered_by_loc:
-        labels = issue.get('labels', [])
+        labels = issue.get("labels", [])
         dept_tag = None
         for label in labels:
-            if label.startswith('dept::'):
-                dept_tag = label.split('::')[1]
+            if label.startswith("dept::"):
+                dept_tag = label.split("::")[1]
                 break
         if not dept_tag or dept_tag in scope_org_ids:
             final_filtered.append(issue)

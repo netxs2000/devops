@@ -2,6 +2,7 @@
 
 测试认证相关的 API 接口，包括用户注册、登录以及获取当前用户信息。
 """
+
 import uuid
 
 import pytest
@@ -25,6 +26,7 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 @pytest.fixture(name="db_session")
 def fixture_db_session():
     """创建干净的数据库会话。"""
@@ -36,9 +38,11 @@ def fixture_db_session():
         db.close()
         Base.metadata.drop_all(bind=engine)
 
+
 @pytest.fixture(name="client")
 def fixture_client(db_session):
     """创建测试客户端并注入数据库会话。"""
+
     def override_get_auth_db():
         try:
             yield db_session
@@ -50,19 +54,21 @@ def fixture_client(db_session):
         yield client
     app.dependency_overrides.clear()
 
+
 def test_register_user(client):
     """测试用户注册接口。"""
     payload = {
         "email": "register_test@tjhq.com",
         "password": "testpassword123",
         "full_name": "Register Tester",
-        "employee_id": "EMP001"
+        "employee_id": "EMP001",
     }
     response = client.post("/auth/register", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["email"] == payload["email"]
     assert data["full_name"] == payload["full_name"]
+
 
 def test_login_user(client, db_session):
     """测试用户登录接口。"""
@@ -78,7 +84,7 @@ def test_login_user(client, db_session):
         full_name="Login Tester",
         is_active=True,
         is_current=True,
-        is_deleted=False
+        is_deleted=False,
     )
     db_session.add(user)
     db_session.flush()
@@ -86,15 +92,13 @@ def test_login_user(client, db_session):
     db_session.commit()
 
     # 执行登录
-    login_data = {
-        "username": email,
-        "password": password
-    }
+    login_data = {"username": email, "password": password}
     response = client.post("/auth/login", data=login_data)
     assert response.status_code == 200
     data = response.json()
     assert "access_token" in data
     assert data["token_type"] == "bearer"
+
 
 def test_get_me_protected(client, db_session):
     """测试获取个人信息接口（含认证）。"""
@@ -109,7 +113,7 @@ def test_get_me_protected(client, db_session):
         full_name="Me Tester",
         is_active=True,
         is_current=True,
-        is_deleted=False
+        is_deleted=False,
     )
     db_session.add(user)
     db_session.flush()
@@ -127,6 +131,7 @@ def test_get_me_protected(client, db_session):
     me_data = me_response.json()
     assert me_data["email"] == email
     assert me_data["full_name"] == "Me Tester"
+
 
 def test_get_me_unauthorized(client):
     """测试未授权访问受保护接口。"""

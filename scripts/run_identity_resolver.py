@@ -5,6 +5,7 @@
 
 遵循 Google Python Style Guide。
 """
+
 import logging
 import os
 import sys
@@ -21,11 +22,9 @@ from devops_collector.models.base_models import IdentityMapping, User
 
 
 # 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - [IdentityResolver] %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - [IdentityResolver] %(message)s")
 logger = logging.getLogger(__name__)
+
 
 class IdentityResolver:
     """身份对齐治理类。"""
@@ -33,22 +32,30 @@ class IdentityResolver:
     def __init__(self, session):
         self.session = session
         # 获取所有有效的 MDM 用户（金数据）
-        self.mdm_users = self.session.query(User).filter(
-            User.is_current == True,
-            User.employee_id != None  # 必须有工号的才是金数据用户
-        ).all()
+        self.mdm_users = (
+            self.session.query(User)
+            .filter(
+                User.is_current == True,
+                User.employee_id != None,  # 必须有工号的才是金数据用户
+            )
+            .all()
+        )
         logger.info(f"Loaded {len(self.mdm_users)} MDM golden users for matching.")
 
     def run(self, dry_run=False):
         """执行治理循环。"""
         # 查找所有待治理的映射：未验证且置信度不为 1 的
-        mappings = self.session.query(IdentityMapping).filter(
-            or_(
-                IdentityMapping.mapping_status == 'PENDING',
-                IdentityMapping.mapping_status == 'AUTO',
-                IdentityMapping.confidence_score < 1.0
+        mappings = (
+            self.session.query(IdentityMapping)
+            .filter(
+                or_(
+                    IdentityMapping.mapping_status == "PENDING",
+                    IdentityMapping.mapping_status == "AUTO",
+                    IdentityMapping.confidence_score < 1.0,
+                )
             )
-        ).all()
+            .all()
+        )
 
         logger.info(f"Found {len(mappings)} identity mappings to re-evaluate.")
 
@@ -64,7 +71,7 @@ class IdentityResolver:
                         mapping.global_user_id = best_match.global_user_id
                         mapping.confidence_score = score
                         # 超过 0.9 自动标记为验证，否则标记待确认
-                        mapping.mapping_status = 'AUTO' if score < 0.9 else 'VERIFIED'
+                        mapping.mapping_status = "AUTO" if score < 0.9 else "VERIFIED"
                     updated_count += 1
 
         if not dry_run:
@@ -79,7 +86,7 @@ class IdentityResolver:
         ext_username = (mapping.external_username or "").lower()
         ext_uid = (mapping.external_user_id or "").lower()
 
-        email_prefix = email.split('@')[0] if '@' in email else None
+        email_prefix = email.split("@")[0] if "@" in email else None
 
         best_user = None
         max_score = 0.0
@@ -105,7 +112,7 @@ class IdentityResolver:
             # 4. 姓名 + Email 域匹配 (Weight: 0.7)
             elif ext_username == u_name and "@" in email:
                 # 检查是否是公司内部域名
-                if email.endswith("@yourcompany.com"): # TODO: 从配置读取
+                if email.endswith("@yourcompany.com"):  # TODO: 从配置读取
                     current_score = 0.7
                 else:
                     current_score = 0.5
@@ -118,10 +125,11 @@ class IdentityResolver:
                 max_score = current_score
                 best_user = user
 
-            if max_score == 1.0: # 找到完美匹配直接退出
+            if max_score == 1.0:  # 找到完美匹配直接退出
                 break
 
         return best_user, max_score
+
 
 def main():
     """入口函数。"""
@@ -144,6 +152,7 @@ def main():
         session.rollback()
     finally:
         session.close()
+
 
 if __name__ == "__main__":
     main()

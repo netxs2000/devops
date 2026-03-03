@@ -123,9 +123,7 @@ class JenkinsBuild(Base):
     executor = Column(String(255))
     trigger_type = Column(String(50))
     trigger_user = Column(String(100))
-    trigger_user_id = Column(
-        UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True
-    )
+    trigger_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
     commit_sha = Column(String(100))
     raw_data = Column(JSON)
     gitlab_mr_iid = Column(Integer)

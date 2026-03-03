@@ -2,6 +2,7 @@
 
 通过对比 SQLAlchemy 模型与数据库实际表结构，自动执行 ALTER TABLE 补全缺失列。
 """
+
 import logging
 
 from sqlalchemy import create_engine, inspect, text
@@ -11,6 +12,7 @@ from devops_collector.models import Base
 
 
 logger = logging.getLogger(__name__)
+
 
 def auto_sync_schema():
     """自动化同步数据库结构 (仅支持新增列)。"""
@@ -26,7 +28,7 @@ def auto_sync_schema():
         for table_name, table in Base.metadata.tables.items():
             # 获取数据库中该表已有的列名
             try:
-                existing_columns = [c['name'] for c in inspector.get_columns(table_name)]
+                existing_columns = [c["name"] for c in inspector.get_columns(table_name)]
             except Exception:
                 # 表可能刚创建或不存在
                 continue
@@ -50,6 +52,7 @@ def auto_sync_schema():
                         logger.info(f"Successfully added column {column.name} to {table_name}")
                     except Exception as e:
                         logger.error(f"Failed to sync column {column.name}: {e}")
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

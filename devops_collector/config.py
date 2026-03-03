@@ -74,10 +74,9 @@ class RabbitMQSettings(BaseModel):
 
 class AnalysisSettings(BaseModel):
     """Code analysis configuration."""
+
     enable_deep_analysis: bool = False
-    ignored_file_patterns: str | list[str] = [
-        "*.lock", "*.min.js", "*.min.css", "node_modules/*", "dist/*"
-    ]
+    ignored_file_patterns: str | list[str] = ["*.lock", "*.min.js", "*.min.css", "node_modules/*", "dist/*"]
     production_env_mapping: str | list[str] = ["prod", "production", "prd", "main"]
     incident_label_patterns: str | list[str] = ["incident", "production-error", "P0", "P1"]
     change_failure_label_patterns: str | list[str] = ["change-failure", "rollback"]
@@ -233,6 +232,7 @@ class SLASettings(BaseModel):
 
 class AuthSettings(BaseModel):
     """认证相关配置。"""
+
     allowed_domains: str | list[str] = Field(default_factory=list, description="允许注册的邮箱域名列表")
     secret_key: str = "your-secret-key-keep-it-secret"
     admin_api_token: str = "admin_secret_token_2025"

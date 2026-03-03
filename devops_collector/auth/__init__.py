@@ -2,6 +2,7 @@
 
 暴露核心路由与服务接口，支持全链路命名空间对齐。
 """
+
 from devops_collector.auth import (
     auth_database,
     auth_dependency,

@@ -2,6 +2,7 @@
 
 验证密码加密、JWT 令牌生成以及用户认证核心服务的正确性。
 """
+
 import uuid
 from datetime import timedelta
 
@@ -20,12 +21,13 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 @pytest.fixture(name="db_session")
 def fixture_db_session():
     """单元测试数据库会话 Fixture。
-    
+
     创建所有表并在测试结束后清理数据库。
-    
+
     Yields:
         Session: SQLAlchemy 数据库会话。
     """
@@ -42,6 +44,7 @@ def fixture_db_session():
         with engine.begin() as conn:
             conn.exec_driver_sql("PRAGMA foreign_keys=ON")
 
+
 def test_auth_password_hashing():
     """测试密码哈希生成与校验功能。"""
     password = "test_password_123"
@@ -49,6 +52,7 @@ def test_auth_password_hashing():
     assert hashed != password
     assert auth_service.auth_verify_password(password, hashed) is True
     assert auth_service.auth_verify_password("wrong_password", hashed) is False
+
 
 def test_auth_create_access_token():
     """测试 JWT 访问令牌的生成与解密验证。"""
@@ -60,6 +64,7 @@ def test_auth_create_access_token():
     assert payload["sub"] == data["sub"]
     assert payload["user_id"] == data["user_id"]
     assert "exp" in payload
+
 
 def test_auth_validate_email_domain():
     """测试电子邮箱域名过滤逻辑。"""
@@ -75,6 +80,7 @@ def test_auth_validate_email_domain():
     finally:
         settings.auth.allowed_domains = original_domains
 
+
 def test_auth_authenticate_user_success(db_session):
     """测试用户凭据认证成功场景。"""
     email = "auth_unit_test@tjhq.com"
@@ -88,15 +94,12 @@ def test_auth_authenticate_user_success(db_session):
         full_name="Unit Tester",
         is_active=True,
         is_current=True,
-        is_deleted=False
+        is_deleted=False,
     )
     db_session.add(user)
     db_session.flush()
 
-    cred = UserCredential(
-        user_id=user_id,
-        password_hash=auth_service.auth_get_password_hash(password)
-    )
+    cred = UserCredential(user_id=user_id, password_hash=auth_service.auth_get_password_hash(password))
     db_session.add(cred)
     db_session.commit()
 
@@ -104,6 +107,7 @@ def test_auth_authenticate_user_success(db_session):
     authenticated_user = auth_service.auth_authenticate_user(db_session, email, password)
     assert authenticated_user is not False
     assert authenticated_user.primary_email == email
+
 
 def test_auth_authenticate_user_failure(db_session):
     """测试用户认证失败（用户不存在或密码错误）场景。"""
@@ -115,20 +119,11 @@ def test_auth_authenticate_user_failure(db_session):
 
     # 2. 注册用户但输入错误密码
     user_id = uuid.uuid4()
-    user = User(
-        global_user_id=user_id,
-        primary_email=email,
-        is_active=True,
-        is_current=True,
-        is_deleted=False
-    )
+    user = User(global_user_id=user_id, primary_email=email, is_active=True, is_current=True, is_deleted=False)
     db_session.add(user)
     db_session.flush()
 
-    cred = UserCredential(
-        user_id=user_id,
-        password_hash=auth_service.auth_get_password_hash(password)
-    )
+    cred = UserCredential(user_id=user_id, password_hash=auth_service.auth_get_password_hash(password))
     db_session.add(cred)
     db_session.commit()
 

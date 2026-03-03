@@ -10,11 +10,13 @@ def engine():
     """Create a memory SQLite engine for testing."""
     return create_engine("sqlite:///:memory:")
 
+
 def test_plugin_autodiscover():
     """Test that plugins are discovered correctly."""
     PluginLoader.autodiscover()
     assert len(PluginLoader._loaded_plugins) > 0
     assert "gitlab" in PluginLoader._loaded_plugins
+
 
 def test_load_models():
     """Test that models from all plugins can be loaded."""
@@ -26,6 +28,7 @@ def test_load_models():
     assert "gitlab_projects" in table_names
     assert "gitlab_commits" in table_names
     assert "zentao_products" in table_names
+
 
 def test_create_tables(engine):
     """Test that all tables can be created without foreign key errors."""
@@ -48,6 +51,7 @@ def test_create_tables(engine):
     assert "gitlab_issues" in tables
     assert "zentao_products" in tables
 
+
 def test_gitlab_model_relations(engine):
     """Deep check for GitLab model relations."""
     from sqlalchemy.orm import sessionmaker
@@ -58,12 +62,7 @@ def test_gitlab_model_relations(engine):
     session = Session()
 
     # Create a project
-    project = GitLabProject(
-        id=1,
-        name="test-project",
-        path_with_namespace="group/test",
-        star_count=0
-    )
+    project = GitLabProject(id=1, name="test-project", path_with_namespace="group/test", star_count=0)
     session.add(project)
 
     # Create a commit
@@ -73,7 +72,7 @@ def test_gitlab_model_relations(engine):
         short_id="abc123d",
         title="initial commit",
         author_name="Test User",
-        author_email="test@example.com"
+        author_email="test@example.com",
     )
     session.add(commit)
     session.commit()

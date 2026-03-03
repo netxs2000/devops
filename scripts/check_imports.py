@@ -19,7 +19,7 @@ def check_imports():
         "devops_collector.models.base_models",
         "devops_collector.auth.auth_service",
         "devops_collector.core.security",
-        "devops_portal.main"
+        "devops_portal.main",
     ]
 
     success_count = 0
@@ -37,6 +37,7 @@ def check_imports():
     print("-" * 60)
     print(f"检查完成: {success_count}/{len(modules)} 成功")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     check_imports()

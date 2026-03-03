@@ -18,8 +18,9 @@ except ImportError:
 
 if not logger:
     import logging
+
     logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger('LabelChecker')
+    logger = logging.getLogger("LabelChecker")
 
 
 class IssueLabelChecker:
@@ -29,7 +30,7 @@ class IssueLabelChecker:
     CHECK_RULES = {
         "bug": ["type", "severity", "priority", "bug_category", "bug_source", "province"],
         "feature": ["type", "priority"],
-        "test": ["type", "priority"]
+        "test": ["type", "priority"],
     }
 
     def __init__(self, client: GitLabClient):
@@ -37,24 +38,27 @@ class IssueLabelChecker:
         # 将 LABEL_DEFINITIONS 转换为按前缀索引的字典，方便检查
         self.label_pools = {}
         for category, items in LABEL_DEFINITIONS.items():
-            self.label_pools[category] = {item['name'] for item in items}
+            self.label_pools[category] = {item["name"] for item in items}
 
     def check_issue(self, issue: dict) -> dict:
         """检查单个 Issue。"""
-        labels = issue.get('labels', [])
+        labels = issue.get("labels", [])
 
         # 识别类型
         issue_type = None
-        if "type::bug" in labels: issue_type = "bug"
-        elif "type::feature" in labels: issue_type = "feature"
-        elif "type::test" in labels: issue_type = "test"
+        if "type::bug" in labels:
+            issue_type = "bug"
+        elif "type::feature" in labels:
+            issue_type = "feature"
+        elif "type::test" in labels:
+            issue_type = "test"
 
         result = {
-            "iid": issue['iid'],
-            "title": issue['title'],
+            "iid": issue["iid"],
+            "title": issue["title"],
             "type": issue_type or "Unknown",
             "missing": [],
-            "url": issue['web_url']
+            "url": issue["web_url"],
         }
 
         if not issue_type:
@@ -100,17 +104,17 @@ def main():
         logger.warning(f"Issue #{item['iid']} 缺少: {', '.join(item['missing'])}")
 
         if args.auto_fix:
-            client.add_issue_label(args.project_id, item['iid'], ["needs-labels"])
+            client.add_issue_label(args.project_id, item["iid"], ["needs-labels"])
             msg = f"⚠️ 标签不完整。缺少类别: {', '.join(item['missing'])}。请根据规范补充。"
-            client.add_issue_note(args.project_id, item['iid'], msg)
+            client.add_issue_note(args.project_id, item["iid"], msg)
 
     if args.report and incomplete:
-        with open(args.report, 'w', newline='', encoding='utf-8') as f:
+        with open(args.report, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=["iid", "title", "type", "missing", "url"])
             writer.writeheader()
             for item in incomplete:
                 row = item.copy()
-                row['missing'] = ",".join(item['missing'])
+                row["missing"] = ",".join(item["missing"])
                 writer.writerow(row)
         logger.info(f"报告已保存至: {args.report}")
 

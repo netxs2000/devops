@@ -3,6 +3,7 @@
 验证虚拟团队管理、增强型身份映射以及身份对齐治理引擎的核心逻辑。
 使用 SQLite 物理文件数据库进行测试以保证多连接数据同步。
 """
+
 import uuid
 from unittest.mock import patch
 
@@ -34,18 +35,16 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 from sqlalchemy.pool import StaticPool
 
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool
-)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=OFF")
     cursor.close()
+
 
 # 覆盖 FastAPI 的 get_db 依赖
 def override_get_db():
@@ -55,8 +54,10 @@ def override_get_db():
     finally:
         db.close()
 
+
 app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
+
 
 @pytest.fixture(scope="function")
 def db_session():
@@ -74,7 +75,9 @@ def db_session():
         with engine.begin() as conn:
             conn.exec_driver_sql("PRAGMA foreign_keys=ON")
 
+
 # --- 1. 模型逻辑测试 ---
+
 
 def test_virtual_team_relationships(db_session):
     """测试虚拟团队的模型关联关系。"""
@@ -106,7 +109,9 @@ def test_virtual_team_relationships(db_session):
     assert len(u2.team_memberships) == 1
     assert u2.team_memberships[0].team.name == "效能平台组"
 
+
 # --- 2. 身份治理引擎逻辑测试 ---
+
 
 def test_identity_resolver_logic(db_session):
     """测试 scripts/run_identity_resolver.py 中的对齐算法。"""
@@ -117,7 +122,7 @@ def test_identity_resolver_logic(db_session):
         employee_id="W005",
         username="wangwu",
         primary_email="wangwu@yourcompany.com",
-        is_current=True
+        is_current=True,
     )
     db_session.add(user)
 
@@ -127,15 +132,15 @@ def test_identity_resolver_logic(db_session):
         external_user_id="123",
         external_username="wangwu",  # Email 前缀匹配 username
         external_email="wangwu@gmail.com",
-        mapping_status="PENDING"
+        mapping_status="PENDING",
     )
 
     mapping2 = IdentityMapping(
-        source_system="gitlab",
+        source_system="jira",
         external_user_id="456",
         external_username="W5_Dev",
-        external_email="W005@yourcompany.com", # Email 前缀匹配工号
-        mapping_status="PENDING"
+        external_email="W005@yourcompany.com",  # Email 前缀匹配工号
+        mapping_status="PENDING",
     )
 
     db_session.add_all([mapping1, mapping2])
@@ -158,7 +163,9 @@ def test_identity_resolver_logic(db_session):
     assert m2.confidence_score == 0.8
     assert m2.mapping_status == "AUTO"
 
+
 # --- 3. API 接口集成测试 ---
+
 
 def test_api_user_full_profile(db_session):
     """测试获取用户全景画像接口。"""
@@ -167,11 +174,24 @@ def test_api_user_full_profile(db_session):
     org = Organization(org_id="ORG_TEST", org_name="测试部", is_current=True)
     db_session.add(org)
     db_session.flush()
-    user = User(global_user_id=u_id, full_name="赵六", employee_id="R666", primary_email="zhao@ex.com", department_id=org.org_id, is_current=True)
+    user = User(
+        global_user_id=u_id,
+        full_name="赵六",
+        employee_id="R666",
+        primary_email="zhao@ex.com",
+        department_id=org.org_id,
+        is_current=True,
+    )
     db_session.add(user)
-    db_session.commit() # 物理库必须提交
+    db_session.commit()  # 物理库必须提交
 
-    mapping = IdentityMapping(global_user_id=u_id, source_system="gitlab", external_user_id="git_666", external_email="zhao@ex.com", mapping_status="VERIFIED")
+    mapping = IdentityMapping(
+        global_user_id=u_id,
+        source_system="gitlab",
+        external_user_id="git_666",
+        external_email="zhao@ex.com",
+        mapping_status="VERIFIED",
+    )
     team = Team(name="虚拟组X", team_code="X")
     db_session.add_all([mapping, team])
     db_session.commit()
@@ -194,11 +214,14 @@ def test_api_user_full_profile(db_session):
     assert data["teams"][0]["team_name"] == "虚拟组X"
     assert data["teams"][0]["allocation"] == 0.8
 
+
 def test_api_create_team_and_add_member(db_session):
     """测试通过 API 创建团队并添加成员。"""
     # 1. 创建用户并赋予管理员角色
     u_id = uuid.uuid4()
-    admin_user = User(global_user_id=u_id, full_name="系统管理员", primary_email="admin@ex.com", employee_id="ADMIN1", is_current=True)
+    admin_user = User(
+        global_user_id=u_id, full_name="系统管理员", primary_email="admin@ex.com", employee_id="ADMIN1", is_current=True
+    )
     admin_role = SysRole(role_key="SYSTEM_ADMIN", role_name="管理员")
     db_session.add_all([admin_user, admin_role])
     db_session.commit()
@@ -211,33 +234,25 @@ def test_api_create_team_and_add_member(db_session):
 
     # 模拟经过认证的管理员 Token
     token_data = {
-        'sub': admin_user.primary_email,
-        'user_id': str(admin_user.global_user_id),
-        'roles': ['SYSTEM_ADMIN'],
-        'permissions': ['*']
+        "sub": admin_user.primary_email,
+        "user_id": str(admin_user.global_user_id),
+        "roles": ["SYSTEM_ADMIN"],
+        "permissions": ["*"],
     }
     token = auth_service.auth_create_access_token(token_data)
     headers = {"Authorization": f"Bearer {token}"}
 
     # 由于 TestClient 与 db_session 共享物理库但不是同一个 Session，我们需要保证 auth_service 能读到用户
     # 最简单办法是直接 Mock auth_get_current_user
-    with patch('devops_collector.auth.auth_service.auth_get_current_user', return_value=db_admin):
+    with patch("devops_collector.auth.auth_service.auth_get_current_user", return_value=db_admin):
         # 2. 创建团队
-        payload = {
-            "name": "API 团队",
-            "team_code": "API_TEAM",
-            "description": "通过 API 创建"
-        }
+        payload = {"name": "API 团队", "team_code": "API_TEAM", "description": "通过 API 创建"}
         resp = client.post("/admin/teams", json=payload, headers=headers)
         assert resp.status_code == 200
         team_id = resp.json()["id"]
 
         # 3. 添加成员
-        member_payload = {
-            "user_id": str(u_id),
-            "role_code": "LEADER",
-            "allocation_ratio": 1.0
-        }
+        member_payload = {"user_id": str(u_id), "role_code": "LEADER", "allocation_ratio": 1.0}
         resp = client.post(f"/admin/teams/{team_id}/members", json=member_payload, headers=headers)
         assert resp.status_code == 200
 

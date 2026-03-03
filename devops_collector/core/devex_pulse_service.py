@@ -2,6 +2,7 @@
 
 该模块封装了“心情指数打卡”的核心业务逻辑。
 """
+
 import logging
 from datetime import date, datetime
 
@@ -12,6 +13,7 @@ from devops_portal.schemas_pulse import PulseStatus, PulseSubmission
 
 
 logger = logging.getLogger(__name__)
+
 
 class DevexPulseService:
     """DevEx 心情指数业务逻辑服务。"""
@@ -28,7 +30,7 @@ class DevexPulseService:
         """检查用户今日打卡状态。"""
         result = self.session.execute(
             text("SELECT 1 FROM satisfaction_records WHERE user_email = :email AND date = :today"),
-            {"email": user_email, "today": date.today()}
+            {"email": user_email, "today": date.today()},
         ).fetchone()
 
         if result:
@@ -46,11 +48,8 @@ class DevexPulseService:
             text("""
                 INSERT INTO satisfaction_records (user_email, score, date, created_at, updated_at)
                 VALUES (:email, :score, :today, :now, :now)
-            """), {
-                "email": submission.user_email,
-                "score": submission.score,
-                "today": date.today(),
-                "now": datetime.now()
-            })
+            """),
+            {"email": submission.user_email, "score": submission.score, "today": date.today(), "now": datetime.now()},
+        )
         self.session.commit()
         return PulseStatus(submitted=True, message="打卡成功")

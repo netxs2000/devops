@@ -25,7 +25,7 @@ class TestPyAirbyteGitLabIntegration(unittest.TestCase):
             "id": "sha-123",
             "project_id": 456,
             "title": "Test Commit",
-            "author_name": "Antigravity"
+            "author_name": "Antigravity",
         }
 
         mock_read_result = MagicMock()
@@ -42,6 +42,7 @@ class TestPyAirbyteGitLabIntegration(unittest.TestCase):
         self.assertEqual(records[0]["id"], "sha-123")
         self.assertEqual(records[0]["author_name"], "Antigravity")
         mock_source.select_streams.assert_called_with(["commits"])
+
 
 if __name__ == "__main__":
     unittest.main()

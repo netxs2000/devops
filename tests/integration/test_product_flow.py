@@ -11,15 +11,12 @@ from devops_collector.models.base_models import (  # Use direct imports
 
 # Import ProjectProductRelation but use it via db queries if needed, or rely on router response
 
+
 def create_test_token(email, user_id, roles=None, permissions=None):
     """Helper to create a JWT for testing."""
-    token_data = {
-        'sub': email,
-        'user_id': str(user_id),
-        'roles': roles or [],
-        'permissions': permissions or []
-    }
+    token_data = {"sub": email, "user_id": str(user_id), "roles": roles or [], "permissions": permissions or []}
     return auth_service.auth_create_access_token(token_data)
+
 
 def test_product_management_flow(client, db_session):
     """集成测试：验证产品创建与项目关联的完整流程。"""
@@ -36,7 +33,7 @@ def test_product_management_flow(client, db_session):
         full_name="Admin User",
         is_active=True,
         is_current=True,
-        roles=[admin_role]
+        roles=[admin_role],
     )
     db_session.add(admin)
 
@@ -55,7 +52,7 @@ def test_product_management_flow(client, db_session):
         "product_name": "Business Core Platform",
         "product_description": "Core platform for business services",
         "category": "Core",
-        "version_schema": "semver"
+        "version_schema": "semver",
     }
 
     response = client.post("/admin/products", json=product_data, headers=headers)
@@ -63,12 +60,7 @@ def test_product_management_flow(client, db_session):
     assert response.json()["product_id"] == "P-BIZ-01"
 
     # 2. 准备项目 (关联Org)
-    project = ProjectMaster(
-        project_id="MDM-PROJ-01",
-        project_name="MDM Project 1",
-        org_id="ORG-001",
-        is_current=True
-    )
+    project = ProjectMaster(project_id="MDM-PROJ-01", project_name="MDM Project 1", org_id="ORG-001", is_current=True)
     db_session.add(project)
     db_session.commit()
 
@@ -77,7 +69,7 @@ def test_product_management_flow(client, db_session):
         "project_id": "MDM-PROJ-01",
         "product_id": "P-BIZ-01",
         "relation_type": "PRIMARY",
-        "allocation_ratio": 1.0
+        "allocation_ratio": 1.0,
     }
 
     response = client.post("/admin/link-product", json=relation_data, headers=headers)

@@ -6,6 +6,7 @@
 3. 验证 Client、Worker 和 Config 是否都已注册
 4. 尝试获取每个插件的配置并打印摘要
 """
+
 import logging
 import os
 import sys
@@ -19,8 +20,9 @@ from devops_collector.plugins import load_all_plugins
 
 
 # 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('PluginVerifier')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger("PluginVerifier")
+
 
 def main():
     logger.info("Starting Plugin Architecture Verification...")
@@ -31,11 +33,7 @@ def main():
     loaded_plugins = load_all_plugins()
     logger.info(f"   Autodiscovered plugins: {loaded_plugins}")
 
-    expected_plugins = [
-        'gitlab', 'sonarqube', 'jenkins',
-        'jira', 'zentao', 'jfrog',
-        'nexus', 'dependency_check'
-    ]
+    expected_plugins = ["gitlab", "sonarqube", "jenkins", "jira", "zentao", "jfrog", "nexus", "dependency_check"]
 
     # 2. 验证插件注册状态
     logger.info("\n2. Verifying Plugin Registration Status...")
@@ -58,21 +56,25 @@ def main():
         status = []
         if client_cls:
             status.append("Client [OK]")
-        elif name == 'dependency_check':
+        elif name == "dependency_check":
             status.append("Client [SKIPPED]")
         else:
             status.append("Client [MISSING]")
 
-        if worker_cls: status.append("Worker [OK]")
-        else: status.append("Worker [MISSING]")
+        if worker_cls:
+            status.append("Worker [OK]")
+        else:
+            status.append("Worker [MISSING]")
 
-        if config_dict: status.append("Config [OK]")
-        else: status.append("Config [MISSING]")
+        if config_dict:
+            status.append("Config [OK]")
+        else:
+            status.append("Config [MISSING]")
 
         logger.info(f"      Status: {', '.join(status)}")
 
         # dependency_check 不需要 Client (CI 驱动模式)
-        is_client_ok = bool(client_cls) or (name == 'dependency_check')
+        is_client_ok = bool(client_cls) or (name == "dependency_check")
 
         if not (is_client_ok and worker_cls and config_dict):
             logger.error(f"      [X] Incomplete registration for {name}")
@@ -90,6 +92,7 @@ def main():
     else:
         logger.error("   [FAILURE] Some plugins failed verification.")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

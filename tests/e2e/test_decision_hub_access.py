@@ -1,4 +1,3 @@
-
 import time
 import unittest
 
@@ -18,10 +17,10 @@ class TestDecisionHubAccess(unittest.TestCase):
         # Configure Chrome options
         options = webdriver.ChromeOptions()
         # options.add_argument('--headless')  # Run in headless mode for CI/CD
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--ignore-certificate-errors')
-        options.add_argument('--ignore-ssl-errors')
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--ignore-certificate-errors")
+        options.add_argument("--ignore-ssl-errors")
 
         # Initialize WebDriver
         try:
@@ -29,6 +28,7 @@ class TestDecisionHubAccess(unittest.TestCase):
         except Exception:
             from selenium.webdriver.chrome.service import Service
             from webdriver_manager.chrome import ChromeDriverManager
+
             self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
         self.driver.maximize_window()
@@ -78,7 +78,7 @@ class TestDecisionHubAccess(unittest.TestCase):
 
             # Reset login_btn variable for safety if needed later, though we are bypassing click
             login_btn = None
-            time.sleep(2.0) # Wait for fetch and redirect
+            time.sleep(2.0)  # Wait for fetch and redirect
 
         except Exception as e:
             driver.save_screenshot("login_failure.png")
@@ -146,6 +146,7 @@ class TestDecisionHubAccess(unittest.TestCase):
     def tearDown(self):
         if self.driver:
             self.driver.quit()
+
 
 if __name__ == "__main__":
     unittest.main()

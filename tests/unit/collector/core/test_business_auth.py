@@ -7,6 +7,7 @@
 4. 虚拟团队负责人角色推断
 5. 动态权限标识聚合
 """
+
 import uuid
 
 from devops_collector.core.business_auth import get_business_linked_roles, get_dynamic_permissions
@@ -34,13 +35,7 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_org_m
     user = User(global_user_id=user_id, username="manager", full_name="Manager")
     db_session.add(user)
 
-    org = Organization(
-        org_id="ORG_001",
-        org_name="Test Org",
-        manager_user_id=user_id,
-        is_current=True,
-        sync_version=1
-    )
+    org = Organization(org_id="ORG_001", org_name="Test Org", manager_user_id=user_id, is_current=True, sync_version=1)
     db_session.add(org)
     db_session.commit()
 
@@ -49,6 +44,7 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_org_m
 
     # validation
     assert "DEPT_MANAGER" in roles
+
 
 def test_get_business_linked_roles_should_return_product_manager_when_user_is_pm(db_session):
     # Setup
@@ -63,7 +59,7 @@ def test_get_business_linked_roles_should_return_product_manager_when_user_is_pm
         version_schema="SemVer",
         product_manager_id=user_id,
         is_current=True,
-        sync_version=1
+        sync_version=1,
     )
     db_session.add(product)
     db_session.commit()
@@ -74,6 +70,7 @@ def test_get_business_linked_roles_should_return_product_manager_when_user_is_pm
     # validation
     assert "PRODUCT_MANAGER" in roles
 
+
 def test_get_business_linked_roles_should_return_project_manager_when_user_is_project_lead(db_session):
     # Setup
     user_id = uuid.uuid4()
@@ -81,11 +78,7 @@ def test_get_business_linked_roles_should_return_project_manager_when_user_is_pr
     db_session.add(user)
 
     project = ProjectMaster(
-        project_id="PROJ_001",
-        project_name="Test Project",
-        pm_user_id=user_id,
-        is_current=True,
-        sync_version=1
+        project_id="PROJ_001", project_name="Test Project", pm_user_id=user_id, is_current=True, sync_version=1
     )
     db_session.add(project)
     db_session.commit()
@@ -96,19 +89,14 @@ def test_get_business_linked_roles_should_return_project_manager_when_user_is_pr
     # validation
     assert "PROJECT_MANAGER" in roles
 
+
 def test_get_business_linked_roles_should_return_dept_manager_when_user_is_team_leader(db_session):
     # Setup
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="tl", full_name="TL")
     db_session.add(user)
 
-    team = Team(
-        name="Test Team",
-        team_code="TEAM_001",
-        leader_id=user_id,
-        is_current=True,
-        sync_version=1
-    )
+    team = Team(name="Test Team", team_code="TEAM_001", leader_id=user_id, is_current=True, sync_version=1)
     db_session.add(team)
     db_session.commit()
 
@@ -117,6 +105,7 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_team_
 
     # validation
     assert "DEPT_MANAGER" in roles
+
 
 def test_get_dynamic_permissions_should_aggregate_all_perms_from_business_roles(db_session):
     # Setup roles and menus
@@ -141,7 +130,15 @@ def test_get_dynamic_permissions_should_aggregate_all_perms_from_business_roles(
     db_session.add(user)
 
     org = Organization(org_id="O1", org_name="O1", manager_user_id=user_id, is_current=True, sync_version=1)
-    prod = Product(product_id="P1", product_name="P1", product_description="P1", version_schema="S", product_manager_id=user_id, is_current=True, sync_version=1)
+    prod = Product(
+        product_id="P1",
+        product_name="P1",
+        product_description="P1",
+        version_schema="S",
+        product_manager_id=user_id,
+        is_current=True,
+        sync_version=1,
+    )
     db_session.add_all([org, prod])
     db_session.commit()
 
@@ -153,10 +150,12 @@ def test_get_dynamic_permissions_should_aggregate_all_perms_from_business_roles(
     assert "prod:manage" in perms
     assert len(perms) == 2
 
+
 def test_get_business_linked_roles_should_return_empty_for_normal_user(db_session):
     user_id = uuid.uuid4()
     roles = get_business_linked_roles(db_session, user_id)
     assert len(roles) == 0
+
 
 def test_get_business_linked_roles_should_return_dept_manager_when_user_is_gitlab_group_maintainer(db_session):
     # Setup
@@ -179,6 +178,7 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_gitla
 
     # validation
     assert "DEPT_MANAGER" in roles
+
 
 def test_get_business_linked_roles_should_return_project_manager_when_user_is_gitlab_project_maintainer(db_session):
     # Setup

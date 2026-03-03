@@ -1,4 +1,3 @@
-
 import os
 import re
 import time
@@ -10,7 +9,10 @@ from selenium.webdriver.common.by import By
 
 # Configuration
 DASHBOARD_URL = "http://localhost:8501"
-PAGES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "dashboard", "pages")
+PAGES_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "dashboard", "pages"
+)
+
 
 def get_page_names():
     """Extract expected page names from the filesystem."""
@@ -27,6 +29,7 @@ def get_page_names():
             page_name = match.group(2).replace("_", " ")
             pages.append(page_name)
     return pages
+
 
 def run_test():
     page_names = get_page_names()
@@ -93,14 +96,14 @@ def run_test():
                         # This is a bit heuristic.
                         text = alert.text
                         if "Error" in text or "Traceback" in text or "KeyError" in text:
-                             error_texts.append(text)
+                            error_texts.append(text)
                 else:
                     for err in errors:
                         error_texts.append(err.text)
 
                 if error_texts:
                     print("FAILED")
-                    print(f"   Errors found: {error_texts[:2]}") # Print first 2 errors
+                    print(f"   Errors found: {error_texts[:2]}")  # Print first 2 errors
                     results[page_name] = "FAILED"
                 else:
                     print("PASS")
@@ -110,9 +113,9 @@ def run_test():
                 print(f"ERROR: {ex}")
                 results[page_name] = f"ERROR: {str(ex)}"
 
-        print("\n" + "="*40)
+        print("\n" + "=" * 40)
         print("Test Summary")
-        print("="*40)
+        print("=" * 40)
         passed = 0
         for name, status in results.items():
             icon = "[PASS]" if status == "PASS" else "[FAIL]"
@@ -125,6 +128,7 @@ def run_test():
 
     finally:
         driver.quit()
+
 
 if __name__ == "__main__":
     run_test()

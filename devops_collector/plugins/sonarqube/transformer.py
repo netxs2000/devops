@@ -97,21 +97,15 @@ class SonarDataTransformer:
             sqale_debt_ratio=safe_float(measures_data.get("sqale_debt_ratio")),
             complexity=safe_int(measures_data.get("complexity")),
             cognitive_complexity=safe_int(measures_data.get("cognitive_complexity")),
-            reliability_rating=SonarQubeClient.rating_to_letter(
-                measures_data.get("reliability_rating")
-            ),
+            reliability_rating=SonarQubeClient.rating_to_letter(measures_data.get("reliability_rating")),
             security_rating=SonarQubeClient.rating_to_letter(measures_data.get("security_rating")),
             sqale_rating=SonarQubeClient.rating_to_letter(measures_data.get("sqale_rating")),
             # 新增代码指标
             new_coverage=safe_float(measures_data.get("new_coverage")),
             new_bugs=safe_int(measures_data.get("new_bugs")),
             new_vulnerabilities=safe_int(measures_data.get("new_vulnerabilities")),
-            new_reliability_rating=SonarQubeClient.rating_to_letter(
-                measures_data.get("new_reliability_rating")
-            ),
-            new_security_rating=SonarQubeClient.rating_to_letter(
-                measures_data.get("new_security_rating")
-            ),
+            new_reliability_rating=SonarQubeClient.rating_to_letter(measures_data.get("new_reliability_rating")),
+            new_security_rating=SonarQubeClient.rating_to_letter(measures_data.get("new_security_rating")),
             quality_gate_status=gate_status.get("status"),
         )
         return measure

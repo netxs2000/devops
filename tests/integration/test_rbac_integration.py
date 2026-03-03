@@ -6,13 +6,9 @@ from devops_collector.models.base_models import User
 
 def create_test_token(email, user_id, roles=None, permissions=None):
     """Helper to create a JWT for testing."""
-    token_data = {
-        'sub': email,
-        'user_id': str(user_id),
-        'roles': roles or [],
-        'permissions': permissions or []
-    }
+    token_data = {"sub": email, "user_id": str(user_id), "roles": roles or [], "permissions": permissions or []}
     return auth_service.auth_create_access_token(token_data)
+
 
 def test_rbac_unauthorized_access(client, db_session):
     """验证普通用户无法访问需要特定权限的接口 (越权访问拦截)。"""
@@ -24,7 +20,7 @@ def test_rbac_unauthorized_access(client, db_session):
         username="normie",
         full_name="Normal User",
         is_active=True,
-        is_current=True
+        is_current=True,
     )
     db_session.add(user)
     db_session.commit()
@@ -43,6 +39,7 @@ def test_rbac_unauthorized_access(client, db_session):
     assert resp.status_code == 403
     assert "Required roles" in resp.json()["detail"]
 
+
 def test_rbac_authorized_access_by_permission(client, db_session):
     """验证拥有特定权限的用户可以访问受限接口。"""
     uid = uuid.uuid4()
@@ -52,7 +49,7 @@ def test_rbac_authorized_access_by_permission(client, db_session):
         username="viewer",
         full_name="Viewer User",
         is_active=True,
-        is_current=True
+        is_current=True,
     )
     db_session.add(user)
     db_session.commit()
@@ -66,6 +63,7 @@ def test_rbac_authorized_access_by_permission(client, db_session):
     # 因为 DB 中有用户了，即使空也应该是 200
     assert resp.status_code == 200
 
+
 def test_rbac_system_admin_override(client, db_session):
     """验证 SYSTEM_ADMIN 角色可以越过所有权限检查。"""
     uid = uuid.uuid4()
@@ -75,7 +73,7 @@ def test_rbac_system_admin_override(client, db_session):
         username="admin",
         full_name="Admin User",
         is_active=True,
-        is_current=True
+        is_current=True,
     )
     db_session.add(user)
     db_session.commit()
@@ -93,10 +91,11 @@ def test_rbac_system_admin_override(client, db_session):
         "global_user_id": str(uid),
         "source_system": "test",
         "external_user_id": "EXT1",
-        "external_username": "tester"
+        "external_username": "tester",
     }
     resp = client.post("/admin/identity-mappings", json=payload, headers=headers)
     assert resp.status_code == 200
+
 
 def test_rbac_write_operations_denied(client, db_session):
     """验证普通用户尝试执行管理员写操作被拦截。"""
@@ -116,15 +115,12 @@ def test_rbac_write_operations_denied(client, db_session):
     resp = client.post("/admin/mdm-projects", json={"project_id": "P1_EVIL", "project_name": "P1"}, headers=headers)
     assert resp.status_code == 403
 
+
 def test_rbac_team_management_flow(client, db_session):
     """验证管理员完整的团队管理提权流程并校验数据一致性 (N+1 优化校验)。"""
     uid = uuid.uuid4()
     user = User(
-        global_user_id=uid,
-        primary_email="boss@example.com",
-        full_name="Big Boss",
-        username="boss",
-        is_active=True
+        global_user_id=uid, primary_email="boss@example.com", full_name="Big Boss", username="boss", is_active=True
     )
     db_session.add(user)
     db_session.commit()
@@ -153,6 +149,7 @@ def test_rbac_team_management_flow(client, db_session):
     assert len(target_team["members"]) == 1
     # 重要断言：验证成员关联的用户姓名是否被正确加载 (joinedload 验证)
     assert target_team["members"][0]["full_name"] == "Big Boss"
+
 
 def test_rbac_token_expired_or_invalid(client):
     """验证无效或过期的 Token 被拦截。"""

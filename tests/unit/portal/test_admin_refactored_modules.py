@@ -16,6 +16,7 @@ from devops_collector.plugins.gitlab.models import GitLabProject
 
 # --- Fixtures ---
 
+
 @pytest.fixture
 def admin_user(db_session):
     """Create a super admin user with all necessary roles/permissions."""
@@ -25,7 +26,7 @@ def admin_user(db_session):
         username="admin",
         full_name="System Admin",
         is_active=True,
-        is_current=True
+        is_current=True,
     )
     db_session.add(user)
 
@@ -49,6 +50,7 @@ def admin_user(db_session):
 
     return user
 
+
 from devops_collector.auth import auth_service
 
 
@@ -58,10 +60,10 @@ def admin_client(client, admin_user, db_session):
 
     # Create JWT with required roles/permissions
     token_data = {
-        'sub': admin_user.primary_email,
-        'user_id': str(admin_user.global_user_id),
-        'roles': ["SYSTEM_ADMIN"],
-        'permissions': ["USER:MANAGE", "system:user:list", "system:project:mapping"]
+        "sub": admin_user.primary_email,
+        "user_id": str(admin_user.global_user_id),
+        "roles": ["SYSTEM_ADMIN"],
+        "permissions": ["USER:MANAGE", "system:user:list", "system:project:mapping"],
     }
     token = auth_service.auth_create_access_token(token_data)
 
@@ -73,17 +75,17 @@ def admin_client(client, admin_user, db_session):
 
 # --- Tests: 1. Product Architecture (adm_products) ---
 
+
 def test_product_lifecycle(admin_client, db_session):
     """Test Create -> List -> Link Product."""
 
     # 1. Create Product
     payload = {
         "product_id": "PROD-001",
-
         "product_name": "Core Banking",
         "category": "CORE",
         "lifecycle_status": "ACTIVE",
-        "product_description": "Core system"
+        "product_description": "Core system",
     }
     resp = admin_client.post("/admin/products", json=payload)
     assert resp.status_code == 200, resp.text
@@ -106,8 +108,8 @@ def test_product_lifecycle(admin_client, db_session):
     link_payload = {
         "project_id": "PRJ-001",
         "product_id": "PROD-001",
-        "relation_type": "PRIMARY", # Assuming this is a valid type
-        "allocation_ratio": 100.0
+        "relation_type": "PRIMARY",  # Assuming this is a valid type
+        "allocation_ratio": 100.0,
     }
     resp = admin_client.post("/admin/link-product", json=link_payload)
     assert resp.status_code == 200
@@ -120,6 +122,7 @@ def test_product_lifecycle(admin_client, db_session):
 
 # --- Tests: 2. Project Mapping (adm_projects) ---
 
+
 def test_project_mapping_flow(admin_client, db_session):
     """Test MDM Project Creation and Repo Linking."""
 
@@ -129,10 +132,7 @@ def test_project_mapping_flow(admin_client, db_session):
 
     # Setup: Unlinked Repo
     repo = GitLabProject(
-        id=1001,
-        name="legacy-repo",
-        path_with_namespace="group/legacy-repo",
-        raw_data={"web_url": "http://git"}
+        id=1001, name="legacy-repo", path_with_namespace="group/legacy-repo", raw_data={"web_url": "http://git"}
     )
     db_session.add(repo)
     db_session.commit()
@@ -142,7 +142,7 @@ def test_project_mapping_flow(admin_client, db_session):
         "project_id": "MDM-2025",
         "project_name": "New Architecture",
         "org_id": "GZ_CENTER",
-        "project_type": "SPRINT"
+        "project_type": "SPRINT",
     }
     resp = admin_client.post("/admin/mdm-projects", json=payload)
     assert resp.status_code == 200
@@ -151,14 +151,10 @@ def test_project_mapping_flow(admin_client, db_session):
     resp = admin_client.get("/admin/unlinked-repos")
     assert resp.status_code == 200
     repos = resp.json()
-    assert any(r['id'] == 1001 for r in repos)
+    assert any(r["id"] == 1001 for r in repos)
 
     # 3. Link Repo
-    link_payload = {
-        "mdm_project_id": "MDM-2025",
-        "gitlab_project_id": 1001,
-        "is_lead": True
-    }
+    link_payload = {"mdm_project_id": "MDM-2025", "gitlab_project_id": 1001, "is_lead": True}
     resp = admin_client.post("/admin/link-repo", json=link_payload)
     assert resp.status_code == 200
 
@@ -173,6 +169,7 @@ def test_project_mapping_flow(admin_client, db_session):
 
 # --- Tests: 3. Employee Identity (adm_users) ---
 
+
 def test_identity_mapping_crud(admin_client, db_session, admin_user):
     """Test Creating and Deleting Identity Mappings."""
 
@@ -182,17 +179,17 @@ def test_identity_mapping_crud(admin_client, db_session, admin_user):
         "source_system": "GITHUB",
         "external_user_id": "gh_12345",
         "external_username": "gh_admin",
-        "external_email": "admin@github.com"
+        "external_email": "admin@github.com",
     }
     resp = admin_client.post("/admin/identity-mappings", json=payload)
     assert resp.status_code == 200
-    assert resp.json()['status'] == 'success'
+    assert resp.json()["status"] == "success"
 
     # 2. List verify
     resp = admin_client.get("/admin/identity-mappings")
     assert resp.status_code == 200
     mappings = resp.json()
-    assert any(m['source_system'] == 'GITHUB' for m in mappings)
+    assert any(m["source_system"] == "GITHUB" for m in mappings)
 
     # 3. Delete
     # Need to get ID
@@ -206,6 +203,7 @@ def test_identity_mapping_crud(admin_client, db_session, admin_user):
 
 # --- Tests: 4. User Approvals (adm_approvals) ---
 
+
 def test_user_approval_process(admin_client, db_session):
     """Test User Registration Approval Flow."""
 
@@ -215,8 +213,8 @@ def test_user_approval_process(admin_client, db_session):
         primary_email="newbie@company.com",
         full_name="New Employee",
         is_active=False,
-        is_survivor=True, # Pending state
-        is_current=True
+        is_survivor=True,  # Pending state
+        is_current=True,
     )
     db_session.add(pending_user)
     db_session.commit()
@@ -226,28 +224,25 @@ def test_user_approval_process(admin_client, db_session):
     assert resp.status_code == 200
     data = resp.json()
     assert data["stats"]["pending"] >= 1
-    assert any(u['email'] == "newbie@company.com" for u in data['users'])
+    assert any(u["email"] == "newbie@company.com" for u in data["users"])
 
     # 3. Approve User with GitLab ID
-    approve_params = {
-        "email": "newbie@company.com",
-        "approved": "true",
-        "gitlab_user_id": "GL-555"
-    }
+    approve_params = {"email": "newbie@company.com", "approved": "true", "gitlab_user_id": "GL-555"}
     # Note: approved is bool in python, likely passed as query param string "true" or boolean by client
     # The endpoint expects query params for this POST.
     resp = admin_client.post("/service-desk/admin/approve-user", params=approve_params, json={})
     assert resp.status_code == 200, resp.text
 
     # 4. Verify User Active
-    db_session.expire(pending_user) # Reload
+    db_session.expire(pending_user)  # Reload
     db_session.refresh(pending_user)
     assert pending_user.is_active is True
 
     # 5. Verify GitLab Mapping Created
-    mapping = db_session.query(IdentityMapping).filter_by(
-        global_user_id=pending_user.global_user_id,
-        source_system="gitlab"
-    ).first()
+    mapping = (
+        db_session.query(IdentityMapping)
+        .filter_by(global_user_id=pending_user.global_user_id, source_system="gitlab")
+        .first()
+    )
     assert mapping is not None
     assert mapping.external_user_id == "GL-555"

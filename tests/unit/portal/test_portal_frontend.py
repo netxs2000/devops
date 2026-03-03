@@ -1,4 +1,3 @@
-
 import pytest
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -17,6 +16,7 @@ def driver():
     yield driver
     driver.quit()
 
+
 def test_portal_navigation_and_modals(driver):
     """集成测试：验证门户导航与重构后的 Handler 交互。"""
     # 1. 访问登录页并模拟登录 (此处假设后端/静态服务运行在 8999 端口)
@@ -24,7 +24,9 @@ def test_portal_navigation_and_modals(driver):
 
     # 注入 Mock Token 以跳过真实登录流程
     driver.execute_script("localStorage.setItem('sd_token', 'mock_token_for_test');")
-    driver.execute_script("localStorage.setItem('sd_user', JSON.stringify({email:'test@test.com', name:'Test', roles:['SYSTEM_ADMIN']}));")
+    driver.execute_script(
+        "localStorage.setItem('sd_user', JSON.stringify({email:'test@test.com', name:'Test', roles:['SYSTEM_ADMIN']}));"
+    )
 
     driver.get("http://localhost:8999/index.html")
     wait = WebDriverWait(driver, 10)
@@ -54,6 +56,7 @@ def test_portal_navigation_and_modals(driver):
     pulse_view = wait.until(EC.visibility_of_element_located((By.ID, "sys-pulse-view")))
     iframe = pulse_view.find_element(By.ID, "pulseFrame")
     assert "devex_pulse.html" in iframe.get_attribute("src")
+
 
 def test_unit_test_page_execution(driver):
     """执行前端单元测试运行器并验证其通过情况。"""

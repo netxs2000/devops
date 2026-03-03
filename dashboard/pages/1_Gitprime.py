@@ -3,6 +3,7 @@
 此页面展示基于代码当量 (ELOC) 的开发人员价值贡献榜。
 核心指标包括 ELOC 分数、Impact (影响力)、Churn Rate (近期代码重写率) 以及 Sherpa Score (协作贡献)。
 """
+
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -13,14 +14,12 @@ from devops_collector.config import settings
 
 # Page Configuration
 st.set_page_config(
-    page_title="GitPrime Engineering Insights",
-    page_icon="🌊",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="GitPrime Engineering Insights", page_icon="🌊", layout="wide", initial_sidebar_state="expanded"
 )
 
 # Custom CSS for Premium Look
-st.markdown("""
+st.markdown(
+    """
 <style>
     .metric-card {
         background-color: #1E1E1E;
@@ -46,7 +45,10 @@ st.markdown("""
         border-bottom: 2px solid #FFD700;
     }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
+
 
 # Database Connection
 @st.cache_resource
@@ -57,6 +59,7 @@ def get_db_engine():
         sqlalchemy.engine.Engine: Database engine instance.
     """
     return create_engine(settings.database.uri)
+
 
 def load_data():
     """Loads leaderboard data from database with fallback logic."""
@@ -112,12 +115,13 @@ def load_data():
 
     try:
         with engine.connect() as conn:
-             df = pd.read_sql(text(query_full), conn)
+            df = pd.read_sql(text(query_full), conn)
     except Exception:
         with engine.connect() as conn:
             df = pd.read_sql(text(query_basic), conn)
 
     return df
+
 
 def process_metrics(df):
     """Process raw metrics into derived KPIs and ranks.
@@ -135,37 +139,48 @@ def process_metrics(df):
         return df
 
     # Calculate Ratios
-    df['churn_rate'] = df.apply(lambda x: (x['churn_lines'] / x['raw_additions'] * 100) if x['raw_additions'] > 0 else 0, axis=1)
-    df['test_rate'] = df.apply(lambda x: (x['test_lines'] / x['raw_additions'] * 100) if x['raw_additions'] > 0 else 0, axis=1)
-    df['refactor_intensity'] = df['refactor_ratio'] * 100
+    df["churn_rate"] = df.apply(
+        lambda x: (x["churn_lines"] / x["raw_additions"] * 100) if x["raw_additions"] > 0 else 0, axis=1
+    )
+    df["test_rate"] = df.apply(
+        lambda x: (x["test_lines"] / x["raw_additions"] * 100) if x["raw_additions"] > 0 else 0, axis=1
+    )
+    df["refactor_intensity"] = df["refactor_ratio"] * 100
 
     # Assign Levels based on Rank (Dense Rank)
-    df['rank'] = df['eloc_score'].rank(method='dense', ascending=False)
+    df["rank"] = df["eloc_score"].rank(method="dense", ascending=False)
 
     def get_level(rank):
-        if rank <= 3: return 'Elite'
-        if rank <= 10: return 'Core'
-        if rank <= 30: return 'Contributor'
-        return 'Member'
+        if rank <= 3:
+            return "Elite"
+        if rank <= 10:
+            return "Core"
+        if rank <= 30:
+            return "Contributor"
+        return "Member"
 
-    df['level'] = df['rank'].apply(get_level)
+    df["level"] = df["rank"].apply(get_level)
 
     # Sherpa Score (Placeholder logic: 1 review = 5 points)
-    df['sherpa_score'] = df['review_count'] * 5
+    df["sherpa_score"] = df["review_count"] * 5
 
     # TTF Placeholder
-    df['ttf'] = "N/A"
+    df["ttf"] = "N/A"
 
     return df
 
+
 # Main UI
 st.title("🌊 GitPrime Engineering Insights")
-st.markdown("""
+st.markdown(
+    """
 <div style='background-color:rgba(255, 215, 0, 0.1); padding: 15px; border-radius: 10px; border-left: 5px solid #FFD700;'>
     <b>GitPrime Core Metrics</b><br>
     Focusing on <b>Impact</b> (Legacy Value), <b>Active Days</b> (Coding Focus), and <b>Efficiency</b> (Churn Analysis).
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 st.button("Refresh Data", on_click=st.cache_resource.clear)
 
 raw_df = load_data()
@@ -176,27 +191,32 @@ if df.empty:
 else:
     # --- Top Stats Banner ---
     top_row = st.columns(4)
-    file_impact = df['impact_score'].sum()
-    total_churn = df['churn_lines'].sum()
-    avg_churn = df['churn_rate'].mean()
+    file_impact = df["impact_score"].sum()
+    total_churn = df["churn_lines"].sum()
+    avg_churn = df["churn_rate"].mean()
 
     with top_row[0]:
         st.metric("Total Team Impact", f"{file_impact:,.0f}", help="Sum of Impact Score (ELOC * Legacy Factor)")
     with top_row[1]:
         st.metric("Avg Churn Rate", f"{avg_churn:.1f}%", help="Percentage of code rewritten shortly after merge")
     with top_row[2]:
-        st.metric("Avg Active Days", f"{df['active_days'].mean():.1f}", help="Average number of coding days per engineer (90d)")
+        st.metric(
+            "Avg Active Days",
+            f"{df['active_days'].mean():.1f}",
+            help="Average number of coding days per engineer (90d)",
+        )
     with top_row[3]:
-        st.metric("Top Sheriff", df.sort_values('sherpa_score', ascending=False).iloc[0]['full_name'] if not df.empty else "N/A")
+        st.metric(
+            "Top Sheriff",
+            df.sort_values("sherpa_score", ascending=False).iloc[0]["full_name"] if not df.empty else "N/A",
+        )
 
     st.markdown("---")
 
     # --- Tabs ---
-    tab_value, tab_quality, tab_collab = st.tabs([
-        "💎 Value Creation (ELOC & Impact)",
-        "🛡️ Quality & Efficiency (Churn & TTF)",
-        "🤝 Collaboration (Sherpa Score)"
-    ])
+    tab_value, tab_quality, tab_collab = st.tabs(
+        ["💎 Value Creation (ELOC & Impact)", "🛡️ Quality & Efficiency (Churn & TTF)", "🤝 Collaboration (Sherpa Score)"]
+    )
 
     # === Tab 1: Value ===
     with tab_value:
@@ -205,27 +225,38 @@ else:
         c1, c2 = st.columns([2, 1])
         with c1:
             fig_val = px.scatter(
-                df, x="commits_90d", y="impact_score", size="eloc_score", color="level",
+                df,
+                x="commits_90d",
+                y="impact_score",
+                size="eloc_score",
+                color="level",
                 hover_data=["full_name", "churn_rate"],
                 text="full_name",
                 title="Impact vs. Activity",
                 labels={"impact_score": "Impact (Value)", "commits_90d": "Commits (90d)"},
-                color_discrete_map={"Elite": "#FFD700", "Core": "#C0C0C0", "Contributor": "#CD7F32", "Member": "#808080"}
+                color_discrete_map={
+                    "Elite": "#FFD700",
+                    "Core": "#C0C0C0",
+                    "Contributor": "#CD7F32",
+                    "Member": "#808080",
+                },
             )
-            fig_val.update_traces(textposition='top center')
+            fig_val.update_traces(textposition="top center")
             st.plotly_chart(fig_val, use_container_width=True)
 
         with c2:
             st.subheader("Leaderboard (by Impact)")
             st.dataframe(
-                df[['rank', 'full_name', 'impact_score', 'active_days', 'level']].sort_values('impact_score', ascending=False),
+                df[["rank", "full_name", "impact_score", "active_days", "level"]].sort_values(
+                    "impact_score", ascending=False
+                ),
                 column_config={
                     "rank": "Rank",
                     "impact_score": st.column_config.NumberColumn("Impact", format="%d"),
-                    "active_days": st.column_config.NumberColumn("📅 Active Days", format="%d")
+                    "active_days": st.column_config.NumberColumn("📅 Active Days", format="%d"),
                 },
                 hide_index=True,
-                use_container_width=True
+                use_container_width=True,
             )
 
     # === Tab 2: Quality ===
@@ -236,26 +267,31 @@ else:
         with col_q1:
             # Churn Rate Bar Chart
             fig_churn = px.bar(
-                df.sort_values('churn_rate', ascending=True).head(15),
-                x="churn_rate", y="full_name", orientation='h',
+                df.sort_values("churn_rate", ascending=True).head(15),
+                x="churn_rate",
+                y="full_name",
+                orientation="h",
                 title="Lowest Churn Rate (Top Stability)",
                 labels={"churn_rate": "Churn Rate %", "full_name": "Developer"},
-                color="churn_rate", color_continuous_scale="RdYlGn_r" # Green is low churn
+                color="churn_rate",
+                color_continuous_scale="RdYlGn_r",  # Green is low churn
             )
             st.plotly_chart(fig_churn, use_container_width=True)
 
         with col_q2:
             st.subheader("Quality Metrics Detail")
             st.dataframe(
-                df[['full_name', 'churn_rate', 'test_rate', 'refactor_intensity', 'ttf']],
+                df[["full_name", "churn_rate", "test_rate", "refactor_intensity", "ttf"]],
                 column_config={
-                    "churn_rate": st.column_config.ProgressColumn("Churn %", format="%.1f%%", min_value=0, max_value=100),
+                    "churn_rate": st.column_config.ProgressColumn(
+                        "Churn %", format="%.1f%%", min_value=0, max_value=100
+                    ),
                     "test_rate": st.column_config.NumberColumn("Test Coverage %", format="%.1f%%"),
                     "refactor_intensity": st.column_config.NumberColumn("Refactor %", format="%.1f%%"),
-                    "ttf": "Time to Fix (Hours)"
+                    "ttf": "Time to Fix (Hours)",
                 },
                 hide_index=True,
-                use_container_width=True
+                use_container_width=True,
             )
 
     # === Tab 3: Collaboration ===
@@ -275,14 +311,16 @@ else:
         with col_c2:
             st.subheader("Sherpa Leaderboard")
             st.dataframe(
-                df[['rank', 'full_name', 'review_count', 'sherpa_score']].sort_values('sherpa_score', ascending=False),
+                df[["rank", "full_name", "review_count", "sherpa_score"]].sort_values("sherpa_score", ascending=False),
                 column_config={
                     "rank": "Rank",
                     "review_count": st.column_config.NumberColumn("Reviews Done"),
-                    "sherpa_score": st.column_config.ProgressColumn("Sherpa Score", format="%d", max_value=max(df['sherpa_score'].max(), 100))
+                    "sherpa_score": st.column_config.ProgressColumn(
+                        "Sherpa Score", format="%d", max_value=max(df["sherpa_score"].max(), 100)
+                    ),
                 },
                 hide_index=True,
-                use_container_width=True
+                use_container_width=True,
             )
 
     st.markdown("---")

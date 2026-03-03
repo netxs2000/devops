@@ -35,10 +35,14 @@ def check_data():
             # Try to get a real employee
             sample_user = db.query(User).filter(User.employee_id.isnot(None)).first()
             if sample_user:
-                print(f"Sample Employee - Name: {sample_user.full_name}, Email: {sample_user.primary_email}, EmployeeID: {sample_user.employee_id}")
+                print(
+                    f"Sample Employee - Name: {sample_user.full_name}, Email: {sample_user.primary_email}, EmployeeID: {sample_user.employee_id}"
+                )
             else:
                 sample_user = db.query(User).first()
-                print(f"Sample User (System) - Name: {sample_user.full_name}, Email: {sample_user.primary_email}, EmployeeID: {sample_user.employee_id}")
+                print(
+                    f"Sample User (System) - Name: {sample_user.full_name}, Email: {sample_user.primary_email}, EmployeeID: {sample_user.employee_id}"
+                )
         else:
             print("No records found in mdm_identities.")
 
@@ -46,6 +50,7 @@ def check_data():
         print(f"Error checking database: {e}")
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     check_data()

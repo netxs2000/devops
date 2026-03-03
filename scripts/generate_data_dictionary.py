@@ -9,6 +9,7 @@
     - 支持变更检测和 Diff 对比
     - 支持增量更新记录
 """
+
 import inspect
 import sys
 from datetime import datetime
@@ -35,23 +36,23 @@ def get_column_type_description(column) -> str:
     """
     col_type = str(column.type)
     type_mapping = {
-        'VARCHAR': 'String',
-        'INTEGER': 'Integer',
-        'BOOLEAN': 'Boolean',
-        'DATETIME': 'DateTime',
-        'UUID': 'UUID',
-        'JSONB': 'JSONB',
-        'JSON': 'JSON',
-        'FLOAT': 'Numeric',
-        'NUMERIC': 'Numeric',
-        'TEXT': 'Text',
-        'BIGINT': 'BigInteger',
-        'DATE': 'Date',
+        "VARCHAR": "String",
+        "INTEGER": "Integer",
+        "BOOLEAN": "Boolean",
+        "DATETIME": "DateTime",
+        "UUID": "UUID",
+        "JSONB": "JSONB",
+        "JSON": "JSON",
+        "FLOAT": "Numeric",
+        "NUMERIC": "Numeric",
+        "TEXT": "Text",
+        "BIGINT": "BigInteger",
+        "DATE": "Date",
     }
     for key, value in type_mapping.items():
         if key in col_type:
-            if key == 'VARCHAR':
-                return col_type.replace('VARCHAR', 'String')
+            if key == "VARCHAR":
+                return col_type.replace("VARCHAR", "String")
             return value
     return col_type
 
@@ -67,13 +68,13 @@ def get_column_constraints(column) -> list[str]:
     """
     constraints = []
     if column.primary_key:
-        constraints.append('PK')
+        constraints.append("PK")
     if column.foreign_keys:
-        constraints.append('FK')
+        constraints.append("FK")
     if column.unique:
-        constraints.append('UNIQUE')
+        constraints.append("UNIQUE")
     if column.index:
-        constraints.append('INDEX')
+        constraints.append("INDEX")
     return constraints
 
 
@@ -88,16 +89,16 @@ def extract_docstring_description(model_class) -> str:
     """
     doc = inspect.getdoc(model_class)
     if not doc:
-        return '无描述'
-    lines = doc.split('\n')
+        return "无描述"
+    lines = doc.split("\n")
     description = []
     for line in lines:
         line = line.strip()
-        if line and not line.startswith('Attributes:') and not line.startswith('Args:'):
+        if line and not line.startswith("Attributes:") and not line.startswith("Args:"):
             description.append(line)
-        elif line.startswith('Attributes:'):
+        elif line.startswith("Attributes:"):
             break
-    return ' '.join(description) if description else '无描述'
+    return " ".join(description) if description else "无描述"
 
 
 def generate_table_documentation(model_class) -> dict[str, Any]:
@@ -116,32 +117,34 @@ def generate_table_documentation(model_class) -> dict[str, Any]:
     columns_info = []
     for column in mapper.columns:
         # 获取 comment (字段注释)
-        comment = getattr(column, 'comment', None) or '-'
+        comment = getattr(column, "comment", None) or "-"
 
         col_info = {
-            'name': column.name,
-            'type': get_column_type_description(column),
-            'constraints': get_column_constraints(column),
-            'nullable': column.nullable,
-            'default': str(column.default.arg) if column.default and hasattr(column.default, 'arg') else '-',
-            'comment': comment
+            "name": column.name,
+            "type": get_column_type_description(column),
+            "constraints": get_column_constraints(column),
+            "nullable": column.nullable,
+            "default": str(column.default.arg) if column.default and hasattr(column.default, "arg") else "-",
+            "comment": comment,
         }
         columns_info.append(col_info)
 
     relationships_info = []
     for rel_name, rel in mapper.relationships.items():
-        relationships_info.append({
-            'name': rel_name,
-            'target': rel.mapper.class_.__name__,
-            'type': 'one-to-many' if rel.uselist else 'many-to-one'
-        })
+        relationships_info.append(
+            {
+                "name": rel_name,
+                "target": rel.mapper.class_.__name__,
+                "type": "one-to-many" if rel.uselist else "many-to-one",
+            }
+        )
 
     return {
-        'table_name': table_name,
-        'model_class': model_class.__name__,
-        'description': description,
-        'columns': columns_info,
-        'relationships': relationships_info
+        "table_name": table_name,
+        "model_class": model_class.__name__,
+        "description": description,
+        "columns": columns_info,
+        "relationships": relationships_info,
     }
 
 
@@ -154,15 +157,15 @@ def generate_markdown_table(columns_info: list[dict]) -> str:
     Returns:
         str: Markdown 表格字符串。
     """
-    md = '| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |\n'
-    md += '|:-------|:---------|:-----|:-----|:-------|:-----|\n'
+    md = "| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |\n"
+    md += "|:-------|:---------|:-----|:-----|:-------|:-----|\n"
     for col in columns_info:
-        constraints_str = ', '.join(col['constraints']) if col['constraints'] else '-'
-        nullable_str = '是' if col['nullable'] else '否'
+        constraints_str = ", ".join(col["constraints"]) if col["constraints"] else "-"
+        nullable_str = "是" if col["nullable"] else "否"
         # 清理默认值显示
-        default_val = col['default']
-        if 'function' in default_val or 'lambda' in default_val:
-            default_val = '(auto)'
+        default_val = col["default"]
+        if "function" in default_val or "lambda" in default_val:
+            default_val = "(auto)"
         md += f"| `{col['name']}` | {col['type']} | {constraints_str} | {nullable_str} | {default_val} | {col['comment']} |\n"
     return md
 
@@ -177,7 +180,8 @@ def extract_table_names_from_content(content: str) -> set[str]:
         Set[str]: 表名集合。
     """
     import re
-    pattern = r'### \w+ \(`(\w+)`\)'
+
+    pattern = r"### \w+ \(`(\w+)`\)"
     return set(re.findall(pattern, content))
 
 
@@ -194,7 +198,7 @@ def generate_changelog(old_path: Path, new_tables: set[str]) -> tuple[str, list[
     if not old_path.exists():
         return "初始版本", [f"+ 新增 {len(new_tables)} 个数据表"]
 
-    old_content = old_path.read_text(encoding='utf-8')
+    old_content = old_path.read_text(encoding="utf-8")
     old_tables = extract_table_names_from_content(old_content)
 
     added = new_tables - old_tables
@@ -227,29 +231,29 @@ def categorize_models(all_models: list) -> dict[str, list]:
         Dict[str, List]: 分类后的模型字典。
     """
     categories = {
-        '核心主数据域': [],
-        '测试管理域': [],
-        'GitLab 集成域': [],
-        '认证与授权域': [],
-        '分析与洞察域': [],
-        '其他辅助域': []
+        "核心主数据域": [],
+        "测试管理域": [],
+        "GitLab 集成域": [],
+        "认证与授权域": [],
+        "分析与洞察域": [],
+        "其他辅助域": [],
     }
 
     for model in all_models:
         table_name = model.__tablename__
 
-        if 'mdm_' in table_name or table_name in ['organizations', 'products', 'services']:
-            categories['核心主数据域'].append(model)
-        elif 'gitlab_' in table_name or table_name in ['sync_logs']:
-            categories['GitLab 集成域'].append(model)
-        elif 'test_' in table_name or 'requirement' in table_name or 'gtm_' in table_name:
-            categories['测试管理域'].append(model)
-        elif 'auth_' in table_name or 'credential' in table_name or 'sys_user' in table_name:
-            categories['认证与授权域'].append(model)
-        elif 'view_' in table_name or 'okr_' in table_name or 'fct_' in table_name:
-            categories['分析与洞察域'].append(model)
+        if "mdm_" in table_name or table_name in ["organizations", "products", "services"]:
+            categories["核心主数据域"].append(model)
+        elif "gitlab_" in table_name or table_name in ["sync_logs"]:
+            categories["GitLab 集成域"].append(model)
+        elif "test_" in table_name or "requirement" in table_name or "gtm_" in table_name:
+            categories["测试管理域"].append(model)
+        elif "auth_" in table_name or "credential" in table_name or "sys_user" in table_name:
+            categories["认证与授权域"].append(model)
+        elif "view_" in table_name or "okr_" in table_name or "fct_" in table_name:
+            categories["分析与洞察域"].append(model)
         else:
-            categories['其他辅助域'].append(model)
+            categories["其他辅助域"].append(model)
 
     return categories
 
@@ -263,7 +267,7 @@ def generate_full_data_dictionary() -> tuple[str, set[str]]:
     # 收集所有模型
     all_models = []
     for name, obj in inspect.getmembers(models):
-        if inspect.isclass(obj) and hasattr(obj, '__tablename__') and obj != Base:
+        if inspect.isclass(obj) and hasattr(obj, "__tablename__") and obj != Base:
             all_models.append(obj)
 
     all_models.sort(key=lambda m: m.__tablename__)
@@ -273,7 +277,7 @@ def generate_full_data_dictionary() -> tuple[str, set[str]]:
     categories = categorize_models(all_models)
 
     # 开始生成文档
-    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     md = f"""# DevOps 效能平台 - 数据字典 (Data Dictionary)
 
@@ -311,34 +315,34 @@ def generate_full_data_dictionary() -> tuple[str, set[str]]:
     for domain_name, models_list in categories.items():
         if not models_list:
             continue
-        md += f'\n### {domain_name}\n'
+        md += f"\n### {domain_name}\n"
         for model in models_list:
-            md += f'- `{model.__tablename__}` - {model.__name__}\n'
+            md += f"- `{model.__tablename__}` - {model.__name__}\n"
 
-    md += '\n---\n\n'
+    md += "\n---\n\n"
 
     # 生成详细文档
     for domain_name, models_list in categories.items():
         if not models_list:
             continue
 
-        md += f'## {domain_name}\n\n'
+        md += f"## {domain_name}\n\n"
 
         for model in models_list:
             table_doc = generate_table_documentation(model)
             md += f"### {model.__name__} (`{table_doc['table_name']}`)\n\n"
             md += f"**业务描述**: {table_doc['description']}\n\n"
-            md += '#### 字段定义\n\n'
-            md += generate_markdown_table(table_doc['columns'])
-            md += '\n'
+            md += "#### 字段定义\n\n"
+            md += generate_markdown_table(table_doc["columns"])
+            md += "\n"
 
-            if table_doc['relationships']:
-                md += '#### 关系映射\n\n'
-                for rel in table_doc['relationships']:
+            if table_doc["relationships"]:
+                md += "#### 关系映射\n\n"
+                for rel in table_doc["relationships"]:
                     md += f"- **{rel['name']}**: {rel['type']} -> `{rel['target']}`\n"
-                md += '\n'
+                md += "\n"
 
-            md += '---\n\n'
+            md += "---\n\n"
 
     # 添加变更日志章节
     md += """
@@ -361,13 +365,13 @@ def generate_full_data_dictionary() -> tuple[str, set[str]]:
 
 def main():
     """主函数：生成并保存数据字典。"""
-    print('=' * 60)
-    print('Data Dictionary Generator v2.2')
-    print('=' * 60)
-    print('Scanning models from: devops_collector.models')
+    print("=" * 60)
+    print("Data Dictionary Generator v2.2")
+    print("=" * 60)
+    print("Scanning models from: devops_collector.models")
 
     try:
-        output_path = Path(__file__).parent.parent / 'docs' / 'api' / 'DATA_DICTIONARY.md'
+        output_path = Path(__file__).parent.parent / "docs" / "api" / "DATA_DICTIONARY.md"
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # 生成新版本
@@ -375,24 +379,25 @@ def main():
 
         # 生成变更日志
         summary, changes = generate_changelog(output_path, new_tables)
-        print(f'\nChange Summary: {summary}')
+        print(f"\nChange Summary: {summary}")
         for change in changes:
-            print(f'  {change}')
+            print(f"  {change}")
 
         # 写入文件
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(markdown_content)
 
-        print('\nData Dictionary generated successfully!')
-        print(f'Output: {output_path}')
-        print(f'Total tables documented: {len(new_tables)}')
+        print("\nData Dictionary generated successfully!")
+        print(f"Output: {output_path}")
+        print(f"Total tables documented: {len(new_tables)}")
 
     except Exception as e:
-        print(f'\nError generating data dictionary: {e}')
+        print(f"\nError generating data dictionary: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

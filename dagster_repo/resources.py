@@ -3,6 +3,7 @@
 This module defines the shared resources used by Dagster assets and jobs,
 such as database connections.
 """
+
 from dagster import ConfigurableResource
 from sqlalchemy import create_engine
 
@@ -15,6 +16,7 @@ class DatabaseResource(ConfigurableResource):
     Attributes:
         connection_string: The SQLAlchemy connection URI for the database.
     """
+
     connection_string: str
 
     def get_engine(self):
@@ -24,6 +26,7 @@ class DatabaseResource(ConfigurableResource):
             A SQLAlchemy Engine instance.
         """
         return create_engine(self.connection_string)
+
 
 def get_db_resource():
     """Factory function to create a DatabaseResource instance.

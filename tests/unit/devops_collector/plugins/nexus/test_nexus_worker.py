@@ -1,4 +1,5 @@
 """Nexus Worker 单元测试"""
+
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -16,7 +17,7 @@ class TestNexusWorker(unittest.TestCase):
         self.mock_products = [
             MagicMock(product_id="devops", matching_patterns=None, is_current=True),
             MagicMock(product_id="portal", matching_patterns=None, is_current=True),
-            MagicMock(product_id="collector", matching_patterns=None, is_current=True)
+            MagicMock(product_id="collector", matching_patterns=None, is_current=True),
         ]
         # 统一设置 query().filter().all() 的返回值
         self.session.query.return_value.filter.return_value.all.return_value = self.mock_products
@@ -24,8 +25,8 @@ class TestNexusWorker(unittest.TestCase):
     def test_product_cache_init(self):
         """测试产品缓存初始化。"""
         self.worker._init_product_cache()
-        self.assertIn('devops', self.worker._product_map)
-        self.assertEqual(self.worker._product_map['devops'], 'devops')
+        self.assertIn("devops", self.worker._product_map)
+        self.assertEqual(self.worker._product_map["devops"], "devops")
 
     def test_resolve_product_id_by_group(self):
         """测试通过 Group 自动识别产品。"""
@@ -69,20 +70,22 @@ class TestNexusWorker(unittest.TestCase):
         pid = self.worker._resolve_product_id("unknown.group", "unknown-lib")
         self.assertIsNone(pid)
 
-    @patch('devops_collector.core.base_worker.BaseWorker.save_to_staging')
+    @patch("devops_collector.core.base_worker.BaseWorker.save_to_staging")
     def test_save_batch_with_auto_mapping(self, mock_staging):
         """测试批量保存时的自动映射逻辑。"""
         self.worker._init_product_cache()
         self.session.query(NexusComponent).filter_by().first.return_value = None
 
-        batch = [{
-            'id': 'comp1',
-            'repository': 'maven-public',
-            'format': 'maven2',
-            'group': 'com.tjhq.devops',
-            'name': 'core',
-            'version': '1.0.0'
-        }]
+        batch = [
+            {
+                "id": "comp1",
+                "repository": "maven-public",
+                "format": "maven2",
+                "group": "com.tjhq.devops",
+                "name": "core",
+                "version": "1.0.0",
+            }
+        ]
 
         self.worker._save_batch(batch)
 
