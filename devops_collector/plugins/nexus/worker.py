@@ -63,7 +63,8 @@ class NexusWorker(BaseWorker):
                         regex_str = pat
                     else:
                         # 简单模式：将 . 替换为 \.，将 * 替换为 .*
-                        regex_str = f"^{pat.replace('.', r'\.').replace('*', '.*')}$"
+                        p_norm = pat.replace('.', r'\.').replace('*', '.*')
+                        regex_str = f"^{p_norm}$"
 
                     self._pattern_rules.append({"re": re.compile(regex_str, re.I), "pid": p.product_id})
                 except Exception as e:

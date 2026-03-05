@@ -727,6 +727,9 @@ class RawDataStaging(Base, TimestampMixin):
     """原始数据暂存表 (Staging 层)，用于存放未经处理的 API Payload。"""
 
     __tablename__ = "stg_raw_data"
+    __table_args__ = (
+        UniqueConstraint("source", "entity_type", "external_id", name="uq_raw_data_staging"),
+    )
     id = Column(Integer, primary_key=True, autoincrement=True, comment="自增主键")
     source = Column(String(50), comment="数据来源系统 (gitlab/jira/sonar)")
     entity_type = Column(String(50), comment="实体类型 (project/issue/pipeline)")

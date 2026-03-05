@@ -15,9 +15,9 @@ while ! nc -z $RABBIT_HOST 5672; do
 done
 echo "✅ RabbitMQ is up!"
 
-# 执行数据库自动初始化/迁移
-echo "🚀 Running auto-initialization..."
-python scripts/init_discovery.py || echo "⚠️ Discovery init failed or already done"
+# 执行数据库自动初始化/迁移 (建议在大规模环境下手动执行)
+# echo "🚀 Running auto-initialization..."
+# python scripts/init_discovery.py || echo "⚠️ Discovery init failed or already done"
 
 # 执行 SQL 视图部署 (如果有相关脚本)
 # python scripts/deploy_views.py

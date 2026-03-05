@@ -23,6 +23,15 @@ from .mq import MessageQueue
 logging.basicConfig(level=Config.LOG_LEVEL)
 logger = logging.getLogger("Worker")
 
+# 模块级数据库连接池 (全局唯一，多任务共享)
+_engine = create_engine(
+    Config.DB_URI,
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,
+)
+_SessionFactory = sessionmaker(bind=_engine)
+
 
 def process_task(ch, method, properties, body):
     """处理 MQ 消息的回调函数。"""
@@ -46,10 +55,8 @@ def process_task(ch, method, properties, body):
         if not client:
             raise ValueError(f"No client registered for source: {source}")
 
-        # 3. 准备数据库会话
-        engine = create_engine(Config.DB_URI)
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        # 3. 从连接池获取数据库会话
+        session = _SessionFactory()
 
         # 4. 获取并实例化 Worker
         worker_kwargs = plugin_cfg.get("worker", {})
@@ -78,8 +85,7 @@ def main():
     # 显式加载所有插件模型，确保 Base.metadata 包含完整的表结构
     PluginLoader.load_models()
 
-    engine = create_engine(Config.DB_URI)
-    Base.metadata.create_all(engine)
+    Base.metadata.create_all(_engine)
     mq = MessageQueue()
     mq.consume_tasks(process_task)
 

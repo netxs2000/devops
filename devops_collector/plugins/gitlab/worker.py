@@ -51,35 +51,76 @@ class GitLabWorker(
 
     def process_task(self, task: dict) -> dict:
         """实现具体的同步逻辑，由 BaseWorker.run_sync 调用。"""
+        from datetime import UTC, datetime
+        
         project_id = task.get("project_id")
         if not project_id:
             raise ValueError("No project_id provided in task")
-        project = self._sync_project(project_id)
-        if not project:
-            return {"status": "skipped", "reason": "project_not_found"}
-        since = project.last_synced_at.isoformat() if project.last_synced_at else None
-        stats = {
-            "commits": self._sync_commits(project, since),
-            "issues": self._sync_issues(project, since),
-            "mrs": self._sync_merge_requests(project, since),
-        }
-        self._sync_pipelines(project)
-        self._sync_deployments(project)
-        self._sync_tags(project)
-        self._sync_branches(project)
-        self._sync_milestones(project)
-        self._sync_packages(project)
-        if self.enable_deep_analysis:
+
+        try:
+            project = self._sync_project(project_id)
+            if not project:
+                return {"status": "skipped", "reason": "project_not_found"}
+            
+            project.sync_status = "SYNCING"
+            self.session.commit()
+
+            since = project.last_synced_at.isoformat() if project.last_synced_at else None
+            
+            # 核心数据同步
+            stats = {
+                "commits": self._sync_commits(project, since),
+                "issues": self._sync_issues(project, since),
+                "mrs": self._sync_merge_requests(project, since),
+            }
+
+            # 次要数据及关联信息同步 (容错)
+            secondary_syncs = [
+                ("_sync_pipelines", "pipelines"),
+                ("_sync_deployments", "deployments"),
+                ("_sync_tags", "tags"),
+                ("_sync_branches", "branches"),
+                ("_sync_milestones", "milestones"),
+                ("_sync_packages", "packages"),
+            ]
+            for meth_name, label in secondary_syncs:
+                try:
+                    getattr(self, meth_name)(project)
+                except Exception as e:
+                    logger.warning(f"Secondary sync failed for {label} in project {project_id}: {e}")
+
+            if self.enable_deep_analysis:
+                try:
+                    self._sync_wiki_logs(project)
+                    self._sync_dependencies(project)
+                except Exception as e:
+                    logger.warning(f"Deep analysis failed for project {project_id}: {e}")
+
+            self._match_identities(project)
+            
+            log_msg = f"Synced: {stats['commits']} commits, {stats['issues']} issues, {stats['mrs']} MRs"
+            sync_log = SyncLog(project_id=str(project_id), status="SUCCESS", message=log_msg)
+            self.session.add(sync_log)
+
+            # 更新项目元状态
+            project.sync_status = "SUCCESS"
+            project.last_synced_at = datetime.now(UTC)
+            self.session.commit()
+            
+            return stats
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"GitLab sync task failed for project {project_id}: {e}", exc_info=True)
             try:
-                self._sync_wiki_logs(project)
-                self._sync_dependencies(project)
-            except Exception as e:
-                logger.warning(f"Deep analysis failed for project {project_id}: {e}")
-        self._match_identities(project)
-        log_msg = f"Synced: {stats['commits']} commits, {stats['issues']} issues, {stats['mrs']} MRs"
-        sync_log = SyncLog(project_id=project_id, status="SUCCESS", message=log_msg)
-        self.session.add(sync_log)
-        return stats
+                # 尝试标记为 FAILED
+                p_failed = self.session.query(GitLabProject).filter_by(id=project_id).first()
+                if p_failed:
+                    p_failed.sync_status = "FAILED"
+                    self.session.add(SyncLog(project_id=str(project_id), status="FAILED", message=str(e)[:500]))
+                    self.session.commit()
+            except:
+                pass
+            raise
 
     def _sync_project(self, project_id: int) -> GitLabProject | None:
         """同步项目元数据并自动维护 Group 关系。"""
@@ -88,16 +129,17 @@ class GitLabWorker(
             if not p_data:
                 return None
             self.save_to_staging(source="gitlab", entity_type="project", external_id=project_id, payload=p_data)
+            namespace_id = p_data.get("namespace", {}).get("id")
+            if namespace_id:
+                self._ensure_group(namespace_id)
+
             project = self.session.query(GitLabProject).filter_by(id=project_id).first()
             if not project:
-                namespace_id = p_data.get("namespace", {}).get("id")
-                if namespace_id:
-                    self._ensure_group(namespace_id)
                 project = GitLabProject(id=project_id)
                 self.session.add(project)
             project.name = p_data.get("name")
             project.path_with_namespace = p_data.get("path_with_namespace")
-            project.group_id = p_data.get("namespace", {}).get("id")
+            project.group_id = namespace_id
             project.raw_data = p_data  # Update raw_data so hybrid properties work
             return project
         except Exception as e:
@@ -111,9 +153,13 @@ class GitLabWorker(
             try:
                 g_data = self.client.get_group(group_id)
                 group = GitLabGroup(
-                    id=g_data["id"], name=g_data["name"], path=g_data["path"], full_path=g_data["full_path"]
+                    id=g_data["id"],
+                    name=g_data["name"],
+                    path=g_data["path"],
+                    full_path=g_data["full_path"]
                 )
                 self.session.add(group)
+                self.session.flush()
             except Exception as e:
                 logger.warning(f"Failed to sync group {group_id}: {e}")
 

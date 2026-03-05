@@ -31,18 +31,14 @@ class MessageQueue:
     """
 
     def __init__(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
+        """初始化 MQ 客户端，增加心跳以维持长任务连接。"""
         self.url = Config.RABBITMQ_URL
+        # 增加 heartbeat 以防止长任务处理期间连接被 RabbitMQ 断开 (默认 60s)
+        if "?" in self.url:
+            self.url += "&heartbeat=600"
+        else:
+            self.url += "?heartbeat=600"
+        
         self.params = pika.URLParameters(self.url)
         self.connection = None
         self.channel = None
@@ -63,7 +59,8 @@ class MessageQueue:
         try:
             self.connection = pika.BlockingConnection(self.params)
             self.channel = self.connection.channel()
-            self.channel.queue_declare(queue="gitlab_tasks", durable=True)
+            for q in ["gitlab_tasks", "zentao_tasks", "sonarqube_tasks"]:
+                self.channel.queue_declare(queue=q, durable=True)
             logger.info("Connected to RabbitMQ")
         except Exception as e:
             logger.error(f"Failed to connect to RabbitMQ: {e}")
@@ -77,13 +74,15 @@ class MessageQueue:
         """
         if not self.channel or self.connection.is_closed:
             self.connect()
+        source = task.get("source", "gitlab")
+        queue_name = f"{source}_tasks"
         self.channel.basic_publish(
             exchange="",
-            routing_key="gitlab_tasks",
+            routing_key=queue_name,
             body=json.dumps(task),
             properties=pika.BasicProperties(delivery_mode=2),
         )
-        logger.info(f"Published task: {task}")
+        logger.info(f"Published task to {queue_name}: {task}")
 
     def consume_tasks(self, callback) -> None:
         """开始消费任务队列 (阻塞式)。
@@ -94,8 +93,9 @@ class MessageQueue:
         if not self.channel or self.connection.is_closed:
             self.connect()
         self.channel.basic_qos(prefetch_count=1)
-        self.channel.basic_consume(queue="gitlab_tasks", on_message_callback=callback)
-        logger.info("Waiting for tasks...")
+        for q in ["gitlab_tasks", "zentao_tasks", "sonarqube_tasks"]:
+            self.channel.basic_consume(queue=q, on_message_callback=callback)
+        logger.info("Waiting for tasks on all queues...")
         try:
             self.channel.start_consuming()
         except KeyboardInterrupt:

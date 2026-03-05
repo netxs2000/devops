@@ -29,6 +29,7 @@ def main() -> None:
     # 获取具体的模型类
     from devops_collector.plugins.gitlab.models import GitLabProject
     from devops_collector.plugins.sonarqube.models import SonarProject
+    from devops_collector.plugins.zentao.models import ZenTaoProduct
 
     engine = create_engine(Config.DB_URI)
     Session = sessionmaker(bind=engine)
@@ -39,7 +40,28 @@ def main() -> None:
     while True:
         session = Session()
         try:
-            # 1. 扫描 GitLab 项目
+            # 1. 扫描 ZenTao 产品 (高优先级)
+            zt_products = session.query(ZenTaoProduct).all()
+            for zp in zt_products:
+                should_sync = False
+                if not zp.last_synced_at:
+                    should_sync = True
+                elif datetime.now(UTC) - zp.last_synced_at.replace(tzinfo=UTC) > timedelta(
+                    minutes=Config.SYNC_INTERVAL_MINUTES
+                ):
+                    should_sync = True
+
+                if should_sync and zp.sync_status not in ["SYNCING", "QUEUED"]:
+                    task = {
+                        "source": "zentao",
+                        "product_id": zp.id,
+                        "job_type": "full",
+                    }
+                    mq.publish_task(task)
+                    zp.sync_status = "QUEUED"
+                    session.commit()
+
+            # 2. 扫描 GitLab 项目
             projects = session.query(GitLabProject).all()
             for proj in projects:
                 should_sync = False
@@ -50,7 +72,7 @@ def main() -> None:
                 ):
                     should_sync = True
 
-                if should_sync and proj.sync_status != "SYNCING":
+                if should_sync and proj.sync_status not in ["SYNCING", "QUEUED"]:
                     task = {
                         "source": "gitlab",
                         "project_id": proj.id,
@@ -60,7 +82,7 @@ def main() -> None:
                     proj.sync_status = "QUEUED"
                     session.commit()
 
-            # 2. 扫描 SonarQube 项目
+            # 3. 扫描 SonarQube 项目
             sonar_projects = session.query(SonarProject).all()
             for sp in sonar_projects:
                 should_sync = False
@@ -71,7 +93,7 @@ def main() -> None:
                 ):
                     should_sync = True
 
-                if should_sync and sp.sync_status != "SYNCING":
+                if should_sync and sp.sync_status not in ["SYNCING", "QUEUED"]:
                     task = {
                         "source": "sonarqube",
                         "project_key": sp.key,

@@ -22,10 +22,52 @@ from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.gitlab.models import GitLabProject as Project
 from devops_collector.plugins.sonarqube.client import SonarQubeClient
 from devops_collector.plugins.sonarqube.models import SonarProject
+from devops_collector.plugins.zentao.client import ZenTaoClient
+from devops_collector.plugins.zentao.models import ZenTaoProduct
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("Discovery")
+
+
+def discover_zentao(session):
+    """从禅道发现所有产品。"""
+    if not settings.zentao.url or not settings.zentao.username:
+        logger.warning("ZenTao config missing, skipping discovery.")
+        return
+    logger.info(f"Connecting to ZenTao at {settings.zentao.url}...")
+    client = ZenTaoClient(settings.zentao.url, settings.zentao.username, settings.zentao.password)
+    try:
+        if not client.login():
+            logger.error("Failed to login to ZenTao. Check credentials.")
+            return
+        
+        products = client.get_products()
+        total_new = 0
+        total_existing = 0
+        for p_data in products:
+            pid = p_data.get("id")
+            if not pid:
+                continue
+            existing = session.query(ZenTaoProduct).filter_by(id=pid).first()
+            if not existing:
+                new_prod = ZenTaoProduct(
+                    id=pid,
+                    name=p_data.get("name"),
+                    code=p_data.get("code"),
+                    status=p_data.get("status", "normal"),
+                    sync_status="PENDING",
+                )
+                session.add(new_prod)
+                total_new += 1
+            else:
+                existing.name = p_data.get("name")
+                existing.status = p_data.get("status", "normal")
+                total_existing += 1
+        session.commit()
+        logger.info(f"ZenTao discovery finished. Found {len(products)} total. New: {total_new}, Existing: {total_existing}")
+    except Exception as e:
+        logger.error(f"Failed to fetch ZenTao products: {e}")
 
 
 def discover_gitlab(session):
@@ -132,6 +174,8 @@ def main():
         discover_gitlab(session)
         print("-" * 50)
         discover_sonarqube(session)
+        print("-" * 50)
+        discover_zentao(session)
     except Exception as e:
         logger.error(f"Discovery process failed: {e}")
     finally:

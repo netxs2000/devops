@@ -53,6 +53,10 @@
     - **批量处理**: 
         - **读**: 大数据集查询必须使用 `yield_per(1000)` 或分页游标。
         - **写**: 插件同步逻辑强制使用 `bulk_insert_mappings`，严禁循环单条 `db.add()`。
+- **连接池管理 (Connection Pool) [MANDATORY]**:
+    - 数据库连接必须通过**应用级连接池** (`create_engine` 的 `pool_size` + `max_overflow`) 管理。Worker / Scheduler 进程启动时创建**唯一的** `engine` 实例，每个任务从池中借用 Session，处理完归还。
+    - **严禁**在循环或回调函数中反复调用 `create_engine()`，否则将导致 PostgreSQL 连接耗尽。
+    - 推荐配置：`pool_size=5, max_overflow=10, pool_pre_ping=True`（自动检测断连并重建）。
 - **SCD Type 2**: 组织、产品、团队主数据采用慢变维，追踪“历史时刻的负责人”及“当时的组织归属”。
 - **组织架构模式**:
     - **层级 (Hierarchy)**: 公司(Root) -> 中心(Center) -> 部门(Dept)，不再使用 `SYS-` 体系节点。
@@ -86,8 +90,19 @@
 - **镜像加速与回退**: 项目支持通过 `NEXUS_DOCKER_REGISTRY` 配置私有镜像存储加速。在 `make build` 或 `make package` 时，系统会优先尝试从该私服拉取并打标 (tag) 核心基础镜像 (`python`, `postgres`, `rabbitmq`)，失败则自动回退至官方源。
 - **健康检查**: 所有容器定义 `healthcheck`，容器间依赖依赖 `service_healthy` 状态。
 - **异步任务 (RabbitMQ)**:
+    - **队列分离 (Queue Isolation) [MANDATORY]**: 每个数据源 (Plugin) 必须拥有独立的 RabbitMQ 队列，命名公约为 `{source}_tasks`（如 `gitlab_tasks`, `zentao_tasks`, `sonarqube_tasks`）。**严禁**将多个数据源的任务混入同一队列，防止高频数据源（如 GitLab 1000+ 项目）的任务洪泛 (Flood) 饿死低频但高优先级的数据源（如 ZenTao）。
+    - **动态路由与 SSOT**: `MessageQueue.publish_task()` 根据任务 payload 中的 `source` 字段自动路由到对应队列。队列名称列表应从 `PluginRegistry.list_sources()` 动态生成（格式 `{source}_tasks`），Registry 是队列名称的**唯一事实来源 (SSOT)**，严禁在 MQ 模块中硬编码队列列表。
+    - **公平消费 (Fair Dispatch)**: Worker 使用 `prefetch_count=1` 以轮询方式同时监听所有已注册队列，确保各数据源获得公平的处理时间片。
     - **幂等性**: `BaseWorker.process` 方法必须实现幂等，处理前校验资源状态，防止重复消费产生脏数据。
     - **失败补偿**: 关键任务配置死信队列 (DLQ)，异步调用通过 `try-except` 捕获异常并记录详细上下文。
+    - **调度纪律**:
+        - Scheduler 在推送任务前必须校验目标实体的 `sync_status`，处于 `SYNCING` 或 `QUEUED` 状态的实体严禁重复入队，防止队列无限膨胀。
+        - **调度限流 (Scheduling Throttle)**: 单轮调度周期内，每个数据源推送的任务数必须设置**上限**（如每次最多 50 个），防止一次性灌满队列。
+        - **独立调度周期**: 不同数据源应支持独立的同步间隔配置（如 GitLab 10min、ZenTao 30min），而非共用单一 `SYNC_INTERVAL_MINUTES`。
+- **Worker 韧性 (Worker Resilience)**:
+    - **自动重连 (Reconnect with Backoff)**: MQ 连接断线时，Worker 必须实现指数退避重连，而非直接崩溃退出。最大重试间隔不超过 60 秒。
+    - **容器重启策略**: Docker Compose 中所有长驻服务 (`worker`, `scheduler`) 必须配置 `restart: unless-stopped`，确保进程意外退出后自动恢复。
+    - **优雅停机 (Graceful Shutdown)**: Worker 进程必须捕获 `SIGTERM` 信号，确保当前正在处理的任务完成后再退出，严禁在任务执行中途被强制终止导致数据不一致。
 
 ## 9. 测试与质量门禁 (Testing)
 - **覆盖率目标**: 核心模块 (`core/`, `models/`) >= 80%，插件模块 >= 60%。
@@ -151,6 +166,16 @@
     - `INFO`: 关键业务流转（如：工单流转、审批通过）。
     - `WARNING`: 可恢复的异常（如：外部 API 重试）。
     - `ERROR`: 系统不可恢复错误，必须包含 Trigger 上下文及完整 Traceback。
+- **关联追踪 (Correlation ID)**:
+    - Scheduler 创建同步任务时，必须在任务 payload 中注入 `correlation_id`（UUID），该 ID 随 MQ 消息传递到 Worker。
+    - Worker 处理任务时，必须将 `correlation_id` 写入所有相关日志（通过 `logging.LoggerAdapter` 或 `extra` 字段）和 `sys_sync_logs` 记录。
+    - **排障价值**: 当生产环境出现同步异常时，通过单个 `correlation_id` 即可在日志和数据库中端到端还原一条任务从调度 → 入队 → 消费 → 写库的完整链路。
+- **业务指标 (Metrics)**:
+    - 关键业务流程必须暴露可量化指标，以便持续监控系统健康度：
+        - **同步指标**: 各数据源同步成功率、失败率、平均耗时。
+        - **队列指标**: 各队列深度 (pending messages)、消费速率。
+        - **数据库指标**: 连接池使用率、慢查询数量。
+    - **采集方式**: 优先通过结构化日志聚合（如 ELK / Loki），未来可扩展至 Prometheus 埋点。严禁为了采集指标而引入重量级依赖。
 - **命名空间关联**: 日志内容必须包含业务域前缀（如 `[SD]`, `[ADM]`），以便在日志系统中快速过滤。
 
 ## 11. 命名全链路对齐 (Naming Alignment)
@@ -255,6 +280,11 @@
 ### 14.2 设计决策门禁 (Design Gates)
 - **RFC 机制** `[Planned]`: P0/P1 级重大功能或架构变更，**严禁直接编码**。必须先产出 RFC (Request for Comments) 文档存入 `docs/design/`，经用户评审通过后方可实施。
 - **Schema 评审**: 任何数据库 Schema 变更（特别是涉及数据迁移的）必须经过独立评审，重点审查**向后兼容性 (Backward Compatibility)**。
+- **架构决策记录 (ADR)**:
+    - ADR 文件存放于 `docs/adr/`，命名格式 `XXXX-决策标题.md`（如 `0001-queue-isolation.md`）。
+    - **触发条件**: 任何改变消息拓扑、数据库 Schema 策略、服务边界、新增基础设施组件或引入新的集成模式的决策，必须产出 ADR。
+    - **内容结构**: 标题、状态 (Proposed/Accepted/Deprecated)、上下文 (Context)、决策 (Decision)、后果 (Consequences)。
+    - **目的**: 为未来的开发者（包括 AI Agent）提供「为什么这样设计」的可追溯记录，避免架构知识断层。
 
 ### 14.3 安全架构与权限 (Security Architecture)
 - **RBAC 模型**: 严格遵循基于角色的访问控制。默认策略为 `Deny All`，仅按需授予最小权限。
@@ -300,3 +330,40 @@
 ### 15.3 拓扑关联规范 (Topology Rules)
 - **ISSUE_TRACKER**: 通过 `mdm_entity_topology` 将 DevOps 项目关联至禅道的 **Execution (执行)** ID。
 - **继承原则**: 支持基于 `path` 的物理继承。若关联了父级项目，其下属所有未单独定义的子执行将自动继承该业务项目归属。
+
+### 15.4 接口特异性与防护规范 (API Quirks & Guardrails) [MANDATORY]
+为了应对禅道非标 API 带来的稳定性挑战，所有相关插件开发必须遵循以下防护规则：
+
+- **1. 认证防御 (Auth Resilience)**:
+    - **自动刷新**: 必须实现 `401` 异常拦截器。检测到会话过期时，自动调用 `client.refresh_token()` 并重试当前请求，确保长效同步任务不中断。
+    - **心跳机制**: MQ 连接必须配置 `heartbeat=600`。由于禅道部分复杂查询（如审计日志）耗时较长，需防止 RabbitMQ 误判消费者死锁。
+- **2. 数据一致性陷阱 (Data Integrity)**:
+    - **ID=0 语义转换**: 禅道常用 `0` 表示空值（如 `plan_id=0`, `module=0`）。入库前必须将 `0` 转换为 `NULL`，严禁直接写入带外键约束的列。
+    - **外键容错**: 对于返回非数字 ID 的人员字段（如 `"closed"`, `"removed"`），系统需通过 `UserResolver` 进行降级处理，失败则保留原始字符串，严禁因外键不匹配导致任务崩溃。
+- **3. 类型安全防护 (Type Safety)**:
+    - **字典对象适配**: 针对部分字段返回 `dict` 对象而非 `string` 的情况，必须在存储前校验并在 `base_client` 或 `worker` 层面进行 `json.dumps` 转换，防止 PostgreSQL 适配器报错。
+    - **版本字段映射**: 使用 Pydantic 的 `alias` 机制同时兼容 `id/ID`、`name/title` 等在不同禅道版本/接口中的字段命名差异。
+- **4. 性能与限流 (Performance)**:
+    - **增量审计扫描**: `actions` (动作日志) 同步必须强制携带 `since` 时间戳，禁止无状态的全量审计抓取。
+    - **空值快速返回**: 接口返回 `null` 或 `total: 0` 时应立即终止当前实体的深度抓取。
+- **5. 状态映射归一化 (Status Transformer) [NEW]**:
+    - 严禁基于禅道原始字符串直接进行业务统计。必须通过 `ZenTaoTransformer` 将 `Story/Bug/Task` 的差异状态映射为平台标准 5 状态（Backlog, InProgress, Testing, Completed, Cancelled）。
+    - 插件内部必须维护一个 SSOT 的状态映射配置，并在抓取层完成转换。
+
+
+## 16. GitLab 集成规范与性能守卫 (GitLab Integration & Guardrails)
+
+### 16.1 性能与“黑洞”防御 (Performance & Limit)
+- **同步深度守卫 (Sync Depth Limit) [MANDATORY]**: 首次同步 (Full Sync) 必须显式传递 `since` 参数。默认仅追溯近 365 天的历史记录，严禁对数万 Commit 的仓库进行无限制全量抓取，除非经用户通过 `force_full_history` 标记确认。
+- **Diff 解析截断**: 为防止内存溢出，单一文件 Diff 对比严禁超过 1MB。超过阈值的变更仅记录文件路径变更，不再进行代码行级的深度解析。
+
+### 16.2 状态存活性自查 (Liveness Probe)
+- **定期僵尸检查 (Zombies Check)**: 增量任务无法感知 GitLab 侧的物理删除。系统必须配置“周级巡检任务”，全量拉取 GitLab Project ID 列表并与本地数据库对比，若本地存在但在源端已缺失，必须将其标记为 `is_deleted=True`且 `sync_status='DELETED'`。
+
+## 17. 全局身份与成本归因规范 (Global Identity & Attribution)
+
+### 17.1 身份对齐优先 (Identity First) [MANDATORY]
+- **主键转换原则**: 任何数据源（GitLab, ZenTao, Jira）采集到的人员标识，入库前**禁止**直接使用原始账号（username/email）作为最终业务关联键。
+- **强制转换链**: 采集原始账号 -> 调用 `IdentityManager.get_global_id()` -> 映射为统一的 UUID `global_user_id` -> 存入业务表。
+- **成本归因**: 只有完成 `global_user_id` 转换的工时或提交记录，方可参与效能度量与成本中心分摊计算。对于无法对齐的“流浪账号”，系统必须通过 `sys_unknown_identities` 表进行挂起并在看板显著提醒。
+

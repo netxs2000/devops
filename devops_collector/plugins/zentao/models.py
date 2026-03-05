@@ -6,7 +6,7 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
 from devops_collector.models.base_models import Base
@@ -43,7 +43,7 @@ class ZenTaoProduct(Base):
     sync_status = Column(String(20), default="PENDING")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC))
-    raw_data = Column(JSON)
+    raw_data = Column(JSONB)
     # MDM 关联字段
     mdm_product_id = Column(
         String(100), ForeignKey("mdm_product.product_id"), nullable=True, comment="关联的 MDM 产品 ID"
@@ -91,7 +91,7 @@ class ZenTaoProductPlan(Base):
     opened_date = Column(DateTime)
     product = relationship("ZenTaoProduct", back_populates="plans")
     issues = relationship("ZenTaoIssue", back_populates="plan")
-    raw_data = Column(JSON)
+    raw_data = Column(JSONB)
 
     def __repr__(self) -> str:
         """返回产品计划的字符串表示。"""
@@ -129,7 +129,7 @@ class ZenTaoExecution(Base):
         String(100), ForeignKey("mdm_projects.project_id"), nullable=True, comment="关联的 MDM 项目 ID"
     )
     product = relationship("ZenTaoProduct", back_populates="executions")
-    raw_data = Column(JSON)
+    raw_data = Column(JSONB)
 
     def __repr__(self) -> str:
         """返回迭代执行的字符串表示。"""
@@ -167,9 +167,9 @@ class ZenTaoIssue(Base):
     status = Column(String(50))
     priority = Column(Integer)
     # 工时数据 (支持 FinOps)
-    estimate = Column(JSON)  # Story 可能有多个阶段预计，Task 是单值，统一存 JSON 或使用 Float
-    consumed = Column(JSON)
-    left = Column(JSON)
+    estimate = Column(JSONB)  # Story 可能有多个阶段预计，Task 是单值，统一存 JSON 或使用 Float
+    consumed = Column(JSONB)
+    left = Column(JSONB)
     # 辅助字段
     task_type = Column(String(50))  # devel, test, design 等
     opened_by = Column(String(100))

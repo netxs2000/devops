@@ -12,6 +12,7 @@ from devops_collector.core.services import close_current_and_insert_new
 from devops_collector.models.base_models import Organization
 
 # from .client import ZenTaoClient
+import json
 from .models import (
     ZenTaoAction,
     ZenTaoBuild,
@@ -26,6 +27,30 @@ from .models import (
 
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_str(val: Any) -> str | None:
+    """提取可能为字典的字段为主键字符串。"""
+    if isinstance(val, dict):
+        # 优先提取 account (用户), 其次 title/name (对象)
+        return str(val.get("account") or val.get("id") or val.get("name") or val.get("title") or json.dumps(val))
+    if isinstance(val, list):
+        return json.dumps(val)
+    return str(val) if val is not None and val != "" else None
+
+
+def _safe_int(val: Any) -> int | None:
+    """提取整数 ID，且将 "0" 视为 None (针对禅道外键关联)。"""
+    s = _safe_str(val)
+    if s is None or s == "0":
+        return None
+    try:
+        # 有时 ID 可能包含非数字前缀（针对兼容逻辑）
+        if isinstance(s, str) and "_" in s:
+            s = s.split("_")[-1]
+        return int(float(s))  # 先转 float 以兼容科学计数法或点号
+    except:
+        return None
 
 
 class ZenTaoWorker(BaseWorker):
@@ -64,29 +89,53 @@ class ZenTaoWorker(BaseWorker):
             bugs = self.client.get_bugs(product.id)
             for b_data in bugs:
                 self._sync_issue(product.id, b_data, "bug")
-            test_cases = self.client.get_test_cases(product.id)
-            for tc_data in test_cases:
-                tc = self._sync_test_case(product.id, tc_data)
-                results = self.client.get_test_results(tc.id)
-                for r_data in results:
-                    self._sync_test_result(tc.id, r_data)
-            releases = self.client.get_releases(product.id)
-            for rel_data in releases:
-                self._sync_release(product.id, rel_data)
+            # 4. 同步测试用例与结果
+            try:
+                test_cases = self.client.get_test_cases(product.id)
+                for tc_data in test_cases:
+                    tc = self._sync_test_case(product.id, tc_data)
+                    try:
+                        results = self.client.get_test_results(tc.id)
+                        for r_data in results:
+                            self._sync_test_result(tc.id, r_data)
+                    except Exception as res_e:
+                        logger.debug(f"Failed to sync results for case {tc.id}: {res_e}")
+            except Exception as case_e:
+                logger.warning(f"Failed to sync test cases for product {product_id}: {case_e}")
             product_executions = self.session.query(ZenTaoExecution).filter_by(product_id=product.id).all()
             for exec_item in product_executions:
-                # 同步构建
-                builds = self.client.get_builds(exec_item.id)
-                for b_data in builds:
-                    self._sync_build(product.id, exec_item.id, b_data)
-                # 同步任务 (Task) 及工时
-                tasks = self.client.get_tasks(exec_item.id)
-                for t_data in tasks:
-                    self._sync_task(product.id, exec_item.id, t_data)
+                # 同步构建 (Builds)
+                try:
+                    builds = self.client.get_builds(exec_item.id)
+                    for b_data in builds:
+                        self._sync_build(product.id, exec_item.id, b_data)
+                except Exception as e:
+                    logger.warning(f"Failed to sync builds for execution {exec_item.id}: {e}")
 
-            actions = self.client.get_actions(product.id)
-            for a_data in actions:
-                self._sync_action(product.id, a_data)
+                # 同步任务 (Tasks)
+                try:
+                    tasks = self.client.get_tasks(exec_item.id)
+                    for t_data in tasks:
+                        self._sync_task(product.id, exec_item.id, t_data)
+                except Exception as e:
+                    logger.error(f"Failed to sync tasks for execution {exec_item.id}: {e}")
+
+            # 5. 同步发布 (Releases)
+            try:
+                releases = self.client.get_releases(product.id)
+                for rel_data in releases:
+                    self._sync_release(product.id, rel_data)
+            except Exception as e:
+                logger.warning(f"Failed to sync releases for product {product_id}: {e}")
+
+            # 6. 同步操作日志 (Actions) - 经常 404
+            try:
+                actions = self.client.get_actions(product.id)
+                for a_data in actions:
+                    self._sync_action(product.id, a_data)
+            except Exception as e:
+                logger.warning(f"Failed to sync actions (audit logs) for product {product_id}: {e}")
+
             product.last_synced_at = datetime.now(UTC)
             product.sync_status = "COMPLETED"
             self.session.commit()
@@ -106,7 +155,7 @@ class ZenTaoWorker(BaseWorker):
         """
         product = self.session.query(ZenTaoProduct).filter_by(id=product_id).first()
         if not product:
-            response = self.client._get(f"/products/{product_id}")
+            response = self.client._get(f"products/{product_id}")
             p_data = response.json()
             self.save_to_staging(
                 source="zentao",
@@ -188,7 +237,7 @@ class ZenTaoWorker(BaseWorker):
             plan.end = datetime.fromisoformat(data["end"].replace(" ", "T"))
         plan.status = data.get("status")
         plan.desc = data.get("desc")
-        plan.opened_by = data.get("openedBy")
+        plan.opened_by = _safe_str(data.get("openedBy"))
         if plan.opened_by:
             u = IdentityManager.get_or_create_user(self.session, "zentao", plan.opened_by)
             plan.opened_by_user_id = u.global_user_id
@@ -219,34 +268,40 @@ class ZenTaoWorker(BaseWorker):
 
         # 统一处理工时数据 (Story/Task 有所不同)
         if issue_type == "feature":
-            issue.estimate = data.get("estimate")  # Story 的预计工时
+            est = data.get("estimate")
+            issue.estimate = est if isinstance(est, (dict, list)) else str(est)
 
-        issue.plan_id = data.get("plan")
-        issue.title = data.get("title") or data.get("name")
-        issue.status = data.get("status")
-        issue.priority = data.get("priority")
-        issue.opened_by = data.get("openedBy")
-        if issue.opened_by:
-            u = IdentityManager.get_or_create_user(self.session, "zentao", issue.opened_by)
+        issue.plan_id = _safe_int(data.get("plan"))
+        issue.title = _safe_str(data.get("title") or data.get("name"))
+        issue.status = _safe_str(data.get("status"))
+        issue.priority = _safe_int(data.get("priority") or data.get("pri"))
+        
+        opened = _safe_str(data.get("openedBy"))
+        issue.opened_by = str(opened) if opened else None
+        if opened:
+            u = IdentityManager.get_or_create_user(self.session, "zentao", opened)
             issue.opened_by_user_id = u.global_user_id
-        issue.assigned_to = data.get("assignedTo")
-        if issue.assigned_to:
-            u = IdentityManager.get_or_create_user(self.session, "zentao", issue.assigned_to)
+        
+        assigned = _safe_str(data.get("assignedTo"))
+        issue.assigned_to = str(assigned) if assigned else None
+        if assigned:
+            u = IdentityManager.get_or_create_user(self.session, "zentao", assigned)
             issue.assigned_to_user_id = u.global_user_id
             issue.user_id = u.global_user_id
+            
         if data.get("openedDate"):
             try:
-                issue.created_at = datetime.fromisoformat(data["openedDate"].replace(" ", "T"))
-            except:
+                issue.created_at = datetime.fromisoformat(str(data["openedDate"]).replace(" ", "T"))
+            except Exception:
                 pass
         if data.get("lastEditedDate"):
             try:
-                issue.updated_at = datetime.fromisoformat(data["lastEditedDate"].replace(" ", "T"))
+                issue.updated_at = datetime.fromisoformat(str(data["lastEditedDate"]).replace(" ", "T"))
             except:
                 pass
         if data.get("closedDate"):
             try:
-                issue.closed_at = datetime.fromisoformat(data["closedDate"].replace(" ", "T"))
+                issue.closed_at = datetime.fromisoformat(str(data["closedDate"]).replace(" ", "T"))
             except:
                 pass
         issue.raw_data = data
@@ -268,39 +323,48 @@ class ZenTaoWorker(BaseWorker):
         """将禅道 Task 转换为 ZenTaoIssue(type='task')。"""
         issue = self.session.query(ZenTaoIssue).filter_by(id=data["id"], type="task").first()
         if not issue:
-            issue = ZenTaoIssue(id=data["id"], product_id=product_id, execution_id=execution_id, type="task")
+            # 强化：如果传入的 execution_id 为 0，视为 None
+            real_exe_id = _safe_int(execution_id)
+            issue = ZenTaoIssue(id=data["id"], product_id=product_id, execution_id=real_exe_id, type="task")
             self.session.add(issue)
 
-        issue.title = data.get("name")
-        issue.status = data.get("status")
-        issue.priority = data.get("pri")
-        issue.task_type = data.get("type")  # devel, design 等
+        issue.title = _safe_str(data.get("name") or data.get("title"))
+        issue.status = _safe_str(data.get("status"))
+        issue.priority = _safe_int(data.get("pri") or data.get("priority"))
+        issue.task_type = _safe_str(data.get("type"))  # devel, design 等
 
         # 工时数据 (FinOps 核心)
-        issue.estimate = data.get("estimate")
-        issue.consumed = data.get("consumed")
-        issue.left = data.get("left")
+        est = data.get("estimate")
+        issue.estimate = est if isinstance(est, (dict, list)) else str(est)
+        
+        con = data.get("consumed")
+        issue.consumed = con if isinstance(con, (dict, list)) else str(con)
+        
+        lft = data.get("left")
+        issue.left = lft if isinstance(lft, (dict, list)) else str(lft)
 
         # 人员映射
-        issue.opened_by = data.get("openedBy")
-        if issue.opened_by:
-            u = IdentityManager.get_or_create_user(self.session, "zentao", issue.opened_by)
+        opened = _safe_str(data.get("openedBy"))
+        issue.opened_by = str(opened) if opened else None
+        if opened:
+            u = IdentityManager.get_or_create_user(self.session, "zentao", opened)
             issue.opened_by_user_id = u.global_user_id
 
-        issue.assigned_to = data.get("assignedTo")
-        if issue.assigned_to:
-            u = IdentityManager.get_or_create_user(self.session, "zentao", issue.assigned_to)
+        assigned = _safe_str(data.get("assignedTo"))
+        issue.assigned_to = str(assigned) if assigned else None
+        if assigned:
+            u = IdentityManager.get_or_create_user(self.session, "zentao", assigned)
             issue.assigned_to_user_id = u.global_user_id
 
         # 时间映射
         if data.get("openedDate"):
             try:
-                issue.created_at = datetime.fromisoformat(data["openedDate"].replace(" ", "T"))
-            except:
+                issue.created_at = datetime.fromisoformat(str(data["openedDate"]).replace(" ", "T"))
+            except Exception:
                 pass
         if data.get("finishedDate"):
             try:
-                issue.closed_at = datetime.fromisoformat(data["finishedDate"].replace(" ", "T"))
+                issue.closed_at = datetime.fromisoformat(str(data["finishedDate"]).replace(" ", "T"))
             except:
                 pass
 
@@ -318,14 +382,19 @@ class ZenTaoWorker(BaseWorker):
         Returns:
             ZenTaoTestCase: 同步后的用例模型对象。
         """
-        tc = self.session.query(ZenTaoTestCase).filter_by(id=data["id"]).first()
+        # 兼容 API 可能会返回字符串 id (如 "case_23461") 的情况
+        tc_id = _safe_int(data.get("caseID") or data.get("id"))
+        if not tc_id:
+            return None # 无法提取有效 ID
+            
+        tc = self.session.query(ZenTaoTestCase).filter_by(id=tc_id).first()
         if not tc:
-            tc = ZenTaoTestCase(id=data["id"], product_id=product_id)
+            tc = ZenTaoTestCase(id=tc_id, product_id=product_id)
             self.session.add(tc)
         self.save_to_staging(
             source="zentao",
             entity_type="test_case",
-            external_id=data["id"],
+            external_id=tc_id,
             payload=data,
             schema_version=self.SCHEMA_VERSION,
         )
@@ -333,9 +402,9 @@ class ZenTaoWorker(BaseWorker):
         tc.type = data.get("type")
         tc.status = data.get("status")
         # 自动化关联：提取关联的需求 ID (Story ID)
-        tc.story_id = data.get("story")
+        tc.story_id = _safe_int(data.get("story"))
         tc.last_run_result = data.get("lastRunResult")
-        tc.opened_by = data.get("openedBy")
+        tc.opened_by = _safe_str(data.get("openedBy"))
         if tc.opened_by:
             u = IdentityManager.get_or_create_user(self.session, "zentao", tc.opened_by)
             tc.opened_by_user_id = u.global_user_id
@@ -362,7 +431,7 @@ class ZenTaoWorker(BaseWorker):
         res.result = data.get("caseResult")
         if data.get("date"):
             res.date = datetime.fromisoformat(data["date"].replace(" ", "T"))
-        res.last_run_by = data.get("lastRunBy")
+        res.last_run_by = _safe_str(data.get("lastRunBy"))
         res.raw_data = data
         self.session.flush()
         return res
@@ -398,12 +467,13 @@ class ZenTaoWorker(BaseWorker):
             build = ZenTaoBuild(id=data["id"], product_id=product_id, execution_id=execution_id)
             self.session.add(build)
         build.name = data.get("name")
-        build.builder = data.get("builder")
+        builder = _safe_str(data.get("builder"))
+        build.builder = str(builder) if builder else None
         if build.builder:
-            u = IdentityManager.get_or_create_user(self.session, "zentao", build.builder)
+            u = IdentityManager.get_or_create_user(self.session, "zentao", builder)
             build.builder_user_id = u.global_user_id
         if data.get("date"):
-            build.date = datetime.fromisoformat(data["date"].replace(" ", "T"))
+            build.date = datetime.fromisoformat(str(data["date"]).replace(" ", "T"))
         build.raw_data = data
         self.session.flush()
         return build
@@ -440,17 +510,29 @@ class ZenTaoWorker(BaseWorker):
 
         rel.name = data.get("name")
         if data.get("date"):
-            rel.date = datetime.fromisoformat(data["date"].replace(" ", "T"))
+            rel.date = datetime.fromisoformat(str(data["date"]).replace(" ", "T"))
         rel.status = data.get("status")
-        rel.build_id = data.get("build")
+        b_val = data.get("build")
+        build_id_val = _safe_int(b_val if not isinstance(b_val, dict) else b_val.get("id"))
+        if build_id_val:
+            # 建立桩数据以防外键报错，并且必须在赋值 rel.build_id 之前执行，防止 autoflush
+            existing_b = self.session.query(ZenTaoBuild).filter_by(id=build_id_val).first()
+            if not existing_b:
+                b_name = b_val.get("name") if isinstance(b_val, dict) else str(build_id_val)
+                stub_b = ZenTaoBuild(id=build_id_val, product_id=product_id, name=b_name)
+                self.session.add(stub_b)
+                self.session.flush()  # 先推入数据库
+            rel.build_id = build_id_val
+        else:
+            rel.build_id = None
 
         # 仅同步 API 直接提供的计划关联 (如有)
-        if data.get("plan"):
-            rel.plan_id = data.get("plan")
+        rel.plan_id = _safe_int(data.get("plan"))
 
-        rel.opened_by = data.get("openedBy")
+        opened = _safe_str(data.get("openedBy"))
+        rel.opened_by = str(opened) if opened else None
         if rel.opened_by:
-            u = IdentityManager.get_or_create_user(self.session, "zentao", rel.opened_by)
+            u = IdentityManager.get_or_create_user(self.session, "zentao", opened)
             rel.opened_by_user_id = u.global_user_id
 
         rel.raw_data = data
@@ -473,9 +555,10 @@ class ZenTaoWorker(BaseWorker):
             self.session.add(action)
         action.object_type = data.get("objectType")
         action.object_id = data.get("objectID")
-        action.actor = data.get("actor")
+        actor = _safe_str(data.get("actor"))
+        action.actor = str(actor) if actor else None
         if action.actor:
-            u = IdentityManager.get_or_create_user(self.session, "zentao", action.actor)
+            u = IdentityManager.get_or_create_user(self.session, "zentao", actor)
             action.actor_user_id = u.global_user_id
         action.action = data.get("action")
         if data.get("date"):

@@ -57,7 +57,7 @@ class CommitMixin:
         """
         existing = (
             self.session.query(GitLabCommit.id)
-            .filter(GitLabCommit.project_id == project.id, GitLabCommit.id.in_([c["id"] for c in batch]))
+            .filter(GitLabCommit.id.in_([c["id"] for c in batch]))
             .all()
         )
         existing_ids = {c.id for c in existing}

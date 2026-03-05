@@ -192,6 +192,8 @@ class ZenTaoSettings(BaseModel):
 
     url: str = ""
     token: str = ""
+    account: str | None = None
+    password: str | None = None
     sync_interval_hours: int = 12
     build_sync_limit: int = 100
 

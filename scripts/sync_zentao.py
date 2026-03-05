@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
+import devops_collector.models # 确保全量模型已加载到 registry，防止 Organization/User 映射报错
 from devops_collector.plugins.zentao.client import ZenTaoClient
 from devops_collector.plugins.zentao.models import ZenTaoProduct
 from devops_collector.plugins.zentao.worker import ZenTaoWorker
@@ -28,7 +29,12 @@ def sync_all_zentao_products():
 
     try:
         # 初始化客户端
-        client = ZenTaoClient(url=settings.zentao.url, token=settings.zentao.token)
+        client = ZenTaoClient(
+            url=settings.zentao.url,
+            token=settings.zentao.token,
+            account=settings.zentao.account,
+            password=settings.zentao.password,
+        )
         worker = ZenTaoWorker(session, client)
 
         # 获取数据库中所有已注册的禅道产品
@@ -75,7 +81,12 @@ if __name__ == "__main__":
         Session = sessionmaker(bind=engine)
         session = Session()
         try:
-            client = ZenTaoClient(url=settings.zentao.url, token=settings.zentao.token)
+            client = ZenTaoClient(
+                url=settings.zentao.url,
+                token=settings.zentao.token,
+                account=settings.zentao.account,
+                password=settings.zentao.password,
+            )
             worker = ZenTaoWorker(session, client)
             pid = int(sys.argv[1])
             logger.info(f"手动触发产品 ID 同步: {pid}")

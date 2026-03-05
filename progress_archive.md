@@ -4,6 +4,33 @@
 
 ---
 
+## 归档批次：2026-03-03
+
+以下项从 `progress.txt` 迁移至此归档。
+
+### 19. [Infrastructure] Nexus 镜像加速全链路落地 (2026-03-03)
+- **适配**: 修复 `.env`, `Makefile`, `Dockerfile` 中的旧 IP/端口映射。
+- **验证**: 通过 `python:3.11-slim-bookworm` 基础镜像的本地驻留测试，拉取速度提升 5x。
+- **环境**: `make install` 适配 `--no-build-isolation` 解决隔离构建问题。
+
+### 18. [QA] 测试用例 UI 细节深化 (2026-03-03)
+- **增强**: 实现执行备注 Mandatory 校验（Failure 场景）级环境标识。
+- **审计**: 备注与环境信息成功反回持久化至 GitLab Issue Note。
+
+### 17. [Style] Ruff 全量代码统一 (2026-03-03)
+- **规模**: 全量 322 个 Python 文件通过 Ruff 自动格式化。
+- **集成**: `Makefile` 新增 `ruff` 检查，`progress.txt` 实施工艺卫生 `[Hygiene]` 规范。
+
+---
+
+## 归档批次：2026-02-23
+
+### 16. [UI/UX] 组织架构树形展示优化 (2026-02-23)
+- **逻辑**: 通过 `org_level` 动态计算缩进偏移量，解决扁平列表难以识别层级关系的问题。
+- **清理**: 删除 `admin_router.py` 中重复的（无层次信息的） `/organizations` 冗余路由。
+
+---
+
 ## 归档批次：2026-02-18
 
 以下 15 条任务从 `progress.txt` 迁移至此归档。

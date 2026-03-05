@@ -122,9 +122,9 @@ class BaseWorker(ABC):
             stmt = stmt.on_conflict_do_update(
                 index_elements=["source", "entity_type", "external_id"],
                 set_={
-                    "payload": data["payload"],
-                    "schema_version": data["schema_version"],
-                    "collected_at": data["collected_at"],
+                    "payload": stmt.excluded.payload,
+                    "schema_version": stmt.excluded.schema_version,
+                    "collected_at": stmt.excluded.collected_at,
                 },
             )
             self.session.execute(stmt)

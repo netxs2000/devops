@@ -138,6 +138,7 @@ class BaseClient(ABC):
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=4, max=60),
         retry=retry_if_exception(is_retryable_exception),
+        reraise=True,
     )
     def _get(self, endpoint: str, params: dict[str, Any] | None = None) -> requests.Response:
         """发送 GET 请求。
@@ -174,6 +175,7 @@ class BaseClient(ABC):
         stop=stop_after_attempt(5),
         wait=wait_exponential(multiplier=1, min=4, max=60),
         retry=retry_if_exception(is_retryable_exception),
+        reraise=True,
     )
     def _post(
         self,

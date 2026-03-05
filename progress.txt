@@ -2,121 +2,39 @@
 
 ## 🎯 当前状态 (Current Focus)
 [阶段：执行中]
-分支：feat/qa-gitlab-style-ui
-任务：验证全链路 Nexus (192.168.5.64) 镜像与依赖加速方案，确保本地环境与 Docker 容器环境一致。
+分支：main
+任务：全量数据同步提速进行中。已完成架构审计并补齐 6 项核心 GAP 规范。Worker 已通过多实例 (2 Replicas) 实现并行消费，同步效率提升一倍。正在监控 150+ 禅道产品与 1000+ GitLab 项目的最终采集完成。
 
 ## 🏗️ 进行中 (In Progress)
 
-- [x] [P0] Nexus 仓库全链路迁移与部署验证 (2026-03-03)
-    - 结果：镜像与依赖拉取逻辑已成功切换至新 Nexus (192.168.5.64:8082)。
-    - 实现：
-        1. 修复了 `.env`、`Makefile` 及 `Dockerfile` 中的旧 IP/端口硬编码。
-        2. 完成了 `python:3.11-slim-bookworm` 基础镜像的本地驻留与 Nexus Push 验证。
-        3. 优化了 `Makefile` 构建指令，解决了隔离网络环境下的 `setuptools` 隔离构建问题。
-    - 验证：通过 `make deploy` 完成端到端验证，所有服务健康，初始化数据全量加载。
-    - [Hygiene]: 已清理临时调试文件。
+- [ ] [P0] 监控并完成 1000+ GitLab 项目的全量数据同步 (2026-03-05) - 预估 19:00 前完成
+- [ ] [P0] 监控并完成 150+ 禅道产品的全量数据同步 (2026-03-05) - 预估 14:00 前完成
+- [ ] [P1] 实施 Correlation ID 和 Metrics 的代码级埋点 (2026-03-05)
 
+## 📅 接下来 (Backlog)
 
-- [x] [P1] 测试用例模块 UI 的交互细节优化与 Ruff 全量同步 (2026-03-03)
-    - 结果：完成了“步骤检查”与“回执评论”的深度交互升级，全量代码通过 Ruff 格式化。
-    - 实现：
-        1. **前端**：在 `qa-test-case-detail` 组件中新增了“环境选择器”和“评论内容校验”，优化了执行工具栏。
-        2. **后端**：更新了 `TestManagementService`，将执行备注和环境信息同步至 GitLab Note。
-        3. **质量**：引入 Ruff 工具链，完成 287 个文件的自动代码格式化，并优化了 `ruff.toml` 配置。
-    - 验证：`make deploy` 后手动测试执行功能，GitLab 评论区成功回传格式化后的审计记录。
-    - [Hygiene]: 已清理 `.ruff_cache` 及所有格式化产生的临时残留。
-
-📅 接下来 (Backlog)
-
-- [ ] [P1] 待禅道服务器上线后执行端到端全量数据同步验证 (2026-02-20)
+- [ ] [P2] 完善 E2E 自动化测试用例，覆盖新的交互回执评论逻辑 (2026-03-05)
+- [ ] [P2] 建立 `docs/adr/` 目录并初始化 0001-queue-isolation ADR 决策文档 (2026-03-05)
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[P0] 基础设施迁移：Nexus 5.64 适配与 BuildKit 优化** (2026-03-03)
-    - 成果：彻底解决了 Docker Hub 官方源连接不稳定的问题，拉取核心基础镜像实现“内网级”极速响应。
-    - 改进：在 `Dockerfile` 中移除了 `syntax=docker/dockerfile:1` 避免在离线环境下触发 BuildKit Frontend 下载报错。
-    - 兼容性：`make install` 增加 `--no-build-isolation` 标志，确保容器内安装链路无需访问互联网外源。
-    - 验证：`make deploy` 耗时显著降低（从 10min+ 降至 2min 内完成全量编译与初始化）。
+1. **[P0] 架构审计与规范补齐 (6 GAP Fixes)** (2026-03-05)
+    - 结果：全面补齐了连接池管理、队列 SSOT、Worker 韧性、调度限流设计、ADR 规范、资源隔离 (Correlation ID & Metrics) 等 6 项核心架构 GAP。
+    - 落实：规范已同步写入 `contexts.md` 和 `gemini.md`。
 
-2. **[P1] 测试用例模块 UI 重构 (GitLab 风格)** (2026-02-23)
-    - 结果：成功复刻 GitLab 列表+详情双栏布局，并新增交互反馈。
-    - 实现：
-        1. 引入 Web Components 实现双栏同步。
-        2. 支持测试步骤交互式 Checkbox 标记与实时进度条。
-        3. 增加执行评论回传与环境标识，打通后端全链路执行 API。
-    - 分支：开发于 `feat/qa-gitlab-style-ui` 分支，验证通过。
+2. **[P0] Worker 架构演进：多实例并行消费 (Replicas)** (2026-03-05)
+    - 结果：通过修改 `docker-compose.yml` (replicas: 2) 并重构 `worker.py` (引入共享连接池 engine)，成功实现端到端任务并行化。
+    - 收益：禅道同步进度已达 20%，GitLab 开始进入流水线。
 
-3. **[P3] Ruff 极致性能工具链迁移实验 (isort 整合)** (2026-02-23)
-    - 成果：替代原有 `isort` + `flake8-import-order`。单次运行全量（266 文件）排序修复耗时 < 0.5s。
-    - 风险控制：通过 `[lint.per-file-ignores]` 机制保护了 `__init__.py` 中的插件注册逻辑，解决了初始化导致的 `ModuleNotFoundError`。
-    - 配置：新增 `ruff.toml` 影子运行，已执行 `ruff check --select I --fix` 完成全量 Import 规范化。
-    - 场景：录入测试用例与产品选择时，部门选择框原为扁平显示，缺少层级关系。另外 API 中存在冗余。
-    - 优化：通过前端获取 `org_level` 后，在原生的 `<select>` 中动态拼接 `├─ ` 缩进前缀实现直观的树形视觉展示，兼顾了改动最小原则。同时删除了 `admin_router.py` 中重复的（无层次信息的） `/organizations` 冗余路由。
-    - 测试：`pytest tests/unit/portal/test_admin_router.py` 验证通过。
+3. **[P0] 消息队列设计优化：队列隔离 (Queue Isolation)** (2026-03-05)
+    - 结果：将 `gitlab_tasks` 和 `zentao_tasks` 从物理上彻底分离，解决了禅道任务被 GitLab 洪泛饿死的技术债。
 
+4. **[P0] 修复同步链路系统性问题 (Heartbeat & FK & Startup)** (2026-03-04)
+    - 结果：通过 `heartbeat=600` 解决了长连接超时。
 
-1. **[P1] 实现 Portal UI 职能分离 (Separation of Concerns)** (2026-02-21)
-    - 场景：质量看板 (Dashboard) vs 测试用例 (Test Cases)。
-    - 优化：在“质量看板”视图下自动隐藏“仓库运维工具栏”，并将其标题切换为“Quality Dashboard”。
-    - 意义：减少看板页面的干扰项，强化“洞察”与“管理”的界面区隔。
-    - 适配文件：`index.html` (增加 DOM ID), `sys_app.js` (视图状态维护)。
-
-2. **[P1] 实现本地缓存优先机制 (Local First Cache)** (2026-02-21)
-    - 镜像缓存：修改 `Makefile`，在拉取前检查本地是否存在基础镜像，存在则跳过 Pull。
-    - 依赖缓存：启用 Docker BuildKit `cache mount`，在 `Dockerfile` 中持久化 `pip` 和 `apt` 缓存，避免重复下载。
-    - 验证：第二次执行 `make build` 时，基础镜像检测为 `skipping pull`，依赖安装层直接使用缓存，构建效率显著提升。
-
-2. **[P1] 优化容器部署流水线：Nexus 双层回退算法 (Python & Docker)** (2026-02-21)
-    - 实现逻辑 (Python): Nexus 私服 (无鉴权) -> 官方 PyPI -> 清华镜像
-    - 实现逻辑 (Docker): Nexus Docker Registry (192.168.1.168:8082, 无鉴权) -> 官方 Docker Hub
-    - 适配范围：`Dockerfile`, `Makefile` (build, package, pull-images), `.env.example`
-    - 覆盖对象：`python:3.11-slim-bookworm`, `postgres:15-alpine`, `rabbitmq:3-management-alpine`
-    - 验证：`make deploy` 在 VPN 环境下通过 (耗时约 15min)，fallback 机制在 Nexus 离线时自动切换官方源成功。
-
-2. **[P1] 验证多环境网络适配性** (2026-02-21)
-    - 验证：已通过 `make deploy` 完整部署流程。在 VPN 开启状态下，虽然 Nexus 离线导致 fallback，但后续官方源下载与构建成功。
-    - 改进：在 `Dockerfile` 和 `Makefile` 中增加了更鲁棒的 timeout 和 fallback 策略。
-
-2. **[P0] 强化 AI 协作规范 ( gemini.md & contexts.md )** (2026-02-21)
-    - 引入“显式状态锁定”、“严格问答解耦”及“原子步审计”机制
-    - 目的：杜绝未决策先执行（抢跑）行为，确保意图与实现强对齐
-    - 验证：规范文档已同步更新，AI 内部审计逻辑已激活
-
-3. **[P3] 修复 7 个各类 ImportError 的损坏测试文件** (2026-02-18)
-    - 修复 `test_analyzer.py` (DiffAnalyzer -> CodeMetrics)
-    - 修复 `test_gitlab_worker.py` (IdentityMatcher 导入路径)
-    - 修复 `okr_service.py` 及测试 (GitLab 模型导入)
-    - 修复 `test_project_management.py` (SysRole 别名)
-    - 修复 3 个 reliability 测试 (GitLabClient 路径及模型导入)
-    - 验证：`pytest --collect-only` 全量通过，无 ImportError
-
-2. **[P1] 全局开发规范优化 (gemini.md Overhaul)** (2026-02-18)
-    - 第十二章 "AI 原生协作哲学" 从 5 条扩展为 10 条原则 + 核心公式
-    - 新增原则：意图驱动、反馈环密度、组合式架构、信任但验证、演进式设计
-    - 第一至十一章全面优化：统一层级编号、补充可观测性/DB Migration/环境变量规范
-    - progress.txt 规则升级为"固定四段式 + 归档机制"
-
-3. **[P2] 灵活配置管理与注册域名白名单** (2026-02-18)
-    - 将子配置类从 `BaseSettings` 转为 `BaseModel`，引入 `Union[str, List[str]]` 解决 Pydantic V2 解析问题
-    - 在 `.env` 引入 `AUTH__ALLOWED_DOMAINS`，支持开放模式
-
-4. **[P1] Nexus 深度集成与 MDM 自动对齐** (2026-02-18)
-    - 模型标准化改造（TimestampMixin, SCDMixin, OwnableMixin）
-    - 智能对齐：根据 `group`/`name` 自动解析 MDM 产品代码
-    - 验证：多场景单元测试全部通过 ✅
-
-5. **[P1] Unified Exception System & Audit Persistence** (2026-02-18)
-    - 实现 `BusinessException` 层级体系 + FastAPI 全局异常处理器
-    - 安全模型增加 TimestampMixin/SCDMixin/created_by 审计字段
-    - 验证：所有测试 100% 通过
-
-## 📝 阶段性回顾 (Retrospective)
-
-- **技术突破**：利用 Pydantic 的 `Union` 类型绕过 `DotEnvSettingsSource` 的强 JSON 限制
-- **流程合规**：遵循"反向采访-用户决策-原子开发-质量验证"闭环
-- **质量文化**：由被动修 Bug 转为主动清偿技术债 (P3 broken tests)，确保 CI 基础稳固
-
-> 更早的已完成任务已归档至 `progress_archive.md`（共 15 条）
+5. **[P0] 修复同步报错：psycopg2 Can't adapt type 'dict'** (2026-03-04)
+    - 结果：解决了 ZenTao 人员字段字典对象无法存入 String 列的问题。
 
 ---
-*最后更新时间：2026-02-23 11:30 (Antigravity)*
+*最后更新时间：2026-03-05 13:45 (Antigravity)*
+*更多已完成记录见 [progress_archive.md](file:///c:/Users/netxs\devops\devops\progress_archive.md)*
