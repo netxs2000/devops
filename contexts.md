@@ -14,8 +14,10 @@
 - **运维 (DevOps)**: Docker Compose, 多阶段镜像构建, 离线 Tar 包部署支持.
 
 ## 3. 开发环境与兼容性 (Environment)
-- **本地环境**: Windows + Python 3.12 (调试使用 PowerShell `Select-String` 替代 `grep`).
-- **容器环境**: Linux + Python 3.9-3.11 (生产镜像基于 Alpine/Debian Slim).
+- **开发与测试环境 (Dev & Test Env)**: 
+    - **宿主机**: Windows + Python 3.12 (适配 PowerShell 调试)。
+    - **容器机**: Docker Desktop (Linux 模式) + Python 3.9-3.11。
+    - **标准原则**: 开发者机器即为第一测试环境。任何功能在本地开发完成后，**必须**在 Docker Desktop 容器内通过 `make test` 或同等命令验证，严禁“仅在 Windows 跑通就提交”。
 - **路径处理**: 强制使用 `pathlib` 确保跨平台路径兼容。
 - **CSV 编码**: 所有 CSV 文件的生成、读取及模版任务强制使用 `utf-8-sig` 编码，确保在 Windows Office/Excel 环境下打开不出现汉字乱码。
 - **语义分层规范 (Semantic Alignment)**:
