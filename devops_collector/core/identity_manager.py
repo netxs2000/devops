@@ -39,7 +39,7 @@ class IdentityManager:
         # 0. 优先检查本地内存缓存 (存储 ID 而非对象，防止跨 Session 游离)
         if cache_key in cls._local_cache:
             user_id = cls._local_cache[cache_key]
-            user = session.query(User).filter_by(global_user_id=user_id, is_current=True).first()
+            user = session.query(User).filter_by(global_user_id=user_id).first()
             if user:
                 return user
 
@@ -47,7 +47,7 @@ class IdentityManager:
         mapping = session.query(IdentityMapping).filter_by(source_system=source, external_user_id=ext_id_str).first()
 
         if mapping:
-            current_user = session.query(User).filter_by(global_user_id=mapping.global_user_id, is_current=True).first()
+            current_user = session.query(User).filter_by(global_user_id=mapping.global_user_id).first()
             if current_user:
                 cls._local_cache[cache_key] = current_user.global_user_id
                 return current_user
@@ -55,15 +55,15 @@ class IdentityManager:
         # 2. 尝试从主数据对齐 (Email 优先)
         user = None
         if email_lower:
-            user = session.query(User).filter_by(primary_email=email_lower, is_current=True).first()
+            user = session.query(User).filter_by(primary_email=email_lower).first()
 
         # 3. 如果 Email 没中，试工号
         if not user and employee_id:
-            user = session.query(User).filter_by(employee_id=employee_id, is_current=True).first()
+            user = session.query(User).filter_by(employee_id=employee_id).first()
 
         # 4. 如果还没中，尝试通过姓名匹配
         if not user and name:
-            potential_users = session.query(User).filter_by(full_name=name, is_current=True).all()
+            potential_users = session.query(User).filter_by(full_name=name).all()
             if len(potential_users) == 1:
                 user = potential_users[0]
 

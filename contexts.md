@@ -58,6 +58,9 @@
     - **严禁**在循环或回调函数中反复调用 `create_engine()`，否则将导致 PostgreSQL 连接耗尽。
     - 推荐配置：`pool_size=5, max_overflow=10, pool_pre_ping=True`（自动检测断连并重建）。
 - **SCD Type 2**: 组织、产品、团队主数据采用慢变维，追踪“历史时刻的负责人”及“当时的组织归属”。
+- **唯一键与 SCD 冲突处理 [MANDATORY]**: 
+    - 若表内存在业务主键的 `Unique` 约束（如 `mdm_organizations.org_id`），在执行 GetOrCreate 或 SCD 更新前，**必须**去除 `is_current=True` 的过滤条件进行全局查询。
+    - 否则，INSERT 操作将由于“看不见”历史记录 (`is_current=False`) 而触发物理唯一冲突。
 - **组织架构模式**:
     - **层级 (Hierarchy)**: 公司(Root) -> 中心(Center) -> 部门(Dept)，不再使用 `SYS-` 体系节点。
     - **属性 (Attribute)**: 体系 (Business Line) 作为 `Organization` 的 `business_line` 字段存储，支持跨体系的部门归属。
@@ -301,9 +304,15 @@
 - **验证自动化闭环 (Mandatory Automation)**: 
     - **后端任务**: 必须通过所有对应的 `pytest` 单元测试与集成测试，确保逻辑覆盖率。
     - **前端/UI 任务**: 涉及到 UI 重构或交互逻辑变更，**强制开展 E2E 测试** (Playwright)，确保护核心业务链路正常。
-- **文档层面**: `contexts.md`, `project_summary.md` 及 API 文档 (如有变更) 已同步更新。
-- **部署层面**: `make deploy` 在容器环境中验证通过，无回滚风险。
-- **证据交付**: 必须附带验证证据日志（录屏、截图或 pytest 结果）。
+- **文档层面 (Document Sync Matrix) [MANDATORY]**:
+    - 任何变更必须根据下表完成文档对齐（调用 `/doc-update`）：
+        | 变更类型 | 必更新文档 |
+        | :--- | :--- |
+        | **Bug 修复 / 故障排除** | `progress.txt`, `lessons-learned.log` |
+        | **架构调整 / 规范发布** | `contexts.md`, `ADR` (可选) |
+        | **模型 (Model/DB) 变更** | `DATA_DICTIONARY.md` (via `make docs`) |
+        | **新依赖引入** | `pyproject.toml`, `requirements.txt`, `.env.example` |
+        | **日常功能开发** | `progress.txt` |
 - **环境卫生清理 (Cleanup on Exit)**: 任务交付前，必须执行 `make clean` 或手动删除所有调试生成的脚本、临时日志 (.log, .txt, debug_*.py, traceback.txt)；确保 `git status` 洁净并更新 `progress.txt` 标记 `[Hygiene]: 已清理临时调试文件`。
 
 

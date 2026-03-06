@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.core.services import close_current_and_insert_new
-from devops_collector.models.base_models import Organization
+from devops_collector.models import Organization, SyncLog
 
 # from .client import ZenTaoClient
 import json
@@ -138,10 +138,29 @@ class ZenTaoWorker(BaseWorker):
 
             product.last_synced_at = datetime.now(UTC)
             product.sync_status = "COMPLETED"
+            
+            # 记录成功日志
+            msg = f"ZenTao product {product_id} synced successfully."
+            self.session.add(SyncLog(project_id=str(product_id), status="SUCCESS", message=msg))
             self.session.commit()
         except Exception as e:
             self.session.rollback()
             logger.error(f"Failed to sync ZenTao product {product_id}: {e}")
+            
+            # 记录失败状态
+            try:
+                # 重新开启 session 以防旧 session 损坏
+                p_failed = self.session.query(ZenTaoProduct).filter_by(id=product_id).first()
+                if p_failed:
+                    p_failed.sync_status = "FAILED"
+                    self.session.add(SyncLog(
+                        project_id=str(product_id), 
+                        status="FAILED", 
+                        message=f"ZenTao sync failed: {str(e)[:500]}"
+                    ))
+                    self.session.commit()
+            except Exception as inner_e:
+                logger.error(f"Failed to record error status for product {product_id}: {inner_e}")
             raise
 
     def _sync_product(self, product_id: int) -> ZenTaoProduct | None:
@@ -575,18 +594,20 @@ class ZenTaoWorker(BaseWorker):
         for d in depts:
             org_id = f"zentao_dept_{d['id']}"
             org_name = d["name"]
-            org = self.session.query(Organization).filter_by(org_id=org_id, is_current=True).first()
+            # 即使 is_current=False 的历史数据也会触发唯一索引冲突，所以必须全局查询
+            org = self.session.query(Organization).filter_by(org_id=org_id).first()
             if not org:
-                org = Organization(org_id=org_id, org_name=org_name, org_level=3, is_current=True, sync_version=1)
-                self.session.add(org)
-                logger.info(f"Created ZenTao Organization: {org_name}")
+                try:
+                    with self.session.begin_nested():
+                        org = Organization(org_id=org_id, org_name=org_name, org_level=3, is_current=True, sync_version=1)
+                        self.session.add(org)
+                        self.session.flush()
+                        logger.info(f"Created ZenTao Organization: {org_name}")
+                except Exception:
+                    self.session.rollback()
+                    org = self.session.query(Organization).filter_by(org_id=org_id).first()
             elif org.org_name != org_name:
-                org = close_current_and_insert_new(
-                    self.session,
-                    Organization,
-                    {"org_id": org_id},
-                    {"org_name": org_name, "sync_version": org.sync_version, "org_level": 3},
-                )
+                org.org_name = org_name
                 logger.info(f"Updated ZenTao Organization Name: {org_name}")
             dept_map[d["id"]] = org
         self.session.flush()
@@ -609,7 +630,7 @@ class ZenTaoWorker(BaseWorker):
             if user:
                 if u_data.get("dept"):
                     org_id = f"zentao_dept_{u_data['dept']}"
-                    org = self.session.query(Organization).filter_by(org_id=org_id, is_current=True).first()
+                    org = self.session.query(Organization).filter_by(org_id=org_id).first()
                     if org:
                         user.department_id = org.org_id
                 user.raw_data = u_data
