@@ -14,6 +14,8 @@ from devops_collector.models.base_models import IdentityMapping, User
 
 logger = logging.getLogger(__name__)
 
+from sqlalchemy.dialects.postgresql import insert
+
 
 class IdentityManager:
     """身份管理中心，提供跨系统的用户识别与映射能力。"""
@@ -72,24 +74,37 @@ class IdentityManager:
 
         # 6. 建立映射关系 (如果不存在)
         if not mapping:
-            existing_user_mapping = None
+            # 使用 Postgres ON CONFLICT DO NOTHING 彻底避免并发击穿
+            stmt = insert(IdentityMapping).values(
+                global_user_id=user.global_user_id if user else None,
+                source_system=source,
+                external_user_id=ext_id_str,
+                external_username=name,
+                external_email=email_lower,
+                mapping_status="AUTO" if user and user.is_survivor else "PENDING",
+                confidence_score=1.0 if user and user.is_survivor else 0.5,
+            ).on_conflict_do_nothing(
+                index_elements=["source_system", "external_user_id"]
+            )
+            session.execute(stmt)
+            # 对于全局用户的第二个联合唯一键也要提供保护
             if user:
-                existing_user_mapping = session.query(IdentityMapping).filter_by(source_system=source, global_user_id=user.global_user_id).first()
-
-            if not existing_user_mapping:
-                mapping = IdentityMapping(
-                    global_user_id=user.global_user_id if user else None,
+                stmt_global = insert(IdentityMapping).values(
+                    global_user_id=user.global_user_id,
                     source_system=source,
                     external_user_id=ext_id_str,
                     external_username=name,
                     external_email=email_lower,
-                    mapping_status="AUTO" if user and user.is_survivor else "PENDING",
-                    confidence_score=1.0 if user and user.is_survivor else 0.5,
+                    mapping_status="AUTO" if user.is_survivor else "PENDING",
+                    confidence_score=1.0 if user.is_survivor else 0.5,
+                ).on_conflict_do_nothing(
+                    index_elements=["source_system", "global_user_id"]
                 )
-                session.add(mapping)
-                logger.info(f"建立身份映射追踪 (待对齐): {source}:{ext_id_str}")
-            else:
-                logger.info(f"用户 {user.full_name} 在 {source} 下已有映射，不再重复处理。")
+                session.execute(stmt_global)
+
+            # 为了使 session 状态保持一致，重新查询 mapping
+            mapping = session.query(IdentityMapping).filter_by(source_system=source, external_user_id=ext_id_str).first()
+            logger.info(f"建立身份映射查询结束: {source}:{ext_id_str}")
 
         if user:
             cls._local_cache[cache_key] = user.global_user_id

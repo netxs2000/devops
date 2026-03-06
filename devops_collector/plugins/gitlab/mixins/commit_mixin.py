@@ -44,23 +44,20 @@ class CommitMixin:
     def _save_commits_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存提交记录，并触发追溯与行为分析。
 
-        流程包括：
-        1. 过滤已存在的 GitLabCommit。
-        2. 创建新 GitLabCommit 实体并保存基本统计 (additions, deletions)。
-        3. 触发 Traceability 提取 (关联 Issue)。
-        4. 触发行为特征分析 (加班识别)。
-        5. (可选) 触发深度 Diff 分析。
-
-        Args:
-            project (GitLabProject): 关联的项目实体。
-            batch (List[dict]): 从 API 获取的原始提交数据列表。
+        优化：直接使用 COPY 接管 Staging 落盘，并通过 PostreSQL On-Conflict 替换查改逻辑。
         """
-        existing = self.session.query(GitLabCommit.id).filter(GitLabCommit.id.in_([c["id"] for c in batch])).all()
-        existing_ids = {c.id for c in existing}
-        new_commits = []
+        from sqlalchemy.dialects.postgresql import insert
+
+        # 1. 采用 PostgreSQL 原生 COPY FROM 极速倒入原始宽表
+        self.bulk_save_to_staging("gitlab", "commit", batch)
+
+        if not batch:
+            return
+
+        commit_objs = []
+        insert_values = []
+
         for data in batch:
-            if data["id"] in existing_ids:
-                continue
             commit = GitLabCommit(
                 id=data["id"],
                 project_id=project.id,
@@ -76,11 +73,40 @@ class CommitMixin:
             commit.additions = stats.get("additions", 0)
             commit.deletions = stats.get("deletions", 0)
             commit.total = stats.get("total", 0)
-            self.session.add(commit)
-            new_commits.append(commit)
+
             if hasattr(self, "_apply_traceability_extraction"):
                 self._apply_traceability_extraction(commit)
             self._apply_commit_behavior_analysis(commit)
+
+            insert_values.append({
+                "id": commit.id,
+                "project_id": commit.project_id,
+                "short_id": commit.short_id,
+                "title": commit.title,
+                "author_name": commit.author_name,
+                "author_email": commit.author_email,
+                "message": commit.message,
+                "authored_date": commit.authored_date,
+                "committed_date": commit.committed_date,
+                "additions": commit.additions,
+                "deletions": commit.deletions,
+                "total": commit.total,
+                "is_off_hours": commit.is_off_hours,
+                "linked_issue_ids": getattr(commit, "linked_issue_ids", None),
+                "issue_source": getattr(commit, "issue_source", None),
+                "gitlab_user_id": getattr(commit, "gitlab_user_id", None),
+            })
+            commit_objs.append(commit)
+
+        new_commits = []
+        if insert_values:
+            # 2. 使用原生 ON CONFLICT 避免读写竞争击穿
+            stmt = insert(GitLabCommit).values(insert_values)
+            stmt = stmt.on_conflict_do_nothing(index_elements=["id"]).returning(GitLabCommit.id)
+            result = self.session.execute(stmt)
+            inserted_ids = {row[0] for row in result.fetchall()}
+            new_commits = [c for c in commit_objs if c.id in inserted_ids]
+
         if self.enable_deep_analysis and new_commits:
             for commit in new_commits:
                 self._process_commit_diffs(project, commit)
