@@ -1,5 +1,7 @@
 import requests
 import urllib3
+
+
 urllib3.disable_warnings()
 
 paths = [
@@ -13,6 +15,7 @@ paths = [
 
 ip = "198.18.0.47"
 
+
 def probe():
     for p in paths:
         url = f"http://{ip}{p}"
@@ -24,6 +27,7 @@ def probe():
                 print(f"Body snippet: {r.text[:100]}")
         except Exception as e:
             print(f"Error: {e}")
+
 
 if __name__ == "__main__":
     probe()

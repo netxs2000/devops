@@ -13,11 +13,7 @@ def _update_project_activity(mapper, connection, target):
     project_id = getattr(target, "project_id", None)
     if project_id:
         activity_time = getattr(target, "created_at", None) or getattr(target, "authored_date", None) or func.now()
-        connection.execute(
-            GitLabProject.__table__.update()
-            .where(GitLabProject.__table__.c.id == project_id)
-            .values(last_activity_at=activity_time)
-        )
+        connection.execute(GitLabProject.__table__.update().where(GitLabProject.__table__.c.id == project_id).values(last_activity_at=activity_time))
 
 
 def _handle_issue_first_response(mapper, connection, target):
@@ -32,7 +28,7 @@ def _handle_issue_first_response(mapper, connection, target):
             .where(
                 (GitLabIssue.__table__.c.iid == target.noteable_iid)
                 & (GitLabIssue.__table__.c.project_id == target.project_id)
-                & (GitLabIssue.__table__.c.first_response_at == None)
+                & (GitLabIssue.__table__.c.first_response_at is None)
                 & (GitLabIssue.__table__.c.author_id != target.author_id)
             )
             .values(first_response_at=target.created_at or func.now())

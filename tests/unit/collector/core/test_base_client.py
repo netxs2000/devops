@@ -34,9 +34,7 @@ class TestBaseClient(unittest.TestCase):
         Raises:
             TODO
         """'''
-        self.client = MockClient(
-            base_url="http://api.example.com", auth_headers={"Authorization": "Bearer token"}, rate_limit=100
-        )
+        self.client = MockClient(base_url="http://api.example.com", auth_headers={"Authorization": "Bearer token"}, rate_limit=100)
 
     @patch("requests.get")
     def test_get_success(self, mock_get):

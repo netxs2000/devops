@@ -3,6 +3,7 @@
 处理用户注册、登录、获取当前用户信息以及 GitLab OAuth 绑定。
 """
 
+import logging
 from datetime import timedelta
 
 import httpx
@@ -16,14 +17,15 @@ from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.config import settings
 
 
+logger = logging.getLogger(__name__)
+
+
 # 初始化认证模块路由
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @auth_router.get("/gitlab/bind")
-async def auth_bind_gitlab(
-    request: Request, token: str = Depends(auth_service.auth_oauth2_scheme), db: Session = Depends(get_auth_db)
-):
+async def auth_bind_gitlab(request: Request, token: str = Depends(auth_service.auth_oauth2_scheme), db: Session = Depends(get_auth_db)):
     """发起 GitLab OAuth 绑定。
 
     Args:

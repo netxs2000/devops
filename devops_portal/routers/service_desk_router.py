@@ -34,9 +34,7 @@ async def list_business_projects(current_user: User = Depends(get_current_user),
         db.query(Product)
         .join(ProjectProductRelation, Product.product_id == ProjectProductRelation.product_id)
         .join(ProjectMaster, ProjectProductRelation.project_id == ProjectMaster.project_id)
-        .filter(
-            Product.is_current.is_(True), ProjectMaster.is_current.is_(True), ProjectMaster.lead_repo_id.is_not(None)
-        )
+        .filter(Product.is_current.is_(True), ProjectMaster.is_current.is_(True), ProjectMaster.lead_repo_id.is_not(None))
         .distinct()
         .all()
     )
@@ -44,10 +42,7 @@ async def list_business_projects(current_user: User = Depends(get_current_user),
     # 如果没有配置了受理中心的产品，则降级返回所有产品（为了让下拉框不为空，方便后期配置）
     if not products:
         products = db.query(Product).filter(Product.is_current.is_(True)).all()
-        return [
-            {"id": p.product_id, "name": p.product_name, "description": p.product_description, "status": "no_lead"}
-            for p in products
-        ]
+        return [{"id": p.product_id, "name": p.product_name, "description": p.product_description, "status": "no_lead"} for p in products]
 
     return [{"id": p.product_id, "name": p.product_name, "description": p.product_description} for p in products]
 
@@ -70,9 +65,7 @@ async def upload_service_desk_attachment(
             raise HTTPException(status_code=404, detail="Lead project repo not found")
 
         content = await file.read()
-        uploaded_file = client._post(
-            f"projects/{mdm_p.lead_repo_id}/uploads", files={"file": (file.filename, content)}
-        ).json()
+        uploaded_file = client._post(f"projects/{mdm_p.lead_repo_id}/uploads", files={"file": (file.filename, content)}).json()
         return {"markdown": uploaded_file.get("markdown"), "url": uploaded_file.get("url")}
     except HTTPException:
         raise
@@ -109,9 +102,7 @@ async def submit_bug_via_service_desk(
         if not mdm_p or not mdm_p.lead_repo_id:
             # 记录详细日志以便排查
             logger.error(f"Submission failed: Product {mdm_id} has no lead_repo configured.")
-            raise HTTPException(
-                status_code=400, detail="该业务系统当前未配置线上受理中心，请通过线下渠道联系 RD 负责人或联系管理员。"
-            )
+            raise HTTPException(status_code=400, detail="该业务系统当前未配置线上受理中心，请通过线下渠道联系 RD 负责人或联系管理员。")
 
         service = ServiceDeskService(client)
         ticket = await service.create_ticket(
@@ -202,9 +193,7 @@ async def reject_ticket(
     """RD 拒绝并关闭反馈。"""
     try:
         service = TestingService(session=db, client=client)
-        success = await service.reject_ticket(
-            project_id=project_id, ticket_iid=iid, reason=reason, actor_name=current_user.full_name
-        )
+        success = await service.reject_ticket(project_id=project_id, ticket_iid=iid, reason=reason, actor_name=current_user.full_name)
         if not success:
             raise HTTPException(status_code=404, detail="Ticket not found")
         return {"message": "Ticket rejected and closed"}
@@ -248,14 +237,10 @@ async def track_service_desk_ticket(ticket_id: int, db: Session = Depends(get_au
 
 
 @router.patch("/tickets/{ticket_id}/status")
-async def update_service_desk_ticket_status(
-    ticket_id: int, new_status: str, current_user=Depends(get_current_user), db: Session = Depends(get_auth_db)
-):
+async def update_service_desk_ticket_status(ticket_id: int, new_status: str, current_user=Depends(get_current_user), db: Session = Depends(get_auth_db)):
     """更新工单状态 (已解耦重构)。"""
     service = ServiceDeskService()
-    success = await service.update_ticket_status(
-        db=db, ticket_id=ticket_id, new_status=new_status, operator_name=current_user.full_name
-    )
+    success = await service.update_ticket_status(db=db, ticket_id=ticket_id, new_status=new_status, operator_name=current_user.full_name)
     if not success:
         raise HTTPException(status_code=404, detail="Update failed")
     return {"status": "success", "new_status": new_status}
@@ -292,35 +277,27 @@ async def list_all_users_for_admin(
     """[管理后台] 获取所有用户申请记录及统计信息。"""
     # 已通过 PermissionRequired 校验权限
 
-    query = db.query(User).filter(User.is_current == True)
+    query = db.query(User).filter(User.is_current)
     if status == "pending":
-        query = query.filter(User.is_active == False, User.is_survivor == True)  # survivor and inactive means pending
+        query = query.filter(not User.is_active, User.is_survivor)  # survivor and inactive means pending
     elif status == "approved":
-        query = query.filter(User.is_active == True)
+        query = query.filter(User.is_active)
     elif status == "rejected":
-        query = query.filter(
-            User.is_active == False, User.is_survivor == False
-        )  # not active and not survivor means rejected
+        query = query.filter(not User.is_active, not User.is_survivor)  # not active and not survivor means rejected
 
     users = query.all()
 
     # 获取统计信息
-    total = db.query(User).filter(User.is_current == True).count()
-    pending = db.query(User).filter(User.is_current == True, User.is_active == False, User.is_survivor == True).count()
-    approved = db.query(User).filter(User.is_current == True, User.is_active == True).count()
-    rejected = (
-        db.query(User).filter(User.is_current == True, User.is_active == False, User.is_survivor == False).count()
-    )
+    total = db.query(User).filter(User.is_current).count()
+    pending = db.query(User).filter(User.is_current, not User.is_active, User.is_survivor).count()
+    approved = db.query(User).filter(User.is_current, User.is_active).count()
+    rejected = db.query(User).filter(User.is_current, not User.is_active, not User.is_survivor).count()
 
     results = []
     for u in users:
         u_status = "approved" if u.is_active else ("pending" if u.is_survivor else "rejected")
         # 获取关联的 GitLab ID
-        gitlab_mapping = (
-            db.query(IdentityMapping)
-            .filter(IdentityMapping.global_user_id == u.global_user_id, IdentityMapping.source_system == "gitlab")
-            .first()
-        )
+        gitlab_mapping = db.query(IdentityMapping).filter(IdentityMapping.global_user_id == u.global_user_id, IdentityMapping.source_system == "gitlab").first()
 
         results.append(
             {
@@ -348,7 +325,7 @@ async def approve_user_application(
     """[管理后台] 审批用户申请并绑定身份标识。"""
     # 已通过 PermissionRequired 校验权限
 
-    user = db.query(User).filter(User.primary_email == email, User.is_current == True).first()
+    user = db.query(User).filter(User.primary_email == email, User.is_current).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -357,13 +334,7 @@ async def approve_user_application(
         user.is_survivor = True
         # 如果提供了 GitLab ID，则创建或更新身份映射
         if gitlab_user_id:
-            mapping = (
-                db.query(IdentityMapping)
-                .filter(
-                    IdentityMapping.global_user_id == user.global_user_id, IdentityMapping.source_system == "gitlab"
-                )
-                .first()
-            )
+            mapping = db.query(IdentityMapping).filter(IdentityMapping.global_user_id == user.global_user_id, IdentityMapping.source_system == "gitlab").first()
             if mapping:
                 mapping.external_user_id = gitlab_user_id
                 mapping.mapping_status = "VERIFIED"

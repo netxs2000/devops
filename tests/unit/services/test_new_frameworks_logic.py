@@ -78,7 +78,7 @@ class TestNewFrameworksLogic(unittest.TestCase):
         # Adapted from HOTSPOTS.sql for SQLite
         self.cursor.execute("""
         CREATE VIEW view_file_hotspots AS
-        SELECT 
+        SELECT
             f.file_path,
             -- Churn Frequency (Modifications in last 90 days)
             COUNT(DISTINCT CASE WHEN c.committed_date >= DATE('now', '-90 days') THEN f.commit_id END) as churn_90d,
@@ -86,13 +86,13 @@ class TestNewFrameworksLogic(unittest.TestCase):
             ABS(SUM(f.code_added) - SUM(f.code_deleted)) as estimated_loc,
             -- Context
             MAX(c.committed_date) as last_modified_at
-        FROM 
+        FROM
             commit_file_stats f
-        JOIN 
+        JOIN
             commits c ON f.commit_id = c.id
-        GROUP BY 
+        GROUP BY
             f.file_path
-        HAVING 
+        HAVING
             estimated_loc > 0;
         """)
 
@@ -101,15 +101,15 @@ class TestNewFrameworksLogic(unittest.TestCase):
         CREATE VIEW view_flow_items AS
         SELECT
             i.id, i.project_id, p.name as project_name, i.title, i.state, i.created_at, i.closed_at,
-            CASE 
+            CASE
                 WHEN i.labels LIKE '%security%' OR i.labels LIKE '%risk%' THEN 'Risk'
                 WHEN i.labels LIKE '%bug%' OR i.labels LIKE '%fix%' THEN 'Defect'
                 WHEN i.labels LIKE '%refactor%' OR i.labels LIKE '%debt%' THEN 'Debt'
-                ELSE 'Feature' 
+                ELSE 'Feature'
             END as flow_type,
-            CASE 
+            CASE
                 WHEN i.closed_at IS NOT NULL THEN (JULIANDAY(i.closed_at) - JULIANDAY(i.created_at))
-                ELSE NULL 
+                ELSE NULL
             END as flow_time_days
         FROM issues i
         LEFT JOIN projects p ON i.project_id = p.id;
@@ -135,7 +135,7 @@ class TestNewFrameworksLogic(unittest.TestCase):
         self.cursor.execute("""
         CREATE VIEW view_gitprime_metrics AS
         WITH user_metrics AS (
-            SELECT 
+            SELECT
                 u.global_user_id,
                 u.full_name,
                 u.primary_email,
@@ -151,11 +151,11 @@ class TestNewFrameworksLogic(unittest.TestCase):
             WHERE cm.committed_at >= DATE('now', '-90 days')
             GROUP BY u.global_user_id, u.full_name, u.primary_email, u.department_id
         )
-        SELECT 
+        SELECT
             *,
-            CASE 
+            CASE
                 WHEN raw_additions > 0 THEN ROUND((total_churn * 100.0 / raw_additions), 1)
-                ELSE 0 
+                ELSE 0
             END as churn_rate_percent
         FROM user_metrics;
         """)
@@ -200,9 +200,7 @@ class TestNewFrameworksLogic(unittest.TestCase):
             )
 
         # Insert 1 Defect closed last week
-        self.cursor.execute(
-            "INSERT INTO issues (created_at, closed_at, labels, state) VALUES (?, ?, 'bug', 'closed')", (last_week, now)
-        )
+        self.cursor.execute("INSERT INTO issues (created_at, closed_at, labels, state) VALUES (?, ?, 'bug', 'closed')", (last_week, now))
 
         self.conn.commit()
 
@@ -275,9 +273,7 @@ class TestNewFrameworksLogic(unittest.TestCase):
         self.conn.commit()
 
         # Verify View
-        self.cursor.execute(
-            "SELECT file_path, churn_90d, estimated_loc FROM view_file_hotspots WHERE file_path = ?", (file_target,)
-        )
+        self.cursor.execute("SELECT file_path, churn_90d, estimated_loc FROM view_file_hotspots WHERE file_path = ?", (file_target,))
         res = self.cursor.fetchone()
 
         print(f"Hotspot Result: {res}")

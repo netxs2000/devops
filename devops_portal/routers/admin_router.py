@@ -52,13 +52,9 @@ router = APIRouter(prefix="/admin", tags=["administration"])
 
 
 @router.get("/export/organizations")
-async def export_organizations(
-    db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))
-):
+async def export_organizations(db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
     """导出所有组织机构为 CSV。"""
-    orgs = (
-        db.query(Organization).options(joinedload(Organization.manager)).filter(Organization.is_current == True).all()
-    )
+    orgs = db.query(Organization).options(joinedload(Organization.manager)).filter(Organization.is_current).all()
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["org_id", "org_name", "org_level", "parent_org_id", "负责人"])
@@ -115,14 +111,12 @@ async def import_organizations(
 @router.get("/export/users")
 async def export_users(db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
     """导出所有用户为 CSV。"""
-    users = db.query(User).filter(User.is_current == True).all()
+    users = db.query(User).filter(User.is_current).all()
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["global_user_id", "employee_id", "full_name", "email", "department_id", "人事关系"])
     for u in users:
-        writer.writerow(
-            [str(u.global_user_id), u.employee_id, u.full_name, u.primary_email, u.department_id, u.hr_relationship]
-        )
+        writer.writerow([str(u.global_user_id), u.employee_id, u.full_name, u.primary_email, u.department_id, u.hr_relationship])
 
     output.seek(0)
     return StreamingResponse(
@@ -144,7 +138,7 @@ async def list_users(
     current_user: User = Depends(PermissionRequired(["system:user:list"])),
 ):
     """获取所有全局用户简要列表。"""
-    query = db.query(User).filter(User.is_current == True)
+    query = db.query(User).filter(User.is_current)
     # User 表通常不需要 RLS 过滤（基础数据），或者仅过滤非本部门?
     # 此处假设用户管理列表需要遵循 RLS，比如部门经理只能看本部门员工
     query = filter.apply(db, query, User, current_user, dept_field="department_id")
@@ -195,9 +189,7 @@ async def create_identity_mapping(
 
 
 @router.delete("/identity-mappings/{mapping_id}")
-async def delete_identity_mapping(
-    mapping_id: int, db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))
-):
+async def delete_identity_mapping(mapping_id: int, db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
     """删除指定的身份映射。"""
     # 已通过 RoleRequired 校验权限
     mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
@@ -233,9 +225,7 @@ async def update_identity_mapping_status(
 @router.get("/teams", response_model=list[TeamView])
 async def list_teams(db: Session = Depends(get_auth_db)):
     """列出所有虚拟业务团队。"""
-    teams = (
-        db.query(Team).options(selectinload(Team.members).joinedload(TeamMember.user), joinedload(Team.leader)).all()
-    )
+    teams = db.query(Team).options(selectinload(Team.members).joinedload(TeamMember.user), joinedload(Team.leader)).all()
     results = []
     for t in teams:
         members = [
@@ -327,7 +317,7 @@ async def list_mdm_projects(
             selectinload(ProjectMaster.gitlab_repos),
             selectinload(ProjectMaster.product_relations).joinedload(ProjectProductRelation.product),
         )
-        .filter(ProjectMaster.is_current == True)
+        .filter(ProjectMaster.is_current)
     )
 
     # 应用 RLS:
@@ -389,7 +379,7 @@ async def create_mdm_project(
 @router.get("/unlinked-repos")
 async def list_unlinked_repos(db: Session = Depends(get_auth_db)):
     """列出尚未关联主项目的 GitLab 仓库。"""
-    repos = db.query(GitLabProject).filter(GitLabProject.mdm_project_id == None).all()
+    repos = db.query(GitLabProject).filter(GitLabProject.mdm_project_id is None).all()
     return [{"id": r.id, "name": r.name, "path": r.path_with_namespace} for r in repos]
 
 
@@ -456,9 +446,7 @@ async def link_product_to_project(
 
 
 @router.get("/export/products")
-async def export_products(
-    service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))
-):
+async def export_products(service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
     """导出产品数据为 CSV。"""
     csv_data = service.export_products()
     return StreamingResponse(
@@ -480,9 +468,7 @@ async def import_products(
 
 
 @router.get("/export/product-mappings")
-async def export_product_mappings(
-    service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))
-):
+async def export_product_mappings(service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
     """导出产品-项目关联矩阵为 CSV。"""
     csv_data = service.export_product_mappings()
     return StreamingResponse(

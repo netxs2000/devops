@@ -70,12 +70,8 @@ async def test_execute_test_case(authenticated_client, mock_test_service, mock_u
 
 @pytest.mark.asyncio
 async def test_get_test_summary(authenticated_client, mock_test_service):
-    mock_case_passed = TestCase(
-        id=1, iid=1, title="Pass", priority="P1", test_type="Func", steps=[], result="passed", web_url="http://gitlab/1"
-    )
-    mock_case_failed = TestCase(
-        id=2, iid=2, title="Fail", priority="P1", test_type="Func", steps=[], result="failed", web_url="http://gitlab/2"
-    )
+    mock_case_passed = TestCase(id=1, iid=1, title="Pass", priority="P1", test_type="Func", steps=[], result="passed", web_url="http://gitlab/1")
+    mock_case_failed = TestCase(id=2, iid=2, title="Fail", priority="P1", test_type="Func", steps=[], result="failed", web_url="http://gitlab/2")
 
     mock_test_service.get_test_cases = AsyncMock(return_value=[mock_case_passed, mock_case_failed])
 
@@ -95,9 +91,7 @@ async def test_import_test_cases_forbidden(authenticated_client, mock_test_servi
         "roles": [],  # No roles
         "permissions": [],
     }
-    monkeypatch.setattr(
-        auth_service, "auth_decode_access_token", lambda t: token_payload if t == "mock-token" else None
-    )
+    monkeypatch.setattr(auth_service, "auth_decode_access_token", lambda t: token_payload if t == "mock-token" else None)
 
     files = {"file": ("test.csv", b"title,priority\nT1,P1", "text/csv")}
     response = authenticated_client.post("/test-management/projects/1/test-cases/import", files=files)

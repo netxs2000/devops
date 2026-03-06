@@ -352,9 +352,7 @@ class TestGitLabWorker(unittest.TestCase):
         """'''
         project = MagicMock(spec=GitLabProject)
         project.id = 1
-        batch = [
-            {"id": 301, "status": "success", "created_at": "2023-01-01T12:00:00Z", "updated_at": "2023-01-01T12:00:00Z"}
-        ]
+        batch = [{"id": 301, "status": "success", "created_at": "2023-01-01T12:00:00Z", "updated_at": "2023-01-01T12:00:00Z"}]
         self.session.query.return_value.filter.return_value.all.return_value = []
         self.worker._save_pipelines_batch(project, batch)
         self.session.add.assert_called()
@@ -471,8 +469,7 @@ class TestGitLabWorker(unittest.TestCase):
             Raises:
                 TODO
             """'''
-            for i in range(5):
-                yield i
+            yield from range(5)
 
         processor = MagicMock()
         count = self.worker._process_generator(gen(), processor, batch_size=2)
@@ -508,8 +505,8 @@ class TestGitLabWorker(unittest.TestCase):
             """'''
             yield 1
 
-        processor = MagicMock(side_effect=Exception("DB Error"))
-        with self.assertRaises(Exception):
+        processor = MagicMock(side_effect=ValueError("DB Error"))
+        with self.assertRaises(ValueError):
             self.worker._process_generator(gen(), processor, batch_size=1)
         self.session.rollback.assert_called()
 

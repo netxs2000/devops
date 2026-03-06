@@ -18,14 +18,14 @@ def get_config() -> dict[str, Any]:
     token = os.getenv("ZENTAO__TOKEN") or os.getenv("ZENTAO_TOKEN", "")
     account = os.getenv("ZENTAO__ACCOUNT") or os.getenv("ZENTAO_ACCOUNT")
     password = os.getenv("ZENTAO__PASSWORD") or os.getenv("ZENTAO_PASSWORD")
-    
+
     return {
         "client": {
             "url": url,
             "token": token,
             "account": account,
             "password": password,
-            "rate_limit": int(os.getenv("REQUESTS_PER_SECOND", 5)),
+            "rate_limit": int(os.getenv("REQUESTS_PER_SECOND", "5")),
         },
         "worker": {},
     }

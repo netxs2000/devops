@@ -36,9 +36,7 @@ class TestTraceabilityExtraction(unittest.TestCase):
 
         # 验证追溯表记录 (保存全部)
         # 应该调用了 2 次 session.add (120 和 121)
-        added_links = [
-            call.args[0] for call in self.session.add.call_args_list if isinstance(call.args[0], TraceabilityLink)
-        ]
+        added_links = [call.args[0] for call in self.session.add.call_args_list if isinstance(call.args[0], TraceabilityLink)]
         self.assertEqual(len(added_links), 2)
 
         source_ids = [link.source_id for link in added_links]
@@ -65,11 +63,7 @@ class TestTraceabilityExtraction(unittest.TestCase):
         self.assertEqual(mr.external_issue_id, "101")
 
         # 追溯表应只有 101 和 102，且没有重复
-        added_ids = [
-            call.args[0].source_id
-            for call in self.session.add.call_args_list
-            if isinstance(call.args[0], TraceabilityLink)
-        ]
+        added_ids = [call.args[0].source_id for call in self.session.add.call_args_list if isinstance(call.args[0], TraceabilityLink)]
         self.assertEqual(len(set(added_ids)), 2)
         self.assertEqual(sorted(added_ids), ["101", "102"])
 
@@ -87,9 +81,7 @@ class TestTraceabilityExtraction(unittest.TestCase):
         # 应该只匹配到 999
         self.assertEqual(mr.external_issue_id, "999")
 
-        added_links = [
-            link.args[0] for link in self.session.add.call_args_list if isinstance(link.args[0], TraceabilityLink)
-        ]
+        added_links = [link.args[0] for link in self.session.add.call_args_list if isinstance(link.args[0], TraceabilityLink)]
         self.assertEqual(len(added_links), 1)
         self.assertEqual(added_links[0].source_id, "999")
 

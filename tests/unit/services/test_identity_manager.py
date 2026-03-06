@@ -58,9 +58,7 @@ class TestIdentityManager(unittest.TestCase):
     def test_identity_matching_by_email(self):
         """测试通过 Email 自动完成跨系统身份对齐。"""
         user_a = IdentityManager.get_or_create_user(self.session, "jira", "jira_acc", "common@example.com", "Jira Name")
-        user_b = IdentityManager.get_or_create_user(
-            self.session, "zentao", "zt_acc", "common@example.com", "ZenTao Name"
-        )
+        user_b = IdentityManager.get_or_create_user(self.session, "zentao", "zt_acc", "common@example.com", "ZenTao Name")
         self.assertEqual(user_a.id, user_b.id)
         mappings = self.session.query(IdentityMapping).filter_by(user_id=user_a.id).all()
         self.assertEqual(len(mappings), 2)
@@ -74,9 +72,7 @@ class TestIdentityManager(unittest.TestCase):
         3. 预期新用户的全局 Username 为 'zhangsan_1'
         """
         IdentityManager.get_or_create_user(self.session, "src1", "id1", "zs@a.com", "Zhang San", username="zhangsan")
-        user2 = IdentityManager.get_or_create_user(
-            self.session, "src2", "id2", "zs@b.com", "Zhang San 2", username="zhangsan"
-        )
+        user2 = IdentityManager.get_or_create_user(self.session, "src2", "id2", "zs@b.com", "Zhang San 2", username="zhangsan")
         self.assertEqual(user2.username, "zhangsan_1")
         self.assertEqual(user2.email, "zs@b.com")
 

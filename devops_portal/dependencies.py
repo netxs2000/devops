@@ -188,10 +188,7 @@ def filter_issues_by_province(issues: list[dict[str, Any]], current_user: User) 
     scope_loc_ids = get_user_data_scope_ids(current_user)
     db = AuthSessionLocal()
     try:
-        scope_short_names = [
-            loc.short_name
-            for loc in db.query(Location.short_name).filter(Location.location_id.in_(scope_loc_ids)).all()
-        ]
+        scope_short_names = [loc.short_name for loc in db.query(Location.short_name).filter(Location.location_id.in_(scope_loc_ids)).all()]
     finally:
         db.close()
 

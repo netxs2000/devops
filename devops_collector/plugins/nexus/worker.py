@@ -41,9 +41,7 @@ class NexusWorker(BaseWorker):
     def _init_product_cache(self):
         """初始化产品代码缓存及匹配模式列表。"""
         # 查询产品 ID 和匹配模式
-        products = (
-            self.session.query(Product.product_id, Product.matching_patterns).filter(Product.is_current == True).all()
-        )
+        products = self.session.query(Product.product_id, Product.matching_patterns).filter(Product.is_current).all()
 
         self._product_map = {p.product_id.lower(): p.product_id for p in products}
 
@@ -63,7 +61,7 @@ class NexusWorker(BaseWorker):
                         regex_str = pat
                     else:
                         # 简单模式：将 . 替换为 \.，将 * 替换为 .*
-                        p_norm = pat.replace('.', r'\.').replace('*', '.*')
+                        p_norm = pat.replace(".", r"\.").replace("*", ".*")
                         regex_str = f"^{p_norm}$"
 
                     self._pattern_rules.append({"re": re.compile(regex_str, re.I), "pid": p.product_id})

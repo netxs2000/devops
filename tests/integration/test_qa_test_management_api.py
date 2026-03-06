@@ -58,9 +58,7 @@ def client():
 
 @pytest.fixture(autouse=True)
 def mock_auth(monkeypatch):
-    monkeypatch.setattr(
-        auth_service, "auth_decode_access_token", lambda t: mock_token_payload if t == "mock-token" else None
-    )
+    monkeypatch.setattr(auth_service, "auth_decode_access_token", lambda t: mock_token_payload if t == "mock-token" else None)
     monkeypatch.setattr(auth_service, "auth_get_current_user", lambda db, t: mock_user if t == "mock-token" else None)
 
 

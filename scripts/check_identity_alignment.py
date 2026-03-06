@@ -181,9 +181,7 @@ def check_zentao_alignment(employees_by_email, employees_by_id):
                         }
                     )
                 elif mdm["name"] != name:
-                    issues.append(
-                        {"type": "姓名不一致", "employee_id": emp_id, "zentao_name": name, "mdm_name": mdm["name"]}
-                    )
+                    issues.append({"type": "姓名不一致", "employee_id": emp_id, "zentao_name": name, "mdm_name": mdm["name"]})
                 else:
                     matched += 1
             elif email and email in employees_by_email:

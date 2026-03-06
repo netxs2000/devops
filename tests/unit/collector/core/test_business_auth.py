@@ -77,9 +77,7 @@ def test_get_business_linked_roles_should_return_project_manager_when_user_is_pr
     user = User(global_user_id=user_id, username="pl", full_name="PL")
     db_session.add(user)
 
-    project = ProjectMaster(
-        project_id="PROJ_001", project_name="Test Project", pm_user_id=user_id, is_current=True, sync_version=1
-    )
+    project = ProjectMaster(project_id="PROJ_001", project_name="Test Project", pm_user_id=user_id, is_current=True, sync_version=1)
     db_session.add(project)
     db_session.commit()
 

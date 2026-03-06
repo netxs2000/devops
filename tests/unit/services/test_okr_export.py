@@ -17,9 +17,7 @@ def admin_service(db_session: Session):
 def test_export_okrs_content(admin_service, db_session):
     """验证 OKR 导出内容、格式及进度计算。"""
     # 1. 准备 mock 数据
-    user = User(
-        global_user_id=uuid.uuid4(), full_name="测试负责人", primary_email="test_owner@example.com", is_current=True
-    )
+    user = User(global_user_id=uuid.uuid4(), full_name="测试负责人", primary_email="test_owner@example.com", is_current=True)
     org = Organization(org_id="TEST-ORG", org_name="测试组织", is_current=True)
     db_session.add_all([user, org])
     db_session.flush()
@@ -36,9 +34,7 @@ def test_export_okrs_content(admin_service, db_session):
     db_session.add(obj)
     db_session.flush()
 
-    kr1 = OKRKeyResult(
-        objective_id=obj.id, title="关键结果1", target_value=100.0, current_value=60.0, progress=0.6, unit="个"
-    )
+    kr1 = OKRKeyResult(objective_id=obj.id, title="关键结果1", target_value=100.0, current_value=60.0, progress=0.6, unit="个")
     db_session.add(kr1)
     db_session.commit()
 

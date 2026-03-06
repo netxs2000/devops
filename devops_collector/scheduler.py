@@ -46,9 +46,7 @@ def main() -> None:
                 should_sync = False
                 if not zp.last_synced_at:
                     should_sync = True
-                elif datetime.now(UTC) - zp.last_synced_at.replace(tzinfo=UTC) > timedelta(
-                    minutes=Config.SYNC_INTERVAL_MINUTES
-                ):
+                elif datetime.now(UTC) - zp.last_synced_at.replace(tzinfo=UTC) > timedelta(minutes=Config.SYNC_INTERVAL_MINUTES):
                     should_sync = True
 
                 if should_sync and zp.sync_status not in ["SYNCING", "QUEUED"]:
@@ -67,9 +65,7 @@ def main() -> None:
                 should_sync = False
                 if not proj.last_synced_at:
                     should_sync = True
-                elif datetime.now(UTC) - proj.last_synced_at.replace(tzinfo=UTC) > timedelta(
-                    minutes=Config.SYNC_INTERVAL_MINUTES
-                ):
+                elif datetime.now(UTC) - proj.last_synced_at.replace(tzinfo=UTC) > timedelta(minutes=Config.SYNC_INTERVAL_MINUTES):
                     should_sync = True
 
                 if should_sync and proj.sync_status not in ["SYNCING", "QUEUED"]:
@@ -88,9 +84,7 @@ def main() -> None:
                 should_sync = False
                 if not sp.last_synced_at:
                     should_sync = True
-                elif datetime.now(UTC) - sp.last_synced_at.replace(tzinfo=UTC) > timedelta(
-                    hours=Config.SONARQUBE_SYNC_INTERVAL_HOURS
-                ):
+                elif datetime.now(UTC) - sp.last_synced_at.replace(tzinfo=UTC) > timedelta(hours=Config.SONARQUBE_SYNC_INTERVAL_HOURS):
                     should_sync = True
 
                 if should_sync and sp.sync_status not in ["SYNCING", "QUEUED"]:
@@ -111,6 +105,7 @@ def main() -> None:
                     ["dbt", "run", "--project-dir", "dbt_project", "--profiles-dir", "dbt_project"],
                     capture_output=True,
                     text=True,
+                    check=True,
                 )
                 if result.returncode == 0:
                     logger.info("dbt run success")

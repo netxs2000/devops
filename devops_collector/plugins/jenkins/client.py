@@ -31,9 +31,7 @@ class JenkinsClient(BaseClient):
             rate_limit (int): 每秒请求限制。默认为 10。
         """
         auth_string = base64.b64encode(f"{user}:{token}".encode()).decode()
-        super().__init__(
-            base_url=f"{url.rstrip('/')}", auth_headers={"Authorization": f"Basic {auth_string}"}, rate_limit=rate_limit
-        )
+        super().__init__(base_url=f"{url.rstrip('/')}", auth_headers={"Authorization": f"Basic {auth_string}"}, rate_limit=rate_limit)
 
     def test_connection(self) -> bool:
         """测试与 Jenkins 实例的连接状态。

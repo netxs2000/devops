@@ -27,9 +27,7 @@ async def list_jenkins_jobs(current_user: User = Depends(get_current_user), db: 
 
 
 @router.get("/jenkins/jobs/{job_id}/builds", response_model=list[schemas.JenkinsBuildSummary])
-async def list_jenkins_builds(
-    job_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_auth_db)
-):
+async def list_jenkins_builds(job_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_auth_db)):
     """获取特定任务的构建历史（含权限校验）。"""
     from devops_collector.plugins.jenkins.models import JenkinsBuild, JenkinsJob
 
@@ -43,13 +41,7 @@ async def list_jenkins_builds(
     if not job_query.first():
         raise HTTPException(status_code=403, detail="Access Denied to this Jenkins Job Data")
 
-    return (
-        db.query(JenkinsBuild)
-        .filter(JenkinsBuild.job_id == job_id)
-        .order_by(JenkinsBuild.number.desc())
-        .limit(100)
-        .all()
-    )
+    return db.query(JenkinsBuild).filter(JenkinsBuild.job_id == job_id).order_by(JenkinsBuild.number.desc()).limit(100).all()
 
 
 @router.get("/artifacts/jfrog", response_model=list[schemas.JFrogArtifactSummary])

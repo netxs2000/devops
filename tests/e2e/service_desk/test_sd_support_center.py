@@ -76,7 +76,7 @@ class TestServiceDeskSupportCenter:
         self.sd_page.wait_for_tickets_loaded()
 
         # 记录当前状态
-        initial_count = self.sd_page.get_ticket_count()
+        self.sd_page.get_ticket_count()
 
         # 点击同步
         self.sd_page.click_sync_button()

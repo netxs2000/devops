@@ -42,9 +42,7 @@ class QualityService:
 
         req_covered = False
         if approved_reqs:
-            details = await asyncio.gather(
-                *[self.test_service.get_requirement_detail(project_id, r.iid) for r in approved_reqs]
-            )
+            details = await asyncio.gather(*[self.test_service.get_requirement_detail(project_id, r.iid) for r in approved_reqs])
             covered_count = sum(1 for r in details if r and len(r.test_cases) > 0)
             coverage_rate = covered_count / len(approved_reqs) * 100
             req_covered = coverage_rate >= 80.0
@@ -52,11 +50,7 @@ class QualityService:
         # 2. P0 Bug 检查 (从 Client 获取)
         all_issues = list(self.client.get_project_issues(project_id))
         p0_count = sum(
-            1
-            for issue in all_issues
-            if "type::bug" in issue.get("labels", [])
-            and "severity::S0" in issue.get("labels", [])
-            and issue["state"] == "opened"
+            1 for issue in all_issues if "type::bug" in issue.get("labels", []) and "severity::S0" in issue.get("labels", []) and issue["state"] == "opened"
         )
         p0_cleared = p0_count == 0
 

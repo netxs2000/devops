@@ -46,10 +46,10 @@ class ExecutiveAuditBot:
     def fetch_hotspots(self):
         """获取代码红区风险。"""
         query = text("""
-            SELECT file_path, risk_factor, churn_90d 
-            FROM fct_code_hotspots 
-            WHERE risk_zone = 'RED_ZONE' 
-            ORDER BY risk_factor DESC 
+            SELECT file_path, risk_factor, churn_90d
+            FROM fct_code_hotspots
+            WHERE risk_zone = 'RED_ZONE'
+            ORDER BY risk_factor DESC
             LIMIT 5
         """)
         return self.session.execute(query).fetchall()
@@ -57,10 +57,10 @@ class ExecutiveAuditBot:
     def fetch_bus_factor_risks(self):
         """获取知识孤岛风险。"""
         query = text("""
-            SELECT subsystem, author_user_id, subsystem_ownership_pct, knowledge_risk_status 
-            FROM dws_subsystem_bus_factor 
-            WHERE knowledge_risk_status IN ('KNOWLEDGE_SILO', 'TRUCK_FACTOR_ONE') 
-            ORDER BY subsystem_ownership_pct DESC 
+            SELECT subsystem, author_user_id, subsystem_ownership_pct, knowledge_risk_status
+            FROM dws_subsystem_bus_factor
+            WHERE knowledge_risk_status IN ('KNOWLEDGE_SILO', 'TRUCK_FACTOR_ONE')
+            ORDER BY subsystem_ownership_pct DESC
             LIMIT 5
         """)
         return self.session.execute(query).fetchall()
@@ -68,9 +68,9 @@ class ExecutiveAuditBot:
     def fetch_financial_audit(self):
         """获取财务审计概览。"""
         query = text("""
-            SELECT audit_week, capitalization_rate, audit_status 
-            FROM fct_capitalization_audit 
-            ORDER BY audit_week DESC 
+            SELECT audit_week, capitalization_rate, audit_status
+            FROM fct_capitalization_audit
+            ORDER BY audit_week DESC
             LIMIT 1
         """)
         return self.session.execute(query).fetchone()
@@ -78,9 +78,9 @@ class ExecutiveAuditBot:
     def fetch_talent_spotlight(self):
         """获取本月 Top 影响力开发者。"""
         query = text("""
-            SELECT real_name, talent_archetype, talent_influence_index 
-            FROM fct_talent_radar 
-            ORDER BY talent_influence_index DESC 
+            SELECT real_name, talent_archetype, talent_influence_index
+            FROM fct_talent_radar
+            ORDER BY talent_influence_index DESC
             LIMIT 3
         """)
         return self.session.execute(query).fetchall()
@@ -103,9 +103,7 @@ class ExecutiveAuditBot:
         details.append({"技术热点风险": hotspot_str or "暂无显著红区"})
 
         # 2. 知识风险
-        bus_risk_str = "\n".join(
-            [f"• {r.subsystem}: {r.subsystem_ownership_pct}% by user_id {str(r.author_user_id)[:8]}" for r in bus_risks]
-        )
+        bus_risk_str = "\n".join([f"• {r.subsystem}: {r.subsystem_ownership_pct}% by user_id {str(r.author_user_id)[:8]}" for r in bus_risks])
         details.append({"知识孤岛预警": bus_risk_str or "知识分布健康"})
 
         # 3. 财务核算
@@ -114,9 +112,7 @@ class ExecutiveAuditBot:
             details.append({"研发投入审计": fin_str})
 
         # 4. 人才星探
-        talent_str = "\n".join(
-            [f"• {r.real_name} [{r.talent_archetype}] (Index: {r.talent_influence_index})" for r in talents]
-        )
+        talent_str = "\n".join([f"• {r.real_name} [{r.talent_archetype}] (Index: {r.talent_influence_index})" for r in talents])
         details.append({"关键影响力人才": talent_str or "数据计算中"})
 
         # 执行推送

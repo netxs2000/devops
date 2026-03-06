@@ -56,12 +56,8 @@ def upgrade() -> None:
         comment="提交时间",
         existing_nullable=True,
     )
-    op.alter_column(
-        "commit_metrics", "raw_additions", existing_type=sa.INTEGER(), comment="原始新增行数", existing_nullable=True
-    )
-    op.alter_column(
-        "commit_metrics", "raw_deletions", existing_type=sa.INTEGER(), comment="原始删除行数", existing_nullable=True
-    )
+    op.alter_column("commit_metrics", "raw_additions", existing_type=sa.INTEGER(), comment="原始新增行数", existing_nullable=True)
+    op.alter_column("commit_metrics", "raw_deletions", existing_type=sa.INTEGER(), comment="原始删除行数", existing_nullable=True)
     op.alter_column(
         "commit_metrics",
         "eloc_score",
@@ -76,21 +72,11 @@ def upgrade() -> None:
         comment="代码影响力得分",
         existing_nullable=True,
     )
-    op.alter_column(
-        "commit_metrics", "churn_lines", existing_type=sa.INTEGER(), comment="代码翻动行数", existing_nullable=True
-    )
-    op.alter_column(
-        "commit_metrics", "comment_lines", existing_type=sa.INTEGER(), comment="注释行数", existing_nullable=True
-    )
-    op.alter_column(
-        "commit_metrics", "test_lines", existing_type=sa.INTEGER(), comment="测试代码行数", existing_nullable=True
-    )
-    op.alter_column(
-        "commit_metrics", "file_count", existing_type=sa.INTEGER(), comment="涉及文件数", existing_nullable=True
-    )
-    op.alter_column(
-        "commit_metrics", "is_merge", existing_type=sa.BOOLEAN(), comment="是否为合并提交", existing_nullable=True
-    )
+    op.alter_column("commit_metrics", "churn_lines", existing_type=sa.INTEGER(), comment="代码翻动行数", existing_nullable=True)
+    op.alter_column("commit_metrics", "comment_lines", existing_type=sa.INTEGER(), comment="注释行数", existing_nullable=True)
+    op.alter_column("commit_metrics", "test_lines", existing_type=sa.INTEGER(), comment="测试代码行数", existing_nullable=True)
+    op.alter_column("commit_metrics", "file_count", existing_type=sa.INTEGER(), comment="涉及文件数", existing_nullable=True)
+    op.alter_column("commit_metrics", "is_merge", existing_type=sa.BOOLEAN(), comment="是否为合并提交", existing_nullable=True)
     op.alter_column(
         "commit_metrics",
         "is_legacy_refactor",
@@ -129,9 +115,7 @@ def upgrade() -> None:
         comment="当日最后提交时间",
         existing_nullable=True,
     )
-    op.alter_column(
-        "daily_dev_stats", "commit_count", existing_type=sa.INTEGER(), comment="当日提交次数", existing_nullable=True
-    )
+    op.alter_column("daily_dev_stats", "commit_count", existing_type=sa.INTEGER(), comment="当日提交次数", existing_nullable=True)
     op.alter_column(
         "daily_dev_stats",
         "total_impact",
@@ -148,9 +132,7 @@ def upgrade() -> None:
     )
     op.add_column(
         "mdm_business_systems",
-        sa.Column(
-            "status", sa.String(length=20), nullable=True, comment="生命周期状态 (PLANNING/DEV/PRODUCTION/DEPRECATED)"
-        ),
+        sa.Column("status", sa.String(length=20), nullable=True, comment="生命周期状态 (PLANNING/DEV/PRODUCTION/DEPRECATED)"),
     )
     op.add_column(
         "mdm_business_systems",
@@ -167,17 +149,13 @@ def upgrade() -> None:
     )
     op.add_column(
         "mdm_business_systems",
-        sa.Column(
-            "primary_tech_stack", sa.String(length=100), nullable=True, comment="主要技术栈 (如 Java/SpringCloud)"
-        ),
+        sa.Column("primary_tech_stack", sa.String(length=100), nullable=True, comment="主要技术栈 (如 Java/SpringCloud)"),
     )
     op.add_column(
         "mdm_business_systems",
         sa.Column("dr_level", sa.String(length=50), nullable=True, comment="容灾等级要求 (双活/冷备/单点)"),
     )
-    op.add_column(
-        "mdm_business_systems", sa.Column("business_owner_id", sa.UUID(), nullable=True, comment="业务负责人 (PDM)")
-    )
+    op.add_column("mdm_business_systems", sa.Column("business_owner_id", sa.UUID(), nullable=True, comment="业务负责人 (PDM)"))
     op.alter_column(
         "mdm_business_systems",
         "id",
@@ -233,12 +211,8 @@ def upgrade() -> None:
     )
     op.alter_column("mdm_calendar", "date_day", existing_type=sa.DATE(), comment="日期", existing_nullable=False)
     op.alter_column("mdm_calendar", "year_number", existing_type=sa.INTEGER(), comment="年份", existing_nullable=True)
-    op.alter_column(
-        "mdm_calendar", "month_number", existing_type=sa.INTEGER(), comment="月份 (1-12)", existing_nullable=True
-    )
-    op.alter_column(
-        "mdm_calendar", "quarter_number", existing_type=sa.INTEGER(), comment="季度 (1-4)", existing_nullable=True
-    )
+    op.alter_column("mdm_calendar", "month_number", existing_type=sa.INTEGER(), comment="月份 (1-12)", existing_nullable=True)
+    op.alter_column("mdm_calendar", "quarter_number", existing_type=sa.INTEGER(), comment="季度 (1-4)", existing_nullable=True)
     op.alter_column(
         "mdm_calendar",
         "day_of_week",
@@ -246,12 +220,8 @@ def upgrade() -> None:
         comment="星期几 (1=周一, 7=周日)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_calendar", "is_workday", existing_type=sa.BOOLEAN(), comment="是否工作日", existing_nullable=True
-    )
-    op.alter_column(
-        "mdm_calendar", "is_holiday", existing_type=sa.BOOLEAN(), comment="是否节假日", existing_nullable=True
-    )
+    op.alter_column("mdm_calendar", "is_workday", existing_type=sa.BOOLEAN(), comment="是否工作日", existing_nullable=True)
+    op.alter_column("mdm_calendar", "is_holiday", existing_type=sa.BOOLEAN(), comment="是否节假日", existing_nullable=True)
     op.alter_column(
         "mdm_calendar",
         "holiday_name",
@@ -259,9 +229,7 @@ def upgrade() -> None:
         comment="节假日名称",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_calendar", "fiscal_year", existing_type=sa.VARCHAR(length=20), comment="财年", existing_nullable=True
-    )
+    op.alter_column("mdm_calendar", "fiscal_year", existing_type=sa.VARCHAR(length=20), comment="财年", existing_nullable=True)
     op.alter_column(
         "mdm_calendar",
         "fiscal_quarter",
@@ -269,9 +237,7 @@ def upgrade() -> None:
         comment="财务季度",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_calendar", "week_of_year", existing_type=sa.INTEGER(), comment="年内周数", existing_nullable=True
-    )
+    op.alter_column("mdm_calendar", "week_of_year", existing_type=sa.INTEGER(), comment="年内周数", existing_nullable=True)
     op.alter_column(
         "mdm_calendar",
         "season_tag",
@@ -281,22 +247,14 @@ def upgrade() -> None:
     )
     op.add_column("mdm_company", sa.Column("name", sa.String(length=200), nullable=False, comment="公司注册全称"))
     op.add_column("mdm_company", sa.Column("short_name", sa.String(length=100), nullable=True, comment="公司简称"))
-    op.add_column(
-        "mdm_company", sa.Column("tax_id", sa.String(length=50), nullable=True, comment="统一社会信用代码/税号")
-    )
-    op.add_column(
-        "mdm_company", sa.Column("currency", sa.String(length=10), nullable=True, comment="本位币种 (CNY/USD)")
-    )
+    op.add_column("mdm_company", sa.Column("tax_id", sa.String(length=50), nullable=True, comment="统一社会信用代码/税号"))
+    op.add_column("mdm_company", sa.Column("currency", sa.String(length=10), nullable=True, comment="本位币种 (CNY/USD)"))
     op.add_column(
         "mdm_company",
         sa.Column("fiscal_year_start", sa.String(length=10), nullable=True, comment="财年开始日期 (MM-DD)"),
     )
-    op.add_column(
-        "mdm_company", sa.Column("registered_address", sa.String(length=255), nullable=True, comment="注册地址")
-    )
-    op.add_column(
-        "mdm_company", sa.Column("location_id", sa.String(length=50), nullable=True, comment="主要办公地点ID")
-    )
+    op.add_column("mdm_company", sa.Column("registered_address", sa.String(length=255), nullable=True, comment="注册地址"))
+    op.add_column("mdm_company", sa.Column("location_id", sa.String(length=50), nullable=True, comment="主要办公地点ID"))
     op.add_column("mdm_company", sa.Column("is_active", sa.Boolean(), nullable=True, comment="是否存续经营"))
     op.add_column("mdm_company", sa.Column("created_at", sa.DateTime(timezone=True), nullable=True))
     op.add_column("mdm_company", sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True))
@@ -347,9 +305,7 @@ def upgrade() -> None:
         comment="状态 (OPEN/IN_REVIEW/RESOLVED/ACCEPTED)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_compliance_issues", "description", existing_type=sa.TEXT(), comment="问题详情", existing_nullable=True
-    )
+    op.alter_column("mdm_compliance_issues", "description", existing_type=sa.TEXT(), comment="问题详情", existing_nullable=True)
     op.alter_column(
         "mdm_compliance_issues",
         "metadata_payload",
@@ -431,12 +387,8 @@ def upgrade() -> None:
         autoincrement=True,
         existing_server_default=sa.text("nextval('mdm_cost_codes_id_seq'::regclass)"),
     )
-    op.alter_column(
-        "mdm_cost_codes", "code", existing_type=sa.VARCHAR(length=50), comment="科目编码", existing_nullable=False
-    )
-    op.alter_column(
-        "mdm_cost_codes", "name", existing_type=sa.VARCHAR(length=200), comment="科目名称", existing_nullable=False
-    )
+    op.alter_column("mdm_cost_codes", "code", existing_type=sa.VARCHAR(length=50), comment="科目编码", existing_nullable=False)
+    op.alter_column("mdm_cost_codes", "name", existing_type=sa.VARCHAR(length=200), comment="科目名称", existing_nullable=False)
     op.alter_column(
         "mdm_cost_codes",
         "category",
@@ -444,12 +396,8 @@ def upgrade() -> None:
         comment="科目分类 (人力/硬件/软件/服务)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_cost_codes", "description", existing_type=sa.TEXT(), comment="科目描述", existing_nullable=True
-    )
-    op.alter_column(
-        "mdm_cost_codes", "parent_id", existing_type=sa.INTEGER(), comment="上级科目ID", existing_nullable=True
-    )
+    op.alter_column("mdm_cost_codes", "description", existing_type=sa.TEXT(), comment="科目描述", existing_nullable=True)
+    op.alter_column("mdm_cost_codes", "parent_id", existing_type=sa.INTEGER(), comment="上级科目ID", existing_nullable=True)
     op.alter_column(
         "mdm_cost_codes",
         "default_capex_opex",
@@ -457,9 +405,7 @@ def upgrade() -> None:
         comment="默认CAPEX/OPEX属性",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_cost_codes", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用", existing_nullable=True
-    )
+    op.alter_column("mdm_cost_codes", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用", existing_nullable=True)
     op.add_column(
         "mdm_entity_topology",
         sa.Column(
@@ -512,9 +458,7 @@ def upgrade() -> None:
         comment="资源类型 (source-code/ci-pipeline/k8s-deployment/db-instance)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_entity_topology", "is_active", existing_type=sa.BOOLEAN(), comment="关联是否有效", existing_nullable=True
-    )
+    op.alter_column("mdm_entity_topology", "is_active", existing_type=sa.BOOLEAN(), comment="关联是否有效", existing_nullable=True)
     op.alter_column(
         "mdm_entity_topology",
         "last_verified_at",
@@ -540,9 +484,7 @@ def upgrade() -> None:
     op.add_column("mdm_epic", sa.Column("description", sa.Text(), nullable=True, comment="价值陈述与详细描述"))
     op.add_column(
         "mdm_epic",
-        sa.Column(
-            "status", sa.String(length=50), nullable=True, comment="状态 (ANALYSIS/BACKLOG/IN_PROGRESS/DONE/CANCELLED)"
-        ),
+        sa.Column("status", sa.String(length=50), nullable=True, comment="状态 (ANALYSIS/BACKLOG/IN_PROGRESS/DONE/CANCELLED)"),
     )
     op.add_column(
         "mdm_epic",
@@ -566,21 +508,15 @@ def upgrade() -> None:
     )
     op.add_column(
         "mdm_epic",
-        sa.Column(
-            "start_date_is_fixed", sa.Boolean(), nullable=True, comment="是否固定开始时间 (False则自动继承子任务)"
-        ),
+        sa.Column("start_date_is_fixed", sa.Boolean(), nullable=True, comment="是否固定开始时间 (False则自动继承子任务)"),
     )
     op.add_column("mdm_epic", sa.Column("due_date_is_fixed", sa.Boolean(), nullable=True, comment="是否固定结束时间"))
     op.add_column("mdm_epic", sa.Column("planned_start_date", sa.Date(), nullable=True, comment="计划开始日期"))
     op.add_column("mdm_epic", sa.Column("planned_end_date", sa.Date(), nullable=True, comment="计划完成日期"))
     op.add_column("mdm_epic", sa.Column("actual_start_date", sa.Date(), nullable=True, comment="实际开始日期"))
     op.add_column("mdm_epic", sa.Column("actual_end_date", sa.Date(), nullable=True, comment="实际完成日期"))
-    op.add_column(
-        "mdm_epic", sa.Column("progress", sa.Float(), nullable=True, comment="总体进度 (0.0-1.0, 基于子任务聚合)")
-    )
-    op.add_column(
-        "mdm_epic", sa.Column("color", sa.String(length=20), nullable=True, comment="Roadmap展示颜色 (Hex Code)")
-    )
+    op.add_column("mdm_epic", sa.Column("progress", sa.Float(), nullable=True, comment="总体进度 (0.0-1.0, 基于子任务聚合)"))
+    op.add_column("mdm_epic", sa.Column("color", sa.String(length=20), nullable=True, comment="Roadmap展示颜色 (Hex Code)"))
     op.add_column("mdm_epic", sa.Column("is_confidential", sa.Boolean(), nullable=True, comment="是否机密 Epic"))
     op.add_column("mdm_epic", sa.Column("web_url", sa.String(length=255), nullable=True, comment="GitLab 原始链接"))
     op.add_column(
@@ -591,17 +527,13 @@ def upgrade() -> None:
     op.add_column("mdm_epic", sa.Column("tags", sa.JSON(), nullable=True, comment="标签 (JSON List)"))
     op.add_column("mdm_epic", sa.Column("created_at", sa.DateTime(timezone=True), nullable=True))
     op.add_column("mdm_epic", sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True))
-    op.alter_column(
-        "mdm_epic", "id", existing_type=sa.INTEGER(), comment="自增主键", existing_nullable=False, autoincrement=True
-    )
+    op.alter_column("mdm_epic", "id", existing_type=sa.INTEGER(), comment="自增主键", existing_nullable=False, autoincrement=True)
     op.create_index(op.f("ix_mdm_epic_epic_code"), "mdm_epic", ["epic_code"], unique=True)
     op.create_foreign_key(None, "mdm_epic", "mdm_organizations", ["group_id"], ["org_id"])
     op.create_foreign_key(None, "mdm_epic", "mdm_epic", ["parent_id"], ["id"])
     op.create_foreign_key(None, "mdm_epic", "mdm_identities", ["owner_id"], ["global_user_id"])
     op.create_foreign_key(None, "mdm_epic", "mdm_okr_objectives", ["okr_objective_id"], ["id"])
-    op.alter_column(
-        "mdm_identities", "global_user_id", existing_type=sa.UUID(), comment="全局唯一用户标识", existing_nullable=False
-    )
+    op.alter_column("mdm_identities", "global_user_id", existing_type=sa.UUID(), comment="全局唯一用户标识", existing_nullable=False)
     op.alter_column(
         "mdm_identities",
         "employee_id",
@@ -609,12 +541,8 @@ def upgrade() -> None:
         comment="HR系统工号",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_identities", "username", existing_type=sa.VARCHAR(length=100), comment="登录用户名", existing_nullable=True
-    )
-    op.alter_column(
-        "mdm_identities", "full_name", existing_type=sa.VARCHAR(length=200), comment="用户姓名", existing_nullable=True
-    )
+    op.alter_column("mdm_identities", "username", existing_type=sa.VARCHAR(length=100), comment="登录用户名", existing_nullable=True)
+    op.alter_column("mdm_identities", "full_name", existing_type=sa.VARCHAR(length=200), comment="用户姓名", existing_nullable=True)
     op.alter_column(
         "mdm_identities",
         "primary_email",
@@ -629,9 +557,7 @@ def upgrade() -> None:
         comment="所属部门ID",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_identities", "is_active", existing_type=sa.BOOLEAN(), comment="是否在职", existing_nullable=True
-    )
+    op.alter_column("mdm_identities", "is_active", existing_type=sa.BOOLEAN(), comment="是否在职", existing_nullable=True)
     op.alter_column(
         "mdm_identities",
         "is_survivor",
@@ -646,9 +572,7 @@ def upgrade() -> None:
         comment="累计有效代码行数",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_identities", "eloc_rank", existing_type=sa.INTEGER(), comment="ELOC排名", existing_nullable=True
-    )
+    op.alter_column("mdm_identities", "eloc_rank", existing_type=sa.INTEGER(), comment="ELOC排名", existing_nullable=True)
     op.alter_column(
         "mdm_identity_mappings",
         "id",
@@ -657,9 +581,7 @@ def upgrade() -> None:
         existing_nullable=False,
         autoincrement=True,
     )
-    op.alter_column(
-        "mdm_identity_mappings", "global_user_id", existing_type=sa.UUID(), comment="全局用户ID", existing_nullable=True
-    )
+    op.alter_column("mdm_identity_mappings", "global_user_id", existing_type=sa.UUID(), comment="全局用户ID", existing_nullable=True)
     op.alter_column(
         "mdm_identity_mappings",
         "source_system",
@@ -711,9 +633,7 @@ def upgrade() -> None:
     )
     op.add_column("mdm_incidents", sa.Column("title", sa.String(length=200), nullable=False, comment="事故标题"))
     op.add_column("mdm_incidents", sa.Column("description", sa.Text(), nullable=True, comment="事故详细描述"))
-    op.add_column(
-        "mdm_incidents", sa.Column("severity", sa.String(length=20), nullable=True, comment="严重等级 (P0/P1/P2/P3)")
-    )
+    op.add_column("mdm_incidents", sa.Column("severity", sa.String(length=20), nullable=True, comment="严重等级 (P0/P1/P2/P3)"))
     op.add_column(
         "mdm_incidents",
         sa.Column(
@@ -750,9 +670,7 @@ def upgrade() -> None:
             comment="业务恢复时间 (用于计算 MTTR: Time to Restore)",
         ),
     )
-    op.add_column(
-        "mdm_incidents", sa.Column("location_id", sa.String(length=50), nullable=True, comment="故障发生地点ID")
-    )
+    op.add_column("mdm_incidents", sa.Column("location_id", sa.String(length=50), nullable=True, comment="故障发生地点ID"))
     op.add_column(
         "mdm_incidents",
         sa.Column(
@@ -766,12 +684,8 @@ def upgrade() -> None:
         "mdm_incidents",
         sa.Column("post_mortem_url", sa.String(length=255), nullable=True, comment="复盘报告链接 (Confluence/Doc URL)"),
     )
-    op.add_column(
-        "mdm_incidents", sa.Column("affected_users", sa.Integer(), nullable=True, comment="受影响用户数量预估")
-    )
-    op.add_column(
-        "mdm_incidents", sa.Column("financial_loss", sa.Float(), nullable=True, comment="预估经济损失金额 (CNY)")
-    )
+    op.add_column("mdm_incidents", sa.Column("affected_users", sa.Integer(), nullable=True, comment="受影响用户数量预估"))
+    op.add_column("mdm_incidents", sa.Column("financial_loss", sa.Float(), nullable=True, comment="预估经济损失金额 (CNY)"))
     op.add_column("mdm_incidents", sa.Column("owner_id", sa.UUID(), nullable=True, comment="主责任人ID (On-call)"))
     op.add_column("mdm_incidents", sa.Column("project_id", sa.String(length=100), nullable=True, comment="关联项目ID"))
     op.add_column("mdm_incidents", sa.Column("service_id", sa.Integer(), nullable=True, comment="故障服务ID"))
@@ -818,9 +732,7 @@ def upgrade() -> None:
         comment="时费率 (元)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_labor_rate_config", "currency", existing_type=sa.VARCHAR(length=10), comment="币种", existing_nullable=True
-    )
+    op.alter_column("mdm_labor_rate_config", "currency", existing_type=sa.VARCHAR(length=10), comment="币种", existing_nullable=True)
     op.alter_column(
         "mdm_labor_rate_config",
         "effective_date",
@@ -828,9 +740,7 @@ def upgrade() -> None:
         comment="生效日期",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_labor_rate_config", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用", existing_nullable=True
-    )
+    op.alter_column("mdm_labor_rate_config", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用", existing_nullable=True)
     op.add_column(
         "mdm_locations",
         sa.Column("code", sa.String(length=20), nullable=True, comment="行政区划或业务编码 (如 CN-GD, 440000)"),
@@ -871,9 +781,7 @@ def upgrade() -> None:
         comment="位置类型 (country/province/city/site/datacenter)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_locations", "parent_id", existing_type=sa.VARCHAR(length=50), comment="上级位置ID", existing_nullable=True
-    )
+    op.alter_column("mdm_locations", "parent_id", existing_type=sa.VARCHAR(length=50), comment="上级位置ID", existing_nullable=True)
     op.alter_column(
         "mdm_locations",
         "region",
@@ -881,12 +789,8 @@ def upgrade() -> None:
         comment="区域 (华北/华东/华南)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_locations", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用", existing_nullable=True
-    )
-    op.alter_column(
-        "mdm_locations", "manager_user_id", existing_type=sa.UUID(), comment="负责人ID", existing_nullable=True
-    )
+    op.alter_column("mdm_locations", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用", existing_nullable=True)
+    op.alter_column("mdm_locations", "manager_user_id", existing_type=sa.UUID(), comment="负责人ID", existing_nullable=True)
     op.create_index(op.f("ix_mdm_locations_code"), "mdm_locations", ["code"], unique=True)
     op.alter_column(
         "mdm_metric_definitions",
@@ -1038,9 +942,7 @@ def upgrade() -> None:
         comment="部门负责人用户ID",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_organizations", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用", existing_nullable=True
-    )
+    op.alter_column("mdm_organizations", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用", existing_nullable=True)
     op.alter_column(
         "mdm_organizations",
         "cost_center",
@@ -1062,15 +964,9 @@ def upgrade() -> None:
         comment="产品唯一标识",
         existing_nullable=False,
     )
-    op.alter_column(
-        "mdm_product", "product_code", existing_type=sa.VARCHAR(length=25), comment="产品编码", existing_nullable=False
-    )
-    op.alter_column(
-        "mdm_product", "product_name", existing_type=sa.VARCHAR(length=255), comment="产品名称", existing_nullable=False
-    )
-    op.alter_column(
-        "mdm_product", "product_description", existing_type=sa.TEXT(), comment="产品描述", existing_nullable=False
-    )
+    op.alter_column("mdm_product", "product_code", existing_type=sa.VARCHAR(length=25), comment="产品编码", existing_nullable=False)
+    op.alter_column("mdm_product", "product_name", existing_type=sa.VARCHAR(length=255), comment="产品名称", existing_nullable=False)
+    op.alter_column("mdm_product", "product_description", existing_type=sa.TEXT(), comment="产品描述", existing_nullable=False)
     op.alter_column(
         "mdm_product",
         "category",
@@ -1113,9 +1009,7 @@ def upgrade() -> None:
         comment="生命周期状态 (Active/Deprecated/EOL)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_product", "repo_url", existing_type=sa.VARCHAR(length=255), comment="主代码仓库URL", existing_nullable=True
-    )
+    op.alter_column("mdm_product", "repo_url", existing_type=sa.VARCHAR(length=255), comment="主代码仓库URL", existing_nullable=True)
     op.alter_column(
         "mdm_product",
         "artifact_path",
@@ -1130,13 +1024,9 @@ def upgrade() -> None:
         comment="负责团队ID",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_product", "product_manager_id", existing_type=sa.UUID(), comment="产品经理ID", existing_nullable=True
-    )
+    op.alter_column("mdm_product", "product_manager_id", existing_type=sa.UUID(), comment="产品经理ID", existing_nullable=True)
     op.create_index(op.f("ix_mdm_product_is_current"), "mdm_product", ["is_current"], unique=False)
-    op.add_column(
-        "mdm_projects", sa.Column("location_id", sa.String(length=50), nullable=True, comment="项目所属/实施地点ID")
-    )
+    op.add_column("mdm_projects", sa.Column("location_id", sa.String(length=50), nullable=True, comment="项目所属/实施地点ID"))
     op.alter_column(
         "mdm_projects",
         "project_id",
@@ -1167,15 +1057,9 @@ def upgrade() -> None:
     )
     op.alter_column("mdm_projects", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用", existing_nullable=True)
     op.alter_column("mdm_projects", "pm_user_id", existing_type=sa.UUID(), comment="项目经理ID", existing_nullable=True)
-    op.alter_column(
-        "mdm_projects", "org_id", existing_type=sa.VARCHAR(length=100), comment="负责部门ID", existing_nullable=True
-    )
-    op.alter_column(
-        "mdm_projects", "plan_start_date", existing_type=sa.DATE(), comment="计划开始日期", existing_nullable=True
-    )
-    op.alter_column(
-        "mdm_projects", "plan_end_date", existing_type=sa.DATE(), comment="计划结束日期", existing_nullable=True
-    )
+    op.alter_column("mdm_projects", "org_id", existing_type=sa.VARCHAR(length=100), comment="负责部门ID", existing_nullable=True)
+    op.alter_column("mdm_projects", "plan_start_date", existing_type=sa.DATE(), comment="计划开始日期", existing_nullable=True)
+    op.alter_column("mdm_projects", "plan_end_date", existing_type=sa.DATE(), comment="计划结束日期", existing_nullable=True)
     op.alter_column(
         "mdm_projects",
         "actual_start_at",
@@ -1204,9 +1088,7 @@ def upgrade() -> None:
         comment="数据来源系统",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_projects", "budget_code", existing_type=sa.VARCHAR(length=100), comment="预算编码", existing_nullable=True
-    )
+    op.alter_column("mdm_projects", "budget_code", existing_type=sa.VARCHAR(length=100), comment="预算编码", existing_nullable=True)
     op.alter_column(
         "mdm_projects",
         "budget_type",
@@ -1214,9 +1096,7 @@ def upgrade() -> None:
         comment="预算类型 (CAPEX/OPEX)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_projects", "lead_repo_id", existing_type=sa.INTEGER(), comment="主代码仓库ID", existing_nullable=True
-    )
+    op.alter_column("mdm_projects", "lead_repo_id", existing_type=sa.INTEGER(), comment="主代码仓库ID", existing_nullable=True)
     op.alter_column("mdm_projects", "description", existing_type=sa.TEXT(), comment="项目描述", existing_nullable=True)
     op.create_foreign_key(None, "mdm_projects", "mdm_locations", ["location_id"], ["location_id"])
     op.alter_column(
@@ -1269,12 +1149,8 @@ def upgrade() -> None:
         comment="币种",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_purchase_contracts", "start_date", existing_type=sa.DATE(), comment="合同开始日期", existing_nullable=True
-    )
-    op.alter_column(
-        "mdm_purchase_contracts", "end_date", existing_type=sa.DATE(), comment="合同结束日期", existing_nullable=True
-    )
+    op.alter_column("mdm_purchase_contracts", "start_date", existing_type=sa.DATE(), comment="合同开始日期", existing_nullable=True)
+    op.alter_column("mdm_purchase_contracts", "end_date", existing_type=sa.DATE(), comment="合同结束日期", existing_nullable=True)
     op.alter_column(
         "mdm_purchase_contracts",
         "cost_code_id",
@@ -1369,12 +1245,8 @@ def upgrade() -> None:
         comment="合同总额",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_revenue_contracts", "currency", existing_type=sa.VARCHAR(length=10), comment="币种", existing_nullable=True
-    )
-    op.alter_column(
-        "mdm_revenue_contracts", "sign_date", existing_type=sa.DATE(), comment="签约日期", existing_nullable=True
-    )
+    op.alter_column("mdm_revenue_contracts", "currency", existing_type=sa.VARCHAR(length=10), comment="币种", existing_nullable=True)
+    op.alter_column("mdm_revenue_contracts", "sign_date", existing_type=sa.DATE(), comment="签约日期", existing_nullable=True)
     op.alter_column(
         "mdm_revenue_contracts",
         "product_id",
@@ -1427,9 +1299,7 @@ def upgrade() -> None:
         autoincrement=True,
         existing_server_default=sa.text("nextval('mdm_services_id_seq'::regclass)"),
     )
-    op.alter_column(
-        "mdm_services", "name", existing_type=sa.VARCHAR(length=200), comment="服务名称", existing_nullable=False
-    )
+    op.alter_column("mdm_services", "name", existing_type=sa.VARCHAR(length=200), comment="服务名称", existing_nullable=False)
     op.alter_column(
         "mdm_services",
         "tier",
@@ -1437,13 +1307,9 @@ def upgrade() -> None:
         comment="服务级别 (T0/T1/T2/T3)",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_services", "org_id", existing_type=sa.VARCHAR(length=100), comment="负责组织ID", existing_nullable=True
-    )
+    op.alter_column("mdm_services", "org_id", existing_type=sa.VARCHAR(length=100), comment="负责组织ID", existing_nullable=True)
     op.alter_column("mdm_services", "description", existing_type=sa.TEXT(), comment="服务描述", existing_nullable=True)
-    op.alter_column(
-        "mdm_services", "system_id", existing_type=sa.INTEGER(), comment="所属业务系统ID", existing_nullable=True
-    )
+    op.alter_column("mdm_services", "system_id", existing_type=sa.INTEGER(), comment="所属业务系统ID", existing_nullable=True)
     op.alter_column(
         "mdm_services",
         "lifecycle",
@@ -1482,12 +1348,8 @@ def upgrade() -> None:
         existing_nullable=False,
         autoincrement=True,
     )
-    op.alter_column(
-        "mdm_slo_definitions", "service_id", existing_type=sa.INTEGER(), comment="关联服务ID", existing_nullable=False
-    )
-    op.alter_column(
-        "mdm_slo_definitions", "name", existing_type=sa.VARCHAR(length=100), comment="SLO 名称", existing_nullable=False
-    )
+    op.alter_column("mdm_slo_definitions", "service_id", existing_type=sa.INTEGER(), comment="关联服务ID", existing_nullable=False)
+    op.alter_column("mdm_slo_definitions", "name", existing_type=sa.VARCHAR(length=100), comment="SLO 名称", existing_nullable=False)
     op.alter_column(
         "mdm_slo_definitions",
         "indicator_type",
@@ -1620,9 +1482,7 @@ def upgrade() -> None:
         comment="技术负责人ID",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_systems_registry", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用采集", existing_nullable=True
-    )
+    op.alter_column("mdm_systems_registry", "is_active", existing_type=sa.BOOLEAN(), comment="是否启用采集", existing_nullable=True)
     op.alter_column(
         "mdm_systems_registry",
         "last_heartbeat",
@@ -1630,9 +1490,7 @@ def upgrade() -> None:
         comment="最后连通性检查时间",
         existing_nullable=True,
     )
-    op.alter_column(
-        "mdm_systems_registry", "remarks", existing_type=sa.TEXT(), comment="备注说明", existing_nullable=True
-    )
+    op.alter_column("mdm_systems_registry", "remarks", existing_type=sa.TEXT(), comment="备注说明", existing_nullable=True)
     op.create_index(op.f("ix_mdm_systems_registry_is_current"), "mdm_systems_registry", ["is_current"], unique=False)
     op.create_foreign_key(None, "mdm_systems_registry", "mdm_identities", ["technical_owner_id"], ["global_user_id"])
     op.add_column("mdm_traceability_links", sa.Column("created_at", sa.DateTime(timezone=True), nullable=True))
@@ -1707,17 +1565,13 @@ def upgrade() -> None:
     op.add_column("mdm_vendor", sa.Column("short_name", sa.String(length=100), nullable=True, comment="供应商简称"))
     op.add_column(
         "mdm_vendor",
-        sa.Column(
-            "category", sa.String(length=50), nullable=True, comment="供应商类别 (人力外包/软件许可/云服务/硬件)"
-        ),
+        sa.Column("category", sa.String(length=50), nullable=True, comment="供应商类别 (人力外包/软件许可/云服务/硬件)"),
     )
     op.add_column(
         "mdm_vendor",
         sa.Column("status", sa.String(length=20), nullable=True, comment="合作状态 (ACTIVE/BLACKLIST/INACTIVE)"),
     )
-    op.add_column(
-        "mdm_vendor", sa.Column("tax_id", sa.String(length=50), nullable=True, comment="统一社会信用代码/税号")
-    )
+    op.add_column("mdm_vendor", sa.Column("tax_id", sa.String(length=50), nullable=True, comment="统一社会信用代码/税号"))
     op.add_column(
         "mdm_vendor",
         sa.Column("payment_terms", sa.String(length=100), nullable=True, comment="默认账期 (e.g. Net 30, Net 60)"),
@@ -1773,12 +1627,8 @@ def upgrade() -> None:
         comment="角色代码 (admin/pm/dev/viewer)",
         existing_nullable=False,
     )
-    op.alter_column(
-        "rbac_roles", "name", existing_type=sa.VARCHAR(length=100), comment="角色显示名称", existing_nullable=False
-    )
-    op.alter_column(
-        "rbac_roles", "description", existing_type=sa.VARCHAR(length=255), comment="角色描述", existing_nullable=True
-    )
+    op.alter_column("rbac_roles", "name", existing_type=sa.VARCHAR(length=100), comment="角色显示名称", existing_nullable=False)
+    op.alter_column("rbac_roles", "description", existing_type=sa.VARCHAR(length=255), comment="角色描述", existing_nullable=True)
     op.alter_column(
         "satisfaction_records",
         "id",
@@ -1824,9 +1674,7 @@ def upgrade() -> None:
         existing_nullable=False,
         autoincrement=True,
     )
-    op.alter_column(
-        "stg_mdm_resource_costs", "service_id", existing_type=sa.INTEGER(), comment="关联服务ID", existing_nullable=True
-    )
+    op.alter_column("stg_mdm_resource_costs", "service_id", existing_type=sa.INTEGER(), comment="关联服务ID", existing_nullable=True)
     op.alter_column(
         "stg_mdm_resource_costs",
         "cost_code_id",
@@ -1950,9 +1798,7 @@ def upgrade() -> None:
         existing_nullable=True,
     )
     op.create_index(op.f("ix_stg_raw_data_external_id"), "stg_raw_data", ["external_id"], unique=False)
-    op.alter_column(
-        "sys_role_permissions", "role_id", existing_type=sa.INTEGER(), comment="角色ID", existing_nullable=False
-    )
+    op.alter_column("sys_role_permissions", "role_id", existing_type=sa.INTEGER(), comment="角色ID", existing_nullable=False)
     op.alter_column(
         "sys_role_permissions",
         "permission_code",
@@ -1991,12 +1837,8 @@ def upgrade() -> None:
         existing_nullable=False,
         autoincrement=True,
     )
-    op.alter_column(
-        "sys_team_members", "team_id", existing_type=sa.INTEGER(), comment="团队ID", existing_nullable=False
-    )
-    op.alter_column(
-        "sys_team_members", "user_id", existing_type=sa.UUID(), comment="成员用户ID", existing_nullable=False
-    )
+    op.alter_column("sys_team_members", "team_id", existing_type=sa.INTEGER(), comment="团队ID", existing_nullable=False)
+    op.alter_column("sys_team_members", "user_id", existing_type=sa.UUID(), comment="成员用户ID", existing_nullable=False)
     op.alter_column(
         "sys_team_members",
         "role_code",
@@ -2027,17 +1869,11 @@ def upgrade() -> None:
         autoincrement=True,
         existing_server_default=sa.text("nextval('sys_teams_id_seq'::regclass)"),
     )
-    op.alter_column(
-        "sys_teams", "name", existing_type=sa.VARCHAR(length=100), comment="团队名称", existing_nullable=False
-    )
-    op.alter_column(
-        "sys_teams", "team_code", existing_type=sa.VARCHAR(length=50), comment="团队代码", existing_nullable=True
-    )
+    op.alter_column("sys_teams", "name", existing_type=sa.VARCHAR(length=100), comment="团队名称", existing_nullable=False)
+    op.alter_column("sys_teams", "team_code", existing_type=sa.VARCHAR(length=50), comment="团队代码", existing_nullable=True)
     op.alter_column("sys_teams", "description", existing_type=sa.TEXT(), comment="团队描述", existing_nullable=True)
     op.alter_column("sys_teams", "parent_id", existing_type=sa.INTEGER(), comment="上级团队ID", existing_nullable=True)
-    op.alter_column(
-        "sys_teams", "org_id", existing_type=sa.VARCHAR(length=100), comment="所属组织ID", existing_nullable=True
-    )
+    op.alter_column("sys_teams", "org_id", existing_type=sa.VARCHAR(length=100), comment="所属组织ID", existing_nullable=True)
     op.alter_column("sys_teams", "leader_id", existing_type=sa.UUID(), comment="团队负责人ID", existing_nullable=True)
     op.create_index(op.f("ix_sys_teams_is_current"), "sys_teams", ["is_current"], unique=False)
     op.alter_column(
@@ -2048,9 +1884,7 @@ def upgrade() -> None:
         existing_nullable=False,
         autoincrement=True,
     )
-    op.alter_column(
-        "sys_user_credentials", "user_id", existing_type=sa.UUID(), comment="用户ID", existing_nullable=True
-    )
+    op.alter_column("sys_user_credentials", "user_id", existing_type=sa.UUID(), comment="用户ID", existing_nullable=True)
     op.alter_column(
         "sys_user_credentials",
         "password_hash",

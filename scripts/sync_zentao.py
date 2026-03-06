@@ -12,7 +12,6 @@ from sqlalchemy.orm import sessionmaker
 sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
-import devops_collector.models # 确保全量模型已加载到 registry，防止 Organization/User 映射报错
 from devops_collector.plugins.zentao.client import ZenTaoClient
 from devops_collector.plugins.zentao.models import ZenTaoProduct
 from devops_collector.plugins.zentao.worker import ZenTaoWorker

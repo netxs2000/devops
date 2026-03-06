@@ -14,9 +14,7 @@ from devops_portal.state import NOTIFICATION_QUEUES
 logger = logging.getLogger(__name__)
 
 
-async def push_notification(
-    user_ids: str | list[str], message: str, type: str = "info", metadata: dict[str, Any] | None = None
-):
+async def push_notification(user_ids: str | list[str], message: str, type: str = "info", metadata: dict[str, Any] | None = None):
     """推送通知到 SSE（支持单播/多播/广播）。
 
     Args:
@@ -33,9 +31,7 @@ async def push_notification(
             target_users = [user_ids]
     else:
         target_users = user_ids
-    data = json.dumps(
-        {"message": message, "type": type, "metadata": metadata or {}, "timestamp": datetime.now().isoformat()}
-    )
+    data = json.dumps({"message": message, "type": type, "metadata": metadata or {}, "timestamp": datetime.now().isoformat()})
     success_count = 0
     total_queues = 0
     for user_id in target_users:
@@ -50,6 +46,4 @@ async def push_notification(
         else:
             logger.debug(f"User {user_id} not connected to SSE stream, skipping")
     if total_queues > 0:
-        logger.info(
-            f"Notification result: {success_count}/{total_queues} queues successful (Targets: {len(target_users)} users)"
-        )
+        logger.info(f"Notification result: {success_count}/{total_queues} queues successful (Targets: {len(target_users)} users)")

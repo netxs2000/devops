@@ -56,9 +56,7 @@ def test_link_product_to_project(admin_service, db_session):
     db_session.add(product)
     db_session.commit()
 
-    payload = schemas.ProjectProductRelationCreate(
-        project_id="PROJ-001", product_id="PROD-001", relation_type="CORE", allocation_ratio=0.8
-    )
+    payload = schemas.ProjectProductRelationCreate(project_id="PROJ-001", product_id="PROD-001", relation_type="CORE", allocation_ratio=0.8)
 
     relation = admin_service.link_product_to_project(payload)
     assert relation.project_id == "PROJ-001"

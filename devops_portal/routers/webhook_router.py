@@ -61,15 +61,9 @@ async def gitlab_webhook(request: Request):
                 logger.info(f"Webhook Received: Test Case #{issue_iid} was {action}")
 
             if "type::requirement" in labels:
-                review_state = next(
-                    (l.replace("review-state::", "") for l in labels if l.startswith("review-state::")), "draft"
-                )
-                old_review_state = next(
-                    (l.replace("review-state::", "") for l in old_labels if l.startswith("review-state::")), None
-                )
-                logger.info(
-                    f"Requirement Sync: #{issue_iid} - Action: {action}, Review: {old_review_state} -> {review_state}"
-                )
+                review_state = next((l.replace("review-state::", "") for l in labels if l.startswith("review-state::")), "draft")
+                old_review_state = next((l.replace("review-state::", "") for l in old_labels if l.startswith("review-state::")), None)
+                logger.info(f"Requirement Sync: #{issue_iid} - Action: {action}, Review: {old_review_state} -> {review_state}")
 
                 if action == "update" and old_review_state and (old_review_state != review_state):
                     try:

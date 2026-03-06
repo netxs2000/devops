@@ -45,10 +45,8 @@ def get_business_linked_roles(db: Session, user_id: Any) -> list[str]:
     managed_prods = (
         db.query(Product.product_id)
         .filter(
-            (Product.product_manager_id == user_id)
-            | (Product.dev_lead_id == user_id)
-            | (Product.qa_lead_id == user_id),
-            Product.is_current == True,
+            (Product.product_manager_id == user_id) | (Product.dev_lead_id == user_id) | (Product.qa_lead_id == user_id),
+            Product.is_current,
         )
         .all()
     )
@@ -60,7 +58,7 @@ def get_business_linked_roles(db: Session, user_id: Any) -> list[str]:
         db.query(ProjectMaster.project_id)
         .filter(
             (ProjectMaster.pm_user_id == user_id) | (ProjectMaster.dev_lead_id == user_id),
-            ProjectMaster.is_current == True,
+            ProjectMaster.is_current,
         )
         .all()
     )
@@ -74,20 +72,12 @@ def get_business_linked_roles(db: Session, user_id: Any) -> list[str]:
 
     # 5. 检查 GitLab 权限 (Maintainer=40, Owner=50)
     # GitLab 群组负责人映射为部门经理
-    managed_gitlab_groups = (
-        db.query(GitLabGroupMember.id)
-        .filter(GitLabGroupMember.user_id == user_id, GitLabGroupMember.access_level >= 40)
-        .all()
-    )
+    managed_gitlab_groups = db.query(GitLabGroupMember.id).filter(GitLabGroupMember.user_id == user_id, GitLabGroupMember.access_level >= 40).all()
     if managed_gitlab_groups:
         roles.append(BUSINESS_ROLE_MAP["org_manager"])
 
     # GitLab 项目负责人映射为项目经理
-    managed_gitlab_projects = (
-        db.query(GitLabProjectMember.id)
-        .filter(GitLabProjectMember.user_id == user_id, GitLabProjectMember.access_level >= 40)
-        .all()
-    )
+    managed_gitlab_projects = db.query(GitLabProjectMember.id).filter(GitLabProjectMember.user_id == user_id, GitLabProjectMember.access_level >= 40).all()
     if managed_gitlab_projects:
         roles.append(BUSINESS_ROLE_MAP["project_manager"])
 
@@ -105,7 +95,7 @@ def get_dynamic_permissions(db: Session, user_id: Any) -> set[str]:
         db.query(SysMenu.perms)
         .join(SysRoleMenu, SysRoleMenu.menu_id == SysMenu.id)
         .join(SysRole, SysRole.id == SysRoleMenu.role_id)
-        .filter(SysRole.role_key.in_(dynamic_roles), SysMenu.perms != None, SysMenu.perms != "", SysMenu.status == True)
+        .filter(SysRole.role_key.in_(dynamic_roles), SysMenu.perms is not None, SysMenu.perms != "", SysMenu.status)
         .all()
     )
 

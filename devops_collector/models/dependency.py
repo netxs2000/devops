@@ -143,9 +143,7 @@ class Dependency(Base, TimestampMixin):
     """
 
     __tablename__ = "dependencies"
-    __table_args__ = (
-        UniqueConstraint("scan_id", "package_name", "package_version", name="uq_dependency_scan_package"),
-    )
+    __table_args__ = (UniqueConstraint("scan_id", "package_name", "package_version", name="uq_dependency_scan_package"),)
     id = Column(Integer, primary_key=True)
     scan_id = Column(Integer, ForeignKey("dependency_scans.id", ondelete="CASCADE"), nullable=False)
     project_id = Column(Integer, ForeignKey("gitlab_projects.id", ondelete="CASCADE"), nullable=False)

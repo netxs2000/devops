@@ -251,7 +251,7 @@ class ServicePortalPage(BasePage):
         # 这里的追踪码通常在 Toast 之后或列表顶部，
         # 由于目前逻辑是提交后 navigate('landing')，我们可能需要检查 Toast 或直接跳过这个断言。
         # 简单等待 Toast 即可。
-        toast = self.wait_for_toast("successful", timeout=10000)
+        self.wait_for_toast("successful", timeout=10000)
         return "SUCCESS"  # 模拟返回
 
     # =========================================================================

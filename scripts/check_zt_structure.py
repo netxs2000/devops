@@ -1,8 +1,9 @@
 import requests
-import json
 import urllib3
 
+
 urllib3.disable_warnings()
+
 
 def check_structure():
     token = "e745103d5c00e1b8182f7af931ec83ad"
@@ -10,9 +11,9 @@ def check_structure():
         "https://rdm.tjhq.com/api.php/v1/departments",
         "https://rdm.tjhq.com/api.php/v1/users",
         "https://rdm.tjhq.com/api.php/v1/products/1/plans",
-        "https://rdm.tjhq.com/api.php/v1/executions"
+        "https://rdm.tjhq.com/api.php/v1/executions",
     ]
-    
+
     for u in urls:
         print(f"\n--- Checking {u} ---")
         try:
@@ -29,6 +30,7 @@ def check_structure():
                 print(f"Data: {str(data)[:500]}")
         except Exception as e:
             print(f"Error: {e}")
+
 
 if __name__ == "__main__":
     check_structure()

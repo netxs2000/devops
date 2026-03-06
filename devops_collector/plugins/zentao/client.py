@@ -44,9 +44,7 @@ class ZenTaoClient(BaseClient):
             # 注意：使用 requests 直接调用以避免重入
             import requests
 
-            resp = requests.post(
-                url, json={"account": self.account, "password": self.password}, verify=False, timeout=10
-            )
+            resp = requests.post(url, json={"account": self.account, "password": self.password}, verify=False, timeout=10)
             if resp.status_code in [200, 201]:
                 new_token = resp.json().get("token")
                 if new_token:
@@ -65,11 +63,7 @@ class ZenTaoClient(BaseClient):
         except Exception as e:
             import requests
 
-            if (
-                isinstance(e, requests.exceptions.HTTPError)
-                and e.response is not None
-                and e.response.status_code == 401
-            ):
+            if isinstance(e, requests.exceptions.HTTPError) and e.response is not None and e.response.status_code == 401:
                 if self._refresh_token():
                     # 重新请求一次
                     return super()._get(endpoint, params)

@@ -54,7 +54,7 @@ def init_gitlab_mappings():
         logger.info("=" * 60)
 
         # 预加载所有员工主数据，按 Email 和姓名建立索引
-        all_users = session.query(User).filter(User.is_current == True).all()
+        all_users = session.query(User).filter(User.is_current).all()
         email_index = {u.primary_email.lower(): u for u in all_users if u.primary_email}
         name_index = defaultdict(list)
         for u in all_users:
@@ -98,16 +98,10 @@ def init_gitlab_mappings():
                         user = candidates[0]
                         match_method = "NAME"
                         stats["matched_by_name"] += 1
-                        logger.warning(
-                            f"[降级] GitLab用户 '{full_name}' "
-                            f"Email({email}) 不在主数据中, "
-                            f"通过姓名唯一匹配到 {user.primary_email}"
-                        )
+                        logger.warning(f"[降级] GitLab用户 '{full_name}' Email({email}) 不在主数据中, 通过姓名唯一匹配到 {user.primary_email}")
                     elif len(candidates) > 1:
                         stats["skipped_duplicate_name"] += 1
-                        logger.error(
-                            f"[跳过] GitLab用户 '{full_name}' ({email}) 存在 {len(candidates)} 个重名员工，无法确定映射"
-                        )
+                        logger.error(f"[跳过] GitLab用户 '{full_name}' ({email}) 存在 {len(candidates)} 个重名员工，无法确定映射")
                         continue
 
                 # ========================================
@@ -123,25 +117,16 @@ def init_gitlab_mappings():
                 # ========================================
 
                 # 检查此 external_user_id 是否已有映射
-                mapping = (
-                    session.query(IdentityMapping)
-                    .filter_by(source_system="gitlab", external_user_id=str(gitlab_id))
-                    .first()
-                )
+                mapping = session.query(IdentityMapping).filter_by(source_system="gitlab", external_user_id=str(gitlab_id)).first()
 
                 confidence = 1.0 if match_method == "EMAIL" else 0.8
 
                 # 检查此 global_user_id 是否已经绑定了其他的 gitlab_id (防止违反 uq_source_global_user)
-                other_mapping = (
-                    session.query(IdentityMapping)
-                    .filter_by(source_system="gitlab", global_user_id=user.global_user_id)
-                    .first()
-                )
+                other_mapping = session.query(IdentityMapping).filter_by(source_system="gitlab", global_user_id=user.global_user_id).first()
 
                 if other_mapping and (not mapping or other_mapping.id != mapping.id):
                     logger.error(
-                        f"[跳过] 员工 {user.full_name}({user.employee_id}) 已绑定 GitLab ID: {other_mapping.external_user_id}, "
-                        f"无法再次绑定新 ID: {gitlab_id}"
+                        f"[跳过] 员工 {user.full_name}({user.employee_id}) 已绑定 GitLab ID: {other_mapping.external_user_id}, 无法再次绑定新 ID: {gitlab_id}"
                     )
                     stats["skipped_duplicate_user"] += 1
                     continue
@@ -162,9 +147,7 @@ def init_gitlab_mappings():
                 else:
                     # 更新现有映射
                     if mapping.global_user_id != user.global_user_id:
-                        logger.warning(
-                            f"[更新] GitLab用户 {username} 重新关联: {mapping.global_user_id} -> {user.global_user_id}"
-                        )
+                        logger.warning(f"[更新] GitLab用户 {username} 重新关联: {mapping.global_user_id} -> {user.global_user_id}")
                     mapping.global_user_id = user.global_user_id
                     mapping.external_username = username
                     mapping.external_email = email if email else mapping.external_email

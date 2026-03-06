@@ -74,7 +74,7 @@ def sync_manager_roles(session: Session):
             if not m_email:
                 continue
 
-            user = session.query(User).filter(User.primary_email == m_email, User.is_current == True).first()
+            user = session.query(User).filter(User.primary_email == m_email, User.is_current).first()
             if user:
                 # 检查是否已有关联
                 if not session.query(UserRole).filter_by(user_id=user.global_user_id, role_id=role_dept_mgr.id).first():
@@ -95,7 +95,7 @@ def sync_employee_roles(session: Session):
             if not name:
                 continue
 
-            user = session.query(User).filter(User.full_name == name, User.is_current == True).first()
+            user = session.query(User).filter(User.full_name == name, User.is_current).first()
             if user:
                 rk = get_role_by_position(pos)
                 role = all_roles.get(rk)

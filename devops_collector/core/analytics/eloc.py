@@ -54,13 +54,9 @@ class ELOCAnalyzer:
             },
         }
         # Regex for "Why" comments (High Value)
-        self.high_value_comment_re = re.compile(
-            r"(TODO|FIXME|HACK|NOTE|WARNING|IMPORTANT|ISSUE|BUG|REF|SEE|WHY)", re.IGNORECASE
-        )
+        self.high_value_comment_re = re.compile(r"(TODO|FIXME|HACK|NOTE|WARNING|IMPORTANT|ISSUE|BUG|REF|SEE|WHY)", re.IGNORECASE)
         # Regex for "Dead Code" (Commented out code)
-        self.dead_code_re = re.compile(
-            r"^\s*[#//].*(=|\{|\}|def |class |function |return |if |for |while |print\(|logger\.)", re.IGNORECASE
-        )
+        self.dead_code_re = re.compile(r"^\s*[#//].*(=|\{|\}|def |class |function |return |if |for |while |print\(|logger\.)", re.IGNORECASE)
 
     def analyze_commit_diff(
         self,

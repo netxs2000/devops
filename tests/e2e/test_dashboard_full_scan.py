@@ -68,13 +68,11 @@ def run_test():
                 # Find link in sidebar
                 # Streamlit sidebar nav usually has high-depth links
                 wait = WebDriverWait(driver, 10)
-                sidebar_nav = wait.until(
-                    EC.presence_of_element_located((By.XPATH, "//div[@data-testid='stSidebarNav']"))
-                )
+                sidebar_nav = wait.until(EC.presence_of_element_located((By.XPATH, "//div[@data-testid='stSidebarNav']")))
 
                 # Try to find the link multiple times with scrolling
                 target_link = None
-                for attempt in range(3):
+                for _attempt in range(3):
                     links = driver.find_elements(By.XPATH, "//div[@data-testid='stSidebarNav']//a")
                     for l in links:
                         link_text = l.text.lower()
@@ -92,9 +90,7 @@ def run_test():
                     time.sleep(1)
 
                 if not target_link:
-                    found_links = [
-                        l.text for l in driver.find_elements(By.XPATH, "//div[@data-testid='stSidebarNav']//a")
-                    ]
+                    found_links = [l.text for l in driver.find_elements(By.XPATH, "//div[@data-testid='stSidebarNav']//a")]
                     print(f"LINK NOT FOUND. Seen: {found_links[:5]}...")
                     results.append({"name": page_name, "status": "SKIPPED", "error": "Link not found in sidebar"})
                     continue
@@ -123,9 +119,7 @@ def run_test():
                 alerts = driver.find_elements(By.XPATH, "//div[contains(@class, 'stAlert')]")
                 for alert in alerts:
                     text = alert.text
-                    if any(
-                        kw in text for kw in ["Error", "Traceback", "KeyError", "ProgrammingError", "UndefinedColumn"]
-                    ):
+                    if any(kw in text for kw in ["Error", "Traceback", "KeyError", "ProgrammingError", "UndefinedColumn"]):
                         problems.append(text.split("\n")[0])
 
                 if problems:
@@ -151,9 +145,7 @@ def run_test():
         f.write("| 模块名称 | 状态 | 错误信息 |\n")
         f.write("| :--- | :--- | :--- |\n")
         for r in results:
-            status_icon = (
-                "✅ PASS" if r["status"] == "PASS" else ("❌ FAILED" if r["status"] == "FAILED" else "⚠️ " + r["status"])
-            )
+            status_icon = "✅ PASS" if r["status"] == "PASS" else ("❌ FAILED" if r["status"] == "FAILED" else "⚠️ " + r["status"])
             f.write(f"| {r['name']} | {status_icon} | {r['error']} |\n")
 
     print(f"\nReport generated at: {report_path}")

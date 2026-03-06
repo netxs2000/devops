@@ -41,7 +41,7 @@ def discover_zentao(session):
         if not client.login():
             logger.error("Failed to login to ZenTao. Check credentials.")
             return
-        
+
         products = client.get_products()
         total_new = 0
         total_existing = 0
@@ -138,18 +138,14 @@ def discover_sonarqube(session):
         key = p_data["key"]
         existing = session.query(SonarProject).filter_by(key=key).first()
         if not existing:
-            new_proj = SonarProject(
-                key=key, name=p_data.get("name"), qualifier=p_data.get("qualifier"), sync_status="PENDING"
-            )
+            new_proj = SonarProject(key=key, name=p_data.get("name"), qualifier=p_data.get("qualifier"), sync_status="PENDING")
             session.add(new_proj)
             total_new += 1
         else:
             existing.name = p_data.get("name")
             total_existing += 1
     session.commit()
-    logger.info(
-        f"SonarQube discovery finished. Found {len(projects)} total. New: {total_new}, Existing: {total_existing}"
-    )
+    logger.info(f"SonarQube discovery finished. Found {len(projects)} total. New: {total_new}, Existing: {total_existing}")
 
 
 def main():

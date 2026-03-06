@@ -74,10 +74,8 @@ class IdentityManager:
         if not mapping:
             existing_user_mapping = None
             if user:
-                existing_user_mapping = session.query(IdentityMapping).filter_by(
-                    source_system=source, global_user_id=user.global_user_id
-                ).first()
-            
+                existing_user_mapping = session.query(IdentityMapping).filter_by(source_system=source, global_user_id=user.global_user_id).first()
+
             if not existing_user_mapping:
                 mapping = IdentityMapping(
                     global_user_id=user.global_user_id if user else None,

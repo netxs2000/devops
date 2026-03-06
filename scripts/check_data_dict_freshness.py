@@ -23,9 +23,7 @@ def get_git_modified_files() -> set:
         set: 已修改文件路径集合。
     """
     try:
-        result = subprocess.run(
-            ["git", "diff", "--cached", "--name-only"], capture_output=True, text=True, cwd=Path(__file__).parent.parent
-        )
+        result = subprocess.run(["git", "diff", "--cached", "--name-only"], capture_output=True, text=True, cwd=Path(__file__).parent.parent, check=False)
         if result.returncode == 0:
             return set(result.stdout.strip().split("\n"))
     except Exception:

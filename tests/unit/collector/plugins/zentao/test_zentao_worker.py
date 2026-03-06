@@ -65,14 +65,10 @@ class TestZenTaoWorker(unittest.TestCase):
             TODO
         """'''
         self.mock_client._get.return_value = {"id": 1, "name": "Prod 1"}
-        self.mock_client.get_plans.return_value = [
-            {"id": 51, "title": "Plan A", "openedBy": "creator1", "openedDate": "2024-01-01 09:00:00"}
-        ]
+        self.mock_client.get_plans.return_value = [{"id": 51, "title": "Plan A", "openedBy": "creator1", "openedDate": "2024-01-01 09:00:00"}]
         self.mock_client.get_executions.return_value = []
         self.mock_client.get_departments.return_value = [{"id": 1, "name": "研发部", "parent": 0}]
-        self.mock_client.get_users.return_value = [
-            {"account": "dev1", "realname": "开发者1", "dept": 1, "dept_name": "研发部", "email": "dev1@fake.com"}
-        ]
+        self.mock_client.get_users.return_value = [{"account": "dev1", "realname": "开发者1", "dept": 1, "dept_name": "研发部", "email": "dev1@fake.com"}]
         self.mock_client.get_stories.return_value = [
             {
                 "id": 1001,

@@ -9,9 +9,7 @@ from selenium.webdriver.common.by import By
 
 # Configuration
 DASHBOARD_URL = "http://localhost:8501"
-PAGES_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "dashboard", "pages"
-)
+PAGES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "dashboard", "pages")
 
 
 def get_page_names():

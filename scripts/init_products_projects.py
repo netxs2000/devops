@@ -70,9 +70,7 @@ def init_products(session: Session):
             # 创建/更新产品对象
             product = session.query(Product).filter_by(product_name=name).first()
             if not product:
-                product = Product(
-                    product_id=final_id, product_name=name, product_description=name, version_schema="SemVer"
-                )
+                product = Product(product_id=final_id, product_name=name, product_description=name, version_schema="SemVer")
                 session.add(product)
 
             # 更新属性 (Update Attributes)
@@ -126,9 +124,7 @@ def init_products(session: Session):
                 else:
                     logger.warning(f"Product {product.product_name} cannot set itself as parent.")
             else:
-                logger.warning(
-                    f"Parent product '{parent_ref}' not found for product '{product.product_name}'. Ignoring."
-                )
+                logger.warning(f"Parent product '{parent_ref}' not found for product '{product.product_name}'. Ignoring.")
         else:
             product.parent_product_id = None
 
@@ -174,11 +170,7 @@ def init_projects(session: Session, prod_map):
                 system = ensure_system_registry(session)
 
                 # 检查是否已存在关联
-                topology = (
-                    session.query(EntityTopology)
-                    .filter_by(project_id=proj_id, external_resource_id=repo_url, element_type="source-code")
-                    .first()
-                )
+                topology = session.query(EntityTopology).filter_by(project_id=proj_id, external_resource_id=repo_url, element_type="source-code").first()
 
                 if not topology:
                     topology = EntityTopology(
@@ -216,11 +208,7 @@ def init_projects(session: Session, prod_map):
             # 建立产品关联
             target_prod_id = prod_map.get(prod_name)
             if target_prod_id:
-                rel = (
-                    session.query(ProjectProductRelation)
-                    .filter_by(project_id=proj_id, product_id=target_prod_id)
-                    .first()
-                )
+                rel = session.query(ProjectProductRelation).filter_by(project_id=proj_id, product_id=target_prod_id).first()
                 if not rel and project.org_id:
                     session.add(
                         ProjectProductRelation(

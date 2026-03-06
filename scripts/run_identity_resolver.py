@@ -35,8 +35,8 @@ class IdentityResolver:
         self.mdm_users = (
             self.session.query(User)
             .filter(
-                User.is_current == True,
-                User.employee_id != None,  # 必须有工号的才是金数据用户
+                User.is_current,
+                User.employee_id is not None,  # 必须有工号的才是金数据用户
             )
             .all()
         )
@@ -106,7 +106,7 @@ class IdentityResolver:
                 current_score = 1.0
 
             # 3. Email 前缀匹配 (Weight: 0.8)
-            elif email_prefix and (email_prefix == u_emp_id or email_prefix == user.username):
+            elif email_prefix and (email_prefix in (u_emp_id, user.username)):
                 current_score = 0.8
 
             # 4. 姓名 + Email 域匹配 (Weight: 0.7)

@@ -96,9 +96,7 @@ class JenkinsWorker(BaseWorker):
             job.sync_status = "SUCCESS"
             if GitLabProject and (not job.gitlab_project_id):
                 gitlab_project = (
-                    self.session.query(GitLabProject)
-                    .filter((GitLabProject.path_with_namespace == full_name) | (GitLabProject.name == job.name))
-                    .first()
+                    self.session.query(GitLabProject).filter((GitLabProject.path_with_namespace == full_name) | (GitLabProject.name == job.name)).first()
                 )
                 if gitlab_project:
                     job.gitlab_project_id = gitlab_project.id
@@ -169,9 +167,7 @@ class JenkinsWorker(BaseWorker):
                     build.trigger_type = causes[0].get("_class")
                     build.trigger_user = causes[0].get("userName")
                     if build.trigger_user:
-                        u = IdentityManager.get_or_create_user(
-                            self.session, "jenkins", build.trigger_user, name=build.trigger_user
-                        )
+                        u = IdentityManager.get_or_create_user(self.session, "jenkins", build.trigger_user, name=build.trigger_user)
                         build.trigger_user_id = u.global_user_id
         build.raw_data = b_data
         if not build.building and build.result:
@@ -193,9 +189,7 @@ class JenkinsWorker(BaseWorker):
             if summary:
                 existing = (
                     self.session.query(JenkinsTestExecution)
-                    .filter_by(
-                        project_id=job.gitlab_project_id, build_id=str(build.number), test_level=summary.test_level
-                    )
+                    .filter_by(project_id=job.gitlab_project_id, build_id=str(build.number), test_level=summary.test_level)
                     .first()
                 )
                 if not existing:

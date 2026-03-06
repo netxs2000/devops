@@ -65,9 +65,7 @@ def init_organizations_from_csv(session: Session):
                 org_id_l2 = f"CTR-{center}"
                 org_l2 = session.query(Organization).filter_by(org_id=org_id_l2).first()
                 if not org_l2:
-                    org_l2 = Organization(
-                        org_id=org_id_l2, org_name=center, org_level=2, parent_org_id=root_id, business_line=system
-                    )
+                    org_l2 = Organization(org_id=org_id_l2, org_name=center, org_level=2, parent_org_id=root_id, business_line=system)
                     session.add(org_l2)
 
                 # 中心级负责人 (无部门的行)
@@ -81,9 +79,7 @@ def init_organizations_from_csv(session: Session):
                 org_id_l3 = f"DEP-{dept}"
                 org_l3 = session.query(Organization).filter_by(org_id=org_id_l3).first()
                 if not org_l3:
-                    org_l3 = Organization(
-                        org_id=org_id_l3, org_name=dept, org_level=3, parent_org_id=parent_id, business_line=system
-                    )
+                    org_l3 = Organization(org_id=org_id_l3, org_name=dept, org_level=3, parent_org_id=parent_id, business_line=system)
                     session.add(org_l3)
 
                 if manager_id:

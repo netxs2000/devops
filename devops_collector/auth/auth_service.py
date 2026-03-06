@@ -107,7 +107,7 @@ def auth_get_user_by_email(db: Session, email: str) -> User | None:
     Returns:
         Optional[User]: 用户对象，如果不存在则返回 None。
     """
-    return db.query(User).filter(User.primary_email == email, User.is_current == True).first()
+    return db.query(User).filter(User.primary_email == email, User.is_current).first()
 
 
 def auth_validate_email_domain(email: str) -> bool:
@@ -312,9 +312,7 @@ async def auth_process_gitlab_callback(db: Session, code: str) -> dict:
 
     # 2. 获取用户信息
     async with httpx.AsyncClient(verify=settings.gitlab.verify_ssl) as client:
-        user_resp = await client.get(
-            f"{settings.gitlab.url}/api/v4/user", headers={"Authorization": f"Bearer {token_data['access_token']}"}
-        )
+        user_resp = await client.get(f"{settings.gitlab.url}/api/v4/user", headers={"Authorization": f"Bearer {token_data['access_token']}"})
         if user_resp.status_code != 200:
             return {"error": "user_info_failed"}
         gitlab_user = user_resp.json()
@@ -336,9 +334,7 @@ async def auth_process_gitlab_callback(db: Session, code: str) -> dict:
         # 自动创建待审批账户
         user = auth_create_user(
             db=db,
-            user_data=auth_schema.AuthRegisterRequest(
-                email=email, password=security.generate_random_password(), full_name=full_name, employee_id=None
-            ),
+            user_data=auth_schema.AuthRegisterRequest(email=email, password=security.generate_random_password(), full_name=full_name, employee_id=None),
         )
         user.is_active = False
         db.commit()

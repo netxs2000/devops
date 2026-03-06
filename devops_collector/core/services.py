@@ -28,9 +28,7 @@ class ConcurrencyError(RuntimeError):
     """
 
 
-def close_current_and_insert_new(
-    session: Session, model_cls: type[Base], natural_key: dict[str, Any], new_data: dict[str, Any]
-) -> Base:
+def close_current_and_insert_new(session: Session, model_cls: type[Base], natural_key: dict[str, Any], new_data: dict[str, Any]) -> Base:
     """统一的 SCD Type2 更新函数。
 
     该函数在同一个事务中完成以下步骤：

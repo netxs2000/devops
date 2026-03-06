@@ -134,11 +134,7 @@ class IssueMixin:
             data (Dict): 来自 GitLab API 的原始事件元数据字典。
         """
         external_id = data["id"]
-        existing = (
-            self.session.query(GitLabIssueEvent)
-            .filter_by(issue_id=issue_id, event_type=event_type, external_event_id=external_id)
-            .first()
-        )
+        existing = self.session.query(GitLabIssueEvent).filter_by(issue_id=issue_id, event_type=event_type, external_event_id=external_id).first()
         if existing:
             return
         event = GitLabIssueEvent(
@@ -165,20 +161,14 @@ class IssueMixin:
         """
         issue_id = issue_data["id"]
         issue_iid = issue_data["iid"]
-        state_events = sorted(
-            list(self.client.get_issue_state_events(project.id, issue_iid)), key=lambda x: x["created_at"]
-        )
+        state_events = sorted(list(self.client.get_issue_state_events(project.id, issue_iid)), key=lambda x: x["created_at"])
         last_state = "opened"
         last_time = parse_iso8601(issue_data["created_at"])
         for event in state_events:
             current_state = event["state"]
             current_time = parse_iso8601(event["created_at"])
             duration = (current_time - last_time).total_seconds() / 3600.0
-            existing = (
-                self.session.query(GitLabIssueStateTransition)
-                .filter_by(issue_id=issue_id, to_state=current_state, timestamp=current_time)
-                .first()
-            )
+            existing = self.session.query(GitLabIssueStateTransition).filter_by(issue_id=issue_id, to_state=current_state, timestamp=current_time).first()
             if not existing:
                 trans = GitLabIssueStateTransition(
                     issue_id=issue_id,
@@ -190,9 +180,7 @@ class IssueMixin:
                 self.session.add(trans)
             last_state = current_state
             last_time = current_time
-        label_events = sorted(
-            list(self.client.get_issue_label_events(project.id, issue_iid)), key=lambda x: x["created_at"]
-        )
+        label_events = sorted(list(self.client.get_issue_label_events(project.id, issue_iid)), key=lambda x: x["created_at"])
         for event in label_events:
             label_name = event.get("label", {}).get("name", "").lower()
             if "blocked" not in label_name:
@@ -200,16 +188,14 @@ class IssueMixin:
             action = event["action"]
             event_time = parse_iso8601(event["created_at"])
             if action == "add":
-                existing = (
-                    self.session.query(GitLabBlockage).filter_by(issue_id=issue_id, start_time=event_time).first()
-                )
+                existing = self.session.query(GitLabBlockage).filter_by(issue_id=issue_id, start_time=event_time).first()
                 if not existing:
                     active_blockage = GitLabBlockage(issue_id=issue_id, reason=label_name, start_time=event_time)
                     self.session.add(active_blockage)
             elif action == "remove":
                 last_block = (
                     self.session.query(GitLabBlockage)
-                    .filter(GitLabBlockage.issue_id == issue_id, GitLabBlockage.end_time == None)
+                    .filter(GitLabBlockage.issue_id == issue_id, GitLabBlockage.end_time is None)
                     .order_by(GitLabBlockage.start_time.desc())
                     .first()
                 )

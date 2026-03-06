@@ -52,9 +52,7 @@ def downgrade() -> None:
         existing_nullable=True,
     )
     op.drop_constraint(None, "gitlab_project_members", type_="foreignkey")
-    op.create_foreign_key(
-        "gitlab_project_members_role_id_fkey", "gitlab_project_members", "rbac_roles", ["role_id"], ["id"]
-    )
+    op.create_foreign_key("gitlab_project_members_role_id_fkey", "gitlab_project_members", "rbac_roles", ["role_id"], ["id"])
     op.create_table(
         "rbac_roles",
         sa.Column(
@@ -65,35 +63,25 @@ def downgrade() -> None:
             nullable=False,
             comment="角色ID",
         ),
-        sa.Column(
-            "code", sa.VARCHAR(length=50), autoincrement=False, nullable=False, comment="角色代码 (admin/pm/dev/viewer)"
-        ),
+        sa.Column("code", sa.VARCHAR(length=50), autoincrement=False, nullable=False, comment="角色代码 (admin/pm/dev/viewer)"),
         sa.Column("name", sa.VARCHAR(length=100), autoincrement=False, nullable=False, comment="角色显示名称"),
         sa.Column("description", sa.VARCHAR(length=255), autoincrement=False, nullable=True, comment="角色描述"),
         sa.PrimaryKeyConstraint("id", name="rbac_roles_pkey"),
-        sa.UniqueConstraint(
-            "code", name="rbac_roles_code_key", postgresql_include=[], postgresql_nulls_not_distinct=False
-        ),
-        sa.UniqueConstraint(
-            "name", name="rbac_roles_name_key", postgresql_include=[], postgresql_nulls_not_distinct=False
-        ),
+        sa.UniqueConstraint("code", name="rbac_roles_code_key", postgresql_include=[], postgresql_nulls_not_distinct=False),
+        sa.UniqueConstraint("name", name="rbac_roles_name_key", postgresql_include=[], postgresql_nulls_not_distinct=False),
         postgresql_ignore_search_path=False,
     )
     op.create_table(
         "sys_role_permissions",
         sa.Column("role_id", sa.INTEGER(), autoincrement=False, nullable=False, comment="角色ID"),
         sa.Column("permission_code", sa.VARCHAR(length=100), autoincrement=False, nullable=False, comment="权限代码"),
-        sa.ForeignKeyConstraint(
-            ["permission_code"], ["rbac_permissions.code"], name="sys_role_permissions_permission_code_fkey"
-        ),
+        sa.ForeignKeyConstraint(["permission_code"], ["rbac_permissions.code"], name="sys_role_permissions_permission_code_fkey"),
         sa.ForeignKeyConstraint(["role_id"], ["rbac_roles.id"], name="sys_role_permissions_role_id_fkey"),
         sa.PrimaryKeyConstraint("role_id", "permission_code", name="sys_role_permissions_pkey"),
     )
     op.create_table(
         "rbac_permissions",
-        sa.Column(
-            "code", sa.VARCHAR(length=100), autoincrement=False, nullable=False, comment="权限代码 (如 ticket:create)"
-        ),
+        sa.Column("code", sa.VARCHAR(length=100), autoincrement=False, nullable=False, comment="权限代码 (如 ticket:create)"),
         sa.Column(
             "category",
             sa.VARCHAR(length=50),

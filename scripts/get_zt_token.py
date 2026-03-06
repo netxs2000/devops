@@ -1,6 +1,6 @@
 import requests
-import json
 import urllib3
+
 
 urllib3.disable_warnings()
 
@@ -8,23 +8,19 @@ URL_BASE = "https://rdm.tjhq.com"
 ACCOUNT = "xushen"
 PASSWORD = "DQPIxs@123"
 
+
 def get_token():
     url = f"{URL_BASE}/api.php/v1/tokens"
-    payload = {
-        "account": ACCOUNT,
-        "password": PASSWORD
-    }
-    headers = {
-        "Content-Type": "application/json"
-    }
-    
+    payload = {"account": ACCOUNT, "password": PASSWORD}
+    headers = {"Content-Type": "application/json"}
+
     print(f"Attempting to get token from {url}...")
     try:
         r = requests.post(url, json=payload, headers=headers, verify=False, timeout=10)
         print(f"Status: {r.status_code}")
         print(f"Response: {r.text}")
-        
-        if r.status_code == 200 or r.status_code == 201:
+
+        if r.status_code in {200, 201}:
             data = r.json()
             token = data.get("token")
             if token:
@@ -36,7 +32,7 @@ def get_token():
             print(f"Failed to get token. Status: {r.status_code}")
     except Exception as e:
         print(f"Error: {e}")
-    
+
     # Try alternate endpoint if first one fails
     url_alt = f"{URL_BASE}/api.php?m=api&f=v1&path=/tokens"
     print(f"\nAttempting to get token from alternate URL: {url_alt}...")
@@ -44,7 +40,7 @@ def get_token():
         r = requests.post(url_alt, json=payload, headers=headers, verify=False, timeout=10)
         print(f"Status: {r.status_code}")
         print(f"Response: {r.text}")
-        if r.status_code == 200 or r.status_code == 201:
+        if r.status_code in {200, 201}:
             data = r.json()
             token = data.get("token")
             if token:
@@ -52,8 +48,9 @@ def get_token():
                 return token
     except Exception as e:
         print(f"Error: {e}")
-        
+
     return None
+
 
 if __name__ == "__main__":
     token = get_token()

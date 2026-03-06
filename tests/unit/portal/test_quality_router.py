@@ -65,8 +65,8 @@ async def test_quality_gate(authenticated_client):
         response = authenticated_client.get("/quality/projects/1/quality-gate")
         assert response.status_code == 200
         data = response.json()
-        assert data["p0_bugs_cleared"] == False  # We simulated one P0 bug
-        assert data["is_passed"] == False
+        assert not data["p0_bugs_cleared"]  # We simulated one P0 bug
+        assert not data["is_passed"]
     finally:
         app.dependency_overrides = {}
 

@@ -106,9 +106,7 @@ class TestTraceabilityModels(unittest.TestCase):
         jira_proj = JiraProject(key="PROJ", name="Project")
         self.session.add(jira_proj)
         self.session.flush()
-        jira_issue = JiraIssue(
-            id=201, key="PROJ-201", project_id=jira_proj.id, first_commit_sha="sha999", first_fix_date=datetime.now(UTC)
-        )
+        jira_issue = JiraIssue(id=201, key="PROJ-201", project_id=jira_proj.id, first_commit_sha="sha999", first_fix_date=datetime.now(UTC))
         self.session.add(jira_issue)
         zt_prod = ZenTaoProduct(id=301, name="ZT Product")
         self.session.add(zt_prod)

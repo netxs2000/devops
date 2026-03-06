@@ -25,10 +25,8 @@ def diagnose_mq():
 
     try:
         credentials = pika.PlainCredentials(user, password)
-        connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host=host, port=port, credentials=credentials, timeout=5)
-        )
-        channel = connection.channel()
+        connection = pika.BlockingConnection(pika.ConnectionParameters(host=host, port=port, credentials=credentials, timeout=5))
+        connection.channel()
 
         print("✓ 连接成功")
 

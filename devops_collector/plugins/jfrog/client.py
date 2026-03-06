@@ -43,8 +43,7 @@ class JFrogClient(BaseClient):
         query = f'items.find({{"repo": "{repo}", "path": {{"$match": "{path}*"}}, "type": "file"}}).include("*", "property")'
         response = self._post(endpoint, data=query, headers={"Content-Type": "text/plain"})
         data = response.json()
-        for item in data.get("results", []):
-            yield item
+        yield from data.get("results", [])
 
     def get_artifact_stats(self, repo: str, path: str) -> dict:
         """获取制品的下载量等统计信息。"""
@@ -58,5 +57,5 @@ class JFrogClient(BaseClient):
         """从 Xray 获取安全漏洞摘要。"""
         try:
             return self._get(f"xray/summary/artifact/{repo}/{path}").json()
-        except:
+        except Exception:
             return {}

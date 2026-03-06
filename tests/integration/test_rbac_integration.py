@@ -119,9 +119,7 @@ def test_rbac_write_operations_denied(client, db_session):
 def test_rbac_team_management_flow(client, db_session):
     """验证管理员完整的团队管理提权流程并校验数据一致性 (N+1 优化校验)。"""
     uid = uuid.uuid4()
-    user = User(
-        global_user_id=uid, primary_email="boss@example.com", full_name="Big Boss", username="boss", is_active=True
-    )
+    user = User(global_user_id=uid, primary_email="boss@example.com", full_name="Big Boss", username="boss", is_active=True)
     db_session.add(user)
     db_session.commit()
 

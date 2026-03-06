@@ -18,7 +18,7 @@ def get_config() -> dict[str, Any]:
             "url": os.getenv("NEXUS_URL", ""),
             "user": os.getenv("NEXUS_USER", ""),
             "password": os.getenv("NEXUS_PASSWORD", ""),
-            "rate_limit": int(os.getenv("REQUESTS_PER_SECOND", 10)),
+            "rate_limit": int(os.getenv("REQUESTS_PER_SECOND", "10")),
         },
         "worker": {},
     }

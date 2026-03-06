@@ -37,9 +37,7 @@ class BaseWorker(ABC):
         """子类需实现此核心同步逻辑。"""
         pass
 
-    def run_sync(
-        self, task: dict, model_cls: Any | None = None, pk_field: str = "id", pk_value: Any | None = None
-    ) -> Any:
+    def run_sync(self, task: dict, model_cls: Any | None = None, pk_field: str = "id", pk_value: Any | None = None) -> Any:
         """通用同步包装器，处理事务、日志和异常。
 
         该方法封装了标准的“开始-处理-成功提交-失败回退”流程。
@@ -81,7 +79,7 @@ class BaseWorker(ABC):
                     if instance and hasattr(instance, "sync_status"):
                         instance.sync_status = "FAILED"
                         self.session.commit()
-                except:
+                except Exception:
                     pass
             raise e
 
@@ -101,9 +99,7 @@ class BaseWorker(ABC):
         percent = current / total * 100 if total > 0 else 0
         logger.info(f"[PROGRESS] {message}: {current}/{total} ({percent:.1f}%)")
 
-    def save_to_staging(
-        self, source: str, entity_type: str, external_id: str, payload: dict, schema_version: str = "1.0"
-    ) -> None:
+    def save_to_staging(self, source: str, entity_type: str, external_id: str, payload: dict, schema_version: str = "1.0") -> None:
         """将原始数据保存到 Staging 层，消除重复的 Upsert 逻辑。"""
         from sqlalchemy.dialects.postgresql import insert
 
@@ -129,11 +125,7 @@ class BaseWorker(ABC):
             )
             self.session.execute(stmt)
         except Exception:
-            existing = (
-                self.session.query(RawDataStaging)
-                .filter_by(source=source, entity_type=entity_type, external_id=str(external_id))
-                .first()
-            )
+            existing = self.session.query(RawDataStaging).filter_by(source=source, entity_type=entity_type, external_id=str(external_id)).first()
             if existing:
                 for k, v in data.items():
                     setattr(existing, k, v)

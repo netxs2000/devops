@@ -122,11 +122,7 @@ class OKRService:
         if not project_key or not metric_name:
             return None
         latest_measure = (
-            self.session.query(SonarMeasure)
-            .join(SonarProject)
-            .filter(SonarProject.key == project_key)
-            .order_by(SonarMeasure.analysis_date.desc())
-            .first()
+            self.session.query(SonarMeasure).join(SonarProject).filter(SonarProject.key == project_key).order_by(SonarMeasure.analysis_date.desc()).first()
         )
         if latest_measure:
             value = getattr(latest_measure, metric_name, None)

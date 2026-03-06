@@ -106,9 +106,7 @@ class TestTestManagementService:
         mock_client.create_issue.return_value = {"iid": 55}
 
         steps = [{"action": "Click Button", "expected": "Success"}]
-        await service.create_test_case(
-            project_id=1, title="New TC", priority="P2", test_type="UI", pre_conditions=["Init state"], steps=steps
-        )
+        await service.create_test_case(project_id=1, title="New TC", priority="P2", test_type="UI", pre_conditions=["Init state"], steps=steps)
 
         mock_client.create_issue.assert_called_once()
         args, kwargs = mock_client.create_issue.call_args

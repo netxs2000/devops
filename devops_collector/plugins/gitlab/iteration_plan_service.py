@@ -49,9 +49,7 @@ class IterationPlanService:
         - 状态为开启 (state = opened)
         - 类型为需求 (type::requirements) 或 Bug (type::bug)
         """
-        query = self.session.query(GitLabIssue).filter(
-            GitLabIssue.project_id == project_id, GitLabIssue.state == "opened"
-        )
+        query = self.session.query(GitLabIssue).filter(GitLabIssue.project_id == project_id, GitLabIssue.state == "opened")
         all_issues = query.all()
         backlog = []
         for issue in all_issues:
@@ -124,11 +122,7 @@ class IterationPlanService:
             ValueError: 当里程碑不存在、任务校验失败或結转失败时。
         """
         # 1. 查找本地缓存的里程碑
-        milestone = (
-            self.session.query(GitLabMilestone)
-            .filter(GitLabMilestone.project_id == project_id, GitLabMilestone.title == milestone_title)
-            .first()
-        )
+        milestone = self.session.query(GitLabMilestone).filter(GitLabMilestone.project_id == project_id, GitLabMilestone.title == milestone_title).first()
         if not milestone:
             raise ValueError(f"GitLab 里程碑 '{milestone_title}' 未找到。")
 
@@ -147,11 +141,7 @@ class IterationPlanService:
 
         # 3. 校验未完成任务
         open_issues = []
-        all_issues = (
-            self.session.query(GitLabIssue)
-            .filter(GitLabIssue.project_id == project_id, GitLabIssue.state == "opened")
-            .all()
-        )
+        all_issues = self.session.query(GitLabIssue).filter(GitLabIssue.project_id == project_id, GitLabIssue.state == "opened").all()
         for issue in all_issues:
             ms = issue.raw_data.get("milestone")
             # 注意：此处要用原 title 查找 issue，因为 Issue 里的 raw_data 还没同步
@@ -172,9 +162,7 @@ class IterationPlanService:
                 issue_titles = ", ".join([f"#{i.iid} {i.title}" for i in open_issues[:3]])
                 if len(open_issues) > 3:
                     issue_titles += "..."
-                raise ValueError(
-                    f"校验失败: 检测到 {len(open_issues)} 个未完成任务 ({issue_titles})。请选择“自动结转”或手动处理。"
-                )
+                raise ValueError(f"校验失败: 检测到 {len(open_issues)} 个未完成任务 ({issue_titles})。请选择“自动结转”或手动处理。")
 
         # 4. 生成变更日志并执行发布
         sprint_issues = self.get_sprint_issues_inclusive(project_id, effective_title)
@@ -193,9 +181,7 @@ class IterationPlanService:
                 logger.warning(f"创建 Tag 可能已存在或失败: {e}")
 
             logger.info(f"正在创建 Release: {tag_name}...")
-            gl_release_data = self.client.create_project_release(
-                project_id, tag_name, description=notes, milestones=[effective_title]
-            )
+            gl_release_data = self.client.create_project_release(project_id, tag_name, description=notes, milestones=[effective_title])
 
             logger.info(f"正在关闭里程碑: {effective_title}...")
             self.client.update_project_milestone(project_id, milestone.id, {"state_event": "close"})
@@ -221,9 +207,7 @@ class IterationPlanService:
             logger.error(f"发布执行失败: {e}")
             raise e
 
-    def create_sprint(
-        self, project_id: int, title: str, start_date: str, due_date: str, description: str = None
-    ) -> dict:
+    def create_sprint(self, project_id: int, title: str, start_date: str, due_date: str, description: str = None) -> dict:
         """【迭代规划】创建新的冲刺 (GitLabMilestone)。"""
         try:
             gl_milestone = self.client.create_project_milestone(project_id, title, start_date, due_date, description)
@@ -233,12 +217,8 @@ class IterationPlanService:
                 project_id=project_id,
                 title=gl_milestone["title"],
                 state=gl_milestone["state"],
-                start_date=datetime.strptime(gl_milestone["start_date"], "%Y-%m-%d")
-                if gl_milestone.get("start_date")
-                else None,
-                due_date=datetime.strptime(gl_milestone["due_date"], "%Y-%m-%d")
-                if gl_milestone.get("due_date")
-                else None,
+                start_date=datetime.strptime(gl_milestone["start_date"], "%Y-%m-%d") if gl_milestone.get("start_date") else None,
+                due_date=datetime.strptime(gl_milestone["due_date"], "%Y-%m-%d") if gl_milestone.get("due_date") else None,
                 created_at=datetime.now(UTC),
                 updated_at=datetime.now(UTC),
                 raw_data=gl_milestone,

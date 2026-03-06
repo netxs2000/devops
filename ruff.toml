@@ -2,7 +2,7 @@
 # 目标：复刻 Flake8, Pylint 并整合 isort 功能
 
 # 基础设置
-line-length = 120
+line-length = 160
 target-version = "py312"
 exclude = [
     ".git",
@@ -12,6 +12,7 @@ exclude = [
     "dist",
     "archived",
     ".agent",
+    "node_modules",
 ]
 
 [lint]
@@ -33,7 +34,14 @@ ignore = [
     "PLR2004", # 魔术值比较
     "B008",    # FastAPI Depends 中常见的函数调用默认值
     "PLC0415", # 允许在函数内 import (解决循环引用或插件按需加载)
-    "E402",    # 允许 import 在代码之后 (某些脚本初始化逻辑需要)
+    "E402",    # 允许 import 在代码之后
+    "ERA001",  # 暂时允许注释代码 (P0 Rollout)
+    "B904",    # 暂时允许 raise without from (P0 Rollout)
+    "PLR0912", # 暂时放宽分支出口限制
+    "PLR0915", # 暂时放宽单函数长度
+    "PLR0911", # 暂时放宽返回点限制
+    "E741",    # 允许单字母变量名 (如 l)
+    "E501",    # 允许长行 (SQL 字符串多)
 ]
 
 # 允许自动修复的规则

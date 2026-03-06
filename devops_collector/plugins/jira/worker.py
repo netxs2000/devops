@@ -112,9 +112,7 @@ class JiraWorker(BaseWorker):
         if not board:
             board = JiraBoard(id=data["id"], project_id=project.id)
             self.session.add(board)
-        self.save_to_staging(
-            source="jira", entity_type="board", external_id=data["id"], payload=data, schema_version=self.SCHEMA_VERSION
-        )
+        self.save_to_staging(source="jira", entity_type="board", external_id=data["id"], payload=data, schema_version=self.SCHEMA_VERSION)
         board.name = data["name"]
         board.type = data["type"]
         board.raw_data = data
@@ -160,9 +158,7 @@ class JiraWorker(BaseWorker):
 
     def _sync_issue(self, project: JiraProject, data: dict) -> JiraIssue:
         """同步 Jira 问题：先落盘到 Staging，再执行业务转换。"""
-        self.save_to_staging(
-            source="jira", entity_type="issue", external_id=data["id"], payload=data, schema_version=self.SCHEMA_VERSION
-        )
+        self.save_to_staging(source="jira", entity_type="issue", external_id=data["id"], payload=data, schema_version=self.SCHEMA_VERSION)
         return self._transform_issue(project, data)
 
     def _transform_issue(self, project: JiraProject, data: dict) -> JiraIssue:
@@ -271,9 +267,7 @@ class JiraWorker(BaseWorker):
             target_ext_id = str(target_issue_data["id"])
             existing = (
                 self.session.query(TraceabilityLink)
-                .filter_by(
-                    source_system="jira", source_id=source_ext_id, target_id=target_ext_id, link_type=link_direction
-                )
+                .filter_by(source_system="jira", source_id=source_ext_id, target_id=target_ext_id, link_type=link_direction)
                 .first()
             )
             if not existing:

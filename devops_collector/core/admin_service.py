@@ -97,18 +97,12 @@ class AdminService:
 
     def add_team_member(self, team_id: int, data: schemas.TeamMemberCreate) -> bool:
         """添加团队成员。"""
-        existing = (
-            self.session.query(TeamMember)
-            .filter(TeamMember.team_id == team_id, TeamMember.user_id == data.user_id)
-            .first()
-        )
+        existing = self.session.query(TeamMember).filter(TeamMember.team_id == team_id, TeamMember.user_id == data.user_id).first()
         if existing:
             existing.role_code = data.role_code
             existing.allocation_ratio = data.allocation_ratio
         else:
-            new_member = TeamMember(
-                team_id=team_id, user_id=data.user_id, role_code=data.role_code, allocation_ratio=data.allocation_ratio
-            )
+            new_member = TeamMember(team_id=team_id, user_id=data.user_id, role_code=data.role_code, allocation_ratio=data.allocation_ratio)
             self.session.add(new_member)
 
         self.session.commit()
@@ -190,7 +184,7 @@ class AdminService:
         orgs = (
             self.session.query(Organization)
             .options(joinedload(Organization.manager), joinedload(Organization.parent))
-            .filter(Organization.is_current == True)
+            .filter(Organization.is_current)
             .order_by(Organization.org_level.asc())
             .all()
         )
@@ -342,9 +336,7 @@ class AdminService:
 
     def export_products(self) -> str:
         """导出所有产品数据为 CSV（包含层级与负责人映射）。"""
-        products = (
-            self.session.query(Product).options(joinedload(Product.product_manager), joinedload(Product.parent)).all()
-        )
+        products = self.session.query(Product).options(joinedload(Product.product_manager), joinedload(Product.parent)).all()
 
         output = io.StringIO()
         writer = csv.writer(output)
@@ -387,7 +379,7 @@ class AdminService:
         # 阶段2：更新 parent_id 关系
 
         # 预加载所有用户邮箱映射以减少查询
-        user_map = {u.primary_email: u for u in self.session.query(User).filter(User.is_current == True).all()}
+        user_map = {u.primary_email: u for u in self.session.query(User).filter(User.is_current).all()}
 
         for phase in [1, 2]:
             for row in reader:
@@ -400,9 +392,7 @@ class AdminService:
                 if not pid or not name:
                     if phase == 1:
                         summary.failure_count += 1
-                        summary.errors.append(
-                            {"row": summary.total_processed, "error": "Missing product_id or product_name"}
-                        )
+                        summary.errors.append({"row": summary.total_processed, "error": "Missing product_id or product_name"})
                     continue
 
                 try:
@@ -449,16 +439,12 @@ class AdminService:
     def export_product_mappings(self) -> str:
         """导出产品-项目关联矩阵。"""
         relations = (
-            self.session.query(ProjectProductRelation)
-            .options(joinedload(ProjectProductRelation.project), joinedload(ProjectProductRelation.product))
-            .all()
+            self.session.query(ProjectProductRelation).options(joinedload(ProjectProductRelation.project), joinedload(ProjectProductRelation.product)).all()
         )
 
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(
-            ["project_id", "project_name", "product_id", "product_name", "relation_type", "allocation_ratio"]
-        )
+        writer.writerow(["project_id", "project_name", "product_id", "product_name", "relation_type", "allocation_ratio"])
 
         for r in relations:
             writer.writerow(
@@ -559,9 +545,7 @@ class AdminService:
                 obj_progress = round(obj.progress * 100, 2)
             elif obj.key_results:
                 # KR progress 存储的是 0.0-1.0，计算平均值后需 * 100
-                obj_progress = round(
-                    (sum(kr.progress or 0.0 for kr in obj.key_results) / len(obj.key_results)) * 100, 2
-                )
+                obj_progress = round((sum(kr.progress or 0.0 for kr in obj.key_results) / len(obj.key_results)) * 100, 2)
 
             # 如果没有 KR，导出一行 Objective
             if not obj.key_results:
@@ -604,9 +588,7 @@ class AdminService:
 
     def list_okrs(self, period: str | None = None, status: str | None = None, limit: int = 50) -> list[dict[str, Any]]:
         """获取 OKR 列表用于前端预览。"""
-        query = self.session.query(OKRObjective).options(
-            joinedload(OKRObjective.owner), joinedload(OKRObjective.key_results)
-        )
+        query = self.session.query(OKRObjective).options(joinedload(OKRObjective.owner), joinedload(OKRObjective.key_results))
         if period:
             query = query.filter(OKRObjective.period == period)
         if status:

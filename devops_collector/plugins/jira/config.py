@@ -18,7 +18,7 @@ def get_config() -> dict[str, Any]:
             "url": os.getenv("JIRA_URL", ""),
             "email": os.getenv("JIRA_EMAIL", ""),
             "api_token": os.getenv("JIRA_TOKEN", ""),
-            "rate_limit": int(os.getenv("REQUESTS_PER_SECOND", 5)),
+            "rate_limit": int(os.getenv("REQUESTS_PER_SECOND", "5")),
         },
         "worker": {},
     }

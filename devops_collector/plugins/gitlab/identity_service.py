@@ -122,9 +122,7 @@ class UserResolver:
                 if dept_name:
                     org = self.session.query(Organization).filter_by(org_name=dept_name).first()
                     if not org:
-                        org = Organization(
-                            org_id=dept_name, org_name=dept_name, org_level=2, sync_version=1, is_current=True
-                        )
+                        org = Organization(org_id=dept_name, org_name=dept_name, org_level=2, sync_version=1, is_current=True)
                         self.session.add(org)
                         self.session.flush()
                     user.department_id = org.org_id

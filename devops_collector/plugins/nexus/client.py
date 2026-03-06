@@ -54,8 +54,7 @@ class NexusClient(BaseClient):
                 params["continuationToken"] = continuation_token
             response = self._get("components", params=params).json()
             items = response.get("items", [])
-            for item in items:
-                yield item
+            yield from items
             continuation_token = response.get("continuationToken")
             if not continuation_token:
                 break
@@ -73,8 +72,7 @@ class NexusClient(BaseClient):
                 params["continuationToken"] = continuation_token
             response = self._get("assets", params=params).json()
             items = response.get("items", [])
-            for item in items:
-                yield item
+            yield from items
             continuation_token = response.get("continuationToken")
             if not continuation_token:
                 break

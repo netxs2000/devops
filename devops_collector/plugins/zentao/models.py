@@ -45,14 +45,10 @@ class ZenTaoProduct(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC))
     raw_data = Column(JSONB)
     # MDM 关联字段
-    mdm_product_id = Column(
-        String(100), ForeignKey("mdm_product.product_id"), nullable=True, comment="关联的 MDM 产品 ID"
-    )
+    mdm_product_id = Column(String(100), ForeignKey("mdm_product.product_id"), nullable=True, comment="关联的 MDM 产品 ID")
     executions = relationship("ZenTaoExecution", back_populates="product", cascade="all, delete-orphan")
     plans = relationship("ZenTaoProductPlan", back_populates="product", cascade="all, delete-orphan")
-    issues = relationship(
-        "ZenTaoIssue", back_populates="product", cascade="all, delete-orphan", foreign_keys="ZenTaoIssue.product_id"
-    )
+    issues = relationship("ZenTaoIssue", back_populates="product", cascade="all, delete-orphan", foreign_keys="ZenTaoIssue.product_id")
     test_cases = relationship("ZenTaoTestCase", back_populates="product", cascade="all, delete-orphan")
     builds = relationship("ZenTaoBuild", back_populates="product", cascade="all, delete-orphan")
     releases = relationship("ZenTaoRelease", back_populates="product", cascade="all, delete-orphan")
@@ -125,9 +121,7 @@ class ZenTaoExecution(Base):
     real_began = Column(DateTime)
     real_end = Column(DateTime)
     # MDM 关联字段
-    mdm_project_id = Column(
-        String(100), ForeignKey("mdm_projects.project_id"), nullable=True, comment="关联的 MDM 项目 ID"
-    )
+    mdm_project_id = Column(String(100), ForeignKey("mdm_projects.project_id"), nullable=True, comment="关联的 MDM 项目 ID")
     product = relationship("ZenTaoProduct", back_populates="executions")
     raw_data = Column(JSONB)
 

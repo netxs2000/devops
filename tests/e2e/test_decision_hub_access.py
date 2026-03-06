@@ -77,7 +77,6 @@ class TestDecisionHubAccess(unittest.TestCase):
             """)
 
             # Reset login_btn variable for safety if needed later, though we are bypassing click
-            login_btn = None
             time.sleep(2.0)  # Wait for fetch and redirect
 
         except Exception as e:
@@ -96,7 +95,7 @@ class TestDecisionHubAccess(unittest.TestCase):
                 alert = driver.find_element(By.ID, "alertBox")
                 if alert.is_displayed():
                     print(f"❌ Login Alert Visible: {alert.text}")
-            except:
+            except Exception:
                 pass
             driver.save_screenshot("redirect_failure.png")
             self.fail(f"Failed to redirect to index.html. Current URL: {driver.current_url}")

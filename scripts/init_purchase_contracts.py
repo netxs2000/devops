@@ -74,11 +74,7 @@ def init_purchase_contracts():
 
                 # 生成演示流水 (2025-01)
                 period = "2025-01"
-                cost_record = (
-                    session.query(ResourceCost)
-                    .filter(ResourceCost.purchase_contract_id == pc.id, ResourceCost.period == period)
-                    .first()
-                )
+                cost_record = session.query(ResourceCost).filter(ResourceCost.purchase_contract_id == pc.id, ResourceCost.period == period).first()
                 if not cost_record:
                     monthly_amount = pc.total_amount / 12.0
                     cost_record = ResourceCost(

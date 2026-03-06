@@ -24,9 +24,7 @@ def test_preview_logic():
     session.add(user)
     session.flush()
 
-    obj = OKRObjective(
-        title="Test Objective", owner_id=user.global_user_id, period="2024-Q1", status="ACTIVE", progress=0.5
-    )
+    obj = OKRObjective(title="Test Objective", owner_id=user.global_user_id, period="2024-Q1", status="ACTIVE", progress=0.5)
     session.add(obj)
     session.commit()
 

@@ -240,9 +240,7 @@ def test_get_my_tickets(authenticated_client, db_session):
         requester_email=mock_user.primary_email,
     )
     # Ticket for other
-    t2 = ServiceDeskTicket(
-        gitlab_project_id=10, gitlab_issue_iid=2, title="Other Ticket", requester_email="other@example.com"
-    )
+    t2 = ServiceDeskTicket(gitlab_project_id=10, gitlab_issue_iid=2, title="Other Ticket", requester_email="other@example.com")
 
     db_session.add(t1)
     db_session.add(t2)

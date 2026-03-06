@@ -38,12 +38,8 @@ class SonarProject(Base):
     qualifier = Column(String(10))
     gitlab_project_id = Column(Integer, ForeignKey("gitlab_projects.id"), nullable=True)
     # MDM 拓扑关联
-    mdm_project_id = Column(
-        String(100), ForeignKey("mdm_projects.project_id"), nullable=True, comment="关联的 MDM 项目 ID"
-    )
-    mdm_product_id = Column(
-        String(100), ForeignKey("mdm_product.product_id"), nullable=True, comment="关联的 MDM 产品 ID"
-    )
+    mdm_project_id = Column(String(100), ForeignKey("mdm_projects.project_id"), nullable=True, comment="关联的 MDM 项目 ID")
+    mdm_product_id = Column(String(100), ForeignKey("mdm_product.product_id"), nullable=True, comment="关联的 MDM 产品 ID")
 
     last_analysis_date = Column(DateTime(timezone=True))
     last_synced_at = Column(DateTime(timezone=True))

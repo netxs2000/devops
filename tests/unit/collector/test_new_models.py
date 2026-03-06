@@ -12,9 +12,7 @@ from devops_collector.models.base_models import (
 
 def test_create_business_system(db_session):
     """Test creating a BusinessSystem."""
-    system = BusinessSystem(
-        code="trade-core", name="Trading System", description="The core trading platform", domain="E-Commerce"
-    )
+    system = BusinessSystem(code="trade-core", name="Trading System", description="The core trading platform", domain="E-Commerce")
     db_session.add(system)
     db_session.commit()
     db_session.refresh(system)

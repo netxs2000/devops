@@ -74,11 +74,7 @@ def init_product_links(session: Session):
             zt_product.mdm_product_id = mdm_pid
 
             # 3. 更新 EntityTopology (用于 DORA/反向查询)
-            topology = (
-                session.query(EntityTopology)
-                .filter_by(system_code="zentao", external_resource_id=zt_pid, element_type="issue-tracker-product")
-                .first()
-            )
+            topology = session.query(EntityTopology).filter_by(system_code="zentao", external_resource_id=zt_pid, element_type="issue-tracker-product").first()
 
             if not topology:
                 topology = EntityTopology(
@@ -125,11 +121,7 @@ def init_project_links(session: Session):
             # 3. 继承逻辑 (Inheritance): 利用 path 字段查找所有子孙节点
             # 禅道 path 格式通常为 ",1,5,10,"，如果我们要找 5 的子孙，匹配 "%,5,%"
             search_pattern = f"%,{zt_id},%"
-            children = (
-                session.query(ZenTaoExecution)
-                .filter(ZenTaoExecution.path.like(search_pattern), ZenTaoExecution.id != zt_id)
-                .all()
-            )
+            children = session.query(ZenTaoExecution).filter(ZenTaoExecution.path.like(search_pattern), ZenTaoExecution.id != zt_id).all()
 
             for child in children:
                 # 只有当子节点没有被 CSV 明确指定其他项目时，才进行继承
@@ -142,9 +134,7 @@ def init_project_links(session: Session):
         # 4. 更新 EntityTopology (作为所有查询的根源)
         topology = (
             session.query(EntityTopology)
-            .filter_by(
-                project_id=mdm_id, system_code="zentao", external_resource_id=str(zt_id), element_type="issue-tracker"
-            )
+            .filter_by(project_id=mdm_id, system_code="zentao", external_resource_id=str(zt_id), element_type="issue-tracker")
             .first()
         )
 

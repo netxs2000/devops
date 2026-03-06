@@ -201,9 +201,7 @@ class BaseClient(ABC):
         if headers:
             req_headers.update(headers)
         try:
-            response = requests.post(
-                url, headers=req_headers, data=data, json=json, timeout=self.timeout, verify=self.verify
-            )
+            response = requests.post(url, headers=req_headers, data=data, json=json, timeout=self.timeout, verify=self.verify)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as e:

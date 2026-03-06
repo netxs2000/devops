@@ -38,7 +38,7 @@ class MessageQueue:
             self.url += "&heartbeat=600"
         else:
             self.url += "?heartbeat=600"
-        
+
         self.params = pika.URLParameters(self.url)
         self.connection = None
         self.channel = None

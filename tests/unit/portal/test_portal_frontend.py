@@ -24,9 +24,7 @@ def test_portal_navigation_and_modals(driver):
 
     # 注入 Mock Token 以跳过真实登录流程
     driver.execute_script("localStorage.setItem('sd_token', 'mock_token_for_test');")
-    driver.execute_script(
-        "localStorage.setItem('sd_user', JSON.stringify({email:'test@test.com', name:'Test', roles:['SYSTEM_ADMIN']}));"
-    )
+    driver.execute_script("localStorage.setItem('sd_user', JSON.stringify({email:'test@test.com', name:'Test', roles:['SYSTEM_ADMIN']}));")
 
     driver.get("http://localhost:8999/index.html")
     wait = WebDriverWait(driver, 10)

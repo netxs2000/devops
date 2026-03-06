@@ -155,9 +155,7 @@ class TestServiceDeskAPIEndpoints:
         场景：使用无效状态更新工单
         期望：返回 400 Bad Request
         """
-        response = self.client.patch(
-            "/service-desk/tickets/1/status", params={"new_status": "invalid_status"}, headers=auth_headers
-        )
+        response = self.client.patch("/service-desk/tickets/1/status", params={"new_status": "invalid_status"}, headers=auth_headers)
         # 可能返回 400 或 422
         assert response.status_code in [400, 422, 404]
 

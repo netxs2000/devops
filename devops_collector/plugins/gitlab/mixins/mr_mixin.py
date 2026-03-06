@@ -113,11 +113,7 @@ class MergeRequestMixin:
                 first_note_at = parse_iso8601(human_notes[0]["created_at"])
                 mr.first_response_at = first_note_at
             system_notes = [n for n in notes if n.get("system") is True]
-            updated_commits_notes = [
-                n
-                for n in system_notes
-                if "added" in n.get("body", "").lower() and "commit" in n.get("body", "").lower()
-            ]
+            updated_commits_notes = [n for n in system_notes if "added" in n.get("body", "").lower() and "commit" in n.get("body", "").lower()]
             mr.review_cycles = 1 + len(updated_commits_notes)
             if mr.merged_at and mr.created_at:
                 delta = mr.merged_at - mr.created_at

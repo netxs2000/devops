@@ -219,9 +219,7 @@ def test_api_create_team_and_add_member(db_session):
     """测试通过 API 创建团队并添加成员。"""
     # 1. 创建用户并赋予管理员角色
     u_id = uuid.uuid4()
-    admin_user = User(
-        global_user_id=u_id, full_name="系统管理员", primary_email="admin@ex.com", employee_id="ADMIN1", is_current=True
-    )
+    admin_user = User(global_user_id=u_id, full_name="系统管理员", primary_email="admin@ex.com", employee_id="ADMIN1", is_current=True)
     admin_role = SysRole(role_key="SYSTEM_ADMIN", role_name="管理员")
     db_session.add_all([admin_user, admin_role])
     db_session.commit()

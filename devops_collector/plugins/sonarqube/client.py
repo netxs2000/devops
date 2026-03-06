@@ -235,7 +235,7 @@ class SonarQubeClient(BaseClient):
             }
         """
         distribution = {"BUG": {}, "VULNERABILITY": {}, "CODE_SMELL": {}}
-        for issue_type in distribution.keys():
+        for issue_type, _ in distribution.items():
             response = self._get(
                 "issues/search",
                 params={
@@ -250,9 +250,9 @@ class SonarQubeClient(BaseClient):
             facets = data.get("facets", [])
             for facet in facets:
                 if facet["property"] == "severities":
-                    for value in facet.get("values", []):
-                        severity = value["val"]
-                        count = value["count"]
+                    for val_item in facet.get("values", []):
+                        severity = val_item["val"]
+                        count = val_item["count"]
                         distribution[issue_type][severity] = count
         return distribution
 
@@ -274,9 +274,7 @@ class SonarQubeClient(BaseClient):
         try:
             page = 1
             while True:
-                response = self._get(
-                    "hotspots/search", params={"projectKey": project_key, "status": "TO_REVIEW", "p": page, "ps": 500}
-                )
+                response = self._get("hotspots/search", params={"projectKey": project_key, "status": "TO_REVIEW", "p": page, "ps": 500})
                 data = response.json()
                 hotspots = data.get("hotspots", [])
                 if not hotspots:

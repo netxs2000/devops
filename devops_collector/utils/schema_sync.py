@@ -41,8 +41,6 @@ def auto_sync_schema():
                     # 构建增量添加列的 SQL (Postgres 语法)
                     # 虽然 SQLAlchemy 支持 type.compile，但基础类型直接拼凑更稳健
                     col_type = column.type.compile(engine.dialect)
-                    nullable = "NULL" if column.nullable else "NOT NULL"
-                    default = f"DEFAULT {column.default.arg}" if column.default else ""
 
                     sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}"
 

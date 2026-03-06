@@ -53,9 +53,7 @@ def run_integration_test():
     try:
         print("Scenrio 1: Organization Hierarchy...")
         root_org = Organization(org_id="ORG_ROOT", org_name="Global Group", org_level=1)
-        dept_org = Organization(
-            org_id="ORG_DEPT_01", org_name="Cloud Infrastructure", parent_org_id="ORG_ROOT", org_level=3
-        )
+        dept_org = Organization(org_id="ORG_DEPT_01", org_name="Cloud Infrastructure", parent_org_id="ORG_ROOT", org_level=3)
         session.add(root_org)
         session.add(dept_org)
         session.commit()
@@ -74,12 +72,8 @@ def run_integration_test():
             is_active=True,
         )
         session.add(test_user)
-        gitlab_id = IdentityMapping(
-            global_user_id=user_uuid, source_system="gitlab", external_user_id="1001", external_username="jdoe_gitlab"
-        )
-        jira_id = IdentityMapping(
-            global_user_id=user_uuid, source_system="jira", external_user_id="JIRA-UID-99", external_username="john.doe"
-        )
+        gitlab_id = IdentityMapping(global_user_id=user_uuid, source_system="gitlab", external_user_id="1001", external_username="jdoe_gitlab")
+        jira_id = IdentityMapping(global_user_id=user_uuid, source_system="jira", external_user_id="JIRA-UID-99", external_username="john.doe")
         session.add(gitlab_id)
         session.add(jira_id)
         session.commit()
@@ -94,9 +88,7 @@ def run_integration_test():
         assert any(i.source_system == "gitlab" for i in saved_user.identities)
         print("  - User and identity mapping verified (including bidirectional org membership).")
         print("Scenario 3: Cross-Plugin Relations & Test Management...")
-        gitlab_project = Project(
-            id=50001, name="core-api", path_with_namespace="infra/core-api", organization_id="ORG_DEPT_01"
-        )
+        gitlab_project = Project(id=50001, name="core-api", path_with_namespace="infra/core-api", organization_id="ORG_DEPT_01")
         session.add(gitlab_project)
         test_commit = Commit(
             id="sha123456789",
@@ -188,10 +180,10 @@ def run_integration_test():
         session.add(test_pipe)
         session.add(test_deploy)
         session.commit()
-        success_pipes = session.query(Pipeline).filter(Pipeline.is_success == True).all()
+        success_pipes = session.query(Pipeline).filter(Pipeline.is_success).all()
         assert len(success_pipes) >= 1
         assert success_pipes[0].status == "success"
-        prod_deploys = session.query(Deployment).filter(Deployment.is_production == True).all()
+        prod_deploys = session.query(Deployment).filter(Deployment.is_production).all()
         assert len(prod_deploys) >= 1
         assert prod_deploys[0].environment == "Production"
         print("  - DORA Hybrid Attributes (Pipeline/Deployment) verified.")
@@ -205,7 +197,7 @@ def run_integration_test():
         assert saved_project.visibility == "private"
         assert saved_project.is_archived is True
         assert saved_project.web_url == "https://gitlab.com/infra/core-api"
-        archived_projs = session.query(Project).filter(Project.is_archived == True).all()
+        archived_projs = session.query(Project).filter(Project.is_archived).all()
         assert len(archived_projs) == 1
         assert archived_projs[0].id == 50001
         print("  - Project Materialized Attributes (visibility, is_archived) verified.")
@@ -236,9 +228,7 @@ def run_integration_test():
         print("  - Requirement -> Bug (Association Proxy) penetration verified.")
         from devops_collector.models import GTMTestExecutionRecord
 
-        exec_record = GTMTestExecutionRecord(
-            project_id=50001, test_case_iid=test_case.iid, result="passed", executed_at=datetime.now(UTC)
-        )
+        exec_record = GTMTestExecutionRecord(project_id=50001, test_case_iid=test_case.iid, result="passed", executed_at=datetime.now(UTC))
         session.add(exec_record)
         session.commit()
         session.refresh(test_case)
@@ -258,7 +248,7 @@ def run_integration_test():
         session.commit()
         assert support_issue.priority_level == 0
         assert support_issue.sla_limit_seconds == 28800
-        assert support_issue.is_sla_violated == True
+        assert support_issue.is_sla_violated
         assert support_issue.sla_status == "WARNING"
         print("  - SLA Violation detection (P0 @ 9h) verified.")
         p3_issue = Issue(
@@ -273,7 +263,7 @@ def run_integration_test():
         session.add(p3_issue)
         session.commit()
         assert p3_issue.sla_limit_seconds == 432000
-        assert p3_issue.is_sla_violated == False
+        assert not p3_issue.is_sla_violated
         print("  - SLA P3 threshold (120h from config) verified.")
         agent_uuid = uuid.uuid4()
         response_note = Note(
@@ -298,9 +288,7 @@ def run_integration_test():
             bugs=10,
             quality_gate_status="ERROR",
         )
-        measure_2 = SonarMeasure(
-            project_id=sonar_project.id, analysis_date=datetime.now(UTC), bugs=0, quality_gate_status="OK"
-        )
+        measure_2 = SonarMeasure(project_id=sonar_project.id, analysis_date=datetime.now(UTC), bugs=0, quality_gate_status="OK")
         session.add_all([measure_1, measure_2])
         session.commit()
         session.refresh(sonar_project)
@@ -321,18 +309,14 @@ def run_integration_test():
         session.add(ghost_commit)
         session.commit()
         assert ghost_commit.gitlab_user_id is None
-        new_mapping = IdentityMapping(
-            global_user_id=user_uuid, source_system="gitlab", external_user_id="999", external_username="ghost_rider"
-        )
+        new_mapping = IdentityMapping(global_user_id=user_uuid, source_system="gitlab", external_user_id="999", external_username="ghost_rider")
         session.add(new_mapping)
         session.commit()
         session.refresh(ghost_commit)
         assert ghost_commit.gitlab_user_id == user_uuid
         print("  - Global Event (IdentityMapping -> Commit auto-link) verified.")
         print("Scenario 12: DORA MTTR & Change Failure Rate (Hybrid Aggregates)...")
-        deploy = Deployment(
-            id=90001, project_id=50001, environment="production", status="success", created_at=datetime.now(UTC)
-        )
+        deploy = Deployment(id=90001, project_id=50001, environment="production", status="success", created_at=datetime.now(UTC))
         session.add(deploy)
         incident_issue = Issue(
             id=90002,
@@ -435,9 +419,7 @@ def run_integration_test():
         assert jenkins_test.pass_rate == 98.0
         try:
             # Verify Unique Constraint: (project_id, build_id, test_level)
-            dup_test = JenkinsTestExecution(
-                project_id=gitlab_project.id, build_id="jenkins-build-999", test_level="Unit"
-            )
+            dup_test = JenkinsTestExecution(project_id=gitlab_project.id, build_id="jenkins-build-999", test_level="Unit")
             session.add(dup_test)
             session.commit()
             print("  - ERROR: Unique Constraint FAILED!")

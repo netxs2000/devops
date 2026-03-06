@@ -55,11 +55,7 @@ class CommitMixin:
             project (GitLabProject): 关联的项目实体。
             batch (List[dict]): 从 API 获取的原始提交数据列表。
         """
-        existing = (
-            self.session.query(GitLabCommit.id)
-            .filter(GitLabCommit.id.in_([c["id"] for c in batch]))
-            .all()
-        )
+        existing = self.session.query(GitLabCommit.id).filter(GitLabCommit.id.in_([c["id"] for c in batch])).all()
         existing_ids = {c.id for c in existing}
         new_commits = []
         for data in batch:

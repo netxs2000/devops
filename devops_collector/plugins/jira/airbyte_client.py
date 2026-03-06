@@ -144,9 +144,7 @@ class AirbyteJiraClient(BaseClient):
             project_key = match.group(1)
 
         if not project_key:
-            logger.warning(
-                f"Could not parse Project Key from JQL: '{jql}'. Returning all cached issues (may be mixed projects)."
-            )
+            logger.warning(f"Could not parse Project Key from JQL: '{jql}'. Returning all cached issues (may be mixed projects).")
             return all_issues
 
         filtered = []

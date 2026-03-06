@@ -1,5 +1,7 @@
 """禅道 (ZenTao) 全量数据采集 Worker"""
 
+# from .client import ZenTaoClient
+import json
 import logging
 from datetime import UTC, datetime
 from typing import Any
@@ -8,11 +10,8 @@ from sqlalchemy.orm import Session
 
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.identity_manager import IdentityManager
-from devops_collector.core.services import close_current_and_insert_new
 from devops_collector.models import Organization, SyncLog
 
-# from .client import ZenTaoClient
-import json
 from .models import (
     ZenTaoAction,
     ZenTaoBuild,
@@ -49,7 +48,7 @@ def _safe_int(val: Any) -> int | None:
         if isinstance(s, str) and "_" in s:
             s = s.split("_")[-1]
         return int(float(s))  # 先转 float 以兼容科学计数法或点号
-    except:
+    except Exception:
         return None
 
 
@@ -138,7 +137,7 @@ class ZenTaoWorker(BaseWorker):
 
             product.last_synced_at = datetime.now(UTC)
             product.sync_status = "COMPLETED"
-            
+
             # 记录成功日志
             msg = f"ZenTao product {product_id} synced successfully."
             self.session.add(SyncLog(project_id=str(product_id), status="SUCCESS", message=msg))
@@ -146,18 +145,14 @@ class ZenTaoWorker(BaseWorker):
         except Exception as e:
             self.session.rollback()
             logger.error(f"Failed to sync ZenTao product {product_id}: {e}")
-            
+
             # 记录失败状态
             try:
                 # 重新开启 session 以防旧 session 损坏
                 p_failed = self.session.query(ZenTaoProduct).filter_by(id=product_id).first()
                 if p_failed:
                     p_failed.sync_status = "FAILED"
-                    self.session.add(SyncLog(
-                        project_id=str(product_id), 
-                        status="FAILED", 
-                        message=f"ZenTao sync failed: {str(e)[:500]}"
-                    ))
+                    self.session.add(SyncLog(project_id=str(product_id), status="FAILED", message=f"ZenTao sync failed: {str(e)[:500]}"))
                     self.session.commit()
             except Exception as inner_e:
                 logger.error(f"Failed to record error status for product {product_id}: {inner_e}")
@@ -294,20 +289,20 @@ class ZenTaoWorker(BaseWorker):
         issue.title = _safe_str(data.get("title") or data.get("name"))
         issue.status = _safe_str(data.get("status"))
         issue.priority = _safe_int(data.get("priority") or data.get("pri"))
-        
+
         opened = _safe_str(data.get("openedBy"))
         issue.opened_by = str(opened) if opened else None
         if opened:
             u = IdentityManager.get_or_create_user(self.session, "zentao", opened)
             issue.opened_by_user_id = u.global_user_id
-        
+
         assigned = _safe_str(data.get("assignedTo"))
         issue.assigned_to = str(assigned) if assigned else None
         if assigned:
             u = IdentityManager.get_or_create_user(self.session, "zentao", assigned)
             issue.assigned_to_user_id = u.global_user_id
             issue.user_id = u.global_user_id
-            
+
         if data.get("openedDate"):
             try:
                 issue.created_at = datetime.fromisoformat(str(data["openedDate"]).replace(" ", "T"))
@@ -316,12 +311,12 @@ class ZenTaoWorker(BaseWorker):
         if data.get("lastEditedDate"):
             try:
                 issue.updated_at = datetime.fromisoformat(str(data["lastEditedDate"]).replace(" ", "T"))
-            except:
+            except Exception:
                 pass
         if data.get("closedDate"):
             try:
                 issue.closed_at = datetime.fromisoformat(str(data["closedDate"]).replace(" ", "T"))
-            except:
+            except Exception:
                 pass
         issue.raw_data = data
         self.session.flush()
@@ -355,10 +350,10 @@ class ZenTaoWorker(BaseWorker):
         # 工时数据 (FinOps 核心)
         est = data.get("estimate")
         issue.estimate = est if isinstance(est, (dict, list)) else str(est)
-        
+
         con = data.get("consumed")
         issue.consumed = con if isinstance(con, (dict, list)) else str(con)
-        
+
         lft = data.get("left")
         issue.left = lft if isinstance(lft, (dict, list)) else str(lft)
 
@@ -384,7 +379,7 @@ class ZenTaoWorker(BaseWorker):
         if data.get("finishedDate"):
             try:
                 issue.closed_at = datetime.fromisoformat(str(data["finishedDate"]).replace(" ", "T"))
-            except:
+            except Exception:
                 pass
 
         issue.raw_data = data
@@ -404,8 +399,8 @@ class ZenTaoWorker(BaseWorker):
         # 兼容 API 可能会返回字符串 id (如 "case_23461") 的情况
         tc_id = _safe_int(data.get("caseID") or data.get("id"))
         if not tc_id:
-            return None # 无法提取有效 ID
-            
+            return None  # 无法提取有效 ID
+
         tc = self.session.query(ZenTaoTestCase).filter_by(id=tc_id).first()
         if not tc:
             tc = ZenTaoTestCase(id=tc_id, product_id=product_id)
@@ -600,9 +595,7 @@ class ZenTaoWorker(BaseWorker):
             if not org:
                 try:
                     with self.session.begin_nested():
-                        org = Organization(
-                            org_id=org_id, org_name=org_name, org_level=3, is_current=True, sync_version=1
-                        )
+                        org = Organization(org_id=org_id, org_name=org_name, org_level=3, is_current=True, sync_version=1)
                         self.session.add(org)
                         self.session.flush()
                         logger.info(f"Created ZenTao Organization: {org_name}")

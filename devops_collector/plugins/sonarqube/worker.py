@@ -84,9 +84,7 @@ class SonarQubeWorker(BaseWorker):
         gate_status = self.client.get_quality_gate_status(project.key)
         issue_dist = self.client.get_issue_severity_distribution(project.key)
         hotspot_dist = self.client.get_hotspot_distribution(project.key)
-        measure = self.transformer.transform_measures_snapshot(
-            project, measures_data, gate_status, issue_dist, hotspot_dist
-        )
+        measure = self.transformer.transform_measures_snapshot(project, measures_data, gate_status, issue_dist, hotspot_dist)
         self.session.add(measure)
         return measure
 

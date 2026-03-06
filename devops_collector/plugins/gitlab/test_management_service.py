@@ -66,9 +66,7 @@ class TestManagementService:
             logger.error(f"Failed to get test cases for project {project_id}: {e}")
             raise e
 
-    def _parse_issues_to_test_cases(
-        self, issues: list[dict], project_name: str | None = None
-    ) -> list[schemas.TestCase]:
+    def _parse_issues_to_test_cases(self, issues: list[dict], project_name: str | None = None) -> list[schemas.TestCase]:
         """将 GitLab Issue 数据解析为测试用例模型。"""
         test_cases = []
         for issue_data in issues:
@@ -82,16 +80,9 @@ class TestManagementService:
                     title=issue_data["title"],
                     priority=parsed["priority"],
                     test_type=parsed["test_type"],
-                    requirement_id=str(
-                        GitLabTestParser.extract_requirement_id(issue_data.get("description", "")) or ""
-                    ),
+                    requirement_id=str(GitLabTestParser.extract_requirement_id(issue_data.get("description", "")) or ""),
                     pre_conditions=parsed["pre_conditions"].split("\n") if parsed["pre_conditions"] else [],
-                    steps=[
-                        schemas.TestStep(
-                            step_number=s["step_number"], action=s["action"], expected_result=s["expected"]
-                        )
-                        for s in parsed["test_steps"]
-                    ],
+                    steps=[schemas.TestStep(step_number=s["step_number"], action=s["action"], expected_result=s["expected"]) for s in parsed["test_steps"]],
                     result=self._determine_result_from_labels(labels),
                     web_url=issue_data["web_url"],
                     project_name=project_name,
@@ -178,13 +169,7 @@ class TestManagementService:
             return []
 
         # 2. 获取需求 (Story/Feature)
-        issues = (
-            db.query(ZenTaoIssue)
-            .filter(
-                ZenTaoIssue.product_id.in_(zt_product_ids), ZenTaoIssue.type.in_(["story", "feature", "requirement"])
-            )
-            .all()
-        )
+        issues = db.query(ZenTaoIssue).filter(ZenTaoIssue.product_id.in_(zt_product_ids), ZenTaoIssue.type.in_(["story", "feature", "requirement"])).all()
 
         # 3. 预加载当前范围内的 Test Cases (避免 N+1 查询)
         # 获取涉及的 GitLab 项目 ID
@@ -242,9 +227,7 @@ class TestManagementService:
 
             for l in links:
                 if l.target_type == "merge_request":
-                    mrs.append(
-                        {"id": l.target_id, "iid": l.target_id, "title": f"MR !{l.target_id}", "state": "merged"}
-                    )
+                    mrs.append({"id": l.target_id, "iid": l.target_id, "title": f"MR !{l.target_id}", "state": "merged"})
                 elif l.target_type == "commit":
                     commits.append({"short_id": l.target_id[:8], "title": f"Commit {l.target_id[:8]}"})
                 elif l.target_type == "bug":  # 假设 TraceabilityMixin 也同步了 Bug 链接
@@ -267,11 +250,7 @@ class TestManagementService:
                 review_state="approved" if issue.status == "active" else "draft",
             )
 
-            results.append(
-                schemas.TraceabilityMatrixItem(
-                    requirement=req_summary, test_cases=api_cases, defects=defects, merge_requests=mrs, commits=commits
-                )
-            )
+            results.append(schemas.TraceabilityMatrixItem(requirement=req_summary, test_cases=api_cases, defects=defects, merge_requests=mrs, commits=commits))
 
         return results
 
@@ -361,9 +340,7 @@ class TestManagementService:
             logger.error(f"Failed to create test case in GitLab: {e}")
             raise e
 
-    async def execute_test_case(
-        self, project_id: int, issue_iid: int, result: str, executor: str, report: schemas.ExecutionReport | None = None
-    ) -> bool:
+    async def execute_test_case(self, project_id: int, issue_iid: int, result: str, executor: str, report: schemas.ExecutionReport | None = None) -> bool:
         """执行用例，更新 GitLab 标签并记录 Note。"""
         try:
             # 1. 更新标签
@@ -394,9 +371,7 @@ class TestManagementService:
             logger.error(f"Failed to execute test case #{issue_iid}: {e}")
             return False
 
-    async def list_requirements(
-        self, project_id: int, current_user: Any, db: Session
-    ) -> list[schemas.RequirementSummary]:
+    async def list_requirements(self, project_id: int, current_user: Any, db: Session) -> list[schemas.RequirementSummary]:
         """列出项目中的需求 (type::requirement)。"""
         try:
             issues = list(self.client.get_project_issues(project_id))
@@ -448,9 +423,7 @@ class TestManagementService:
                                 requirement_id=str(iid),
                                 pre_conditions=parsed["pre_conditions"].split("\n") if parsed["pre_conditions"] else [],
                                 steps=[
-                                    schemas.TestStep(
-                                        step_number=s["step_number"], action=s["action"], expected_result=s["expected"]
-                                    )
+                                    schemas.TestStep(step_number=s["step_number"], action=s["action"], expected_result=s["expected"])
                                     for s in parsed["test_steps"]
                                 ],
                                 result=self._determine_result_from_labels(other_issue.get("labels", [])),
@@ -664,10 +637,7 @@ class TestManagementService:
                 test_type=parsed["test_type"],
                 requirement_id=str(GitLabTestParser.extract_requirement_id(issue_data.get("description", "")) or ""),
                 pre_conditions=parsed["pre_conditions"].split("\n") if parsed["pre_conditions"] else [],
-                steps=[
-                    schemas.TestStep(step_number=s["step_number"], action=s["action"], expected_result=s["expected"])
-                    for s in parsed["test_steps"]
-                ],
+                steps=[schemas.TestStep(step_number=s["step_number"], action=s["action"], expected_result=s["expected"]) for s in parsed["test_steps"]],
                 result=self._determine_result_from_labels(issue_data.get("labels", [])),
                 web_url=issue_data["web_url"],
             )

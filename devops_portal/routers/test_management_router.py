@@ -29,9 +29,7 @@ router = APIRouter(prefix="/test-management", tags=["test-management"])
 logger = logging.getLogger(__name__)
 
 
-def get_test_management_service(
-    db: Session = Depends(get_auth_db), client: GitLabClient = Depends(get_user_gitlab_client)
-) -> TestManagementService:
+def get_test_management_service(db: Session = Depends(get_auth_db), client: GitLabClient = Depends(get_user_gitlab_client)) -> TestManagementService:
     """获取测试管理服务实例。"""
     return TestManagementService(db, client)
 
@@ -104,9 +102,7 @@ async def create_test_case(
             title=data.title,
             priority=data.priority,
             test_type=data.test_type,
-            pre_conditions=data.pre_conditions.split("\n")
-            if isinstance(data.pre_conditions, str)
-            else data.pre_conditions,
+            pre_conditions=data.pre_conditions.split("\n") if isinstance(data.pre_conditions, str) else data.pre_conditions,
             steps=data.steps,
             requirement_id=str(data.requirement_iid) if data.requirement_iid else None,
             product_id=data.product_id,
@@ -152,9 +148,7 @@ async def import_test_cases(
                     "title": str(row.get("title", "Untitled")),
                     "priority": str(row.get("priority", "P2")),
                     "test_type": str(row.get("test_type", "功能测试")),
-                    "requirement_id": str(row.get("requirement_id", ""))
-                    if not pd.isna(row.get("requirement_id"))
-                    else None,
+                    "requirement_id": str(row.get("requirement_id", "")) if not pd.isna(row.get("requirement_id")) else None,
                     "pre_conditions": str(row.get("pre_conditions", "")).split("\n"),
                     "steps": steps,
                 }
@@ -328,7 +322,7 @@ async def execute_test_case(
         raise HTTPException(status_code=400, detail="Invalid result status")
     executor = f"{current_user.full_name} ({current_user.primary_email})"
     try:
-        success = await service.execute_test_case(project_id, issue_iid, final_result, executor, report)
+        await service.execute_test_case(project_id, issue_iid, final_result, executor, report)
         return {"status": "success", "new_result": final_result}
     except Exception as e:
         logger.error(f"Failed to execute test case #{issue_iid}: {e}")

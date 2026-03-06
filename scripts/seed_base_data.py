@@ -57,7 +57,7 @@ def seed_organizations(session: Session, csv_path: Path):
         rows = list(reader)
 
     # Build user name -> user map for manager lookup
-    users = {u.full_name: u for u in session.query(User).filter(User.is_current == True).all()}
+    users = {u.full_name: u for u in session.query(User).filter(User.is_current).all()}
 
     created_orgs = {}  # org_name -> org_id (for dedup)
     stats = {"created": 0, "skipped": 0}
@@ -154,9 +154,7 @@ def seed_products(session: Session, csv_path: Path):
         rows = list(reader)
 
     # Build org name -> org_id map for owner_team lookup
-    org_name_map = {
-        o.org_name: o.org_id for o in session.query(Organization).filter(Organization.is_current == True).all()
-    }
+    org_name_map = {o.org_name: o.org_id for o in session.query(Organization).filter(Organization.is_current).all()}
 
     stats = {"created": 0, "skipped": 0}
 

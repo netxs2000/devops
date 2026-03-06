@@ -36,9 +36,7 @@ def parse_html_report(html_file):
     if not vulnerability_table:
         logging.error("Vulnerability table not found in the HTML file.")
         return []
-    headers = [
-        header.text.strip().replace("\xa0", " ").lower() for header in vulnerability_table.find("thead").find_all("th")
-    ]
+    headers = [header.text.strip().replace("\xa0", " ").lower() for header in vulnerability_table.find("thead").find_all("th")]
     logging.debug(f"Headers: {headers}")
     try:
         dependency_idx = headers.index("dependency")
@@ -47,11 +45,7 @@ def parse_html_report(html_file):
     except ValueError as e:
         logging.error(f"Missing required header: {e}")
         return []
-    rows = (
-        vulnerability_table.find("tbody").find_all("tr")
-        if vulnerability_table.find("tbody")
-        else vulnerability_table.find_all("tr")[1:]
-    )
+    rows = vulnerability_table.find("tbody").find_all("tr") if vulnerability_table.find("tbody") else vulnerability_table.find_all("tr")[1:]
     for row in rows:
         cells = row.find_all("td")
         if len(cells) != len(headers):

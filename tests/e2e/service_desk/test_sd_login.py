@@ -155,7 +155,7 @@ class TestServiceDeskRBAC:
         sidebar = self.page.locator("#sidebar-nav-container")
 
         # 检查是否有管理员专属菜单
-        admin_menu = sidebar.locator("text=User Approvals")
+        sidebar.locator("text=User Approvals")
 
         # 如果用户没有 USER:MANAGE 权限，不应该看到此菜单
         # 注意：这取决于测试用户的权限配置

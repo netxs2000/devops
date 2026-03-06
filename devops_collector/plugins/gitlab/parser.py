@@ -40,7 +40,7 @@ class GitLabTestParser:
                 parts = description.split("## 🛠️ 前置条件")
                 if len(parts) > 1:
                     pre_content = parts[1].split("---")[0].strip()
-                    lines = [line.strip("- [ ] ").strip() for line in pre_content.split("\n") if line.strip()]
+                    lines = [line.lstrip("- [ ] ").strip() for line in pre_content.split("\n") if line.strip()]  # noqa: B005
                     pre_conditions = "\n".join(lines)
             except Exception:
                 pass

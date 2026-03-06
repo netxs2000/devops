@@ -89,9 +89,7 @@ async def test_service_desk_full_flow(session, mock_user, mock_gitlab_client):
     assert tickets[0].id == ticket.id
 
     # 4. Update Status (Close)
-    success = await service.update_ticket_status(
-        db=session, ticket_id=ticket.id, new_status="closed", operator_name="Admin"
-    )
+    success = await service.update_ticket_status(db=session, ticket_id=ticket.id, new_status="closed", operator_name="Admin")
 
     assert success is True
 

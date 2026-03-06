@@ -131,9 +131,7 @@ def test_project_mapping_flow(admin_client, db_session):
     db_session.add(org)
 
     # Setup: Unlinked Repo
-    repo = GitLabProject(
-        id=1001, name="legacy-repo", path_with_namespace="group/legacy-repo", raw_data={"web_url": "http://git"}
-    )
+    repo = GitLabProject(id=1001, name="legacy-repo", path_with_namespace="group/legacy-repo", raw_data={"web_url": "http://git"})
     db_session.add(repo)
     db_session.commit()
 
@@ -239,10 +237,6 @@ def test_user_approval_process(admin_client, db_session):
     assert pending_user.is_active is True
 
     # 5. Verify GitLab Mapping Created
-    mapping = (
-        db_session.query(IdentityMapping)
-        .filter_by(global_user_id=pending_user.global_user_id, source_system="gitlab")
-        .first()
-    )
+    mapping = db_session.query(IdentityMapping).filter_by(global_user_id=pending_user.global_user_id, source_system="gitlab").first()
     assert mapping is not None
     assert mapping.external_user_id == "GL-555"

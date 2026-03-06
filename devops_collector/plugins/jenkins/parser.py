@@ -16,9 +16,7 @@ class ReportParser:
     """Jenkins 测试报告解析器。"""
 
     @staticmethod
-    def parse_jenkins_test_report(
-        project_id: int | None, build_id: str, report_data: dict[str, Any], job_name: str = ""
-    ) -> JenkinsTestExecution | None:
+    def parse_jenkins_test_report(project_id: int | None, build_id: str, report_data: dict[str, Any], job_name: str = "") -> JenkinsTestExecution | None:
         """将 Jenkins testReport 转换为 JenkinsTestExecution。
 
         Args:

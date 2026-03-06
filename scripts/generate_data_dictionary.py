@@ -92,8 +92,8 @@ def extract_docstring_description(model_class) -> str:
         return "无描述"
     lines = doc.split("\n")
     description = []
-    for line in lines:
-        line = line.strip()
+    for raw_line in lines:
+        line = raw_line.strip()
         if line and not line.startswith("Attributes:") and not line.startswith("Args:"):
             description.append(line)
         elif line.startswith("Attributes:"):
@@ -266,7 +266,7 @@ def generate_full_data_dictionary() -> tuple[str, set[str]]:
     """
     # 收集所有模型
     all_models = []
-    for name, obj in inspect.getmembers(models):
+    for _name, obj in inspect.getmembers(models):
         if inspect.isclass(obj) and hasattr(obj, "__tablename__") and obj != Base:
             all_models.append(obj)
 
@@ -281,8 +281,8 @@ def generate_full_data_dictionary() -> tuple[str, set[str]]:
 
     md = f"""# DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: {now}  
-> **版本**: v2.2 (企业级标准版)  
+> **生成时间**: {now}
+> **版本**: v2.2 (企业级标准版)
 > **状态**: 有效 (Active)
 
 ---

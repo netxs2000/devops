@@ -16,11 +16,11 @@ def get_config() -> dict[str, Any]:
     return {
         "client": {
             "cli_path": os.getenv("DEPENDENCY_CHECK_CLI", "dependency-check"),
-            "timeout": int(os.getenv("DEPENDENCY_CHECK_TIMEOUT", 600)),
+            "timeout": int(os.getenv("DEPENDENCY_CHECK_TIMEOUT", "600")),
         },
         "worker": {
             "report_dir": os.getenv("DEPENDENCY_CHECK_REPORT_DIR", "/var/lib/devops/dependency-reports"),
             "keep_reports": os.getenv("DEPENDENCY_CHECK_KEEP_REPORTS", "true").lower() == "true",
-            "retention_days": int(os.getenv("DEPENDENCY_CHECK_RETENTION_DAYS", 90)),
+            "retention_days": int(os.getenv("DEPENDENCY_CHECK_RETENTION_DAYS", "90")),
         },
     }

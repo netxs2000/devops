@@ -96,9 +96,7 @@ def run_validation():
         {
             "name": "fct_delivery_costs",
             "suite_name": "finops_quality_suite",
-            "expectations": [
-                {"type": "expect_column_values_to_be_between", "column": "total_labor_cost", "min_value": 0}
-            ],
+            "expectations": [{"type": "expect_column_values_to_be_between", "column": "total_labor_cost", "min_value": 0}],
         },
         {
             "name": "fct_metrics_audit_guard",
@@ -111,9 +109,7 @@ def run_validation():
         {
             "name": "fct_talent_radar",
             "suite_name": "talent_quality_suite",
-            "expectations": [
-                {"type": "expect_column_values_to_be_between", "column": "influence_score", "min_value": 0}
-            ],
+            "expectations": [{"type": "expect_column_values_to_be_between", "column": "influence_score", "min_value": 0}],
         },
         {
             "name": "fct_shadow_it_discovery",
@@ -156,14 +152,10 @@ def run_validation():
                 suite.add_expectation(gx.expectations.ExpectColumnValuesToNotBeNull(column=exp["column"]))
             elif exp["type"] == "expect_column_values_to_be_between":
                 suite.add_expectation(
-                    gx.expectations.ExpectColumnValuesToBeBetween(
-                        column=exp["column"], min_value=exp.get("min_value"), max_value=exp.get("max_value")
-                    )
+                    gx.expectations.ExpectColumnValuesToBeBetween(column=exp["column"], min_value=exp.get("min_value"), max_value=exp.get("max_value"))
                 )
             elif exp["type"] == "expect_column_values_to_be_in_set":
-                suite.add_expectation(
-                    gx.expectations.ExpectColumnValuesToBeInSet(column=exp["column"], value_set=exp["value_set"])
-                )
+                suite.add_expectation(gx.expectations.ExpectColumnValuesToBeInSet(column=exp["column"], value_set=exp["value_set"]))
         asset_name = f"table_{model['name']}"
         try:
             asset = datasource.get_asset(asset_name)

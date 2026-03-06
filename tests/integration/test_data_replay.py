@@ -9,7 +9,6 @@ from devops_collector.config import Config
 
 
 Config.DB_URI = "sqlite:///:memory:"
-from devops_collector.models import *
 from devops_collector.models.base_models import Base, RawDataStaging
 from devops_collector.plugins.gitlab.models import GitLabMergeRequest, GitLabProject
 from scripts.reprocess_staging_data import reprocess_by_source
@@ -29,9 +28,7 @@ def test_gitlab_mr_replay():
     test_mr_iid = 8888
     test_mr_id = 7777777
     try:
-        project = GitLabProject(
-            id=test_project_id, name="Test Replay Project", path_with_namespace="test/replay-project"
-        )
+        project = GitLabProject(id=test_project_id, name="Test Replay Project", path_with_namespace="test/replay-project")
         session.add(project)
         session.commit()
         payload = {
@@ -58,7 +55,7 @@ def test_gitlab_mr_replay():
         logger.info("Executing reprocess logic...")
         reprocess_by_source("gitlab", "merge_request")
         session.expire_all()
-        mr = session.query(GitLabMergeRequest).get(test_mr_id)
+        session.query(GitLabMergeRequest).get(test_mr_id)
     except Exception as e:
         logger.error(f"❌ Test Failed with error: {e}")
         raise
@@ -79,5 +76,5 @@ if __name__ == "__main__":
         if os.path.exists(test_db_file):
             try:
                 os.remove(test_db_file)
-            except:
+            except Exception:
                 pass

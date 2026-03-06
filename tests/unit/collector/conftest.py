@@ -36,7 +36,6 @@ def db_session():
     # Create all tables
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
-    db = TestingSessionLocal()
     try:
         yield db
     finally:

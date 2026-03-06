@@ -3,6 +3,7 @@ import logging
 import os
 import re
 
+from devops_collector.auth.auth_database import AuthSessionLocal
 from devops_collector.models.base_models import Product
 from devops_collector.plugins.nexus.models import NexusComponent
 
@@ -16,6 +17,7 @@ NEXUS_MAP_CSV = os.path.join(os.path.dirname(os.path.dirname(__file__)), "docs",
 
 def init_nexus_links():
     """根据 CSV 映射文件初始化 Nexus 组件与 MDM 产品的关联。"""
+    session = AuthSessionLocal()
     if not os.path.exists(NEXUS_MAP_CSV):
         logger.warning(f"找不到映射文件: {NEXUS_MAP_CSV}")
         return
@@ -24,7 +26,7 @@ def init_nexus_links():
         logger.info("开始同步 Nexus 组件关联 (高性能模式)...")
 
         # 1. 预加载所有有效产品到内存
-        all_products = session.query(Product.product_id).filter(Product.is_current == True).all()
+        all_products = session.query(Product.product_id).filter(Product.is_current).all()
         valid_product_ids = {p.product_id for p in all_products}
         logger.info(f"已加载 {len(valid_product_ids)} 个有效产品。")
 

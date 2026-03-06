@@ -187,7 +187,6 @@ class TestGitLabWorkerIdempotency(unittest.TestCase):
     def test_pipeline_idempotency(self):
         """Verify Pipeline sync idempotency."""
         logger.info(">>> Starting Idempotency Test: Pipelines")
-        mock_headers = {"X-Total-Pages": "1"}
         mock_pipelines = [
             {
                 "id": 500,

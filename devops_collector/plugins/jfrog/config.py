@@ -17,7 +17,7 @@ def get_config() -> dict[str, Any]:
         "client": {
             "url": os.getenv("JFROG_URL", ""),
             "token": os.getenv("JFROG_TOKEN", ""),
-            "rate_limit": int(os.getenv("REQUESTS_PER_SECOND", 10)),
+            "rate_limit": int(os.getenv("REQUESTS_PER_SECOND", "10")),
         },
         "worker": {},
     }

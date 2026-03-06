@@ -117,9 +117,7 @@ def sync_shadow_it_findings(session: Session) -> int:
     created_count = 0
     for row in results:
         repo_id = str(row["gitlab_project_id"])
-        existing = (
-            session.query(ComplianceIssue).filter_by(entity_id=repo_id, issue_type="SHADOW_IT", status="OPEN").first()
-        )
+        existing = session.query(ComplianceIssue).filter_by(entity_id=repo_id, issue_type="SHADOW_IT", status="OPEN").first()
         if not existing:
             new_issue = ComplianceIssue(
                 issue_type="SHADOW_IT",

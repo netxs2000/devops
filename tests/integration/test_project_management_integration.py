@@ -159,12 +159,8 @@ def test_admin_link_and_set_lead_repo():
 def test_service_desk_list_projects():
     """测试业务侧获取可选项目列表（组织隔离）。"""
     db = TestingSessionLocal()
-    pm1 = ProjectMaster(
-        project_id="PM_SD_001", project_name="Visible Project", org_id="DEPT_TEST", lead_repo_id=101, is_current=True
-    )
-    pm2 = ProjectMaster(
-        project_id="PM_SD_002", project_name="Hidden Project", org_id="DEPT_OTHER", lead_repo_id=102, is_current=True
-    )
+    pm1 = ProjectMaster(project_id="PM_SD_001", project_name="Visible Project", org_id="DEPT_TEST", lead_repo_id=101, is_current=True)
+    pm2 = ProjectMaster(project_id="PM_SD_002", project_name="Hidden Project", org_id="DEPT_OTHER", lead_repo_id=102, is_current=True)
     db.add_all([pm1, pm2])
     db.commit()
     user = db.query(User).filter(User.primary_email == "user@example.com").first()
@@ -184,9 +180,7 @@ def test_submit_bug_via_mdm_id(MockServiceDeskService):
     db = TestingSessionLocal()
     admin = db.query(User).filter(User.primary_email == "admin@example.com").first()
     mock_context.user = admin
-    pm = ProjectMaster(
-        project_id="PM_RT_001", project_name="Router Project", org_id="DEPT_TEST", lead_repo_id=555, is_current=True
-    )
+    pm = ProjectMaster(project_id="PM_RT_001", project_name="Router Project", org_id="DEPT_TEST", lead_repo_id=555, is_current=True)
     db.add(pm)
     db.commit()
     mock_service = MockServiceDeskService.return_value
@@ -229,9 +223,7 @@ def test_submit_bug_no_lead_repo():
     db = TestingSessionLocal()
     admin = db.query(User).filter(User.primary_email == "admin@example.com").first()
     mock_context.user = admin
-    pm = ProjectMaster(
-        project_id="PM_NO_LEAD", project_name="No Lead Project", org_id="DEPT_TEST", lead_repo_id=None, is_current=True
-    )
+    pm = ProjectMaster(project_id="PM_NO_LEAD", project_name="No Lead Project", org_id="DEPT_TEST", lead_repo_id=None, is_current=True)
     db.add(pm)
     db.commit()
     payload = {

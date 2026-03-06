@@ -52,9 +52,7 @@ class CreateMilestoneRequest(BaseModel):
     description: str | None = None
 
 
-def get_iteration_plan_service(
-    db: Session = Depends(get_auth_db), client: GitLabClient = Depends(get_user_gitlab_client)
-) -> IterationPlanService:
+def get_iteration_plan_service(db: Session = Depends(get_auth_db), client: GitLabClient = Depends(get_user_gitlab_client)) -> IterationPlanService:
     """获取迭代计划服务实例。
 
     Args:
@@ -77,15 +75,10 @@ async def list_projects(db: Session = Depends(get_auth_db), current_user: User =
 
 
 @router.get("/projects/{project_id}/milestones")
-async def list_milestones(
-    project_id: int, db: Session = Depends(get_auth_db), current_user: User = Depends(get_current_user)
-):
+async def list_milestones(project_id: int, db: Session = Depends(get_auth_db), current_user: User = Depends(get_current_user)):
     """获取指定项目的里程碑列表。"""
     milestones = (
-        db.query(GitLabMilestone)
-        .filter(GitLabMilestone.project_id == project_id, GitLabMilestone.state == "active")
-        .order_by(GitLabMilestone.due_date)
-        .all()
+        db.query(GitLabMilestone).filter(GitLabMilestone.project_id == project_id, GitLabMilestone.state == "active").order_by(GitLabMilestone.due_date).all()
     )
     return [{"id": m.id, "title": m.title, "due_date": m.due_date} for m in milestones]
 

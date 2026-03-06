@@ -28,9 +28,7 @@ class PipelineMixin:
         Returns:
             int: 处理的流水线总数。
         """
-        return self._process_generator(
-            self.client.get_project_pipelines(project.id), lambda batch: self._save_pipelines_batch(project, batch)
-        )
+        return self._process_generator(self.client.get_project_pipelines(project.id), lambda batch: self._save_pipelines_batch(project, batch))
 
     def _save_pipelines_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存流水线及其基本指标。
@@ -86,9 +84,7 @@ class PipelineMixin:
         Returns:
             int: 处理的部署记录总数。
         """
-        return self._process_generator(
-            self.client.get_project_deployments(project.id), lambda batch: self._save_deployments_batch(project, batch)
-        )
+        return self._process_generator(self.client.get_project_deployments(project.id), lambda batch: self._save_deployments_batch(project, batch))
 
     def _save_deployments_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存部署信息。

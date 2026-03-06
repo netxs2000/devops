@@ -58,9 +58,7 @@ def test_gitlab_webhook(client):
 
 
 def test_list_jfrog_artifacts(authenticated_client, db_session):
-    artifact = JFrogArtifact(
-        repo="libs-release-local", path="com/example/test", name="test-artifact", version="1.0.0", package_type="maven"
-    )
+    artifact = JFrogArtifact(repo="libs-release-local", path="com/example/test", name="test-artifact", version="1.0.0", package_type="maven")
     db_session.add(artifact)
     db_session.commit()
 
@@ -72,9 +70,7 @@ def test_list_jfrog_artifacts(authenticated_client, db_session):
 
 
 def test_list_nexus_components(authenticated_client, db_session):
-    comp = NexusComponent(
-        id="nexus-comp-1", name="test-comp", repository="maven-releases", group="com.example", version="1.0.0"
-    )
+    comp = NexusComponent(id="nexus-comp-1", name="test-comp", repository="maven-releases", group="com.example", version="1.0.0")
     db_session.add(comp)
     db_session.commit()
 

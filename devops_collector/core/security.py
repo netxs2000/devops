@@ -84,11 +84,7 @@ def get_user_org_scope_ids(db: Session, user: User) -> list[str]:
             parent_id: 父级组织 ID。
             db_session: 数据库会话。
         """
-        children = (
-            db_session.query(Organization.org_id)
-            .filter(Organization.parent_org_id == parent_id, Organization.is_current == True)
-            .all()
-        )
+        children = db_session.query(Organization.org_id).filter(Organization.parent_org_id == parent_id, Organization.is_current).all()
         for child_row in children:
             child_id = child_row[0]
             scope_ids.append(child_id)
@@ -215,7 +211,7 @@ def get_user_permissions(db: Session, user: User) -> list[str]:
             role_menus = (
                 db.query(SysMenu.perms)
                 .join(SysRoleMenu, SysRoleMenu.menu_id == SysMenu.id)
-                .filter(SysRoleMenu.role_id == r.id, SysMenu.perms != None, SysMenu.perms != "", SysMenu.status == True)
+                .filter(SysRoleMenu.role_id == r.id, SysMenu.perms is not None, SysMenu.perms != "", SysMenu.status)
                 .all()
             )
 
@@ -379,10 +375,10 @@ def apply_plugin_privacy_filter(db: Session, query: Query, model_class: Any, cur
         return query.join(GitLabProject).filter(GitLabProject.organization_id.in_(scope_ids))
 
     if model_class == User:
-        return query.filter(User.department_id.in_(scope_ids), User.is_current == True)
+        return query.filter(User.department_id.in_(scope_ids), User.is_current)
 
     if model_class == Organization:
-        return query.filter(Organization.org_id.in_(scope_ids), Organization.is_current == True)
+        return query.filter(Organization.org_id.in_(scope_ids), Organization.is_current)
 
     return query
 
@@ -421,9 +417,7 @@ def filter_issues_by_province(db: Session, issues: list[dict], current_user: Use
     scope_loc_ids = get_user_data_scope_ids(current_user)
     from devops_collector.models.base_models import Location
 
-    scope_short_names = [
-        loc.short_name for loc in db.query(Location.short_name).filter(Location.location_id.in_(scope_loc_ids)).all()
-    ]
+    scope_short_names = [loc.short_name for loc in db.query(Location.short_name).filter(Location.location_id.in_(scope_loc_ids)).all()]
 
     filtered = []
     for issue in issues:

@@ -1,10 +1,12 @@
 import requests
-import json
 import urllib3
+
+
 urllib3.disable_warnings()
 
 url = "https://rdm.tjhq.com/api.php/v1/products"
 token = "a7794c49367d7b089be2e170354584d7"
+
 
 def test_headers():
     variants = [
@@ -13,7 +15,7 @@ def test_headers():
         {"Authorization": f"Bearer {token}"},
         {"Cookie": f"zentaosid={token}"},
     ]
-    
+
     for headers in variants:
         print(f"\nTesting headers: {headers}")
         try:
@@ -33,6 +35,7 @@ def test_headers():
     print("\nTesting query param ?zentaosid=...")
     r = requests.get(f"{url}?zentaosid={token}", verify=False, timeout=5)
     print(f"Status: {r.status_code}, Response: {r.text[:200]}")
+
 
 if __name__ == "__main__":
     test_headers()

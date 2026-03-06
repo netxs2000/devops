@@ -57,9 +57,7 @@ class AirbyteGitLabClient(BaseClient):
             logger.error(f"PyAirbyte GitLab connection check failed: {e}")
             return False
 
-    def get_stream_records(
-        self, stream_name: str, project_ids: list | None = None
-    ) -> Generator[dict[str, Any], None, None]:
+    def get_stream_records(self, stream_name: str, project_ids: list | None = None) -> Generator[dict[str, Any], None, None]:
         """流式获取指定 stream 的原始记录。
 
         Args:

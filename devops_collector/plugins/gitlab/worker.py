@@ -23,9 +23,7 @@ from .models import GitLabGroup, GitLabProject
 logger = logging.getLogger(__name__)
 
 
-class GitLabWorker(
-    BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueMixin, MergeRequestMixin, PipelineMixin, AssetMixin
-):
+class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueMixin, MergeRequestMixin, PipelineMixin, AssetMixin):
     """GitLab 数据采集 Worker。
 
     支持传统 REST API 客户端 (GitLabClient) 和现代 PyAirbyte 客户端 (AirbyteGitLabClient)。
@@ -52,7 +50,7 @@ class GitLabWorker(
     def process_task(self, task: dict) -> dict:
         """实现具体的同步逻辑，由 BaseWorker.run_sync 调用。"""
         from datetime import UTC, datetime
-        
+
         project_id = task.get("project_id")
         if not project_id:
             raise ValueError("No project_id provided in task")
@@ -61,12 +59,12 @@ class GitLabWorker(
             project = self._sync_project(project_id)
             if not project:
                 return {"status": "skipped", "reason": "project_not_found"}
-            
+
             project.sync_status = "SYNCING"
             self.session.commit()
 
             since = project.last_synced_at.isoformat() if project.last_synced_at else None
-            
+
             # 核心数据同步
             stats = {
                 "commits": self._sync_commits(project, since),
@@ -97,7 +95,7 @@ class GitLabWorker(
                     logger.warning(f"Deep analysis failed for project {project_id}: {e}")
 
             self._match_identities(project)
-            
+
             log_msg = f"Synced: {stats['commits']} commits, {stats['issues']} issues, {stats['mrs']} MRs"
             sync_log = SyncLog(project_id=str(project_id), status="SUCCESS", message=log_msg)
             self.session.add(sync_log)
@@ -106,7 +104,7 @@ class GitLabWorker(
             project.sync_status = "SUCCESS"
             project.last_synced_at = datetime.now(UTC)
             self.session.commit()
-            
+
             return stats
         except Exception as e:
             self.session.rollback()
@@ -118,7 +116,7 @@ class GitLabWorker(
                     p_failed.sync_status = "FAILED"
                     self.session.add(SyncLog(project_id=str(project_id), status="FAILED", message=str(e)[:500]))
                     self.session.commit()
-            except:
+            except Exception:
                 pass
             raise
 
@@ -152,12 +150,7 @@ class GitLabWorker(
         if not group:
             try:
                 g_data = self.client.get_group(group_id)
-                group = GitLabGroup(
-                    id=g_data["id"],
-                    name=g_data["name"],
-                    path=g_data["path"],
-                    full_path=g_data["full_path"]
-                )
+                group = GitLabGroup(id=g_data["id"], name=g_data["name"], path=g_data["path"], full_path=g_data["full_path"])
                 self.session.add(group)
                 self.session.flush()
             except Exception as e:

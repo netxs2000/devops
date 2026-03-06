@@ -38,12 +38,8 @@ class GTMTestCase(Base, TimestampMixin):
         back_populates="test_cases",
     )
     project = relationship("GitLabProject", back_populates="test_cases")
-    linked_issues = relationship(
-        "GitLabIssue", secondary="gtm_test_case_issue_links", back_populates="associated_test_cases"
-    )
-    associated_requirements = relationship(
-        "GTMRequirement", secondary="gtm_requirement_test_case_links", back_populates="test_cases"
-    )
+    linked_issues = relationship("GitLabIssue", secondary="gtm_test_case_issue_links", back_populates="associated_test_cases")
+    associated_requirements = relationship("GTMRequirement", secondary="gtm_requirement_test_case_links", back_populates="test_cases")
 
     @hybrid_property
     def execution_count(self) -> int:
@@ -98,9 +94,7 @@ class GTMRequirement(Base, TimestampMixin):
         back_populates="requirements",
     )
     project = relationship("GitLabProject", back_populates="requirements")
-    test_cases = relationship(
-        "GTMTestCase", secondary="gtm_requirement_test_case_links", back_populates="associated_requirements"
-    )
+    test_cases = relationship("GTMTestCase", secondary="gtm_requirement_test_case_links", back_populates="associated_requirements")
     linked_bugs = association_proxy("test_cases", "linked_issues")
 
     def __repr__(self) -> str:

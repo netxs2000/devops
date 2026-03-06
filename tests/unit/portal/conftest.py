@@ -45,7 +45,7 @@ def db_session():
         if os.path.exists(db_file):
             try:
                 os.remove(db_file)
-            except:
+            except Exception:
                 pass
 
 
@@ -105,9 +105,7 @@ def authenticated_client(client, db_session, mock_user, monkeypatch):
     }
 
     # Mock auth service functions globally
-    monkeypatch.setattr(
-        auth_service, "auth_decode_access_token", lambda t: token_payload if t == "mock-token" else None
-    )
+    monkeypatch.setattr(auth_service, "auth_decode_access_token", lambda t: token_payload if t == "mock-token" else None)
 
     def mock_get_current_user(db, t):
         if t == "mock-token":
@@ -118,9 +116,7 @@ def authenticated_client(client, db_session, mock_user, monkeypatch):
     monkeypatch.setattr(auth_service, "auth_get_current_user", mock_get_current_user)
 
     # Override get_current_user for endpoints that use it directly
-    app.dependency_overrides[dependencies.get_current_user] = lambda: (
-        db_session.query(User).filter_by(primary_email=mock_user.primary_email).first()
-    )
+    app.dependency_overrides[dependencies.get_current_user] = lambda: db_session.query(User).filter_by(primary_email=mock_user.primary_email).first()
 
     client.headers["Authorization"] = "Bearer mock-token"
     yield client

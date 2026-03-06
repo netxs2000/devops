@@ -33,7 +33,7 @@ try:
 except ImportError:
     pass
 try:
-    import devops_collector.plugins.jfrog.worker
+    import devops_collector.plugins.jfrog.worker  # noqa: F401
 except ImportError:
     pass
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")

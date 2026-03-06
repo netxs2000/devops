@@ -53,9 +53,9 @@ class DashboardPageTester:
         pattern = r'run_query\s*\(\s*["\']+(.*?)["\']+\s*\)'
         matches = re.findall(pattern, content, re.DOTALL)
 
-        for i, sql in enumerate(matches):
+        for i, raw_sql in enumerate(matches):
             # 清理 SQL
-            sql = sql.strip()
+            sql = raw_sql.strip()
             if sql:
                 queries.append((f"Query_{i + 1}", sql))
 
@@ -63,8 +63,8 @@ class DashboardPageTester:
         triple_pattern = r'run_query\s*\(\s*"""(.*?)"""\s*\)'
         triple_matches = re.findall(triple_pattern, content, re.DOTALL)
 
-        for i, sql in enumerate(triple_matches):
-            sql = sql.strip()
+        for i, raw_sql in enumerate(triple_matches):
+            sql = raw_sql.strip()
             if sql:
                 queries.append((f"TripleQuery_{i + 1}", sql))
 
@@ -98,8 +98,6 @@ class DashboardPageTester:
                     # 添加 LIMIT 1 来限制结果
                     if "LIMIT" not in test_sql.upper():
                         test_sql = f"SELECT * FROM ({test_sql}) AS _test_wrapper LIMIT 1"
-                    else:
-                        test_sql = test_sql
 
                 conn.execute(text(test_sql))
                 conn.commit()

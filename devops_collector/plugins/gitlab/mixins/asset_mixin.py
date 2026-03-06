@@ -35,9 +35,7 @@ class AssetMixin:
         Returns:
             int: 成功同步的标签数量。
         """
-        count = self._process_generator(
-            self.client.get_project_tags(project.id), lambda batch: self._save_tags_batch(project, batch)
-        )
+        count = self._process_generator(self.client.get_project_tags(project.id), lambda batch: self._save_tags_batch(project, batch))
         project.tags_count = count
         return count
 
@@ -49,9 +47,7 @@ class AssetMixin:
             batch (List[dict]): 包含多个 Tag 原始数据的列表。
         """
         names = [item["name"] for item in batch]
-        existing = (
-            self.session.query(GitLabTag).filter(GitLabTag.project_id == project.id, GitLabTag.name.in_(names)).all()
-        )
+        existing = self.session.query(GitLabTag).filter(GitLabTag.project_id == project.id, GitLabTag.name.in_(names)).all()
         existing_map = {t.name: t for t in existing}
         for data in batch:
             tag = existing_map.get(data["name"])
@@ -70,9 +66,7 @@ class AssetMixin:
         Returns:
             int: 成功同步的分支数量。
         """
-        return self._process_generator(
-            self.client.get_project_branches(project.id), lambda batch: self._save_branches_batch(project, batch)
-        )
+        return self._process_generator(self.client.get_project_branches(project.id), lambda batch: self._save_branches_batch(project, batch))
 
     def _save_branches_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存分支。
@@ -82,11 +76,7 @@ class AssetMixin:
             batch (List[dict]): 包含多个 Branch 原始数据的列表。
         """
         names = [item["name"] for item in batch]
-        existing = (
-            self.session.query(GitLabBranch)
-            .filter(GitLabBranch.project_id == project.id, GitLabBranch.name.in_(names))
-            .all()
-        )
+        existing = self.session.query(GitLabBranch).filter(GitLabBranch.project_id == project.id, GitLabBranch.name.in_(names)).all()
         existing_map = {b.name: b for b in existing}
         for data in batch:
             branch = existing_map.get(data["name"])
@@ -111,9 +101,7 @@ class AssetMixin:
         Returns:
             int: 成功同步的里程碑数量。
         """
-        return self._process_generator(
-            self.client.get_project_milestones(project.id), lambda batch: self._save_milestones_batch(project, batch)
-        )
+        return self._process_generator(self.client.get_project_milestones(project.id), lambda batch: self._save_milestones_batch(project, batch))
 
     def _save_milestones_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存里程碑。
@@ -157,9 +145,7 @@ class AssetMixin:
         Returns:
             int: 成功同步的包数量。
         """
-        return self._process_generator(
-            self.client.get_packages(project.id), lambda batch: self._save_packages_batch(project, batch)
-        )
+        return self._process_generator(self.client.get_packages(project.id), lambda batch: self._save_packages_batch(project, batch))
 
     def _save_packages_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """保存包及其关联文件。
@@ -197,7 +183,7 @@ class AssetMixin:
             package (GitLabPackage): 关联的包实体。
             files_data (List[dict]): 包文件列表原始数据。
         """
-        ids = [f["id"] for f in files_data]
+        [f["id"] for f in files_data]
         existing = {f.id for f in package.files}
         for f_data in files_data:
             if f_data["id"] in existing:
@@ -244,11 +230,7 @@ class AssetMixin:
             project (GitLabProject): 关联的项目实体。
         """
         for dep in self.client.get_project_dependencies(project.id):
-            existing = (
-                self.session.query(GitLabDependency)
-                .filter_by(project_id=project.id, name=dep["name"], version=dep["version"])
-                .first()
-            )
+            existing = self.session.query(GitLabDependency).filter_by(project_id=project.id, name=dep["name"], version=dep["version"]).first()
             if existing:
                 continue
             dependency = GitLabDependency(

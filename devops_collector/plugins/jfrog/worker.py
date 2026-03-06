@@ -105,9 +105,7 @@ class JFrogWorker(BaseWorker):
         issues = scan_data.get("issues", [])
         for issue in issues:
             cve_id = issue.get("cve", "N/A")
-            vuln = (
-                self.session.query(JFrogVulnerabilityDetail).filter_by(artifact_id=artifact.id, cve_id=cve_id).first()
-            )
+            vuln = self.session.query(JFrogVulnerabilityDetail).filter_by(artifact_id=artifact.id, cve_id=cve_id).first()
             if not vuln:
                 vuln = JFrogVulnerabilityDetail(artifact_id=artifact.id, cve_id=cve_id)
                 self.session.add(vuln)

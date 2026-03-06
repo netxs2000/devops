@@ -61,28 +61,21 @@ def init_zentao_mappings():
 
                 # 1. 优先通过工号匹配 (最高优先级)
                 if employee_id:
-                    user = session.query(User).filter(User.employee_id == employee_id, User.is_current == True).first()
+                    user = session.query(User).filter(User.employee_id == employee_id, User.is_current).first()
                     if user:
                         match_method = "EMPLOYEE_ID"
                         # 验证邮箱是否一致
                         if email and user.primary_email and email.lower() != user.primary_email:
-                            logger.warning(
-                                f"禅道用户 '{full_name}'({employee_id}) 邮箱不一致: "
-                                f"禅道={email}, 主数据={user.primary_email}"
-                            )
+                            logger.warning(f"禅道用户 '{full_name}'({employee_id}) 邮箱不一致: 禅道={email}, 主数据={user.primary_email}")
 
                 # 2. 其次通过 Email 匹配
                 if not user and email:
-                    user = (
-                        session.query(User).filter(User.primary_email == email.lower(), User.is_current == True).first()
-                    )
+                    user = session.query(User).filter(User.primary_email == email.lower(), User.is_current).first()
                     if user:
                         match_method = "EMAIL"
                         # 验证工号是否一致
                         if employee_id and user.employee_id and employee_id != user.employee_id:
-                            logger.warning(
-                                f"禅道用户 '{full_name}' 工号不一致: 禅道={employee_id}, 主数据={user.employee_id}"
-                            )
+                            logger.warning(f"禅道用户 '{full_name}' 工号不一致: 禅道={employee_id}, 主数据={user.employee_id}")
 
                 if not user:
                     logger.warning(f"无法为禅道用户 '{full_name}' ({employee_id}) 找到对应主数据，跳过。")
@@ -92,11 +85,7 @@ def init_zentao_mappings():
                 # 禅道中外部系统账号通常标识为邮箱前缀
                 external_id = account or email.lower()
 
-                mapping = (
-                    session.query(IdentityMapping)
-                    .filter_by(source_system="zentao", external_user_id=external_id)
-                    .first()
-                )
+                mapping = session.query(IdentityMapping).filter_by(source_system="zentao", external_user_id=external_id).first()
 
                 if not mapping:
                     mapping = IdentityMapping(

@@ -123,9 +123,7 @@ def test_gitlab_callback_existing_user(mock_get, mock_post, client, db_session):
     from devops_collector.auth import auth_service
     from devops_collector.auth.auth_schema import AuthRegisterRequest
 
-    auth_service.auth_create_user(
-        db_session, AuthRegisterRequest(email=email, password="somepassword", full_name="Existing User")
-    )
+    auth_service.auth_create_user(db_session, AuthRegisterRequest(email=email, password="somepassword", full_name="Existing User"))
     user = db_session.query(User).filter_by(primary_email=email).first()
     user.is_active = True
     db_session.commit()
@@ -148,9 +146,7 @@ def test_gitlab_callback_domain_not_allowed(client):
     """测试 GitLab 回调：邮箱域名不允许。"""
     with patch("httpx.AsyncClient.post") as mock_post, patch("httpx.AsyncClient.get") as mock_get:
         mock_post.return_value = MagicMock(status_code=200, json=lambda: {"access_token": "abc"})
-        mock_get.return_value = MagicMock(
-            status_code=200, json=lambda: {"email": "stranger@hacker.com", "name": "Hacker"}
-        )
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: {"email": "stranger@hacker.com", "name": "Hacker"})
 
         response = client.get("/auth/gitlab/callback?code=mock_code&state=login_flow", follow_redirects=False)
         assert response.status_code == 307

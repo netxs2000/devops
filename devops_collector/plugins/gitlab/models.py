@@ -114,9 +114,7 @@ class GitLabGroupMember(Base):
     joined_at = Column(DateTime(timezone=True))
     expires_at = Column(DateTime(timezone=True))
     group = relationship("GitLabGroup", back_populates="members")
-    user = relationship(
-        "User", primaryjoin="and_(User.global_user_id==GitLabGroupMember.user_id, User.is_current==True)"
-    )
+    user = relationship("User", primaryjoin="and_(User.global_user_id==GitLabGroupMember.user_id, User.is_current==True)")
 
     def __repr__(self) -> str:
         return f"<GitLabGroupMember(group_id={self.group_id}, gitlab_uid={self.gitlab_uid})>"
@@ -202,9 +200,7 @@ class GitLabProject(Base):
     # Add relationships for other modules and plugins
     test_cases = relationship("GTMTestCase", back_populates="project", cascade="all, delete-orphan")
     requirements = relationship("GTMRequirement", back_populates="project", cascade="all, delete-orphan")
-    test_execution_records = relationship(
-        "GTMTestExecutionRecord", back_populates="project", cascade="all, delete-orphan"
-    )
+    test_execution_records = relationship("GTMTestExecutionRecord", back_populates="project", cascade="all, delete-orphan")
     sonar_projects = relationship("SonarProject", back_populates="gitlab_project")
     jira_projects = relationship("JiraProject", back_populates="gitlab_project")
 
@@ -254,7 +250,7 @@ class GitLabProject(Base):
         return (
             select(func.avg(Issue_.resolution_time))
             .where(Issue_.project_id == cls.id)
-            .where(Issue_.is_incident == True)
+            .where(Issue_.is_incident)
             .where(Issue_.state == "closed")
             .scalar_subquery()
         )
@@ -277,18 +273,8 @@ class GitLabProject(Base):
 
         Issue_ = cls.issues.property.mapper.class_
         Deployment_ = cls.deployments.property.mapper.class_
-        failures_count = (
-            select(func.count(Issue_.id))
-            .where(Issue_.project_id == cls.id)
-            .where(Issue_.is_change_failure == True)
-            .scalar_subquery()
-        )
-        deploy_count = (
-            select(func.count(Deployment_.id))
-            .where(Deployment_.project_id == cls.id)
-            .where(Deployment_.status == "success")
-            .scalar_subquery()
-        )
+        failures_count = select(func.count(Issue_.id)).where(Issue_.project_id == cls.id).where(Issue_.is_change_failure).scalar_subquery()
+        deploy_count = select(func.count(Deployment_.id)).where(Deployment_.project_id == cls.id).where(Deployment_.status == "success").scalar_subquery()
         return case((deploy_count > 0, cast(failures_count, Float) / cast(deploy_count, Float) * 100), else_=0.0)
 
     def __repr__(self) -> str:
@@ -444,9 +430,7 @@ class GitLabMergeRequest(Base):
     ai_summary = Column(Text)
     ai_confidence = Column(Float)
     author_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"))
-    author = relationship(
-        "User", primaryjoin="and_(User.global_user_id==GitLabMergeRequest.author_id, User.is_current==True)"
-    )
+    author = relationship("User", primaryjoin="and_(User.global_user_id==GitLabMergeRequest.author_id, User.is_current==True)")
     project = relationship("GitLabProject", back_populates="merge_requests")
 
     @hybrid_property
@@ -551,9 +535,7 @@ class GitLabCommit(Base):
     project = relationship("GitLabProject", back_populates="commits")
     raw_data = Column(JSON)
     gitlab_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
-    author = relationship(
-        "User", primaryjoin="and_(User.global_user_id==GitLabCommit.gitlab_user_id, User.is_current==True)"
-    )
+    author = relationship("User", primaryjoin="and_(User.global_user_id==GitLabCommit.gitlab_user_id, User.is_current==True)")
 
     def __repr__(self) -> str:
         return f"<GitLabCommit(id='{self.short_id}', project_id={self.project_id})>"
@@ -683,9 +665,7 @@ class GitLabIssue(Base):
                     envs.add(d.environment)
         return list(envs)
 
-    associated_test_cases = relationship(
-        "GTMTestCase", secondary="gtm_test_case_issue_links", back_populates="linked_issues"
-    )
+    associated_test_cases = relationship("GTMTestCase", secondary="gtm_test_case_issue_links", back_populates="linked_issues")
 
     @hybrid_property
     def resolution_time(self):
@@ -757,9 +737,7 @@ class GitLabIssue(Base):
         """变更失败检测的 SQL 表达式。"""
         from sqlalchemy import Text, or_
 
-        conditions = [
-            func.cast(cls.labels, Text).ilike(f"%{p}%") for p in settings.analysis.change_failure_label_patterns
-        ]
+        conditions = [func.cast(cls.labels, Text).ilike(f"%{p}%") for p in settings.analysis.change_failure_label_patterns]
         return or_(*conditions)
 
     @hybrid_property

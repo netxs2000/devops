@@ -21,9 +21,7 @@ router = APIRouter(prefix="/quality", tags=["quality"])
 logger = logging.getLogger(__name__)
 
 
-def get_quality_service(
-    db: Session = Depends(get_auth_db), client: GitLabClient = Depends(get_user_gitlab_client)
-) -> QualityService:
+def get_quality_service(db: Session = Depends(get_auth_db), client: GitLabClient = Depends(get_user_gitlab_client)) -> QualityService:
     """获取质量分析服务实例。"""
     return QualityService(db, client)
 
@@ -63,7 +61,7 @@ async def get_province_quality(project_id: int, current_user=Depends(get_current
                     break
 
             # Filter by province if user has a specific location
-            if user_province != "全国" and province != user_province:
+            if user_province not in ("全国", province):
                 continue
 
             if province not in stats:
@@ -78,9 +76,7 @@ async def get_province_quality(project_id: int, current_user=Depends(get_current
 
 
 @router.get("/projects/{project_id}/quality-gate", response_model=schemas.QualityGateStatus)
-async def get_quality_gate(
-    project_id: int, current_user=Depends(get_current_user), service: QualityService = Depends(get_quality_service)
-):
+async def get_quality_gate(project_id: int, current_user=Depends(get_current_user), service: QualityService = Depends(get_quality_service)):
     """自动化运行质量门禁合规性检查。"""
     try:
         status = await service.get_quality_gate_status(project_id, current_user)
@@ -91,9 +87,7 @@ async def get_quality_gate(
 
 
 @router.get("/projects/{project_id}/test-summary")
-async def get_test_summary(
-    project_id: int, current_user=Depends(get_current_user), service: QualityService = Depends(get_quality_service)
-):
+async def get_test_summary(project_id: int, current_user=Depends(get_current_user), service: QualityService = Depends(get_quality_service)):
     """获取测试用例执行状态的统计摘要。"""
     try:
         # 延迟导入以避免循环依赖

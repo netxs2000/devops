@@ -16,9 +16,7 @@ class AgileMetrics:
     """敏捷效能指标计算类。"""
 
     @staticmethod
-    def calculate_cycle_time(
-        histories: list[dict[str, Any]], start_status: str = "In Progress", end_status: str = "Done"
-    ) -> float | None:
+    def calculate_cycle_time(histories: list[dict[str, Any]], start_status: str = "In Progress", end_status: str = "Done") -> float | None:
         """计算 Cycle Time (周期时间)。
 
         Args:

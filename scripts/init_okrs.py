@@ -48,7 +48,7 @@ def init_okrs():
             # 预加载用户索引 (邮箱 + 姓名)
             email_idx, name_idx = build_user_indexes(session)
             # 同时建立 user_id -> User 对象索引 (用于后续取 global_user_id)
-            all_users_map = {u.global_user_id: u for u in session.query(User).filter_by(is_current=True).all()}
+            {u.global_user_id: u for u in session.query(User).filter_by(is_current=True).all()}
 
             for row in reader:
                 o_title = row["目标标题"].strip()

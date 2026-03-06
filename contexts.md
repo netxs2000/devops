@@ -376,3 +376,23 @@
 - **强制转换链**: 采集原始账号 -> 调用 `IdentityManager.get_global_id()` -> 映射为统一的 UUID `global_user_id` -> 存入业务表。
 - **成本归因**: 只有完成 `global_user_id` 转换的工时或提交记录，方可参与效能度量与成本中心分摊计算。对于无法对齐的“流浪账号”，系统必须通过 `sys_unknown_identities` 表进行挂起并在看板显著提醒。
 
+
+## 18. 代码质量与 Ruff 规范 (Code Quality & Ruff) [NEW]
+
+### 18.1 统一工具链 (Unified Tooling)
+- **核心工具**: 项目全面采用 **Ruff** 作为唯一的静态代码检查 (Lint) 与格式化 (Format) 工具，取代了传统的 Flake8、Black、isort 和 Pylint (部分核心检查已迁移)。
+- **配置标准**: 必须遵循根目录下的 `ruff.toml` 配置。
+- **命令行标准**:
+    - 代码检查: `make lint` (内部执行 `ruff check`)。
+    - 自动修复: `make ruff-fix` (执行 `ruff check --fix`)。
+    - 代码格式化: `make fmt` (执行 `ruff format`)。
+
+### 18.2 关键编码禁令 (Hard Rules)
+- **禁止 Bare Except**: 严禁使用 `except:` 捕获所有异常，必须显式捕获 `Exception` 或更具体的异常类，防止屏蔽系统级信号。
+- **禁止环境变量类型混淆**: 使用 `os.getenv` 时，所有默认值必须为**字符串**（如 `"600"` 而非 `600`），并在使用处显式转换。
+- **移除无用导入**: 严禁在非 `__init__.py` 文件中残留未使用的导入。
+- **行宽限制 (Line Length)**: 默认限制为 **160**。对于超长的 SQL 字符串，若无法拆分，允许在行尾添加 `# noqa: E501` 或保持原样（若全局已忽略）。
+
+### 18.3 完工标准 (DoD)
+- 任何 PR 在合入 `main` 分支前，必须确保 `make lint` 输出为 0 错误（Green Build）。
+- 如果因架构需求必须引入复杂逻辑导致复杂度超标（PLR 规则），必须报备并在 `ruff.toml` 或行内添加显式忽略原因。

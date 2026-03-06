@@ -61,9 +61,7 @@ class GitLabClient(BaseClient):
         """
         return self._get(f"groups/{group_id_or_path}").json()
 
-    def get_project_commits(
-        self, project_id: int, since: str | None = None, start_page: int = 1, per_page: int = 100
-    ) -> Generator[dict, None, None]:
+    def get_project_commits(self, project_id: int, since: str | None = None, start_page: int = 1, per_page: int = 100) -> Generator[dict, None, None]:
         """获取项目的提交记录。
 
         Args:
@@ -84,8 +82,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_commit_diff(self, project_id: int, commit_sha: str) -> list[dict]:
@@ -100,9 +97,7 @@ class GitLabClient(BaseClient):
         """
         return self._get(f"projects/{project_id}/repository/commits/{commit_sha}/diff").json()
 
-    def get_project_issues(
-        self, project_id: int, since: str | None = None, start_page: int = 1, per_page: int = 100
-    ) -> Generator[dict, None, None]:
+    def get_project_issues(self, project_id: int, since: str | None = None, start_page: int = 1, per_page: int = 100) -> Generator[dict, None, None]:
         """获取项目的 Issue 列表。
 
         Args:
@@ -123,8 +118,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_project_issue(self, project_id: int, issue_iid: int) -> dict:
@@ -139,9 +133,7 @@ class GitLabClient(BaseClient):
         """
         return self._get(f"projects/{project_id}/issues/{issue_iid}").json()
 
-    def get_project_merge_requests(
-        self, project_id: int, since: str | None = None, start_page: int = 1, per_page: int = 100
-    ) -> Generator[dict, None, None]:
+    def get_project_merge_requests(self, project_id: int, since: str | None = None, start_page: int = 1, per_page: int = 100) -> Generator[dict, None, None]:
         """获取项目的合并请求 (MR) 列表。
 
         Args:
@@ -162,13 +154,10 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
-    def get_project_pipelines(
-        self, project_id: int, start_page: int = 1, per_page: int = 100
-    ) -> Generator[dict, None, None]:
+    def get_project_pipelines(self, project_id: int, start_page: int = 1, per_page: int = 100) -> Generator[dict, None, None]:
         """获取项目的流水线列表。
 
         Args:
@@ -186,13 +175,10 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
-    def get_project_deployments(
-        self, project_id: int, start_page: int = 1, per_page: int = 100
-    ) -> Generator[dict, None, None]:
+    def get_project_deployments(self, project_id: int, start_page: int = 1, per_page: int = 100) -> Generator[dict, None, None]:
         """获取项目的部署记录列表。
 
         Args:
@@ -210,8 +196,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_issue_notes(self, project_id: int, issue_iid: int, per_page: int = 100) -> Generator[dict, None, None]:
@@ -232,8 +217,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_mr_notes(self, project_id: int, mr_iid: int, per_page: int = 100) -> Generator[dict, None, None]:
@@ -254,8 +238,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_mr_approvals(self, project_id: int, mr_iid: int) -> dict:
@@ -299,8 +282,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_project_branches(self, project_id: int, per_page: int = 100) -> Generator[dict, None, None]:
@@ -320,8 +302,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_project_members(self, project_id: int, per_page: int = 100) -> Generator[dict, None, None]:
@@ -341,8 +322,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_project_milestones(self, project_id: int, per_page: int = 100) -> Generator[dict, None, None]:
@@ -362,8 +342,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_user(self, user_id: int) -> dict:
@@ -407,8 +386,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_packages(self, project_id: int, per_page: int = 100) -> Generator[dict, None, None]:
@@ -428,8 +406,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def get_package_files(self, project_id: int, package_id: int) -> list[dict]:
@@ -572,8 +549,7 @@ class GitLabClient(BaseClient):
             data = response.json()
             if not data:
                 break
-            for item in data:
-                yield item
+            yield from data
             page += 1
 
     def update_issue(self, project_id: int, issue_iid: int, data: dict) -> dict:
@@ -606,9 +582,7 @@ class GitLabClient(BaseClient):
             data["message"] = message
         return self._post(f"projects/{project_id}/repository/tags", data=data).json()
 
-    def create_project_release(
-        self, project_id: int, tag_name: str, description: str, milestones: list[str] = None
-    ) -> dict:
+    def create_project_release(self, project_id: int, tag_name: str, description: str, milestones: list[str] = None) -> dict:
         """创建项目发布 (Release)。
 
         Args:
