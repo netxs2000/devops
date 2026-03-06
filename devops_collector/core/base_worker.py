@@ -22,15 +22,19 @@ class BaseWorker(ABC):
 
     SCHEMA_VERSION = "1.0"
 
-    def __init__(self, session: Session, client: Any):
+    def __init__(self, session: Session, client: Any, correlation_id: str = "unknown-cid"):
         """初始化 Worker。
 
         Args:
             session: SQLAlchemy 数据库会话
             client: API 客户端实例
+            correlation_id: 追踪 ID (用于日志对齐)
         """
         self.session = session
         self.client = client
+        self.correlation_id = correlation_id
+        # 使用特定业务域前缀及 CID 创建适配器
+        self.logger = logging.LoggerAdapter(logger, {"correlation_id": self.correlation_id})
 
     @abstractmethod
     def process_task(self, task: dict) -> Any:
@@ -85,19 +89,19 @@ class BaseWorker(ABC):
 
     def log_success(self, message: str) -> None:
         """记录成功日志。"""
-        logger.info(f"[SUCCESS] {message}")
+        self.logger.info(f"[SUCCESS] {message}")
 
     def log_failure(self, message: str, error: Exception | None = None) -> None:
         """记录失败日志并记录异常信息。"""
         if error:
-            logger.error(f"[FAILURE] {message}: {error}")
+            self.logger.error(f"[FAILURE] {message}: {error}")
         else:
-            logger.error(f"[FAILURE] {message}")
+            self.logger.error(f"[FAILURE] {message}")
 
     def log_progress(self, message: str, current: int, total: int) -> None:
         """记录任务进度。"""
         percent = current / total * 100 if total > 0 else 0
-        logger.info(f"[PROGRESS] {message}: {current}/{total} ({percent:.1f}%)")
+        self.logger.info(f"[PROGRESS] {message}: {current}/{total} ({percent:.1f}%)")
 
     def save_to_staging(self, source: str, entity_type: str, external_id: str, payload: dict, schema_version: str = "1.0") -> None:
         """将原始数据保存到 Staging 层，消除重复的 Upsert 逻辑。"""
@@ -111,6 +115,7 @@ class BaseWorker(ABC):
             "external_id": str(external_id),
             "payload": payload,
             "schema_version": schema_version,
+            "correlation_id": self.correlation_id,
             "collected_at": datetime.now(UTC),
         }
         try:
@@ -158,7 +163,7 @@ class BaseWorker(ABC):
         for item in items:
             ext_id = str(item.get(id_field, ""))
             payload_str = json.dumps(item)
-            writer.writerow([source, entity_type, ext_id, payload_str, schema_version])
+            writer.writerow([source, entity_type, ext_id, payload_str, schema_version, self.correlation_id])
 
         csv_file.seek(0)
         temp_table = f"tmp_stg_{source}_{entity_type}_{id(self)}"
@@ -168,18 +173,19 @@ class BaseWorker(ABC):
             cursor.execute(f"CREATE TEMP TABLE {temp_table} (LIKE stg_raw_data INCLUDING DEFAULTS) ON COMMIT DROP")
 
             # 使用原生的 copy_expert 进行高性能加载
-            copy_sql = f"COPY {temp_table} (source, entity_type, external_id, payload, schema_version) FROM STDIN WITH CSV"
+            copy_sql = f"COPY {temp_table} (source, entity_type, external_id, payload, schema_version, correlation_id) FROM STDIN WITH CSV"
             cursor.copy_expert(copy_sql, csv_file)
 
             # 通过 Upsert 逻辑把临时表合并到主表
             upsert_sql = f"""
-                INSERT INTO stg_raw_data (source, entity_type, external_id, payload, schema_version, collected_at)
-                SELECT source, entity_type, external_id, cast(payload as jsonb), schema_version, CURRENT_TIMESTAMP
+                INSERT INTO stg_raw_data (source, entity_type, external_id, payload, schema_version, correlation_id, collected_at)
+                SELECT source, entity_type, external_id, cast(payload as jsonb), schema_version, correlation_id, CURRENT_TIMESTAMP
                 FROM {temp_table}
                 ON CONFLICT (source, entity_type, external_id)
                 DO UPDATE SET
                     payload = EXCLUDED.payload,
                     schema_version = EXCLUDED.schema_version,
+                    correlation_id = EXCLUDED.correlation_id,
                     collected_at = EXCLUDED.collected_at
             """
             cursor.execute(upsert_sql)

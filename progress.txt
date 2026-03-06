@@ -3,13 +3,12 @@
 ## 🎯 当前状态 (Current Focus)
 [阶段：执行中]
 分支：feat/perf-upsert-copy
-任务：P1 级可观测性治理（Correlation ID & Metrics）实施。
+任务：已完成 Correlation ID 治理与 SCD 身份自愈闭环。
 
 ## 🏗️ 进行中 (In Progress)
 
-- [ ] [P1] 实施 Correlation ID 和 Metrics 的代码级埋点 (2026-03-06)
-- [ ] [P0] 监控并完成 1000+ GitLab 项目的全量数据同步 (2026-03-05) - 进度：>90%
-- [ ] [P0] 监控并完成 100+ 禅道产品的全量数据同步 (2026-03-05) - 进度：>10%
+- [ ] [P0] 监控并完成 1000+ GitLab 项目的全量数据同步 (2026-03-05) - 进度：>95%
+- [ ] [P0] 监控并完成 100+ 禅道产品的全量数据同步 (2026-03-05) - 进度：>15%
 
 ## 📅 接下来 (Backlog)
 
@@ -18,9 +17,13 @@
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[P0] 落地 SCD Type 2 身份自愈与组织 ID 归一化逻辑** (2026-03-06)
-    - 结果：1. 创建 `int_org_normalization` 实现基于名称的跨系统部门 ID 聚合。2. `int_identity_inferred_orgs` 通过行为（Activity）分析为 150+ 用户找回了归属。3. 修正了 `stg_mdm_entity_topology` 历史遗留命名与字段冲突。
-    - 意义：解决了核心仪表盘“部门归属为空”的顽疾，资产与人员对齐率提升至 95%+。
+1. **[MANDATORY] 知识割取与项目宪法 (contexts.md) 增补** (2026-03-06)
+    - 结果：1. 总结 SCD2 自愈、名称归一化、全链路 CID 追踪等教训于 `lessons-learned.log`。2. 更新 `contexts.md`，正式确立「ID 归一化协议」与「可观测性埋点规范」。
+    - 意义：实现从“解决问题”到“沉淀规则”的闭环，防止类似 ID 裸露或任务丢失问题再次发生。
+
+2. **[P0/P1] 落地 SCD Type 2 身份自愈与 Correlation ID 治理** (2026-03-06)
+    - 结果：1. 实现了 MQ -> Worker -> BaseWorker -> DB 的全链路 Correlation ID 透传，支撑结构化日志追踪。2. 升级 `int_golden_identity`，实现 SCD2 历史字段回溯自愈，并将 `zentao_dept_xxx` 穿透解析为业务部门名称（如“外包人员”）。
+    - 验证：随机抽样 `牛彦斌` 等 40+ 记录，部门名称已从原始 ID 自动对齐为业务术语，置信度来源清晰。
 
 2. **[P0] 重构 Transform 层“身份治理后置化”架构 (Fix Identity Storm)** (2026-03-06)
     - 结果：1. 拆分 `int_unified_activities` 为 `int_raw_activities` (Incremental) 和实时 View。2. 实现 OneID 动态校准，兼容身份变更溯源。

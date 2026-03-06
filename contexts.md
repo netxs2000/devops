@@ -50,6 +50,7 @@
     - **系统层 (`sys_*`)**: 强制继承 `TimestampMixin`。RBAC 关联表（如 `sys_user_roles`, `sys_role_menu`）应至少包含 `created_at`，以支持安全审计。
     - **插件层 (`{source}_*`)**: 不强制继承 `TimestampMixin`。插件模型的 `created_at`/`updated_at` 保留**源系统 API 返回的时间语义**（如 MR 在 GitLab 的创建时间），不与系统入库时间混淆。生命周期由 `sync_status` 管理。
     - **`created_by` (操作人)**: 不全局强制。仅在**存在用户交互**的业务模块（如 Service Desk `sd_*`）按需添加。自动化同步写入的数据通过 `correlation_id` 和 `sys_sync_logs` 追踪来源。
+    - **`correlation_id` (追踪标识) [MANDATORY]**: 所有后台同步相关的 Staging 表 (`stg_raw_data`) 和日志表 (`sys_sync_logs`) 必须包含此字段，以便在 1000+ 项目并行时进行全链路链路还原。
     - **软删除**: 严禁物理删除生产数据。MDM 层通过 `SCDMixin.is_deleted` 实现；插件层通过 `sync_status='DELETED'` 标记源端已消失的实体。
 - **数据一致性与性能**: 
     - 关联表必须定义 `UniqueConstraint` 复合索引防重复。
@@ -88,6 +89,10 @@
     | **Staging** | `stg_` | 原始数据清洗，1:1 映射源表，仅字段重命名与类型强制。 |
     | **Intermediate** | `int_` | 中间转换，跨源关联与过滤。 |
     | **Marts (维度)** | `dim_` | 业务维度表，描述性属性。 |
+- **ID 归一化与自愈协议 (Normalization & Self-Healing) [MANDATORY]**:
+    - **名称对齐优先**: 在 `int_` 层必须建立 `int_org_normalization` 模型。对于 `zentao_dept_xxx` 等非标 ID，必须通过名称（Name）对齐回填为 HR 规范 ID 或业务中文术语，严禁在报表层暴露原始源系统 ID。
+    - **SCD2 历史自愈**: 身份主数据 (`int_golden_identity`) 必须实现基于 SCD2 历史版本的字段回溯逻辑。当当前记录属性（部门/工号）缺失时，自动回滚寻找历史版本中的最近非空值填充。
+    - **置信度溯源**: 合并后的记录必须包含 `attribution_source`，标注数据是来自“HR官网”、“归一化映射”还是“历史自愈”。
     | **Marts (事实)** | `fct_` | 业务事实表，度量指标，直接对接报表层。 |
 - **源表管理**: 所有原始表必须在 `sources.yml` 中声明，包含 database, schema, table 完整路径。
     - **新鲜度 (Freshness)**: 核心 Source 表必须配置 `freshness` 检查（如:warn_after: {count: 24, period: hour}）。
@@ -178,9 +183,10 @@
     - `INFO`: 关键业务流转（如：工单流转、审批通过）。
     - `WARNING`: 可恢复的异常（如：外部 API 重试）。
     - `ERROR`: 系统不可恢复错误，必须包含 Trigger 上下文及完整 Traceback。
-- **关联追踪 (Correlation ID)**:
-    - Scheduler 创建同步任务时，必须在任务 payload 中注入 `correlation_id`（UUID），该 ID 随 MQ 消息传递到 Worker。
-    - Worker 处理任务时，必须将 `correlation_id` 写入所有相关日志（通过 `logging.LoggerAdapter` 或 `extra` 字段）和 `sys_sync_logs` 记录。
+- **关联追踪 (Correlation ID) [MANDATORY]**:
+    - **产生**: Scheduler 创建同步任务时必须生成 `correlation_id` (UUID)。
+    - **传递**: 随 MQ Payload 传递，Worker 消费时提取并实例化 `logging.LoggerAdapter` 进行包裹输出。
+    - **持久化**: 链路涉及的所有 Staging 表和 Sync Log 必须落盘此 ID。
     - **排障价值**: 当生产环境出现同步异常时，通过单个 `correlation_id` 即可在日志和数据库中端到端还原一条任务从调度 → 入队 → 消费 → 写库的完整链路。
 - **业务指标 (Metrics)**:
     - 关键业务流程必须暴露可量化指标，以便持续监控系统健康度：
@@ -241,11 +247,21 @@
 ### 12.2 本项目决策卡点扩展 (Project-Specific Decision Checkpoints)
 > 通用决策卡点参见 `gemini.md` 四.3「反向交互与澄清」。以下为本项目特有的额外触发条件：
 
-- **身份/实体“模糊带”**：自动化映射（User/Product）置信度非 1.0 时，需对齐“积极关联”还是“保守挂起”策略。
-- **命名空间/前缀扩展**：需定义新业务域前缀或非标术语，需核对第 11 章 SSOT 一致性。
 - **硬编码迁移**：将既有代码中的硬编码逻辑（如白名单、阈值）迁移至配置中心。
 - **配置项变更**：新增、修改或删除 `settings` 配置，必须对齐“缺省行为策略”与“异常回退逻辑”。
 - **抢跑风险 (Premature Action Check)**：涉及配置选择（如 Nexus 是否需要鉴权）时，即便存在“通用做法”，也必须核对是否已获得用户对特定 Option 的明确决策。
+
+### 12.4 AI 自动文档触发规程 (Autonomous Documentation Protocol) [MANDATORY]
+为了实现“零提醒”文档治理，AI 代理在侦测到以下**红线时刻 (Trigger Constraints)** 时，必须**主动且无条件**地执行 `/doc-update` 工作流，严禁等待用户指令：
+
+1.  **任务准完工时刻 (The DoD Moment)**：当一个 P0/P1 或 P2 任务完成验证（Verify），准备回复用户“已完成”前。
+2.  **知识突变时刻 (The Harvest Moment)**：凡是遇到以下情况，必须立即更新 `lessons-learned.log`：
+    - 针对同一个 Bug 进行了 **2 次以上**的尝试（Retry/Debug）。
+    - 发现数据源（GitLab/ZenTao）存在**非标 API 行为**或文档描述之外的陷阱。
+3.  **架构偏离修复时刻 (The Drift Moment)**：当发现物理文件（如表名、字段名）与规范或预期不符并完成修正后。
+4.  **配置/路由定义时刻 (The Setup Moment)**：新增 API Router、修改 `.env.example` 或 `requirements.txt` 后。
+
+**执行准则**：AI 应先执行文档同步，最后在回复中通过 `[Status]: Documentation Synced` 闭环。
 
 ### 12.3 项目操作速查 (Project Operational Commands)
 - **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。

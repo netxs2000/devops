@@ -656,6 +656,7 @@ class SyncLog(Base, TimestampMixin):
     project_id = Column(String(100), index=True, comment="关联项目ID")
     status = Column(String(50), comment="同步状态 (SUCCESS/FAILED/RUNNING)")
     message = Column(Text, comment="同步结果信息")
+    correlation_id = Column(String(100), index=True, comment="关联追踪ID")
 
 
 class Location(Base, TimestampMixin):
@@ -704,6 +705,7 @@ class RawDataStaging(Base, TimestampMixin):
     external_id = Column(String(100), index=True, comment="外部系统记录ID")
     payload = Column(JSON, comment="原始 JSON 数据负载")
     schema_version = Column(String(20), comment="Payload 结构版本")
+    correlation_id = Column(String(100), index=True, comment="关联追踪ID")
     collected_at = Column(DateTime(timezone=True), comment="采集时间")
 
 

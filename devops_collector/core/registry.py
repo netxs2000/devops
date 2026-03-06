@@ -216,13 +216,14 @@ class PluginRegistry:
         return client_cls(**kwargs)
 
     @classmethod
-    def get_worker_instance(cls, name: str, session: object, client: object, **kwargs) -> object | None:
+    def get_worker_instance(cls, name: str, session: object, client: object, correlation_id: str = "unknown-cid", **kwargs) -> object | None:
         """获取并实例化 Worker。
 
         Args:
             name: 数据源名称
             session: 数据库会话
             client: 客户端实例
+            correlation_id: 追踪 ID (用于日志对齐)
             **kwargs: 传递给 Worker 构造函数的命名参数
 
         Returns:
@@ -231,7 +232,7 @@ class PluginRegistry:
         worker_cls = cls.get_worker(name)
         if not worker_cls:
             return None
-        return worker_cls(session, client, **kwargs)
+        return worker_cls(session, client, correlation_id=correlation_id, **kwargs)
 
     @classmethod
     def clear(cls) -> None:

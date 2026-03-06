@@ -8,6 +8,7 @@
 
 import json
 import logging
+import time
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -37,16 +38,28 @@ def process_task(ch, method, properties, body):
     """处理 MQ 消息的回调函数。"""
     task = {}
     session = None
+    
+    # 获取 Correlation ID (优先从 properties 获取，兼容旧版本从 task 获取)
+    correlation_id = properties.correlation_id
     try:
         task = json.loads(body)
+        if not correlation_id:
+            correlation_id = task.get("correlation_id", "unknown-cid")
+    except Exception:
+        correlation_id = correlation_id or "corrupt-payload"
+
+    adapter = logging.LoggerAdapter(logger, {"correlation_id": correlation_id})
+    
+    start_time = time.perf_counter()
+    try:
         source = task.get("source", "unknown")
-        logger.info(f"Received task: {task} (source={source})")
+        job_type = task.get("job_type", "unknown")
+        adapter.info(f"Received task for {source} [CID: {correlation_id}]")
 
         # 1. 获取插件配置 (动态)
         plugin_cfg = PluginRegistry.get_config(source)
         if not plugin_cfg:
-            # 如果未注册配置，尝试使用空配置（或者这里也可以选择报错）
-            logger.warning(f"No config registered for source: {source}, using defaults.")
+            adapter.warning(f"No config registered for source: {source}, using defaults.")
             plugin_cfg = {"client": {}, "worker": {}}
 
         # 2. 获取并实例化客户端
@@ -60,17 +73,39 @@ def process_task(ch, method, properties, body):
 
         # 4. 获取并实例化 Worker
         worker_kwargs = plugin_cfg.get("worker", {})
-        worker = PluginRegistry.get_worker_instance(source, session, client, **worker_kwargs)
+        worker = PluginRegistry.get_worker_instance(source, session, client, correlation_id=correlation_id, **worker_kwargs)
         if not worker:
             raise ValueError(f"No worker registered for source: {source}")
 
         # 5. 执行任务
         worker.process_task(task)
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        logger.info(f"Task for {source} processed successfully.")
+        
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+        adapter.info(
+            f"Task for {source} processed successfully.",
+            extra={
+                "metric_type": "sync_task",
+                "status": "success",
+                "source": source,
+                "job_type": job_type,
+                "duration_ms": duration_ms
+            }
+        )
 
     except Exception as e:
-        logger.error(f"Error processing task: {e}", exc_info=True)
+        duration_ms = int((time.perf_counter() - start_time) * 1000)
+        adapter.error(
+            f"Error processing task: {e}",
+            exc_info=True,
+            extra={
+                "metric_type": "sync_task",
+                "status": "failure",
+                "error_type": type(e).__name__,
+                "source": source,
+                "duration_ms": duration_ms
+            }
+        )
         if session:
             session.rollback()
         # 即使失败也确认消息，防止死循环 (或者根据需求放入死信队列)
