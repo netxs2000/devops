@@ -272,9 +272,6 @@ dbt-build: ## 执行 dbt 建模转换
 	@echo "$(GREEN)Running dbt transformations...$(RESET)"
 	$(EXEC_CMD) bash -c "cd dbt_project && dbt build"
 
-validate: ## 执行数据质量校验 (Great Expectations)
-	@echo "$(GREEN)Running Data Quality Validation...$(RESET)"
-	$(EXEC_CMD) python scripts/validate_models.py
 
 # =============================================================================
 # E2E 测试 (Playwright)
@@ -322,9 +319,9 @@ clean: ## [增强] 清理所有临时文件、日志和 AI 调试脚本 (Environ
 		# 1. 清理 Python 编译缓存 \
 		Get-ChildItem -Path . -Include __pycache__ -Recurse -Directory | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; \
 		# 2. 清理通用垃圾后缀 (保持 .env 完整) \
-		Get-ChildItem -Path . -Include *.pyc,*.pyo,*.log,.coverage,*.tmp,traceback.txt,debug_output.txt -File -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue; \
+		Get-ChildItem -Path . -Include *.pyc,*.pyo,*.log,.coverage,*.tmp,traceback.txt,debug_output.txt,dbt_*.txt -File -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue; \
 		# 3. 针对性清理 AI 调试/脚本残留 \
-		Get-ChildItem -Path . -Include debug_*.py,test_tmp_*.py,tmp_*.py -File -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue; \
+		Get-ChildItem -Path . -Include debug_*.py,test_tmp_*.py,tmp_*.py,parse_dbt_*.py,drop_b.py -File -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue; \
 		# 4. 清理测试产出文件夹 \
 		if (Test-Path htmlcov) { Remove-Item -Path htmlcov -Recurse -Force }; \
 		if (Test-Path .pytest_cache) { Remove-Item -Path .pytest_cache -Recurse -Force }; \

@@ -3,7 +3,7 @@
 WITH stories AS (
     SELECT 
         issue_unique_id,
-        story_id,
+        raw_id AS story_id,
         issue_title,
         issue_status,
         priority,

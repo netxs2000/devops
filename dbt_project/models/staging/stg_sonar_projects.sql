@@ -9,6 +9,7 @@ renamed AS (
         key AS sonar_project_key,
         name AS sonar_project_name,
         qualifier,
+        gitlab_project_id,
         mdm_project_id,
         mdm_product_id,
         last_analysis_date,

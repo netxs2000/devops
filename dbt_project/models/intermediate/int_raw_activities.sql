@@ -11,7 +11,7 @@ with
 -- 1. 开发活动 (Commits)
 commit_activities as (
     select
-        commit_sha as activity_id,
+        'GITLAB-COMMIT-' || commit_sha as activity_id,
         committed_date as occurred_at,
         lower(trim(author_email)) as external_author_id,
         'EMAIL' as identifier_type,
@@ -32,11 +32,11 @@ commit_activities as (
 -- 2. 协作活动 (Merge Requests)
 mr_activities as (
     select
-        m.merge_request_id::text as activity_id,
+        'GITLAB-MR-OPEN-' || m.merge_request_id::text as activity_id,
         m.created_at as occurred_at,
         m.author_user_id::text as external_author_id,
         'EXTERNAL_ID' as identifier_type,
-        'MR_OPEN' as activity_type,
+        'MR' as activity_type,
         m.merge_request_id::text as target_entity_id,
         m.project_id,
         'MR' as target_entity_type,
@@ -52,11 +52,11 @@ mr_activities as (
     union all
     
     select
-        m.merge_request_id::text || '_merged' as activity_id,
+        'GITLAB-MR-MERGE-' || m.merge_request_id::text as activity_id,
         m.merged_at as occurred_at,
         m.author_user_id::text as external_author_id,
         'EXTERNAL_ID' as identifier_type,
-        'MR_MERGE' as activity_type,
+        'MR' as activity_type,
         m.merge_request_id::text as target_entity_id,
         m.project_id,
         'MR' as target_entity_type,
@@ -74,11 +74,11 @@ mr_activities as (
 -- 3. 需求/任务活动 (Issues)
 issue_activities as (
     select
-        i.issue_id::text as activity_id,
+        'GITLAB-ISSUE-OPEN-' || i.issue_id::text as activity_id,
         i.created_at as occurred_at,
         i.author_user_id::text as external_author_id,
         'EXTERNAL_ID' as identifier_type,
-        'ISSUE_OPEN' as activity_type,
+        'ISSUE' as activity_type,
         i.issue_id::text as target_entity_id,
         i.project_id,
         'ISSUE' as target_entity_type,
@@ -94,11 +94,11 @@ issue_activities as (
     union all
     
     select
-        i.issue_id::text || '_closed' as activity_id,
+        'GITLAB-ISSUE-CLOSE-' || i.issue_id::text as activity_id,
         i.closed_at as occurred_at,
         i.author_user_id::text as external_author_id,
         'EXTERNAL_ID' as identifier_type,
-        'ISSUE_CLOSE' as activity_type,
+        'ISSUE' as activity_type,
         i.issue_id::text as target_entity_id,
         i.project_id,
         'ISSUE' as target_entity_type,
@@ -116,14 +116,11 @@ issue_activities as (
 -- 4. 评审/讨论活动 (Notes/Comments)
 note_activities as (
     select
-        n.note_id::text as activity_id,
+        'GITLAB-NOTE-' || n.note_id::text as activity_id,
         n.created_at as occurred_at,
         n.author_user_id::text as external_author_id,
         'EXTERNAL_ID' as identifier_type,
-        case 
-            when n.noteable_type = 'MergeRequest' then 'REVIEW_COMMENT'
-            else 'ISSUE_DISCUSSION'
-        end as activity_type,
+        'REVIEW' as activity_type,
         n.noteable_iid::text as target_entity_id,
         n.project_id,
         n.noteable_type as target_entity_type,

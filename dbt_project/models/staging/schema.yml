@@ -9,12 +9,12 @@ models:
   - name: stg_gitlab_projects
     description: "GitLab 项目清洗层，1:1 映射源表 gitlab_projects"
     columns:
-      - name: project_id
+      - name: gitlab_project_id
         description: "GitLab 项目唯一标识"
         tests:
           - not_null
           - unique
-      - name: name
+      - name: project_name
         description: "项目名称"
       - name: path_with_namespace
         description: "项目完整路径 (含命名空间)"
@@ -30,7 +30,7 @@ models:
   - name: stg_gitlab_commits
     description: "GitLab 提交记录清洗层"
     columns:
-      - name: commit_id
+      - name: commit_sha
         description: "提交 SHA 哈希值"
         tests:
           - not_null
@@ -38,7 +38,7 @@ models:
         description: "所属项目 ID"
       - name: author_email
         description: "提交者邮箱"
-      - name: committed_at
+      - name: committed_date
         description: "提交时间"
       - name: message
         description: "提交信息"
@@ -46,7 +46,7 @@ models:
   - name: stg_gitlab_merge_requests
     description: "GitLab 合并请求清洗层"
     columns:
-      - name: mr_id
+      - name: merge_request_id
         description: "合并请求唯一标识"
         tests:
           - not_null
@@ -54,7 +54,7 @@ models:
         description: "所属项目 ID"
       - name: state
         description: "状态 (opened/merged/closed)"
-      - name: author_id
+      - name: author_user_id
         description: "创建者用户 ID"
       - name: created_at
         description: "创建时间"
@@ -148,16 +148,16 @@ models:
   - name: stg_mdm_identities
     description: "全局用户身份清洗层"
     columns:
-      - name: global_user_id
+      - name: user_id
         description: "全局用户唯一标识 (UUID)"
         tests:
           - not_null
           - unique
       - name: employee_id
         description: "HR 系统工号"
-      - name: full_name
+      - name: real_name
         description: "用户姓名"
-      - name: primary_email
+      - name: email
         description: "主邮箱地址"
       - name: department_id
         description: "所属部门 ID"
@@ -215,12 +215,12 @@ models:
   - name: stg_sonar_projects
     description: "SonarQube 项目清洗层"
     columns:
-      - name: project_key
+      - name: sonar_project_key
         description: "SonarQube 项目唯一键"
         tests:
           - not_null
           - unique
-      - name: name
+      - name: sonar_project_name
         description: "项目名称"
       - name: qualifier
         description: "项目类型 (TRK/APP)"

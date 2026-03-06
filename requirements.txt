@@ -50,6 +50,5 @@ streamlit==1.41.1
 plotly==5.24.1
 watchdog==6.0.0
 
-# 数据质量校验 (Great Expectations)
-great_expectations==1.10.0
+# 数据质量校验 (由 dbt-expectations 接管)
 pypinyin==0.53.0

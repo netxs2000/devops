@@ -10,8 +10,7 @@ renamed AS (
         build_id,
         result AS execution_result,
         date AS execution_date,
-        last_run_by,
-        created_at
+        last_run_by
     FROM source
 )
 

@@ -17,9 +17,7 @@ renamed AS (
         begin AS start_date,
         "end" AS end_date,
         real_began AS actual_start_date,
-        real_end AS actual_end_date,
-        created_at,
-        updated_at
+        real_end AS actual_end_date
     FROM source
 )
 

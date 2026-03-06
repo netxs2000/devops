@@ -38,21 +38,28 @@ in_degree as (
 -- 2. 质量指标
 quality as (
     select 
-        gitlab_project_id,
+        master_entity_id,
         complexity,
         cognitive_complexity,
         coverage
     from (
         select 
-            sp.gitlab_project_id,
+            sp.mdm_project_id as master_entity_id,
             sm.complexity,
             sm.cognitive_complexity,
             sm.coverage,
-            row_number() over (partition by sp.gitlab_project_id order by sm.analysis_date desc) as rn
+            row_number() over (partition by sp.mdm_project_id order by sm.analysis_date desc) as rn
         from {{ ref('stg_sonar_projects') }} sp
-        join {{ ref('stg_sonar_measures') }} sm on sp.sonar_project_id = sm.sonar_project_id
+        join {{ ref('stg_sonar_measures') }} sm on sp.internal_project_id = sm.project_id
     ) t
-    where rn = 1
+    where rn = 1 and master_entity_id is not null
+),
+
+alignment as (
+    select
+        gitlab_project_id,
+        master_entity_id
+    from {{ ref('int_entity_alignment') }}
 )
 
 select
@@ -78,5 +85,6 @@ select
 
 from {{ ref('stg_gitlab_projects') }} p
 left join in_degree i on p.gitlab_project_id = i.project_id
-left join quality q on p.gitlab_project_id = q.gitlab_project_id
+left join alignment a on p.gitlab_project_id = a.gitlab_project_id::numeric
+left join quality q on a.master_entity_id = q.master_entity_id
 order by brittleness_index desc

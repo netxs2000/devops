@@ -49,7 +49,7 @@ select
     coverage,
     tech_debt_hours,
     complexity,
-    ncloc,
+    lines_of_code,
     
     -- 计算趋势
     (bugs - coalesce(prev_day_bugs, bugs)) as daily_bugs_net_change,

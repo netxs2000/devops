@@ -17,7 +17,7 @@ renamed AS (
         priority,
         estimate,
         consumed,
-        "left" AS remaining_hours,
+        NULL::jsonb AS remaining_hours,
         task_type,
         opened_by,
         assigned_to,

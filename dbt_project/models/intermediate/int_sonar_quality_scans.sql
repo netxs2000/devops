@@ -14,28 +14,24 @@ measures as (
     select * from {{ ref('stg_sonar_measures') }}
 ),
 
-projects as (
-    select * from {{ ref('stg_sonar_projects') }}
-),
+    projects as (
+        select * from {{ ref('stg_sonar_projects') }}
+    ),
 
-alignment as (
-    select * from {{ ref('int_entity_alignment') }}
-),
-
-joined as (
+    joined as (
     select
-        m.sonar_project_id,
+        p.internal_project_id as sonar_project_id,
         p.sonar_project_key,
         p.sonar_project_name,
         p.gitlab_project_id,
         -- 对齐到 MDM Master Entity ID
-        coalesce(a.master_entity_id, 'UNKNOWN') as master_entity_id,
+        coalesce(p.mdm_project_id, 'UNKNOWN') as master_entity_id,
         
         m.analysis_date,
         date_trunc('day', m.analysis_date)::date as analysis_day,
         
         -- 开发语言产出 (LOC)
-        m.ncloc,
+        m.lines_of_code,
         
         -- 质量门槛与缺陷
         m.quality_gate_status,
@@ -54,8 +50,7 @@ joined as (
         round(m.technical_debt_minutes::numeric / 60.0, 2) as tech_debt_hours
 
     from measures m
-    join projects p on m.sonar_project_id = p.sonar_project_id
-    left join alignment a on p.gitlab_project_id = a.gitlab_project_id
+    join projects p on m.project_id = p.internal_project_id
 )
 
 select * from joined
