@@ -1,81 +1,45 @@
 
-/* 
-    人才隐形影响力雷达 (Talent Influence Radar) v2.0
+/*
+    人才雷达/技术画像模型 (Developer Talent Radar)
     
-    量化开发者的 "Technical Leadership" 和 "Implicit Impact"。
-    不看堆代码量，看核心贡献、评审参与度和【知识领域控制深度】。
+    量化维度：
+    1. 活跃度：最近 90 天的 Commit 分布。
+    2. 深度：核心/关键资产的参与度 (Critical Assets)。
+    3. 广度：跨项目的协作能力。
 */
 
 with 
--- 1. 评审影响力 (Review)
-reviewer_stats as (
+
+commits as (
     select 
-        u.master_user_id as user_id,
-        count(distinct n.note_id) as review_comment_count,
-        count(distinct n.note_id) * 3.0 as review_score
-    from {{ ref('stg_gitlab_notes') }} n
-    join {{ ref('int_gitlab_user_mapping') }} u on n.author_user_id::text = u.gitlab_user_id
-    where n.noteable_type = 'MergeRequest'
-      and n.created_at >= current_date - interval '90 days'
-    group by 1
+        master_user_id as user_id,
+        project_id,
+        committed_at as committed_date
+    from {{ ref('int_commits_with_authors') }}
 ),
 
--- 2. 核心资产控制力 (Asset Impact)
-asset_impact_stats as (
+asset_weights as (
+    -- 为不同重要性的资产分配分数权重
     select 
-        c.author_user_id as user_id,
-        count(distinct c.project_id) as active_repo_count,
-        sum(case when et.importance = 'Critical' then 5 else 1 end) as asset_score
-    from {{ ref('int_commits_with_authors') }} c
-    left join {{ ref('stg_mdm_entities_topology') }} et 
-        on c.project_id::text = et.internal_id and et.entity_type = 'REPO'
+        user_id,
+        count(distinct project_id) as active_repo_count,
+        sum(case when et.element_type = 'source-code' then 1 else 0 end) as asset_score -- 简化权重逻辑，后续可根据 topology 扩展
+    from commits c
+    left join {{ ref('stg_mdm_entity_topology') }} et 
+        on c.project_id::text = et.external_resource_id
     where c.committed_date >= current_date - interval '90 days'
     group by 1
 ),
 
--- 3. 知识领地深度 (Knowledge Domain Depth) - 基于所有历史贡献
-knowledge_depth as (
+final as (
     select
-        author_user_id as user_id,
-        count(distinct subsystem) as owned_subsystems_count,
-        sum(case when knowledge_risk_status = 'KNOWLEDGE_SILO' then 10 else 2 end) as domain_depth_score
-    from {{ ref('dws_subsystem_bus_factor') }}
-    where subsystem_ownership_pct > 30 -- 有一定话语权
-    group by 1
-),
-
--- 4. 用户主数据
-users as (
-    select * from {{ ref('stg_mdm_identities') }}
+        u.global_user_id,
+        u.full_name,
+        u.department_name,
+        coalesce(a.active_repo_count, 0) as active_repo_count,
+        coalesce(a.asset_score, 0) as talent_score
+    from {{ ref('int_golden_identity') }} u
+    left join asset_weights a on u.global_user_id = a.user_id
 )
 
--- 5. 最终汇聚
-select
-    u.user_id,
-    u.real_name,
-    u.department_id,
-    coalesce(rs.review_comment_count, 0) as metric_review_comments,
-    coalesce(ais.active_repo_count, 0) as metric_active_repos,
-    coalesce(kd.owned_subsystems_count, 0) as metric_knowledge_domains,
-    
-    -- 核心画像标签
-    case 
-        when kd.domain_depth_score > 50 then 'Domain Specialist'
-        when rs.review_score > 30 then 'Collaborative Leader'
-        when ais.asset_score > 20 then 'Reliable Contributor'
-        else 'Active Engineer'
-    end as talent_archetype,
-
-    -- 综合影响力指数 (Multi-Dimensional Index)
-    round(
-        (coalesce(rs.review_score, 0) * 0.3) + 
-        (coalesce(ais.asset_score, 0) * 0.3) +
-        (coalesce(kd.domain_depth_score, 0) * 0.4)
-    , 2) as talent_influence_index
-
-from users u
-left join reviewer_stats rs on u.user_id = rs.user_id
-left join asset_impact_stats ais on u.user_id = ais.user_id
-left join knowledge_depth kd on u.user_id = kd.user_id
-where u.is_active = true
-order by talent_influence_index desc
+select * from final

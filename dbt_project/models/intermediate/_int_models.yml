@@ -1,6 +1,17 @@
 version: 2
 
 models:
+  - name: int_org_normalization
+    description: "部门 ID 归一化中心：通过‘名称锚定’解决多源系统部门 ID 冲突（如解决 zentao_dept_* 与 CTR-* 的映射关系）。"
+
+  - name: int_identity_inferred_orgs
+    description: "人员部门归属推断模型：通过行为信号（Activity）频次权重分析，为 1000+ 无部门标识的存量用户自动推断归属部门。"
+    columns:
+      - name: original_org_id
+        description: "原始系统 ID"
+      - name: canonical_org_id
+        description: "对齐后的 HR/中心标准 ID"
+
   - name: int_identity_alignment
     description: "人员身份校准引擎：通过多级优先级策略（精确映射 > Email 匹配 > 用户名猜测）建立 OneID 翻译层。"
     columns:

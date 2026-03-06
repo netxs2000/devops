@@ -65,7 +65,7 @@ sources:
         description: "业务主项目定义表"
       - name: mdm_epic
         description: "跨团队史诗需求表"
-      - name: mdm_entities_topology
+      - name: mdm_entity_topology
         description: "实体拓扑关系表"
       - name: mdm_resource_costs
         identifier: stg_mdm_resource_costs

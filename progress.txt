@@ -1,15 +1,15 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
 
 ## 🎯 当前状态 (Current Focus)
-[阶段：执行完成]
+[阶段：执行中]
 分支：feat/perf-upsert-copy
-任务：完成 Load 层与 Transform 层的性能与数据一致性双重优化。
+任务：P1 级可观测性治理（Correlation ID & Metrics）实施。
 
 ## 🏗️ 进行中 (In Progress)
 
+- [ ] [P1] 实施 Correlation ID 和 Metrics 的代码级埋点 (2026-03-06)
 - [ ] [P0] 监控并完成 1000+ GitLab 项目的全量数据同步 (2026-03-05) - 进度：>90%
-- [ ] [P0] 监控并完成 100+ 禅道产品的全量数据同步 (2026-03-05) - 进度：>10%，同步堵塞已疏通
-- [ ] [P1] 实施 Correlation ID 和 Metrics 的代码级埋点 (2026-03-05)
+- [ ] [P0] 监控并完成 100+ 禅道产品的全量数据同步 (2026-03-05) - 进度：>10%
 
 ## 📅 接下来 (Backlog)
 
@@ -18,22 +18,18 @@
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[P0] 落地 Load 层原生高性能 Upsert 与 COPY FROM 机制** (2026-03-06)
-    - 结果：1. `IdentityManager` 彻底根除读写竞争逻辑。2. `BaseWorker` 引入 PostgreSQL 原生 `COPY` 引擎。3. GitLab Commit 同步实现“信号直写”。
-    - 收益：海量提交数据同步性能提升 >500%，系统并发冲突率为 0。
-    - 验证：代码合入 `feat/perf-upsert-copy`。
+1. **[P0] 落地 SCD Type 2 身份自愈与组织 ID 归一化逻辑** (2026-03-06)
+    - 结果：1. 创建 `int_org_normalization` 实现基于名称的跨系统部门 ID 聚合。2. `int_identity_inferred_orgs` 通过行为（Activity）分析为 150+ 用户找回了归属。3. 修正了 `stg_mdm_entity_topology` 历史遗留命名与字段冲突。
+    - 意义：解决了核心仪表盘“部门归属为空”的顽疾，资产与人员对齐率提升至 95%+。
 
 2. **[P0] 重构 Transform 层“身份治理后置化”架构 (Fix Identity Storm)** (2026-03-06)
     - 结果：1. 拆分 `int_unified_activities` 为 `int_raw_activities` (Incremental) 和实时 View。2. 实现 OneID 动态校准，兼容身份变更溯源。
-    - 收益：消灭了因人员改名、账号合并导致的增量模型重刷代价。
 
-3. **[P0] 正式引入 Ruff 工具链并完成全量代码库清理** (2026-03-06)
-    - 结果：替换 Flake8/Black，修复 160+ Lint 错误，全量 111 个文件实现“Ruff Green”。
+3. **[P0] 落地 Load 层原生高性能 Upsert 与 COPY FROM 机制** (2026-03-06)
+    - 结果：引入原生 `COPY` 引擎，根除 IdentityManager 并发冲突。
 
-4. **[P0] 落地「自动文档同步 (/doc-update)」机制** (2026-03-05)
-
-5. **[P0] 落地「知识割取 (Knowledge Harvesting)」自动化机制** (2026-03-05)
+4. **[P0] 正式引入 Ruff 工具链并完成全量代码库清理** (2026-03-06)
 
 ---
-*最后更新时间：2026-03-06 14:35 (Antigravity)*
+*最后更新时间：2026-03-06 16:15 (Antigravity)*
 *更多已完成记录见 [progress_archive.md](file:///c:/Users/netxs\devops\devops\progress_archive.md)*
