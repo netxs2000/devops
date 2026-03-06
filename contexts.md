@@ -52,6 +52,10 @@
 - **数据一致性与性能**: 
     - 关联表必须定义 `UniqueConstraint` 复合索引防重复。
     - 指标结果表必须建立针对时间维度的索引。
+    - **插件层索引策略 (Plugin Index Policy)**:
+        - **外键字段必建索引**: PostgreSQL 不会自动为 FK 创建索引。所有 `ForeignKey` 列必须显式添加 `index=True`，否则 JOIN 和 CASCADE DELETE 会触发全表扫描。
+        - **高频查询字段建索引**: `state`/`status`（列表筛选）、`created_at`/`merged_at`/`committed_date`（时间范围聚合、DORA 指标计算）等高频 WHERE/ORDER BY 字段。
+        - **不盲目加索引**: 枚举值极少的字段（如 `environment` 仅 prod/staging，选择性差）或查询频率低的字段不加索引，避免无收益的写入代价。
     - **N+1 问题**: 查询关联对象时必须显式使用 `.options(joinedload(...))`。
     - **批量处理**: 
         - **读**: 大数据集查询必须使用 `yield_per(1000)` 或分页游标。
