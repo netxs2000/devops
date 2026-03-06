@@ -109,7 +109,7 @@ class ZenTaoExecution(Base):
 
     __tablename__ = "zentao_executions"
     id = Column(Integer, primary_key=True)
-    product_id = Column(Integer, ForeignKey("zentao_products.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("zentao_products.id"), nullable=False, index=True)
     name = Column(String(255))
     code = Column(String(100))
     type = Column(String(20), comment="实体类型: program, project, execution")
@@ -154,7 +154,7 @@ class ZenTaoIssue(Base):
     __tablename__ = "zentao_issues"
     id = Column(Integer, primary_key=True, autoincrement=False)
     type = Column(String(50), primary_key=True)  # feature, bug, task
-    product_id = Column(Integer, ForeignKey("zentao_products.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("zentao_products.id"), nullable=False, index=True)
     execution_id = Column(Integer, ForeignKey("zentao_executions.id"), nullable=True)
     plan_id = Column(Integer, ForeignKey("zentao_product_plans.id"), nullable=True)
     title = Column(String(500), nullable=False)
@@ -321,7 +321,7 @@ class ZenTaoAction(Base):
     actor = Column(String(100))
     actor_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
     action = Column(String(100))
-    date = Column(DateTime)
+    date = Column(DateTime, index=True)
     comment = Column(Text)
     product = relationship("ZenTaoProduct", back_populates="actions")
     raw_data = Column(JSON)

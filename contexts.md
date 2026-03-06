@@ -43,9 +43,12 @@
 - **Security Scans**: 采用 **CI-Driven** 模式。DevOps 平台不运行本地扫描器（如 Java/Dependency-Check），而是通过 API 接收 CI 流水线上传的 JSON 报告。这降低了平台容器的体积与资源消耗。
 
 ## 5. 数据库开发规范 (Database & SCD)
-- **审计与安全性**:
-    - **强制字段**: 所有业务模型必须包含审计字段：`created_at` (创建时间), `updated_at` (最后更新), `created_by` (创建人), `is_deleted` (软删除标记)。
-    - **软删除**: 严禁物理删除生产数据。所有删除操作必须通过逻辑删除（`is_deleted=True`）实现。
+- **审计与安全性 (分层要求)**:
+    - **MDM 层 (`mdm_*`)**: 强制继承 `TimestampMixin`（`created_at`, `updated_at`）+ `SCDMixin`（`is_deleted`, `is_current`, `effective_from/to`）。SCD 机制已覆盖软删除与版本追踪。
+    - **系统层 (`sys_*`)**: 强制继承 `TimestampMixin`。RBAC 关联表（如 `sys_user_roles`, `sys_role_menu`）应至少包含 `created_at`，以支持安全审计。
+    - **插件层 (`{source}_*`)**: 不强制继承 `TimestampMixin`。插件模型的 `created_at`/`updated_at` 保留**源系统 API 返回的时间语义**（如 MR 在 GitLab 的创建时间），不与系统入库时间混淆。生命周期由 `sync_status` 管理。
+    - **`created_by` (操作人)**: 不全局强制。仅在**存在用户交互**的业务模块（如 Service Desk `sd_*`）按需添加。自动化同步写入的数据通过 `correlation_id` 和 `sys_sync_logs` 追踪来源。
+    - **软删除**: 严禁物理删除生产数据。MDM 层通过 `SCDMixin.is_deleted` 实现；插件层通过 `sync_status='DELETED'` 标记源端已消失的实体。
 - **数据一致性与性能**: 
     - 关联表必须定义 `UniqueConstraint` 复合索引防重复。
     - 指标结果表必须建立针对时间维度的索引。

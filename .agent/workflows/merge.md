@@ -69,7 +69,22 @@ make deploy
   ```
 - **降级条件**：同 Step 4，记录阻塞原因后可有条件跳过
 
-## Step 6: 文档同步检查 🟡 WARN
+// turbo
+## Step 6: 环境清理 (Cleanup) 🟡 WARN
+
+清理因开发/调试/测试产生的临时文件，确保零残留。
+
+```bash
+make clean
+```
+
+手动确认：
+
+- [ ] `git status` 无意外的 untracked 临时文件（`.log`, `.tmp`, `debug_*.py` 等）
+- [ ] 无 AI 生成的中间分析文件残留在项目目录中
+- [ ] 若发现 `.gitignore` 未覆盖的新类型临时文件，补充到 `.gitignore`
+
+## Step 7: 文档同步检查 🟡 WARN
 
 手动确认以下文档已更新：
 
@@ -80,7 +95,7 @@ make deploy
    - 新增开发规范或核心模型
 3. **`DATA_DICTIONARY.md`**（仅当模型变更时）：执行 `make docs` 刷新
 
-## Step 7: 安全自检 🟡 WARN
+## Step 8: 安全自检 🟡 WARN
 
 手动确认：
 
@@ -88,7 +103,7 @@ make deploy
 - [ ] 新增的第三方依赖无已知 CVE 漏洞
 - [ ] 日志不打印敏感信息（token, password, key 等字段已屏蔽）
 
-## Step 8: 数据库兼容性检查 🔴 BLOCK (仅涉及 Schema 变更时)
+## Step 9: 数据库兼容性检查 🔴 BLOCK (仅涉及 Schema 变更时)
 
 - [ ] Schema 变更向后兼容（不能同时修改 Schema 和依赖该 Schema 的代码）
 - [ ] 遵循安全变更顺序：Add Column → Deploy Code → Drop Old Column
