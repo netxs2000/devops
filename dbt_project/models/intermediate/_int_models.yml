@@ -29,16 +29,29 @@ models:
       - name: root_org_name
         description: "顶层一级组织名称"
 
-  - name: int_unified_activities
-    description: "统一活动流流水：将 Commit, MR, Issue, Note 等碎片化行为聚合成标准化的 Event Stream。"
+  - name: int_raw_activities
+    description: "原始活动流 (Raw Sequence)：增量存储各系统抓取到的原始信号（External ID），不耦合身份对齐逻辑。此表用于彻底根除‘身份风暴’与‘改名风暴’引起的增量重刷新。"
     columns:
       - name: activity_id
         description: "全局唯一活动 ID"
         tests:
           - not_null
           - unique
-      - name: activity_type
-        description: "活动类型 (COMMIT, MERGE_REQUEST, ISSUE, NOTE)"
+      - name: external_author_id
+        description: "源系统采集到的作者标识 (ID/Email/Username)"
+
+  - name: int_unified_activities
+    description: "最终视图 (Unified View)：通过实时 Join 身份对齐引擎 (Identity Resolution Engine)，将原始信号映射为全局统一 OneID。解决身份变更后的历史溯源一致性问题。"
+    columns:
+      - name: activity_id
+        description: "全局唯一活动 ID"
+        tests:
+          - not_null
+          - unique
+      - name: author_user_id
+        description: "解析后的全局统一用户 ID"
+      - name: author_name
+        description: "实时同步的黄金记录真实姓名"
 
   - name: int_activity_financial_classification
     description: "行为财务分类：根据活动所属项目或特定规则，自动标识该产出应计入 CapEx（资本支出）还是 OpEx（经营支出）。"
