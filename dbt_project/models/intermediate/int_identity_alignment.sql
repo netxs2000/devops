@@ -27,7 +27,7 @@ fragment_pool as (
     select 
         source_system,
         'EXTERNAL_ID' as identifier_type,
-        external_user_id as identifier_value,
+        lower(trim(external_user_id)) as identifier_value,
         user_id as master_user_id,
         'EXACT_MAPPING' as strategy,
         10 as priority
@@ -40,7 +40,7 @@ fragment_pool as (
     select 
         source_system,
         'EMAIL' as identifier_type,
-        external_email as identifier_value,
+        lower(trim(external_email)) as identifier_value,
         user_id as master_user_id,
         'EXACT_MAPPING' as strategy,
         10 as priority
@@ -53,7 +53,7 @@ fragment_pool as (
     select 
         source_system,
         'USERNAME' as identifier_type,
-        external_username as identifier_value,
+        lower(trim(external_username)) as identifier_value,
         user_id as master_user_id,
         'EXACT_MAPPING' as strategy,
         10 as priority
@@ -62,11 +62,11 @@ fragment_pool as (
 
     union all
 
-    -- 4. 基于 MDM Identities 的 Email 回退策略 (通用自动计算)
+    -- 4. 基于 Golden Identities 的 Email 回退策略 (通用自动计算)
     select 
         'ANY' as source_system,
         'EMAIL' as identifier_type,
-        primary_email as identifier_value,
+        lower(trim(primary_email)) as identifier_value,
         global_user_id as master_user_id,
         'EMAIL_FALLBACK' as strategy,
         20 as priority
@@ -76,16 +76,24 @@ fragment_pool as (
     union all
 
     -- 5. 自动规则：基于 Email 前缀匹配用户名 (Username Auto-Guess)
-    -- 场景：Jenkins/Jira 账号名为 zhangsan，而主 Email 为 zhangsan@company.com
     select 
         'ANY' as source_system,
         'USERNAME' as identifier_type,
-        split_part(primary_email, '@', 1) as identifier_value,
+        lower(split_part(primary_email, '@', 1)) as identifier_value,
         global_user_id as master_user_id,
         'USERNAME_AUTO_MATCH' as strategy,
-        30 as priority -- 优先级低于精确映射和直接 Email 匹配
+        30 as priority
     from identities
     where primary_email like '%@%'
 )
 
-select * from fragment_pool
+select 
+    source_system,
+    identifier_type,
+    identifier_value,
+    master_user_id,
+    strategy,
+    priority
+from fragment_pool
+where identifier_value is not null
+  and master_user_id is not null

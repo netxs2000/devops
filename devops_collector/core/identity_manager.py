@@ -5,7 +5,6 @@
 """
 
 import logging
-import uuid
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -30,7 +29,7 @@ class IdentityManager:
         email: str | None = None,
         name: str | None = None,
         employee_id: str | None = None,
-    ) -> User:
+    ) -> User | None:
         """根据外部账号解析并获取全局用户实体。"""
         email_lower = email.lower().strip() if email else None
         ext_id_str = str(external_id).strip()
@@ -67,41 +66,33 @@ class IdentityManager:
             if len(potential_users) == 1:
                 user = potential_users[0]
 
-        # 5. 如果彻底找不到，创建一个待对齐的外部用户
+        # 5. 如果彻底找不到，不再创建临时用户，而是记录原始信号供 dbt 后续处理
         if not user:
-            new_uid = uuid.uuid4()
-            user = User(
-                global_user_id=new_uid,
-                full_name=name or f"Unknown_{source}_{ext_id_str}",
-                primary_email=email_lower,
-                employee_id=employee_id,
-                is_active=False,
-                is_survivor=False,
-                sync_version=1,
-                is_current=True,
-            )
-            session.add(user)
-            logger.info(f"创建外部临时用户: {user.full_name} ({source}:{ext_id_str})")
+            logger.debug(f"未找到匹配的全局用户，记录信号待 dbt 处理: {source}:{ext_id_str}")
 
-        # 6. 建立映射关系
+        # 6. 建立映射关系 (如果不存在)
         if not mapping:
-            existing_user_mapping = session.query(IdentityMapping).filter_by(
-                source_system=source, global_user_id=user.global_user_id
-            ).first()
+            existing_user_mapping = None
+            if user:
+                existing_user_mapping = session.query(IdentityMapping).filter_by(
+                    source_system=source, global_user_id=user.global_user_id
+                ).first()
             
             if not existing_user_mapping:
                 mapping = IdentityMapping(
-                    global_user_id=user.global_user_id,
+                    global_user_id=user.global_user_id if user else None,
                     source_system=source,
                     external_user_id=ext_id_str,
                     external_username=name,
                     external_email=email_lower,
-                    mapping_status="AUTO" if user.is_survivor else "PENDING",
-                    confidence_score=1.0 if user.is_survivor else 0.5,
+                    mapping_status="AUTO" if user and user.is_survivor else "PENDING",
+                    confidence_score=1.0 if user and user.is_survivor else 0.5,
                 )
                 session.add(mapping)
+                logger.info(f"建立身份映射追踪 (待对齐): {source}:{ext_id_str}")
             else:
                 logger.info(f"用户 {user.full_name} 在 {source} 下已有映射，不再重复处理。")
 
-        cls._local_cache[cache_key] = user.global_user_id
+        if user:
+            cls._local_cache[cache_key] = user.global_user_id
         return user

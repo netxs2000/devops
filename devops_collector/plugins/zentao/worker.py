@@ -578,7 +578,8 @@ class ZenTaoWorker(BaseWorker):
         action.actor = str(actor) if actor else None
         if action.actor:
             u = IdentityManager.get_or_create_user(self.session, "zentao", actor)
-            action.actor_user_id = u.global_user_id
+            if u:
+                action.actor_user_id = u.global_user_id
         action.action = data.get("action")
         if data.get("date"):
             action.date = datetime.fromisoformat(data["date"].replace(" ", "T"))
@@ -599,7 +600,9 @@ class ZenTaoWorker(BaseWorker):
             if not org:
                 try:
                     with self.session.begin_nested():
-                        org = Organization(org_id=org_id, org_name=org_name, org_level=3, is_current=True, sync_version=1)
+                        org = Organization(
+                            org_id=org_id, org_name=org_name, org_level=3, is_current=True, sync_version=1
+                        )
                         self.session.add(org)
                         self.session.flush()
                         logger.info(f"Created ZenTao Organization: {org_name}")

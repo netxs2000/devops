@@ -69,7 +69,7 @@ class IdentityMatcher:
             email=commit.author_email,
             name=commit.author_name,
         )
-        return user.global_user_id
+        return user.global_user_id if user else None
 
 
 class UserResolver:
@@ -117,19 +117,21 @@ class UserResolver:
                 name=user_data.get("name"),
                 employee_id=user_data.get("username"),
             )
-            dept_name = user_data.get("skype")
-            if dept_name:
-                org = self.session.query(Organization).filter_by(org_name=dept_name, is_current=True).first()
-                if not org:
-                    org = Organization(
-                        org_id=dept_name, org_name=dept_name, org_level=2, sync_version=1, is_current=True
-                    )
-                    self.session.add(org)
-                    self.session.flush()
-                user.department_id = org.org_id
-            self.session.flush()
-            self.cache[gitlab_id] = user.global_user_id
-            return user.global_user_id
+            if user:
+                dept_name = user_data.get("skype")
+                if dept_name:
+                    org = self.session.query(Organization).filter_by(org_name=dept_name).first()
+                    if not org:
+                        org = Organization(
+                            org_id=dept_name, org_name=dept_name, org_level=2, sync_version=1, is_current=True
+                        )
+                        self.session.add(org)
+                        self.session.flush()
+                    user.department_id = org.org_id
+                self.session.flush()
+                self.cache[gitlab_id] = user.global_user_id
+                return user.global_user_id
+            return None
         except Exception as e:
             logger.warning(f"Failed to resolve user {gitlab_id}: {e}")
             return None
