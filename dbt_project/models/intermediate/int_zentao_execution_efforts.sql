@@ -4,10 +4,10 @@ WITH tasks AS (
     SELECT 
         issue_unique_id,
         execution_id,
-        "left" AS remaining_hours,
+        remaining_hours,
         -- 使用 Postgres JSON 操作符提取数值
-        (consumed::text)::numeric AS consumed_hours,
-        (estimate::text)::numeric AS estimated_hours,
+        coalesce(nullif(trim(both '"' from consumed#>>'{}'), ''), '0')::numeric AS consumed_hours,
+        coalesce(nullif(trim(both '"' from estimate#>>'{}'), ''), '0')::numeric AS estimated_hours,
         task_type,
         assigned_to_user_id
     FROM {{ ref('stg_zentao_issues') }}

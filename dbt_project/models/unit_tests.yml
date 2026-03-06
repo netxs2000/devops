@@ -4,31 +4,35 @@ unit_tests:
   - name: test_golden_record_fusion
     model: int_golden_identity
     given:
-      - input: ref('stg_mdm_identities')
+      - input: source('raw', 'mdm_identities')
         rows:
-          - {user_id: 'u1', employee_id: 'E001'}
+          - {global_user_id: '00000000-0000-0000-0000-000000000001', employee_id: 'E001', is_current: true}
       - input: ref('stg_hr_employees')
         rows:
           - {employee_id: 'E001', hr_name: 'Zhang San', hr_dept: 'Tech Dept', hr_status: 'Active'}
       - input: ref('stg_ldap_accounts')
         rows:
           - {employee_id: 'E001', ldap_email: 'zs@ldap.com', ldap_username: 'zhangsan'}
+      - input: ref('int_org_normalization')
+        rows: []
+      - input: ref('int_identity_inferred_orgs')
+        rows: []
     expect:
       rows:
-        - {global_user_id: 'u1', full_name: 'Zhang San', department_name: 'Tech Dept', primary_email: 'zs@ldap.com', has_hr_record: true, has_ldap_record: true}
+        - {global_user_id: '00000000-0000-0000-0000-000000000001', full_name: 'Zhang San', department_name: 'Tech Dept', primary_email: 'zs@ldap.com', has_hr_record: true, has_ldap_record: true}
 
   - name: test_identity_priority_logic
     model: int_identity_alignment
     given:
       - input: ref('int_golden_identity')
         rows:
-          - {global_user_id: 'u1', primary_email: 'zs@co.com'}
+          - {global_user_id: '00000000-0000-0000-0000-000000000001', primary_email: 'zs@co.com'}
       - input: ref('stg_mdm_identity_mappings')
         rows:
-          - {user_id: 'u1', source_system: 'GITLAB', external_email: 'zs@co.com'}
+          - {user_id: '00000000-0000-0000-0000-000000000001', source_system: 'GITLAB', external_email: 'zs@co.com'}
     expect:
       rows:
         # 应产生两条规则：一条是 EXACT_MAPPING (priority 10)，一条是 EMAIL_FALLBACK (priority 20)
-        - {master_user_id: 'u1', strategy: 'EXACT_MAPPING', priority: 10}
-        - {master_user_id: 'u1', strategy: 'EMAIL_FALLBACK', priority: 20}
-        - {master_user_id: 'u1', strategy: 'USERNAME_AUTO_MATCH', priority: 30}
+        - {master_user_id: '00000000-0000-0000-0000-000000000001', strategy: 'EXACT_MAPPING', priority: 10}
+        - {master_user_id: '00000000-0000-0000-0000-000000000001', strategy: 'EMAIL_FALLBACK', priority: 20}
+        - {master_user_id: '00000000-0000-0000-0000-000000000001', strategy: 'USERNAME_AUTO_MATCH', priority: 30}

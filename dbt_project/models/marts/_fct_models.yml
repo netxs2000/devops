@@ -12,8 +12,15 @@ models:
         description: "审计归属周"
       - name: capitalization_rate
         description: "资本化率 (CapEx 活动占比)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
       - name: audit_status
         description: "人工审计建议状态 (e.g., AUDIT_READY, INSPECTION_REQUIRED)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['AUDIT_READY', 'HIGH_CAPEX_INSPECTION_REQUIRED', 'INSUFFICIENT_DATA']
 
   - name: fct_dora_metrics
     description: "DORA 核心指标事实表：从自动化部署、代码变更及故障管理数据中计算出的交付效能指标。"
@@ -22,8 +29,14 @@ models:
         description: "业务主项目 ID"
       - name: deployment_frequency
         description: "部署频率：单位时间内发布的成功构建次数"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
       - name: mtr_hours
         description: "故障平均恢复时长 (Mean Time to Restore)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
 
   - name: fct_project_delivery_health
     description: "项目交付健康度大屏：综合产出、质量、响应速度三个维度的加权评分模型。"
@@ -32,6 +45,10 @@ models:
         description: "业务主项目 ID"
       - name: health_score
         description: "健康度得分 (0-10)"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 10
 
   - name: fct_delivery_costs
     description: "交付成本核算：结合人力工时单价与活动流分布，产出的细粒度研发投入明细。"

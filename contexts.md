@@ -99,7 +99,14 @@
 - **元数据 (Metadata)**: 核心 Marts 模型必须在 `meta` 字段中标记 `owner` 和 `domain`，以便 DataHub 采集。
 - **质量哨兵**: 所有模型在 `schema.yml` 必须定义 `unique` 和 `not_null` 测试，关键指标使用 Singular SQL Tests 校验。
 
+### 7.3 dbt 性能与类型守卫 (Performance & Type Safety) [NEW]
+- **JSONB 强类型转换**: 从 `JSONB` 提取数值字段进行 `numeric` 转换时，必须执行 `trim(both '"' from field)` 以清除潜在的字面量双引号。结合 `nullif(..., '')` 过滤空字符串，并确保 `coalesce` 兜底。
+- **ID 语义一致性 (String IDs)**: 所有跨源关联的业务主键（Master IDs/Entity IDs）在 dbt 语义层强制统一为 `String (character varying)` 类型。严禁在中间层混用 `Integer` 与 `String` 导致关联报错。
+- **Staging 透明度**: Staging 模型必须完成所有字段语义对齐（如 `ncloc` -> `lines_of_code`）。严禁在 `int_` 或 `fct_` 层继续直接使用源系统的非标缩写。
+- **并发控制**: 在资源受限环境执行 `dbt build` 时，必须通过 `--threads 1` 或环境变量限制并发，防止数据库锁冲突 (Deadlock) 或内存溢出导致的挂起。
+
 ## 8. 运维流程与生命周期 (DevOps Ops)
+
 - **部署模式**: 
     - `make deploy`: 本地快速验证部署。支持基础镜像 Nexus 回退机制 (Nexus -> Docker Hub)。
     - `make package`: 生成镜像存档 `devops-platform.tar`。

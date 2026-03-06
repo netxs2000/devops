@@ -14,9 +14,7 @@ renamed AS (
         last_run_result,
         is_automated,
         automation_type,
-        script_path,
-        created_at,
-        updated_at
+        script_path
     FROM source
 )
 

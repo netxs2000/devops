@@ -3,14 +3,23 @@ version: 2
 models:
   - name: int_org_normalization
     description: "部门 ID 归一化中心：通过‘名称锚定’解决多源系统部门 ID 冲突（如解决 zentao_dept_* 与 CTR-* 的映射关系）。"
-
-  - name: int_identity_inferred_orgs
-    description: "人员部门归属推断模型：通过行为信号（Activity）频次权重分析，为 1000+ 无部门标识的存量用户自动推断归属部门。"
     columns:
       - name: original_org_id
         description: "原始系统 ID"
       - name: canonical_org_id
         description: "对齐后的 HR/中心标准 ID"
+        tests:
+          - not_null:
+              severity: warn
+
+  - name: int_identity_inferred_orgs
+    description: "人员部门归属推断模型：通过行为信号（Activity）频次权重分析，为 1000+ 无部门标识的存量用户自动推断归属部门。"
+    columns:
+      - name: inferred_org_id
+        description: "推断出的部门 ID"
+        tests:
+          - not_null:
+              severity: warn
 
   - name: int_identity_alignment
     description: "人员身份校准引擎：通过多级优先级策略（精确映射 > Email 匹配 > 用户名猜测）建立 OneID 翻译层。"
@@ -19,6 +28,9 @@ models:
         description: "原始系统中采集到的标识值（ID/Email/Username）"
       - name: master_user_id
         description: "对应的全局统一用户 ID"
+        tests:
+          - not_null:
+              severity: warn
       - name: strategy
         description: "匹配策略名 (e.g., EXACT_MAPPING, USERNAME_AUTO_MATCH)"
       - name: priority
@@ -29,6 +41,9 @@ models:
     columns:
       - name: master_entity_id
         description: "MDM 标准资产 ID"
+        tests:
+          - not_null:
+              severity: warn
       - name: alignment_strategy
         description: "对齐策略：EXACT_ID, EXACT_NAME, FUZZY_PATH"
 
@@ -48,8 +63,17 @@ models:
         tests:
           - not_null
           - unique
+      - name: source_system
+        description: "源系统名称 (gitlab/zentao/...)"
+        tests:
+          - not_null
       - name: external_author_id
         description: "源系统采集到的作者标识 (ID/Email/Username)"
+      - name: activity_type
+        description: "行为类型"
+        tests:
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['COMMIT', 'ISSUE', 'MR', 'REVIEW', 'DEPLOY']
 
   - name: int_unified_activities
     description: "最终视图 (Unified View)：通过实时 Join 身份对齐引擎 (Identity Resolution Engine)，将原始信号映射为全局统一 OneID。解决身份变更后的历史溯源一致性问题。"
@@ -61,6 +85,8 @@ models:
           - unique
       - name: author_user_id
         description: "解析后的全局统一用户 ID"
+        tests:
+          - not_null
       - name: author_name
         description: "实时同步的黄金记录真实姓名"
 

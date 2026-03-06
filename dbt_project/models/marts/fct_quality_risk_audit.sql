@@ -62,6 +62,6 @@ select
     end as recommended_action
 
 from latest_quality q
-join topology t on q.master_entity_id = t.topology_id
+join topology t on q.master_entity_id = t.master_project_id
 left join weekly_trend w on q.master_entity_id = w.master_entity_id
 where q.latest_rank = 1

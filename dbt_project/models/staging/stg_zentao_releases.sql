@@ -14,8 +14,6 @@ renamed AS (
         status AS DEPLOYMENT_STATUS,
         opened_by,
         opened_by_user_id,
-        created_at,
-        updated_at,
         raw_data
     FROM source
 )

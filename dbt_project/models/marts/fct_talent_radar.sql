@@ -12,9 +12,9 @@ with
 
 commits as (
     select 
-        master_user_id as user_id,
+        author_user_id as user_id,
         project_id,
-        committed_at as committed_date
+        committed_date
     from {{ ref('int_commits_with_authors') }}
 ),
 

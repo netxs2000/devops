@@ -16,6 +16,7 @@ renamed AS (
         code_smells,
         complexity,
         cognitive_complexity,
+        sqale_index AS technical_debt_minutes,
         -- 核心增量指标 (New Code)
         new_coverage,
         new_bugs,
