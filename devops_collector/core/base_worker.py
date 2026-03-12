@@ -119,23 +119,35 @@ class BaseWorker(ABC):
             "collected_at": datetime.now(UTC),
         }
         try:
-            stmt = insert(RawDataStaging).values(**data)
-            stmt = stmt.on_conflict_do_update(
-                index_elements=["source", "entity_type", "external_id"],
-                set_={
-                    "payload": stmt.excluded.payload,
-                    "schema_version": stmt.excluded.schema_version,
-                    "collected_at": stmt.excluded.collected_at,
-                },
-            )
-            self.session.execute(stmt)
-        except Exception:
-            existing = self.session.query(RawDataStaging).filter_by(source=source, entity_type=entity_type, external_id=str(external_id)).first()
+            # 使用嵌套事务 (Savepoint) 尝试 Upsert，防止事务中止
+            with self.session.begin_nested():
+                stmt = insert(RawDataStaging).values(**data)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=["source", "entity_type", "external_id"],
+                    set_={
+                        "payload": stmt.excluded.payload,
+                        "schema_version": stmt.excluded.schema_version,
+                        "collected_at": stmt.excluded.collected_at,
+                    },
+                )
+                self.session.execute(stmt)
+        except Exception as e:
+            # 如果核心 Upsert 语法失败（例如某些不支持 upsert 的 PG 版本），则尝试回退到手动查询更新
+            self.logger.debug(f"Upsert failed, falling back to manual merge for {entity_type}:{external_id}: {e}")
+            existing = self.session.query(RawDataStaging).filter_by(
+                source=source, 
+                entity_type=entity_type, 
+                external_id=str(external_id)
+            ).first()
             if existing:
                 for k, v in data.items():
                     setattr(existing, k, v)
             else:
                 self.session.add(RawDataStaging(**data))
+                try:
+                    self.session.flush()
+                except Exception:
+                    self.session.rollback() # 真的没法救了再 rollback
 
     def bulk_save_to_staging(self, source: str, entity_type: str, items: list[dict], id_field: str = "id", schema_version: str = "1.0") -> None:
         """高性能批量存放原始数据到 Staging 层。

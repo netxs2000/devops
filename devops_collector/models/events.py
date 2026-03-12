@@ -21,7 +21,7 @@ def auto_link_user_activities(mapper, connection, target):
         connection.execute(
             GitLabCommit.__table__.update()
             .where(
-                (GitLabCommit.__table__.c.gitlab_user_id is None)
+                (GitLabCommit.__table__.c.gitlab_user_id.is_(None))
                 & ((GitLabCommit.__table__.c.author_email == user.primary_email) | (GitLabCommit.__table__.c.author_name == target.external_username))
             )
             .values(gitlab_user_id=target.global_user_id)
@@ -31,7 +31,7 @@ def auto_link_user_activities(mapper, connection, target):
             connection.execute(
                 GitLabIssue.__table__.update()
                 .where(
-                    (GitLabIssue.__table__.c.author_id is None) & (GitLabIssue.__table__.c.raw_data[("author", "id")].as_string().cast(Integer) == gitlab_uid)
+                    (GitLabIssue.__table__.c.author_id.is_(None)) & (GitLabIssue.__table__.c.raw_data[("author", "id")].as_string().cast(Integer) == gitlab_uid)
                 )
                 .values(author_id=target.global_user_id)
             )

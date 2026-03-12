@@ -3,7 +3,7 @@
 ## 🎯 当前状态 (Current Focus)
 [阶段：执行中]
 分支：feat/dbt-expectations-migration
-任务：完成 dbt 模型修复与验证，进入数据质量审计与生产环境验证阶段。
+任务：完成环境卫生与初始化链路修复后，已进入知识沉淀阶段。接下来将继续深度修复 GitLab/ZenTao 数据关联问题。
 
 ## 🏗️ 进行中 (In Progress)
 
@@ -19,24 +19,22 @@
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[Data] dbt 模型全量修复与 Schema 治理** (2026-03-06)
-    - 结果：1. 修复了 SonarQube（缺失 `gitlab_project_id`）、禅道（JSONB 转换报错）及审计事实表（类型不匹配）在内的所有阻塞性错误。2. 引入 `drop_b.py` 自动化清理机制，解决了 `__dbt_backup` 导致的构建冲突。
-    - 验证：`dbt build` 对关键事实表（Project Health, Quality Risk Audit, Brittleness Index）已全量通过。
-    - [Hygiene]: 已清理临时调试文件及日志。
+1. **[DoD] 知识割取与规范化环境卫生治理** (2026-03-12)
+    - 结果：1. 沉淀 Env/Hygiene, Infra/Init, ZenTao/Auth 三大领域教训至 `lessons-learned.log`。2. 在 `gemini.md` 与 `contexts.md` 中正式写入「临时输出归集」与「强制 make clean」红线规则。
+    - [Status]: 知识已沉淀，环境已清理。
 
-2. **[MANDATORY] 知识割取与项目宪法 (contexts.md) 增补** (2026-03-06)
-    - 结果：1. 总结 dbt 备份清理、JSONB 强类型转换、并发控制等教训于 `lessons-learned.log`。2. 更新 `contexts.md`，追加「dbt 性能与类型守卫」规范。
-    - 意义：实现从“解决问题”到“沉淀规则”的闭环，防止类似 ID 冲突或事务死锁问题再次发生。
+2. **[Bugfix] 修复部署及初始化链路阻塞性错误** (2026-03-12)
+    - 结果：1. 解决 Compose Profile 缺失问题。2. 解决 `mdm_organizations` 外键死锁。3. 修复 SQLAlchemy `is_(None)` 事件监听器报错。
+    - 验证：`make deploy` 与 `make init` 全量通过。
 
-3. **[Core] 基础设施瘦身 (KISS) 与 GE 彻底移除** (2026-03-06)
-    - 结果：彻底删除了 GE 遗留脚本及依赖，解耦数据质量校验逻辑至 dbt 原生流程。
-    - 验证：`dbt test` 全量通过。
+3. **[Data] dbt 模型全量修复与 Schema 治理** (2026-03-06)
+    - 结果：修复了 SonarQube、禅道及审计事实表的同步故障。
 
-4. **[P0/P1] 落地 SCD Type 2 身份自愈与 Correlation ID 治理** (2026-03-06)
-    - 结果：实现 MQ -> DB 全链路 CID 透传。升级 `int_golden_identity` 支持 SCD2 历史字段回溯。
+4. **[MANDATORY] 知识割取与项目宪法 (contexts.md) 增补** (2026-03-06)
+    - 结果：沉淀 dbt 性能与类型守卫规范。
 
-5. **[P0] 正式引入 Ruff 工具链并完成全量代码库清理** (2026-03-06)
+5. **[Core] 基础设施瘦身 (KISS) 与 GE 彻底移除** (2026-03-06)
 
 ---
-*最后更新时间：2026-03-06 20:50 (Antigravity)*
+*最后更新时间：2026-03-12 18:45 (Antigravity)*
 *更多已完成记录见 [progress_archive.md](file:///c:/Users/netxs\devops\devops\progress_archive.md)*

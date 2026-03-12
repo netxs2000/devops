@@ -52,6 +52,17 @@ def _safe_int(val: Any) -> int | None:
         return None
 
 
+def _safe_date(val: Any) -> datetime | None:
+    """容错处理禅道的不规范日期字符串 (如 '长期', '0000-00-00')。"""
+    if not val or val == "长期" or val in ["0000-00-00", "0000-00-00 00:00:00"]:
+        return None
+    try:
+        s = _safe_str(val).replace(" ", "T")
+        return datetime.fromisoformat(s)
+    except (ValueError, TypeError):
+        return None
+
+
 class ZenTaoWorker(BaseWorker):
     """禅道全量数据采集 Worker。"""
 
@@ -79,7 +90,33 @@ class ZenTaoWorker(BaseWorker):
             plans_data = self.client.get_plans(product.id)
             for p_data in plans_data:
                 self._sync_plan(product.id, p_data)
-            executions_data = self.client.get_executions()
+            # 2. 同步层级结构 (Program -> Project -> Execution)
+            # 这是一个全局同步，因为它涉及到跨项目的层级
+            logger.info("Syncing ZenTao hierarchy (Programs/Projects/Executions)...")
+            
+            # 2.1 同步项目集 Programs
+            programs = self.client.get_programs()
+            for p_data in programs:
+                self._sync_execution(product.id, p_data)
+                
+            # 2.2 同步项目 Projects
+            projects = self.client.get_projects()
+            for p_data in projects:
+                # 检查该项目是否关联到当前产品
+                linked_products = p_data.get("products", [])
+                p_id_list = []
+                if isinstance(linked_products, list):
+                    for item in linked_products:
+                        if isinstance(item, dict):
+                            p_id_list.append(_safe_int(item.get("id")))
+                        else:
+                            p_id_list.append(_safe_int(item))
+                
+                # 如果该项目关联到当前产品，或者它是全局的，我们就同步它
+                self._sync_execution(product.id if product.id in p_id_list else None, p_data)
+
+            # 2.3 同步当前产品下的所有执行 Executions
+            executions_data = self.client.get_executions(product_id=product.id)
             for e_data in executions_data:
                 self._sync_execution(product.id, e_data)
             stories = self.client.get_stories(product.id)
@@ -190,15 +227,12 @@ class ZenTaoWorker(BaseWorker):
             self.session.flush()
         return product
 
-    def _sync_execution(self, product_id: int, data: dict) -> ZenTaoExecution:
-        """同步禅道执行（迭代/阶段）记录。
-
+    def _sync_execution(self, product_id: int | None, data: dict) -> ZenTaoExecution:
+        """同步禅道层级节点（项目集/项目/迭代/阶段）。
+        
         Args:
-            product_id (int): 所属产品 ID。
-            data (dict): 原始执行数据。
-
-        Returns:
-            ZenTaoExecution: 同步后的执行模型对象。
+            product_id: 关联的产品 ID。如果是项目集或全局项目，可能为 None。
+            data: API 返回的原始数据。
         """
         exe = self.session.query(ZenTaoExecution).filter_by(id=data["id"]).first()
         if not exe:
@@ -215,10 +249,30 @@ class ZenTaoWorker(BaseWorker):
         exe.code = data.get("code")
         exe.type = data.get("type")
         exe.status = data.get("status")
-        if data.get("begin"):
-            exe.begin = datetime.fromisoformat(data["begin"].replace(" ", "T"))
-        if data.get("end"):
-            exe.end = datetime.fromisoformat(data["end"].replace(" ", "T"))
+        exe.parent_id = _safe_int(data.get("parent"))
+        exe.path = data.get("path")
+        
+        # 只有在明确提供或者原本没值的情况下更新 product_id
+        if product_id and not exe.product_id:
+            exe.product_id = product_id
+        elif not exe.product_id:
+            # 尝试从数据中提取第一个产品
+            linked_products = data.get("products", [])
+            if linked_products:
+                first_p = linked_products[0]
+                p_id = _safe_int(first_p.get("id")) if isinstance(first_p, dict) else _safe_int(first_p)
+                if p_id:
+                    exe.product_id = p_id
+            
+        # 如果还是没找到 product_id，为了满足非空约束，可能需要跳过或填一个默认值
+        # 但禅道中有些节点确实没有 product_id (如顶级 Program)，我们需要确认模型是否允许为 null
+        # 模型中 product_id 是 nullable=False。这可能是一个设计缺陷，因为 Program 不属于 Product。
+        if not exe.product_id:
+            # 暂时归口，如果全局节点不属于任何产品，则设为 None (已改为 nullable)
+            exe.product_id = product_id if product_id is not None else None
+            
+        exe.begin = _safe_date(data.get("begin"))
+        exe.end = _safe_date(data.get("end"))
         exe.raw_data = data
         self.session.flush()
         return exe
@@ -245,10 +299,8 @@ class ZenTaoWorker(BaseWorker):
             schema_version=self.SCHEMA_VERSION,
         )
         plan.title = data.get("title")
-        if data.get("begin"):
-            plan.begin = datetime.fromisoformat(data["begin"].replace(" ", "T"))
-        if data.get("end"):
-            plan.end = datetime.fromisoformat(data["end"].replace(" ", "T"))
+        plan.begin = _safe_date(data.get("begin"))
+        plan.end = _safe_date(data.get("end"))
         plan.status = data.get("status")
         plan.desc = data.get("desc")
         plan.opened_by = _safe_str(data.get("openedBy"))

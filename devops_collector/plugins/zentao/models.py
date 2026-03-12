@@ -109,7 +109,7 @@ class ZenTaoExecution(Base):
 
     __tablename__ = "zentao_executions"
     id = Column(Integer, primary_key=True)
-    product_id = Column(Integer, ForeignKey("zentao_products.id"), nullable=False, index=True)
+    product_id = Column(Integer, ForeignKey("zentao_products.id"), nullable=True, index=True)
     name = Column(String(255))
     code = Column(String(100))
     type = Column(String(20), comment="实体类型: program, project, execution")

@@ -11,6 +11,15 @@ from sqlalchemy.orm import sessionmaker
 # 添加项目根目录到路径
 sys.path.append(os.getcwd())
 
+# Ensure all models are loaded for SQLAlchemy mapper initialization
+import devops_collector.models
+from sqlalchemy.orm import configure_mappers
+try:
+    configure_mappers()
+except Exception:
+    # 可能已经在别处初始化过了
+    pass
+
 from devops_collector.config import settings
 from devops_collector.plugins.zentao.client import ZenTaoClient
 from devops_collector.plugins.zentao.models import ZenTaoProduct

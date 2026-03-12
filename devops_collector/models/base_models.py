@@ -66,6 +66,7 @@ class Organization(Base, TimestampMixin, SCDMixin):
     """组织架构表，支持 SCD Type 2 生命周期管理。"""
 
     __tablename__ = "mdm_organizations"
+    __table_args__ = (UniqueConstraint("org_id", name="uq_mdm_org_id"),)
     id = Column(Integer, primary_key=True, autoincrement=True, comment="自增主键")
     org_id = Column(String(100), nullable=False, unique=True, index=True, comment="组织唯一标识 (HR系统同步)")
     org_name = Column(String(200), nullable=False, comment="组织名称")
@@ -388,13 +389,12 @@ class Product(Base, TimestampMixin, SCDMixin):
     parent = relationship("Product", remote_side=[product_id], backref=backref("children", cascade="all"))
     owner_team = relationship("Organization", back_populates="products")
     product_manager = relationship("User", foreign_keys=[product_manager_id], back_populates="managed_products_as_pm")
-    dev_lead = relationship("User", foreign_keys=[dev_lead_id], back_populates="managed_products_as_dev", overlaps="managed_products_as_dev")
-    qa_lead = relationship("User", foreign_keys=[qa_lead_id], back_populates="managed_products_as_qa", overlaps="managed_products_as_qa")
+    dev_lead = relationship("User", foreign_keys=[dev_lead_id], back_populates="managed_products_as_dev")
+    qa_lead = relationship("User", foreign_keys=[qa_lead_id], back_populates="managed_products_as_qa")
     release_lead = relationship(
         "User",
         foreign_keys=[release_lead_id],
         back_populates="managed_products_as_release",
-        overlaps="managed_products_as_release",
     )
     project_relations = relationship("ProjectProductRelation", back_populates="product")
 

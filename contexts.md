@@ -19,6 +19,7 @@
     - **容器机**: Docker Desktop (Linux 模式) + Python 3.9-3.11。
     - **标准原则**: 开发者机器即为第一测试环境。任何功能在本地开发完成后，**必须**在 Docker Desktop 容器内通过 `make test` 或同等命令验证，严禁“仅在 Windows 跑通就提交”。
 - **路径处理**: 强制使用 `pathlib` 确保跨平台路径兼容。
+- **临时输出归集 [MANDATORY]**: 严禁在根目录直接生成临时过程文件或导出结果。所有临时调试脚本、手动导出 CSV、日志重定向（Redirect）必须明确指向 `./tmp/` 或 `./data/temp/` 目录。
 - **CSV 编码**: 所有 CSV 文件的生成、读取及模版任务强制使用 `utf-8-sig` 编码，确保在 Windows Office/Excel 环境下打开不出现汉字乱码。
 - **语义分层规范 (Semantic Alignment)**:
     - **技术侧用英文**: 数据库字段名、API Schema、核心代码变量必须使用标准英文命名（如 `pm_user_id`）。
@@ -345,7 +346,7 @@
         | **模型 (Model/DB) 变更** | `DATA_DICTIONARY.md` (via `make docs`) |
         | **新依赖引入** | `pyproject.toml`, `requirements.txt`, `.env.example` |
         | **日常功能开发** | `progress.txt` |
-- **环境卫生清理 (Cleanup on Exit)**: 任务交付前，必须执行 `make clean` 或手动删除所有调试生成的脚本、临时日志 (.log, .txt, debug_*.py, traceback.txt)；确保 `git status` 洁净并更新 `progress.txt` 标记 `[Hygiene]: 已清理临时调试文件`。
+- **环境卫生清理 (Cleanup on Exit) [MANDATORY]**: 每次完成功能验证或阶段性任务交付前，**必须强制**执行一次 `make clean`。严禁在根目录残留任何调试生成的脚本、临时日志 (.log, .txt, .csv, debug_*.py, traceback.txt)；确保 `git status` 洁净并更新 `progress.txt` 标记 `[Hygiene]: 已清理临时调试文件`。
 
 
 

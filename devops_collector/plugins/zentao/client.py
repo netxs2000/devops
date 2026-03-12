@@ -96,13 +96,49 @@ class ZenTaoClient(BaseClient):
         response = self._get(f"products/{product_id}/plans")
         return self._handle_list_response(response, "plans")
 
-    def get_executions(self, project_id: int | None = None) -> list[dict[Any, Any]]:
-        """获取执行 (迭代/Sprint)。"""
+    def get_executions(self, project_id: int | None = None, product_id: int | None = None) -> list[dict[Any, Any]]:
+        """获取执行 (迭代/Sprint/阶段)。"""
         endpoint = "executions"
         if project_id:
             endpoint = f"projects/{project_id}/executions"
+        elif product_id:
+            endpoint = f"products/{product_id}/executions"
+            
         response = self._get(endpoint)
         return self._handle_list_response(response, "executions")
+
+    def get_projects(self) -> list[dict[Any, Any]]:
+        """获取项目 (Project)。"""
+        return self._get_paged_list("projects", "projects")
+
+    def get_programs(self) -> list[dict[Any, Any]]:
+        """获取项目集 (Program)。"""
+        return self._get_paged_list("programs", "programs")
+
+    def _get_paged_list(self, endpoint: str, key: str) -> list[dict[str, Any]]:
+        """统一的分页列表获取逻辑。"""
+        items = []
+        page = 1
+        limit = 100
+        max_pages = 1000  # 安全保护
+        while page <= max_pages:
+            params = {"page": page, "limit": limit}
+            try:
+                response = self._get(endpoint, params=params)
+                data = response.json()
+                current = data.get(key, []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+                items.extend(current)
+                if isinstance(data, dict):
+                    total = data.get("total", 0)
+                    if len(items) >= total or not current:
+                        break
+                else:
+                    break
+            except Exception as e:
+                logger.error(f"Error fetching {endpoint} page {page}: {e}")
+                break
+            page += 1
+        return items
 
     def get_stories(self, product_id: int) -> list[dict[str, Any]]:
         """获取需求。"""
