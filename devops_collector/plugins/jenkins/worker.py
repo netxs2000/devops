@@ -37,14 +37,16 @@ class JenkinsWorker(BaseWorker):
 
     SCHEMA_VERSION = "1.0"
 
-    def __init__(self, session: Session, client: Any) -> None:
+    def __init__(self, session: Session, client: Any, correlation_id: str = "unknown-cid", **kwargs) -> None:
         """初始化 Jenkins Worker。
 
         Args:
             session: SQLAlchemy 数据库会话。
             client: Jenkins API 客户端。
+            correlation_id (str): 追踪 ID (用于日志对齐)
+            **kwargs: 其他透传参数
         """
-        super().__init__(session, client)
+        super().__init__(session, client, correlation_id=correlation_id)
 
     def process_task(self, task: dict) -> None:
         """处理 Jenkins 同步任务。

@@ -39,6 +39,7 @@ mr_backlog as (
 )
 
 select
+    p.gitlab_project_id as project_id,
     p.gitlab_project_id,
     p.project_name,
     p.path_with_namespace,
@@ -54,12 +55,23 @@ select
     coalesce(b.open_mr_count, 0) as mr_backlog,
     coalesce(s.total_prod_deploys, 0) as prod_deploys,
     
-    -- 综合健康分计算 (逻辑同 v1)
-    round(
-        100 
-        - (least(coalesce(s.latest_bug_count, 0) * 2, 20))
-        - (case when coalesce(s.latest_coverage, 0) < 50 then (50 - s.latest_coverage) else 0 end)
-        + (least(coalesce(s.total_prod_deploys, 0) * 5, 20))
+    -- 综合健康分计算 (缩放到 0-10 范围)
+    least(
+        greatest(
+            round(
+                cast(
+                    (
+                        100 
+                        - (least(coalesce(s.latest_bug_count, 0) * 2, 20))
+                        - (case when coalesce(s.latest_coverage, 0) < 50 then (50 - cast(s.latest_coverage as numeric)) else 0 end)
+                        + (least(coalesce(s.total_prod_deploys, 0) * 5, 20))
+                    ) as numeric
+                ) / 10.0, 
+                1
+            ), 
+            0
+        ), 
+        10
     ) as health_score
     
 from projects p

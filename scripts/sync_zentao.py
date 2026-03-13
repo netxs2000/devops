@@ -53,9 +53,13 @@ def sync_all_zentao_products():
             try:
                 remote_products = client.get_products()
                 for p_data in remote_products:
-                    logger.info(f"发现远程产品: {p_data['name']} (ID: {p_data['id']})")
-                    worker._sync_product(p_data["id"])
-                session.commit()
+                    try:
+                        logger.info(f"发现远程产品: {p_data['name']} (ID: {p_data['id']})")
+                        worker._sync_product(p_data["id"])
+                        session.commit() # 发现一个存一个
+                    except Exception as pe:
+                        logger.warning(f"同步产品元数据失败 (ID: {p_data['id']}): {pe}")
+                        session.rollback()
                 # 重新查询
                 products = session.query(ZenTaoProduct).all()
             except Exception as e:

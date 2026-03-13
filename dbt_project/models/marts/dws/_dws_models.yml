@@ -12,6 +12,14 @@ models:
         description: "该项目当日是否处于活跃状态（基于是否有提交/构建等判断）"
       - name: commit_count
         description: "当日代码提交总次数"
+      - name: zentao_stories_opened
+        description: "当日禅道新增需求数"
+      - name: zentao_bugs_opened
+        description: "当日禅道新增 Bug 数"
+      - name: zentao_tasks_opened
+        description: "当日禅道新增任务数"
+      - name: zentao_items_closed
+        description: "当日禅道完成的工作项总数 (Story/Task/Bug)"
 
   - name: dws_project_quality_daily
     description: "项目质量日度汇总：计算每日的新增 Bug、漏洞修复率及 SonarQube 重复率指标。"

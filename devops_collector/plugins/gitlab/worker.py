@@ -31,18 +31,20 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
 
     SCHEMA_VERSION = "1.2"
 
-    def __init__(self, session: Session, client: Any = None, enable_deep_analysis: bool = False):
+    def __init__(self, session: Session, client: Any = None, correlation_id: str = "unknown-cid", enable_deep_analysis: bool = False, **kwargs):
         """初始化 GitLab Worker。
 
         Args:
             session (Session): SQLAlchemy 数据库会话。
             client (Any): 客户端实例，若为 None 则根据配置自动选择。
+            correlation_id (str): 追踪 ID (用于日志对齐)
             enable_deep_analysis (bool): 是否开启深度 Diff 分析。
+            **kwargs: 其他透传参数
         """
         if client is None:
             raise ValueError("Client must be provided")
 
-        super().__init__(session, client)
+        super().__init__(session, client, correlation_id=correlation_id)
         self.enable_deep_analysis = enable_deep_analysis
         self.identity_matcher = IdentityMatcher(session)
         self.user_resolver = UserResolver(session, client)

@@ -346,6 +346,11 @@
         | **模型 (Model/DB) 变更** | `DATA_DICTIONARY.md` (via `make docs`) |
         | **新依赖引入** | `pyproject.toml`, `requirements.txt`, `.env.example` |
         | **日常功能开发** | `progress.txt` |
+        | **Spike 探针完成** | `docs/spikes/YYYY-MM-DD_<topic>.md` |
+- **任务分级与估时回溯 (Task Level & Estimation Tracking) [NEW]**:
+    - 每条任务在 `progress.txt` 中必须标注任务级别（如 `[L2]`），参见 `/task-kickoff` 工作流。
+    - L2 及以上任务完成后，在「最近完成」记录中须附带估时对比：`预估 Xh / 实际 Yh`。
+    - 偏差超过 50% 的任务，必须在 `docs/lessons-learned.log` 中分析原因（如：范围蔓延、未预见依赖等），用于持续改进估时精度。
 - **环境卫生清理 (Cleanup on Exit) [MANDATORY]**: 每次完成功能验证或阶段性任务交付前，**必须强制**执行一次 `make clean`。严禁在根目录残留任何调试生成的脚本、临时日志 (.log, .txt, .csv, debug_*.py, traceback.txt)；确保 `git status` 洁净并更新 `progress.txt` 标记 `[Hygiene]: 已清理临时调试文件`。
 
 
@@ -377,11 +382,13 @@
 为了应对禅道非标 API 带来的稳定性挑战，所有相关插件开发必须遵循以下防护规则：
 
 - **1. 认证防御 (Auth Resilience)**:
-    - **自动刷新**: 必须实现 `401` 异常拦截器。检测到会话过期时，自动调用 `client.refresh_token()` 并重试当前请求，确保长效同步任务不中断。
+    - **自动刷新与防死循环**: 必须实现 `401` 异常拦截器。检测到会话过期时，自动调用 `client.refresh_token()` 并重试。为了防止配置错误导致的认证无限死循环，重试逻辑必须包含 `is_retry` 状态位，单次请求仅允许触发一次自动刷新重试。
     - **心跳机制**: MQ 连接必须配置 `heartbeat=600`。由于禅道部分复杂查询（如审计日志）耗时较长，需防止 RabbitMQ 误判消费者死锁。
 - **2. 数据一致性陷阱 (Data Integrity)**:
     - **ID=0 语义转换**: 禅道常用 `0` 表示空值（如 `plan_id=0`, `module=0`）。入库前必须将 `0` 转换为 `NULL`，严禁直接写入带外键约束的列。
-    - **外键容错**: 对于返回非数字 ID 的人员字段（如 `"closed"`, `"removed"`），系统需通过 `UserResolver` 进行降级处理，失败则保留原始字符串，严禁因外键不匹配导致任务崩溃。
+    - **外键容错与资源韧性**: 
+        - **子资源韧性 (Sub-resource Resilience)**: 禅道 List API 返回的资源在 Detail API 中可能因权限或物理删除返回 404。对此类非核心子资源（如 executions, actions），Client 应支持 `allow_404` 模式将其降级为空集合处理，Worker 应对各同步阶段建立异常隔离边界，严禁因个别资源报错中断全量任务。
+        - **人员降级**: 对于返回非数字 ID 的人员字段（如 `"closed"`, `"removed"`），系统需通过 `UserResolver` 进行降级处理，失败则保留原始字符串，严禁因外键不匹配导致任务崩溃。
 - **3. 类型安全防护 (Type Safety)**:
     - **字典对象适配**: 针对部分字段返回 `dict` 对象而非 `string` 的情况，必须在存储前校验并在 `base_client` 或 `worker` 层面进行 `json.dumps` 转换，防止 PostgreSQL 适配器报错。
     - **版本字段映射**: 使用 Pydantic 的 `alias` 机制同时兼容 `id/ID`、`name/title` 等在不同禅道版本/接口中的字段命名差异。

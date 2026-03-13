@@ -44,9 +44,38 @@ gitlab_items as (
         time_estimate as estimate_seconds,
         total_time_spent as spent_seconds
     from {{ ref('stg_gitlab_issues') }}
+),
+
+-- 3. 来自 ZenTao 的工作项
+zentao_items as (
+    select
+        issue_unique_id as work_item_id,
+        raw_id::text as work_item_key,
+        -- 这里我们优先映射到 MDM 项目，如果没有则映射到产品
+        coalesce(execution_id::text, product_id::text) as source_project_id,
+        issue_title as title,
+        issue_status as current_status,
+        -- 将禅道类型映射到通用类型
+        case 
+            when issue_type = 'story' then 'Story'
+            when issue_type = 'bug' then 'Bug'
+            when issue_type = 'task' then 'Task'
+            else issue_type
+        end as work_item_type,
+        created_at,
+        updated_at,
+        closed_at,
+        assigned_to_user_id as author_user_id,
+        'ZENTAO' as source_system,
+        -- 工时转换 (从字符串/JSON 到数值)
+        coalesce(nullif(trim(both '"' from estimate#>>'{}'), ''), '0')::numeric * 3600 as estimate_seconds,
+        coalesce(nullif(trim(both '"' from consumed#>>'{}'), ''), '0')::numeric * 3600 as spent_seconds
+    from {{ ref('stg_zentao_issues') }}
 )
 
--- 3. 最终汇总
+-- 4. 最终汇总
 select * from jira_items
 union all
 select * from gitlab_items
+union all
+select * from zentao_items

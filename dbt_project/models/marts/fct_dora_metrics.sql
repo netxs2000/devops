@@ -21,6 +21,31 @@ deployments as (
     group by 1, 2
 ),
 
+-- 提取 ZenTao 中类型为 Bug 的事故恢复时间 (从创建到关闭的小时数)
+incidents as (
+    select
+        rm.master_project_id,
+        date_trunc('month', i.created_at) as month,
+        extract(epoch from (i.closed_at - i.created_at))/3600.0 as restore_hours
+    from {{ ref('stg_zentao_issues') }} i
+    join {{ ref('int_project_resource_map') }} rm 
+        on (i.execution_id::text = rm.external_resource_id or i.product_id::text = rm.external_resource_id)
+        and rm.system_code = 'zentao-prod'
+    where i.issue_type = 'bug' and i.closed_at is not null
+),
+
+-- 通过 master_project_id 将 MTTR 映射回对应的 GitLab 项目级维度
+mttr_by_gitlab as (
+    select 
+        gl_rm.external_resource_id::int as gitlab_project_id,
+        i.month,
+        avg(i.restore_hours) as avg_restore_hours
+    from incidents i
+    join {{ ref('int_project_resource_map') }} gl_rm 
+        on i.master_project_id = gl_rm.master_project_id and gl_rm.system_code = 'gitlab-prod'
+    group by 1, 2
+),
+
 projects as (
     select * from {{ ref('stg_gitlab_projects') }}
 )
@@ -31,7 +56,7 @@ select
     
     -- DORA Core 4
     coalesce(d.deploy_count, 0) as deployment_frequency,
-    0 as mtr_hours,
+    round(coalesce(mttr.avg_restore_hours, 0)::numeric, 2) as mtr_hours,
     b.avg_cycle_time_hours as lead_time_hours,
     round((coalesce(d.failed_deploys, 0)::numeric / nullif(d.deploy_count, 0) * 100), 2) as change_failure_rate_pct,
     
@@ -50,5 +75,6 @@ select
 
 from bottlenecks b
 left join deployments d on b.project_id = d.project_id and b.audit_month = d.month
+left join mttr_by_gitlab mttr on b.project_id = mttr.gitlab_project_id and b.audit_month = mttr.month
 left join projects p on b.project_id = p.gitlab_project_id
 order by month desc, lead_time_hours asc

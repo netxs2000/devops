@@ -68,14 +68,16 @@ class ZenTaoWorker(BaseWorker):
 
     SCHEMA_VERSION = "1.0"
 
-    def __init__(self, session: Session, client: Any):
+    def __init__(self, session: Session, client: Any, correlation_id: str = "unknown-cid", **kwargs):
         """初始化禅道 Worker。
 
         Args:
             session (Session): 数据库会话。
             client (Any): 禅道 API 客户端。
+            correlation_id (str): 追踪 ID (用于日志对齐)
+            **kwargs: 其他透传参数
         """
-        super().__init__(session, client)
+        super().__init__(session, client, correlation_id=correlation_id)
 
     def process_task(self, task: dict) -> None:
         """处理禅道同步任务。"""
@@ -85,46 +87,72 @@ class ZenTaoWorker(BaseWorker):
             product = self._sync_product(product_id)
             if not product:
                 return
-            self._sync_org_structure()
-            self._sync_zentao_users()
-            plans_data = self.client.get_plans(product.id)
-            for p_data in plans_data:
-                self._sync_plan(product.id, p_data)
+            try:
+                self._sync_org_structure()
+            except Exception as e:
+                logger.warning(f"Failed to sync ZenTao organization structure: {e}")
+            
+            try:
+                self._sync_zentao_users()
+            except Exception as e:
+                logger.warning(f"Failed to sync ZenTao users: {e}")
+            try:
+                plans_data = self.client.get_plans(product.id)
+                for p_data in plans_data:
+                    self._sync_plan(product.id, p_data)
+            except Exception as e:
+                logger.error(f"Failed to sync plans for product {product_id}: {e}")
             # 2. 同步层级结构 (Program -> Project -> Execution)
             # 这是一个全局同步，因为它涉及到跨项目的层级
             logger.info("Syncing ZenTao hierarchy (Programs/Projects/Executions)...")
             
             # 2.1 同步项目集 Programs
-            programs = self.client.get_programs()
-            for p_data in programs:
-                self._sync_execution(product.id, p_data)
+            try:
+                programs = self.client.get_programs()
+                for p_data in programs:
+                    self._sync_execution(product.id, p_data)
+            except Exception as e:
+                logger.warning(f"Failed to sync programs: {e}")
                 
             # 2.2 同步项目 Projects
-            projects = self.client.get_projects()
-            for p_data in projects:
-                # 检查该项目是否关联到当前产品
-                linked_products = p_data.get("products", [])
-                p_id_list = []
-                if isinstance(linked_products, list):
-                    for item in linked_products:
-                        if isinstance(item, dict):
-                            p_id_list.append(_safe_int(item.get("id")))
-                        else:
-                            p_id_list.append(_safe_int(item))
-                
-                # 如果该项目关联到当前产品，或者它是全局的，我们就同步它
-                self._sync_execution(product.id if product.id in p_id_list else None, p_data)
+            try:
+                projects = self.client.get_projects()
+                for p_data in projects:
+                    # 检查该项目是否关联到当前产品
+                    linked_products = p_data.get("products", [])
+                    p_id_list = []
+                    if isinstance(linked_products, list):
+                        for item in linked_products:
+                            if isinstance(item, dict):
+                                p_id_list.append(_safe_int(item.get("id")))
+                            else:
+                                p_id_list.append(_safe_int(item))
+                    
+                    # 如果该项目关联到当前产品，或者它是全局的，我们就同步它
+                    self._sync_execution(product.id if product.id in p_id_list else None, p_data)
+            except Exception as e:
+                logger.warning(f"Failed to sync projects: {e}")
 
             # 2.3 同步当前产品下的所有执行 Executions
-            executions_data = self.client.get_executions(product_id=product.id)
-            for e_data in executions_data:
-                self._sync_execution(product.id, e_data)
-            stories = self.client.get_stories(product.id)
-            for s_data in stories:
-                self._sync_issue(product.id, s_data, "feature")
-            bugs = self.client.get_bugs(product.id)
-            for b_data in bugs:
-                self._sync_issue(product.id, b_data, "bug")
+            try:
+                executions_data = self.client.get_executions(product_id=product.id)
+                for e_data in executions_data:
+                    self._sync_execution(product.id, e_data)
+            except Exception as e:
+                logger.error(f"Failed to sync executions for product {product_id}: {e}")
+            try:
+                stories = self.client.get_stories(product.id)
+                for s_data in stories:
+                    self._sync_issue(product.id, s_data, "feature")
+            except Exception as e:
+                logger.error(f"Failed to sync stories (features) for product {product_id}: {e}")
+
+            try:
+                bugs = self.client.get_bugs(product.id)
+                for b_data in bugs:
+                    self._sync_issue(product.id, b_data, "bug")
+            except Exception as e:
+                logger.error(f"Failed to sync bugs for product {product_id}: {e}")
             # 4. 同步测试用例与结果
             try:
                 test_cases = self.client.get_test_cases(product.id)

@@ -28,18 +28,20 @@ class SonarQubeWorker(BaseWorker):
 
     SCHEMA_VERSION = "1.1"
 
-    def __init__(self, session: Session, client: Any = None, sync_issues: bool = False) -> None:
+    def __init__(self, session: Session, client: Any = None, correlation_id: str = "unknown-cid", sync_issues: bool = False, **kwargs) -> None:
         """初始化 SonarQube Worker。
 
         Args:
             session (Session): SQLAlchemy 数据库会话。
             client (Any): 客户端实例，若为 None 则根据配置自动选择。
+            correlation_id (str): 追踪 ID (用于日志对齐)
             sync_issues (bool): 是否同步问题详情。
+            **kwargs: 其他透传参数
         """
         if client is None:
             raise ValueError("Client must be provided")
 
-        super().__init__(session, client)
+        super().__init__(session, client, correlation_id=correlation_id)
         self.sync_issues = sync_issues
         self.transformer = SonarDataTransformer(session)
 

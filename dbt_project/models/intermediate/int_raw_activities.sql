@@ -132,9 +132,59 @@ note_activities as (
     {% if is_incremental() %}
     where n.created_at >= (select max(occurred_at) - interval '3 days' from {{ this }})
     {% endif %}
+),
+
+-- 5. 禅道活动 (ZenTao Activities)
+zentao_activities as (
+    select
+        'ZENTAO-OPEN-' || i.issue_unique_id as activity_id,
+        i.created_at as occurred_at,
+        i.opened_by_user_id::text as external_author_id,
+        'EXTERNAL_ID' as identifier_type,
+        case 
+            when i.issue_type = 'story' then 'STORY'
+            when i.issue_type = 'bug' then 'BUG'
+            else 'TASK'
+        end as activity_type,
+        i.issue_unique_id as target_entity_id,
+        i.execution_id as project_id,
+        'ISSUE' as target_entity_type,
+        1.5 as base_impact_score,
+        'ZENTAO' as source_system,
+        i.issue_title as summary,
+        json_build_object('id', i.raw_id, 'type', i.issue_type) as metadata
+    from {{ ref('stg_zentao_issues') }} i
+    {% if is_incremental() %}
+    where i.created_at >= (select max(occurred_at) - interval '3 days' from {{ this }})
+    {% endif %}
+
+    union all
+
+    select
+        'ZENTAO-CLOSE-' || i.issue_unique_id as activity_id,
+        i.closed_at as occurred_at,
+        i.assigned_to_user_id::text as external_author_id,
+        'EXTERNAL_ID' as identifier_type,
+        case 
+            when i.issue_type = 'story' then 'STORY'
+            when i.issue_type = 'bug' then 'BUG'
+            else 'TASK'
+        end as activity_type,
+        i.issue_unique_id as target_entity_id,
+        i.execution_id as project_id,
+        'ISSUE' as target_entity_type,
+        2.0 as base_impact_score,
+        'ZENTAO' as source_system,
+        i.issue_title as summary,
+        json_build_object('id', i.raw_id, 'type', i.issue_type) as metadata
+    from {{ ref('stg_zentao_issues') }} i
+    where i.closed_at is not null and i.issue_status in ('closed', 'finished', 'resolved')
+    {% if is_incremental() %}
+    and i.closed_at >= (select max(occurred_at) - interval '3 days' from {{ this }})
+    {% endif %}
 )
 
--- 5. 最终汇聚 (The Stream)
+-- 6. 最终汇聚 (The Stream)
 select * from commit_activities
 union all
 select * from mr_activities
@@ -142,3 +192,5 @@ union all
 select * from issue_activities
 union all
 select * from note_activities
+union all
+select * from zentao_activities

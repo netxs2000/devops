@@ -35,7 +35,7 @@ PRD_CSV = Path(__file__).parent.parent / "docs" / "products.csv"
 PROJ_CSV = Path(__file__).parent.parent / "docs" / "projects.csv"
 
 
-def ensure_system_registry(session: Session, code="gitlab-corp", name="GitLab Corporate"):
+def ensure_system_registry(session: Session, code="gitlab-prod", name="生产环境GitLab"):
     system = session.query(SystemRegistry).filter_by(system_code=code).first()
     if not system:
         system = SystemRegistry(system_code=code, system_name=name, system_type="VCS", is_active=True)

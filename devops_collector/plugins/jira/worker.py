@@ -23,21 +23,16 @@ class JiraWorker(BaseWorker):
 
     SCHEMA_VERSION = "1.0"
 
-    def __init__(self, session: Session, client: Any):
-        '''"""TODO: Add description.
+    def __init__(self, session: Session, client: Any, correlation_id: str = "unknown-cid", **kwargs) -> None:
+        """初始化 Jenkins Worker。
 
         Args:
-            self: TODO
-            session: TODO
-            client: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        super().__init__(session, client)
+            session: SQLAlchemy 数据库会话。
+            client: Jenkins API 客户端。
+            correlation_id (str): 追踪 ID (用于日志对齐)
+            **kwargs: 其他透传参数
+        """
+        super().__init__(session, client, correlation_id=correlation_id)
 
     def process_task(self, task: dict) -> None:
         """处理 Jira 同步任务。"""

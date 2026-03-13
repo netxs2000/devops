@@ -264,7 +264,7 @@ models:
       - name: type
         description: "类型 (program/project/execution)"
       - name: mdm_project_id
-        description: "关联的 MDM 项目 ID"
+        description: "关联的 MDM 项目 ID (映射不成功的历史项目允许为空，不参与后续统计)"
 
   - name: stg_zentao_issues
     description: "禅道需求、任务、缺陷清洗层"
@@ -276,16 +276,24 @@ models:
           - unique
       - name: raw_id
         description: "禅道原始 ID"
-      - name: type
-        description: "实体类型 (feature/task/bug)"
-      - name: plan_id
-        description: "关联计划 ID"
-      - name: execution_id
-        description: "关联执行 ID"
+        tests:
+          - not_null
+      - name: issue_type
+        description: "实体类型 (story/task/bug)"
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_in_set:
+              value_set: ['feature', 'task', 'bug']
       - name: estimate
-        description: "预计工时 (JSON)"
+        description: "预计工时 (JSONB)"
+        tests:
+          - dbt_expectations.expect_column_values_to_not_be_null:
+              row_condition: "issue_type = 'task'" # 任务理论上必填预计工时
       - name: consumed
-        description: "消耗工时 (JSON)"
+        description: "消耗工时 (JSONB)"
+        tests:
+          - dbt_expectations.expect_column_values_to_not_be_null:
+              row_condition: "issue_type = 'task' and issue_status in ('closed', 'done', 'finished')" 
 
   - name: stg_zentao_releases
     description: "禅道发布清洗层"

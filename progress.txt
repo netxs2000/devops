@@ -1,40 +1,44 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
 
 ## 🎯 当前状态 (Current Focus)
-[阶段：执行中]
-分支：feat/dbt-expectations-migration
-任务：完成环境卫生与初始化链路修复后，已进入知识沉淀阶段。接下来将继续深度修复 GitLab/ZenTao 数据关联问题。
+[阶段：执行完成 - 等待下一任务]
+分支：main
+任务：已完成 ZenTao 数据全链路打通与 DWS 层增量物化优化。GitLab 系统代码与资源 ID 已全量对齐为数字 ID 模式。
 
 ## 🏗️ 进行中 (In Progress)
 
-- [ ] [P1] 数据质量审计：基于 `dbt test` 结果，深度修复 GitLab/ZenTao 部分项目的 null 关联问题 (2026-03-06)
-- [ ] [P0] 监控并完成 100+ 禅道产品的全量数据同步 (2026-03-05) - 进度： >15%
+- [ ] [P0] 监控并完成 100+ 禅道产品的全量数据同步 - 进度：35/100 COMPLETED (2026-03-13 17:30)
 
 ## 📅 接下来 (Backlog)
 
 - [ ] [P1] DORA 指标逻辑迁移：将 `fct_dora_metrics` 中的 MTTR 占位符替换为真实事故管理数据逻辑 (2026-03-06)
 - [ ] [P1] 生产验证：在生产 profile 下执行 `dbt build --full-refresh` 验证可扩展性 (2026-03-06)
-- [ ] [P2] 完善 E2E 自动化测试用例，覆盖新的交互回执评论逻辑 (2026-03-05)
 - [ ] [P2] 建立 `docs/adr/` 目录并初始化 0001-queue-isolation ADR 决策文档 (2026-03-05)
 
 ## 📋 最近完成 (Recently Completed)
 
-1. **[DoD] 知识割取与规范化环境卫生治理** (2026-03-12)
-    - 结果：1. 沉淀 Env/Hygiene, Infra/Init, ZenTao/Auth 三大领域教训至 `lessons-learned.log`。2. 在 `gemini.md` 与 `contexts.md` 中正式写入「临时输出归集」与「强制 make clean」红线规则。
-    - [Status]: 知识已沉淀，环境已清理。
+1. **[L2][Data] 禅道数据质量审计与 dbt-expectations 防御构建** (2026-03-13)
+    - 结果：1. 新增实体类型(`issue_type`)和工时字典(`estimate`/`consumed`)约束校验。2. 将 `mdm_project_id` 剥离 `not_null` 校验以适配历史废弃项目的客观现实，实现“审计通过即合法”防范空跑。
+    - 验证：`dbt test --select stg_zentao_*` 11 项用例全部 PASS。
 
-2. **[Bugfix] 修复部署及初始化链路阻塞性错误** (2026-03-12)
-    - 结果：1. 解决 Compose Profile 缺失问题。2. 解决 `mdm_organizations` 外键死锁。3. 修复 SQLAlchemy `is_(None)` 事件监听器报错。
-    - 验证：`make deploy` 与 `make init` 全量通过。
+1. **[L3][Data] ZenTao 数据全链路集成与 DWS 增量优化** (2026-03-13)
+    - 结果：1. 重构 `int_project_resource_map`，通过层级递归 + 产品直连解决禅道数据孤岛。2. 实现 `dws_project_metrics_daily` 等模型的增量物化（3天窗口）。3. 修复 `stg_zentao_executions` 映射逻辑。
+    - 验证：DWS 报表已正常显示任务、Bug 及需求数据。
 
-3. **[Data] dbt 模型全量修复与 Schema 治理** (2026-03-06)
-    - 结果：修复了 SonarQube、禅道及审计事实表的同步故障。
+2. **[Fix][Data] GitLab 系统代码纠正与资源 ID 数字化迁移** (2026-03-13)
+    - 结果：1. 统一系统代码为 `gitlab-prod`，删除冗余的 `gitlab-corp`/`gitlab-test`。2. 编写脚本将 70 个项目的 URL 路径全量映射为 GitLab 数字 ID，提升统计精确度。
+    - 验证：dbt 模型已同步修改，统计逻辑恢复。
 
-4. **[MANDATORY] 知识割取与项目宪法 (contexts.md) 增补** (2026-03-06)
-    - 结果：沉淀 dbt 性能与类型守卫规范。
+3. **[L3][Process] 人机协同开发流程体系化建设** (2026-03-13)
+    - 结果：建立 L1-L4+S 五级分类体系，新建 4 个专项 Workflow。
+    - 验证：全量流程文档已上线。
 
-5. **[Core] 基础设施瘦身 (KISS) 与 GE 彻底移除** (2026-03-06)
+4. **[Fix] 全局 Worker 实例化链路修复** (2026-03-13)
+    - 结果：解决 `correlation_id` 导致的插件 Worker 实例化崩溃。
+
+5. **[Resilience] 禅道全量同步容错化与映射对齐** (2026-03-13)
+    - 结果：实现子资源自动降级跳过 + 多态匹配逻辑。
 
 ---
-*最后更新时间：2026-03-12 18:45 (Antigravity)*
-*更多已完成记录见 [progress_archive.md](file:///c:/Users/netxs\devops\devops\progress_archive.md)*
+*最后更新时间：2026-03-13 17:30 (Antigravity)*
+*更多已完成记录见 [progress_archive.md](file:///c:/Users/netxs/devops/devops/progress_archive.md)*

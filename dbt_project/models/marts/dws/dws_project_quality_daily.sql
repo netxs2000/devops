@@ -1,3 +1,10 @@
+{{
+    config(
+        materialized='incremental',
+        unique_key="concat(master_entity_id, '_', analysis_day)",
+        on_schema_change='append_new_columns'
+    )
+}}
 
 /*
     DWS: 项目每日质量快照 (Project Daily Quality Snapshot)
@@ -13,6 +20,9 @@ with
 
 scans as (
     select * from {{ ref('int_sonar_quality_scans') }}
+    {% if is_incremental() %}
+    where analysis_date >= (select max(analysis_date) - interval '3 days' from {{ this }})
+    {% endif %}
 ),
 
 -- 获取每日最后一次扫描
