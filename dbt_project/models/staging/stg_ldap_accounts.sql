@@ -1,6 +1,6 @@
 
 with source as (
-    select * from {{ source('raw', 'ldap_accounts') }}
+    select * from {{ ref('seed_ldap_accounts') }}
 ),
 
 renamed as (

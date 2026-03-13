@@ -334,7 +334,8 @@ class ZenTaoWorker(BaseWorker):
         plan.opened_by = _safe_str(data.get("openedBy"))
         if plan.opened_by:
             u = IdentityManager.get_or_create_user(self.session, "zentao", plan.opened_by)
-            plan.opened_by_user_id = u.global_user_id
+            if u:
+                plan.opened_by_user_id = u.global_user_id
         if data.get("openedDate"):
             plan.opened_date = datetime.fromisoformat(data["openedDate"].replace(" ", "T"))
         plan.raw_data = data
@@ -374,14 +375,16 @@ class ZenTaoWorker(BaseWorker):
         issue.opened_by = str(opened) if opened else None
         if opened:
             u = IdentityManager.get_or_create_user(self.session, "zentao", opened)
-            issue.opened_by_user_id = u.global_user_id
+            if u:
+                issue.opened_by_user_id = u.global_user_id
 
         assigned = _safe_str(data.get("assignedTo"))
         issue.assigned_to = str(assigned) if assigned else None
         if assigned:
             u = IdentityManager.get_or_create_user(self.session, "zentao", assigned)
-            issue.assigned_to_user_id = u.global_user_id
-            issue.user_id = u.global_user_id
+            if u:
+                issue.assigned_to_user_id = u.global_user_id
+                issue.user_id = u.global_user_id
 
         if data.get("openedDate"):
             try:
@@ -442,13 +445,15 @@ class ZenTaoWorker(BaseWorker):
         issue.opened_by = str(opened) if opened else None
         if opened:
             u = IdentityManager.get_or_create_user(self.session, "zentao", opened)
-            issue.opened_by_user_id = u.global_user_id
+            if u:
+                issue.opened_by_user_id = u.global_user_id
 
         assigned = _safe_str(data.get("assignedTo"))
         issue.assigned_to = str(assigned) if assigned else None
         if assigned:
             u = IdentityManager.get_or_create_user(self.session, "zentao", assigned)
-            issue.assigned_to_user_id = u.global_user_id
+            if u:
+                issue.assigned_to_user_id = u.global_user_id
 
         # 时间映射
         if data.get("openedDate"):
@@ -501,7 +506,8 @@ class ZenTaoWorker(BaseWorker):
         tc.opened_by = _safe_str(data.get("openedBy"))
         if tc.opened_by:
             u = IdentityManager.get_or_create_user(self.session, "zentao", tc.opened_by)
-            tc.opened_by_user_id = u.global_user_id
+            if u:
+                tc.opened_by_user_id = u.global_user_id
         if data.get("openedDate"):
             tc.opened_date = datetime.fromisoformat(data["openedDate"].replace(" ", "T"))
         tc.raw_data = data
@@ -565,7 +571,8 @@ class ZenTaoWorker(BaseWorker):
         build.builder = str(builder) if builder else None
         if build.builder:
             u = IdentityManager.get_or_create_user(self.session, "zentao", builder)
-            build.builder_user_id = u.global_user_id
+            if u:
+                build.builder_user_id = u.global_user_id
         if data.get("date"):
             build.date = datetime.fromisoformat(str(data["date"]).replace(" ", "T"))
         build.raw_data = data
@@ -627,7 +634,8 @@ class ZenTaoWorker(BaseWorker):
         rel.opened_by = str(opened) if opened else None
         if rel.opened_by:
             u = IdentityManager.get_or_create_user(self.session, "zentao", opened)
-            rel.opened_by_user_id = u.global_user_id
+            if u:
+                rel.opened_by_user_id = u.global_user_id
 
         rel.raw_data = data
         self.session.flush()

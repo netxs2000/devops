@@ -29,12 +29,19 @@ project_output as (
 ),
 
 projects as (
-    select * from {{ ref('stg_gitlab_projects') }}
+    select 
+        p.*,
+        rm.master_project_id
+    from {{ ref('stg_gitlab_projects') }} p
+    left join {{ ref('int_project_resource_map') }} rm 
+        on p.gitlab_project_id::text = rm.external_resource_id 
+        and rm.system_code = 'gitlab-prod'
 )
 
 select
     p.gitlab_project_id,
     p.project_name,
+    p.master_project_id,
     coalesce(pc.total_accrued_cost, 0) as total_cost,
     
     -- 效率指标
@@ -54,6 +61,6 @@ select
     end as efficiency_rating
 
 from projects p
-left join project_costs pc on cast(p.gitlab_project_id as varchar) = pc.project_id
-left join project_output po on p.gitlab_project_id = po.project_id
+left join project_costs pc on p.master_project_id = pc.project_id
+left join project_output po on p.master_project_id = po.project_id
 where p.is_archived = false

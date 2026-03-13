@@ -73,7 +73,7 @@ models:
         description: "行为类型"
         tests:
           - dbt_expectations.expect_column_values_to_be_in_set:
-              value_set: ['COMMIT', 'ISSUE', 'MR', 'REVIEW', 'DEPLOY']
+              value_set: ['COMMIT', 'ISSUE', 'MR', 'REVIEW', 'DEPLOY', 'STORY', 'TASK', 'BUG']
 
   - name: int_unified_activities
     description: "最终视图 (Unified View)：通过实时 Join 身份对齐引擎 (Identity Resolution Engine)，将原始信号映射为全局统一 OneID。解决身份变更后的历史溯源一致性问题。"

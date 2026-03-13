@@ -25,7 +25,7 @@ renamed AS (
         assigned_to_user_id,
         created_at,
         updated_at,
-        closed_at,
+        coalesce(closed_at, nullif(raw_data->>'resolvedDate', '')::timestamp) as closed_at,
         raw_data
     FROM source
 )

@@ -9,7 +9,13 @@
 with 
 
 projects as (
-    select * from {{ ref('stg_gitlab_projects') }}
+    select 
+        p.*,
+        rm.master_project_id
+    from {{ ref('stg_gitlab_projects') }} p
+    left join {{ ref('int_project_resource_map') }} rm 
+        on p.gitlab_project_id::text = rm.external_resource_id 
+        and rm.system_code = 'gitlab-prod'
 ),
 
 -- 从 DWS 层获取汇总指标 (按项目聚合所有日期的总和)
@@ -43,6 +49,7 @@ select
     p.gitlab_project_id,
     p.project_name,
     p.path_with_namespace,
+    p.master_project_id,
     
     -- 质量指标
     coalesce(s.latest_bug_count, 0) as bug_count,
@@ -75,7 +82,7 @@ select
     ) as health_score
     
 from projects p
-left join dws_project_summary s on p.gitlab_project_id = s.project_id
+left join dws_project_summary s on p.master_project_id = s.project_id
 left join mr_backlog b on p.gitlab_project_id = b.project_id
 where p.is_archived = false
 order by health_score desc

@@ -11,3 +11,12 @@ devops_analytics:
       dbname: "{{ env_var('POSTGRES_DB', 'devops_db') }}"
       schema: public
       threads: 4
+    prod:
+      type: postgres
+      host: "{{ env_var('DB_HOST', 'db') }}"
+      user: "{{ env_var('POSTGRES_USER', 'postgres') }}"
+      pass: "{{ env_var('POSTGRES_PASSWORD', 'devops123') }}"
+      port: "{{ env_var('DB_PORT', 5432) | as_number }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'devops_db') }}"
+      schema: public
+      threads: 8

@@ -1,21 +1,31 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
 
 ## 🎯 当前状态 (Current Focus)
-[阶段：执行完成 - 等待下一任务]
+[阶段：完成/待对齐]
 分支：main
-任务：已完成 ZenTao 数据全链路打通与 DWS 层增量物化优化。GitLab 系统代码与资源 ID 已全量对齐为数字 ID 模式。
+任务：修复 ZenTao Sync Worker 崩溃，解决 dbt 全量刷新中的类型不兼容与测试用例缺失问题。
 
 ## 🏗️ 进行中 (In Progress)
 
-- [ ] [P0] 监控并完成 100+ 禅道产品的全量数据同步 - 进度：35/100 COMPLETED (2026-03-13 17:30)
+- [ ] [P0] 监控并完成 100+ 禅道产品的全量数据同步 - 进度：61/100 COMPLETED (2026-03-13 18:55)
 
 ## 📅 接下来 (Backlog)
 
-- [ ] [P1] DORA 指标逻辑迁移：将 `fct_dora_metrics` 中的 MTTR 占位符替换为真实事故管理数据逻辑 (2026-03-06)
-- [ ] [P1] 生产验证：在生产 profile 下执行 `dbt build --full-refresh` 验证可扩展性 (2026-03-06)
-- [ ] [P2] 建立 `docs/adr/` 目录并初始化 0001-queue-isolation ADR 决策文档 (2026-03-05)
+- [x] [P1] 生产验证：在生产 profile 下执行 `dbt build --full-refresh` 验证可扩展性 (2026-03-13)
+    - 结果：1. 修复了 Integer/String 类型不匹配导致的 Join 失败。2. 解决了 `ldap_accounts` 同名种子与原始表的冲突。3. 扩展了活动流审计约束。
+    - 验证：`dbt build` 132 个节点全线 PASS（除 1 项历史对齐预警外）。
+- [x] [P2] 建立 `docs/adr/` 目录并初始化 0001-0003 ADR 决策文档 (2026-03-13)
+    - 结果：完成了队列隔离、ID 归一化、种子隔离三项核心决策的文档化。
 
 ## 📋 最近完成 (Recently Completed)
+
+1. **[Fix][Worker] 修复禅道同步 Worker 的人员映射崩溃问题** (2026-03-13)
+    - 结果：在 `ZenTaoWorker` 中为所有 `get_or_create_user` 调用增加了 `if u:` 守护逻辑，解决了因主数据缺失导致的 `'NoneType' object has no attribute 'global_user_id'` 异常，提升了全量同步的鲁棒性。
+    - 验证：重启 Worker 后不再出现该错误，同步进度平稳推进至 61%。
+
+2. **[L2][Data] DORA 指标逻辑迁移与补链** (2026-03-13)
+    - 结果：1. 重构 `fct_dora_metrics`，将硬编码的 MTTR 替换为引接 `stg_zentao_issues` 中的真实事故恢复时间。2. 在 Staging 层 (`stg_zentao_products`) 统一增加了 `PROJ-` 前缀映射转换，消除了 `GLA` 和 `PROJ-GLA` 的系统数据歧义，进一步重构简化了 DWS/FCT 的挂载逻辑 (移除了脆弱的 `replace` 兼容函数)。
+    - 验证：`rdms` 项目已出现大范围的真实 MTTR 计算数值（如 1085 小时），DORA 四大核心指标数据链现已完全贯通。
 
 1. **[L2][Data] 禅道数据质量审计与 dbt-expectations 防御构建** (2026-03-13)
     - 结果：1. 新增实体类型(`issue_type`)和工时字典(`estimate`/`consumed`)约束校验。2. 将 `mdm_project_id` 剥离 `not_null` 校验以适配历史废弃项目的客观现实，实现“审计通过即合法”防范空跑。
@@ -40,5 +50,5 @@
     - 结果：实现子资源自动降级跳过 + 多态匹配逻辑。
 
 ---
-*最后更新时间：2026-03-13 17:30 (Antigravity)*
+*最后更新时间：2026-03-13 19:25 (Antigravity)*
 *更多已完成记录见 [progress_archive.md](file:///c:/Users/netxs/devops/devops/progress_archive.md)*
