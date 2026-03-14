@@ -11,7 +11,9 @@ renamed as (
         title,
         author_email,
         committed_date,
-        message
+        message,
+        -- 使用正则提取 #123 格式的禅道 ID
+        substring(message from '#([0-9]+)') as zentao_id
     from source
 )
 
