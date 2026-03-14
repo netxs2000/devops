@@ -76,3 +76,8 @@ class NexusClient(BaseClient):
             continuation_token = response.get("continuationToken")
             if not continuation_token:
                 break
+
+    def download_asset_content(self, download_url: str) -> str:
+        """下载资产内容（通常用于解析小型元数据文件）。"""
+        response = self._get(download_url, is_full_url=True)
+        return response.text
