@@ -1,0 +1,5 @@
+repository_type,price_per_gb_per_month,currency
+maven-releases,1.0,CNY
+maven-snapshots,0.5,CNY
+docker-hosted,2.0,CNY
+default,1.0,CNY
