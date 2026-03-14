@@ -39,14 +39,24 @@ topic: CI/CD Pipeline Artifact Traceability Strategy (Jenkins & GitLab CI)
 * **GitLab CI (`.gitlab-ci.yml`)**:
   ```yaml
   build-and-deploy:
+    stage: deploy
     script:
+      # 借助 GitLab 官方内置的环境变量，生成防伪溯源文件
       - echo "commit_sha=${CI_COMMIT_SHA}" > target/devops-trace.properties
       - echo "pipeline_job=${CI_JOB_NAME}" >> target/devops-trace.properties
       - echo "pipeline_id=${CI_PIPELINE_ID}" >> target/devops-trace.properties
+      
+      # 执行 Maven 构建并推送到 Nexus
       - mvn clean deploy
   ```
 
-**优势**：不需要修改 pom.xml，不需要升级任何构建插件。Nexus Collector 只需抓取这个 `.properties` 资产即可完成匹配。
+  > 💡 **小白专区：GitLab CI 是如何工作的？**
+  > 如果您觉得上方的脚本有些陌生，别担心。在 GitLab 体系中，上述的 `CI_COMMIT_SHA`（当前代码提交的唯一防伪码）、`CI_PIPELINE_ID` 等变量**不需要您手动去配置*。它们是 **GitLab Runner 自动注入** 到执行环境中的系统内置参数。
+  > 
+  > 只要将上方的 `script` 补充到您现有的 `.gitlab-ci.yml`（GitLab 专属流水线配制文件）的 `deploy` 环节中，平台以后在 Nexus 里拉下来的包，就如同烙上了一个“GitLab 出品”的出厂二维码！
+
+**优势**：不需要修改业务方的 `pom.xml` 源码，不需要去研究复杂的构建插件升级。DevOps 侧的 Nexus Collector 爬虫以后只需抓取这个附属的 `.properties` 文件，就能像“滴血认亲”一样，百分百将生成的 JAR 与您写在 GitLab 里的某一行代码挂靠在一起。
+
 
 ### Option B: Maven Manifest 注入法 (最优雅，需改业务)
 **推荐度**：⭐⭐⭐
