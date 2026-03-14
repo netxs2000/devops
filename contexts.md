@@ -106,6 +106,15 @@
 - **Staging 透明度**: Staging 模型必须完成所有字段语义对齐（如 `ncloc` -> `lines_of_code`）。严禁在 `int_` 或 `fct_` 层继续直接使用源系统的非标缩写。
 - **并发控制**: 在资源受限环境执行 `dbt build` 时，必须通过 `--threads 1` 或环境变量限制并发，防止数据库锁冲突 (Deadlock) 或内存溢出导致的挂起。
 
+### 7.4 BI 与可视化平台 (BI & Visualization) [NEW]
+- **平台选型 (Platform Selection)**:
+    - **Streamlit (已集成 ✅)**: 核心 BI 交互平台。用于轻量级、交互式数据应用开发，特别是涉及 Python 逻辑的动态看板。
+    - **Superset**: 企业级可视化大盘，用于处理大规模 SQL 聚合报表。
+    - **Metabase**: 用于业务侧自服务查询 (Self-service BI) 与快速简单看板搭建。
+- **数据源接入**: 所有平台必须统一接入 `PostgreSQL` 的 Marts 层 (`rpt_*` 或 `fct_*` 模型)，严禁越过 dbt 直接查询 Staging 表。
+
+
+
 ## 8. 运维流程与生命周期 (DevOps Ops)
 
 - **部署模式**: 
@@ -359,6 +368,7 @@
     - 每条任务在 `progress.txt` 中必须标注任务级别（如 `[L2]`），参见 `/task-kickoff` 工作流。
     - L2 及以上任务完成后，在「最近完成」记录中须附带估时对比：`预估 Xh / 实际 Yh`。
     - 偏差超过 50% 的任务，必须在 `docs/lessons-learned.log` 中分析原因（如：范围蔓延、未预见依赖等），用于持续改进估时精度。
+- **知识割取与复盘 (Knowledge Harvest) [MANDATORY]**: 凡是遇到需要 2 次以上尝试才解决的问题、或非标 API 陷阱，必须**主动总结**并更新至 `docs/lessons-learned.log`。每次完工汇报前，必须在回复中包含 `Harvest Items` 摘要，否则视为 DoD 未达成。
 - **环境卫生清理 (Cleanup on Exit) [MANDATORY]**: 每次完成功能验证或阶段性任务交付前，**必须强制**执行一次 `make clean`。严禁在根目录残留任何调试生成的脚本、临时日志 (.log, .txt, .csv, debug_*.py, traceback.txt)；确保 `git status` 洁净并更新 `progress.txt` 标记 `[Hygiene]: 已清理临时调试文件`。
 
 

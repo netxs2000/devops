@@ -1,5 +1,5 @@
 ---
-status: Proposed (Active)
+status: Completed & Handover (✅)
 date: 2026-03-14
 author: AI Architect
 topic: Nexus 3.x OSS Artifact Traceability & FinOps Strategy
@@ -43,14 +43,19 @@ topic: Nexus 3.x OSS Artifact Traceability & FinOps Strategy
 - [x] 建立 `2024-01-01` 增量采集隔离网。
 - [x] 补齐 dbt Staging 层与 `sources.yml` 映射。
 - [x] 实现 `fct_nexus_orphan_assets` 孤儿发现模型。
+- [x] **[DB-01] 物理字段扩展**：已增加 `commit_sha` 物理列。 (2026-03-14)
+- [x] **[DB-02] 索引优化**：已建立 `ix_nexus_components_lookup` 联合索引。 (2026-03-14)
 
 ### 第二阶段：防伪印章对接 (执行中 🏗️)
-- [x] **平台端就绪**：`NexusWorker` 现已支持解析 `devops-trace.properties` 旁路文件。
+- [x] **平台端就绪**：`NexusWorker` 已支持解析旁路文件。
+- [x] **[dbt-03/04] DORA 链路贯通**：已实现 `int_nexus_commits` 与 `fct_dora_metrics` 关联，支持打包延迟度量。 (2026-03-14)
 - [ ] **流水线侧改造**：与运维团队研讨，在 Jenkins/GitLab CI 的 `deploy` 阶段追加 3 行 `echo` 脚本。
 
-### 第三阶段：财务量化与自动清理 (规划中 📅)
-- [ ] **FinOps 板报**：根据文件字节大小，生成每月存储成本排行。
-- [ ] **清理自动化**：对接 Nexus API 删除接口，针对“幽灵包”执行自动化硬删除清理。
+### 第三阶段：财务量化与自动清理 (已交付 ✅)
+- [x] **[dbt-05] 费率折算与成本事实表**：已建立 `fct_nexus_storage_costs` 模型。
+- [x] **FinOps 板报**：已通过 Streamlit 建立 `20_Nexus_FinOps.py` 展示大屏。 (2026-03-14)
+- [x] **[Script-06] 清理逻辑打分系统**：已实现 `fct_nexus_cleanup_list` 积分制名单。 (2026-03-14)
+- [ ] **清理自动化 (待授权)**：对接 Nexus API 删除接口，针对“高危包”执行自动化硬删除清理。 (需运维配合)
 
 ---
 
@@ -58,23 +63,20 @@ topic: Nexus 3.x OSS Artifact Traceability & FinOps Strategy
 为了完成上述路线图，建议按以下颗粒度任务进行实施，请 USER 决策开启顺序：
 
 ### 任务域 1：基础架构加固 (后勤准备)
-- [ ] **[DB-01] 物理字段扩展**：在 `nexus_components` 表中正式增加 `commit_sha (String)` 字段，而不仅是存在 `raw_data` 的 JSON 里。这将大幅提升未来 DORA 大数据量下的 Join 性能。
-- [ ] **[DB-02] 索引优化**：为 `component_group` 和 `component_name` 增加联合索引，加速“孤儿猎手”的扫描速度。
+- [x] **[DB-01] 物理字段扩展**：在 `nexus_components` 表中正式增加 `commit_sha (String)` 字段。 (2026-03-14 完成)
+- [x] **[DB-02] 索引优化**：为 `repository`, `group`, `name` 增加联合索引。 (2026-03-14 完成)
 
 ### 任务域 2：DORA 链路贯通 (核心价值)
-- [ ] **[dbt-03] 建立“代码-制品”映射模型**：编写 `int_nexus_commits.sql`。
-    - **逻辑**：将解析到的 `commit_sha` 与 `stg_gitlab_commits` 进行左连接，计算出“打包延迟 (Build Latency)”。
-- [ ] **[dbt-04] 产出 DORA 核心事实表**：更新 `fct_dora_metrics`，将 Nexus 产出作为交付流水线的“终点站”时间。
+- [x] **[dbt-03] 建立“代码-制品”映射模型**：编写 `int_nexus_commits.sql`。 (2026-03-14 完成)
+- [x] **[dbt-04] 产出 DORA 核心事实表**：更新 `fct_dora_metrics`，将 Nexus 产出作为交付流水线的“终点站”时间。 (2026-03-14 完成)
 
 ### 任务域 3：FinOps 财务量化 (成本控制)
-- [ ] **[dbt-05] 接入费率折算**：编写 `marts_nexus_storage_costs.sql`。
-    - **逻辑**：读取 `seed_nexus_storage_rates`（需新建，定义每 GB 单价），计算每个产品线每个月的账单金额。
-- [ ] **[Grafana] 搭建“成本黑洞”排行榜**：展示前 10 名占用最高且未登记、未下载的“幽灵组件”。
+- [x] **[dbt-05] 接入费率折算**：编写 `marts_nexus_storage_costs.sql` 以及配套的 `seed_nexus_storage_rates.csv`。 (2026-03-14 完成)
+- [x] **[Streamlit] 搭建“成本黑洞”排行榜**：已完成 `20_Nexus_FinOps.py` 页面。 (2026-03-14 完成)
 
-### 任务域 4：自动化治理 (进阶闭环)
-- [ ] **[Script-06] 清理逻辑打分系统**：在 dbt 中实现 `is_safe_to_delete` 标识。
-    - **规则**：如果组件属于 snapshot 库 + 超过 180 天没下载 + 是孤儿包 = 标记为 TRUE。
-- [ ] **[Nexus-API] 开发清理执行脚本**：编写 `cleanup_executor.py`，根据 dbt 导出的“待删除清单”，调用 Nexus 真正的 DELETE 接口执行物理清理。
+### 任务域 4：自动化治理 (逻辑已贯通)
+- [x] **[Script-06] 清理逻辑打分系统**：已在 dbt 中实现 `is_safe_to_auto_cleanup` 标识。 (2026-03-14 完成)
+- [ ] **[Nexus-API] 开发清理执行脚本**：需要 Nexus 管理员 Token 后执行物理删除封装。
 
 ---
 

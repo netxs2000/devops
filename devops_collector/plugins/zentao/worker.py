@@ -63,6 +63,19 @@ def _safe_date(val: Any) -> datetime | None:
         return None
 
 
+SYNC_SINCE_DATE = datetime(2024, 1, 1)
+
+
+def _is_after_cutoff(val: Any) -> bool:
+    """判断给定日期是否在 2024-01-01 之后。如果没有日期，默认放行。"""
+    dt = _safe_date(val)
+    if not dt:
+        return True
+    if dt.tzinfo:
+        dt = dt.replace(tzinfo=None)
+    return dt >= SYNC_SINCE_DATE
+
+
 class ZenTaoWorker(BaseWorker):
     """禅道全量数据采集 Worker。"""
 
@@ -143,25 +156,31 @@ class ZenTaoWorker(BaseWorker):
             try:
                 stories = self.client.get_stories(product.id)
                 for s_data in stories:
-                    self._sync_issue(product.id, s_data, "feature")
+                    if _is_after_cutoff(s_data.get("openedDate")):
+                        self._sync_issue(product.id, s_data, "feature")
             except Exception as e:
                 logger.error(f"Failed to sync stories (features) for product {product_id}: {e}")
 
             try:
                 bugs = self.client.get_bugs(product.id)
                 for b_data in bugs:
-                    self._sync_issue(product.id, b_data, "bug")
+                    if _is_after_cutoff(b_data.get("openedDate")):
+                        self._sync_issue(product.id, b_data, "bug")
             except Exception as e:
                 logger.error(f"Failed to sync bugs for product {product_id}: {e}")
             # 4. 同步测试用例与结果
             try:
                 test_cases = self.client.get_test_cases(product.id)
                 for tc_data in test_cases:
+                    if not _is_after_cutoff(tc_data.get("openedDate")):
+                        continue
                     tc = self._sync_test_case(product.id, tc_data)
+                    if not tc: continue
                     try:
                         results = self.client.get_test_results(tc.id)
                         for r_data in results:
-                            self._sync_test_result(tc.id, r_data)
+                            if _is_after_cutoff(r_data.get("date")):
+                                self._sync_test_result(tc.id, r_data)
                     except Exception as res_e:
                         logger.debug(f"Failed to sync results for case {tc.id}: {res_e}")
             except Exception as case_e:
@@ -172,7 +191,8 @@ class ZenTaoWorker(BaseWorker):
                 try:
                     builds = self.client.get_builds(exec_item.id)
                     for b_data in builds:
-                        self._sync_build(product.id, exec_item.id, b_data)
+                        if _is_after_cutoff(b_data.get("date")):
+                            self._sync_build(product.id, exec_item.id, b_data)
                 except Exception as e:
                     logger.warning(f"Failed to sync builds for execution {exec_item.id}: {e}")
 
@@ -180,7 +200,8 @@ class ZenTaoWorker(BaseWorker):
                 try:
                     tasks = self.client.get_tasks(exec_item.id)
                     for t_data in tasks:
-                        self._sync_task(product.id, exec_item.id, t_data)
+                        if _is_after_cutoff(t_data.get("openedDate")):
+                            self._sync_task(product.id, exec_item.id, t_data)
                 except Exception as e:
                     logger.error(f"Failed to sync tasks for execution {exec_item.id}: {e}")
 
@@ -188,7 +209,8 @@ class ZenTaoWorker(BaseWorker):
             try:
                 releases = self.client.get_releases(product.id)
                 for rel_data in releases:
-                    self._sync_release(product.id, rel_data)
+                    if _is_after_cutoff(rel_data.get("date")):
+                        self._sync_release(product.id, rel_data)
             except Exception as e:
                 logger.warning(f"Failed to sync releases for product {product_id}: {e}")
 
@@ -196,7 +218,8 @@ class ZenTaoWorker(BaseWorker):
             try:
                 actions = self.client.get_actions(product.id)
                 for a_data in actions:
-                    self._sync_action(product.id, a_data)
+                    if _is_after_cutoff(a_data.get("date")):
+                        self._sync_action(product.id, a_data)
             except Exception as e:
                 logger.warning(f"Failed to sync actions (audit logs) for product {product_id}: {e}")
 

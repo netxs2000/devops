@@ -65,7 +65,14 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
             project.sync_status = "SYNCING"
             self.session.commit()
 
-            since = project.last_synced_at.isoformat() if project.last_synced_at else None
+            # 强制应用 2024-01-01 为最早的数据同步截断点
+            cutoff_date = datetime(2024, 1, 1, tzinfo=UTC)
+            if project.last_synced_at:
+                since_dt = max(project.last_synced_at, cutoff_date)
+            else:
+                since_dt = cutoff_date
+            
+            since = since_dt.isoformat()
 
             # 核心数据同步
             stats = {

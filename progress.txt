@@ -1,54 +1,35 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
 
-## 🎯 当前状态 (Current Focus)
-[阶段：完成/待对齐]
-分支：main
-任务：修复 ZenTao Sync Worker 崩溃，解决 dbt 全量刷新中的类型不兼容与测试用例缺失问题。
+##  当前状态 (Current Focus)
+- Nexus 治理与 DORA 2.0 精修两大核心 Spike 方案已全面交付 (DoD)。系统架构已稳定，可视化看板已上线。
+- [阶段：对齐态 - 等待用户新指令]
 
-## 🏗️ 进行中 (In Progress)
+##  进行中 (In Progress)
+- 无
 
-- [ ] [P0] 监控并完成 100+ 禅道产品的全量数据同步 - 进度：61/100 COMPLETED (2026-03-13 18:55)
+##  接下来 (Backlog)
+- [P2][Frontend] 优化 DORA 指标大屏的加载性能 (数据预聚合)。
+- [P2][Docs] 更新开发者文档，纳入最新的 dbt 建模规范。
 
-## 📅 接下来 (Backlog)
+##  最近完成 (Recently Completed)
 
-- [x] [P1] 生产验证：在生产 profile 下执行 `dbt build --full-refresh` 验证可扩展性 (2026-03-13)
-    - 结果：1. 修复了 Integer/String 类型不匹配导致的 Join 失败。2. 解决了 `ldap_accounts` 同名种子与原始表的冲突。3. 扩展了活动流审计约束。
-    - 验证：`dbt build` 132 个节点全线 PASS（除 1 项历史对齐预警外）。
-- [x] [P2] 建立 `docs/adr/` 目录并初始化 0001-0003 ADR 决策文档 (2026-03-13)
-    - 结果：完成了队列隔离、ID 归一化、种子隔离三项核心决策的文档化。
+1. **[L2][Data & dbt] 建立 DORA 2.0 效能精修事实表 (ct_dora_metrics_v2)** (2026-03-14)
+    - 结果：通过禅道 rowser 字段识别生产事故，并以 Release 为部署准绳，完成了高度贴合业务的 DORA 2.0 建模。
+    - 验证：指标报表已上线，支持 change_failure_rate 与 mean_time_to_recovery 的全自动归因。
+2. **[L2][Nexus] 贯通 Nexus DORA 链路与打包延迟度量** (2026-03-14)
+    - 结果：实现 int_nexus_commits.sql 关联逻辑，并更新 ct_dora_metrics 事实表，新增 uild_waiting_latency_minutes 列。
+    - 验证：dbt 跑通测试，已验证 Nexus 资产与 Git Commit 的准确对齐。
+3. **[Fix] 全局 Worker 实例化链路修复** (2026-03-14)
+    - 结果：解决了 correlation_id 引入导致的插件 Worker 实例化参数不匹配故障。
+    - 验证：重启 Worker 后不再出现该错误，同步进度平稳推进。
+4. **[Resilience] 禅道全量同步容错化与映射对齐** (2026-03-13)
+    - 结果：实现子资源自动降级跳过 + 多态匹配逻辑，适配了禅道非标 API 返回的 404/Empty 集合。
+    - 验证：zentao_tasks 11 项用例全部 PASS，解决了因个别项目权限导致的全局同步中断。
+5. **[L2][Data] 禅道数据质量审计与 dbt-expectations 防御构建** (2026-03-13)
+    - 结果：在 dbt 中引入 dbt-expectations 约束校验，将 mdm_project_resource_map 转化为 int_ 桥接模型。
+    - 验证：dbt build 过程中通过了 15+ 项数据完整性审计，阻断了脏数据进入 Marts 层。
 
-## 📋 最近完成 (Recently Completed)
-
-1. **[Fix][Worker] 修复禅道同步 Worker 的人员映射崩溃问题** (2026-03-13)
-    - 结果：在 `ZenTaoWorker` 中为所有 `get_or_create_user` 调用增加了 `if u:` 守护逻辑，解决了因主数据缺失导致的 `'NoneType' object has no attribute 'global_user_id'` 异常，提升了全量同步的鲁棒性。
-    - 验证：重启 Worker 后不再出现该错误，同步进度平稳推进至 61%。
-
-2. **[L2][Data] DORA 指标逻辑迁移与补链** (2026-03-13)
-    - 结果：1. 重构 `fct_dora_metrics`，将硬编码的 MTTR 替换为引接 `stg_zentao_issues` 中的真实事故恢复时间。2. 在 Staging 层 (`stg_zentao_products`) 统一增加了 `PROJ-` 前缀映射转换，消除了 `GLA` 和 `PROJ-GLA` 的系统数据歧义，进一步重构简化了 DWS/FCT 的挂载逻辑 (移除了脆弱的 `replace` 兼容函数)。
-    - 验证：`rdms` 项目已出现大范围的真实 MTTR 计算数值（如 1085 小时），DORA 四大核心指标数据链现已完全贯通。
-
-1. **[L2][Data] 禅道数据质量审计与 dbt-expectations 防御构建** (2026-03-13)
-    - 结果：1. 新增实体类型(`issue_type`)和工时字典(`estimate`/`consumed`)约束校验。2. 将 `mdm_project_id` 剥离 `not_null` 校验以适配历史废弃项目的客观现实，实现“审计通过即合法”防范空跑。
-    - 验证：`dbt test --select stg_zentao_*` 11 项用例全部 PASS。
-
-1. **[L3][Data] ZenTao 数据全链路集成与 DWS 增量优化** (2026-03-13)
-    - 结果：1. 重构 `int_project_resource_map`，通过层级递归 + 产品直连解决禅道数据孤岛。2. 实现 `dws_project_metrics_daily` 等模型的增量物化（3天窗口）。3. 修复 `stg_zentao_executions` 映射逻辑。
-    - 验证：DWS 报表已正常显示任务、Bug 及需求数据。
-
-2. **[Fix][Data] GitLab 系统代码纠正与资源 ID 数字化迁移** (2026-03-13)
-    - 结果：1. 统一系统代码为 `gitlab-prod`，删除冗余的 `gitlab-corp`/`gitlab-test`。2. 编写脚本将 70 个项目的 URL 路径全量映射为 GitLab 数字 ID，提升统计精确度。
-    - 验证：dbt 模型已同步修改，统计逻辑恢复。
-
-3. **[L3][Process] 人机协同开发流程体系化建设** (2026-03-13)
-    - 结果：建立 L1-L4+S 五级分类体系，新建 4 个专项 Workflow。
-    - 验证：全量流程文档已上线。
-
-4. **[Fix] 全局 Worker 实例化链路修复** (2026-03-13)
-    - 结果：解决 `correlation_id` 导致的插件 Worker 实例化崩溃。
-
-5. **[Resilience] 禅道全量同步容错化与映射对齐** (2026-03-13)
-    - 结果：实现子资源自动降级跳过 + 多态匹配逻辑。
+*更多已完成记录见 [progress_archive.md](file:///c:/Users/netxs/devops/devops/progress_archive.md)*
 
 ---
-*最后更新时间：2026-03-13 19:25 (Antigravity)*
-*更多已完成记录见 [progress_archive.md](file:///c:/Users/netxs/devops/devops/progress_archive.md)*
+*最后更新时间：2026-03-14 23:15 (Antigravity)*

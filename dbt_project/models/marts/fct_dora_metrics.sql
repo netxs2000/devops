@@ -48,6 +48,15 @@ mttr_by_gitlab as (
 
 projects as (
     select * from {{ ref('stg_gitlab_projects') }}
+),
+
+nexus_metrics as (
+    select
+        gitlab_project_id,
+        date_trunc('month', nexus_created_at) as month,
+        avg(build_latency_minutes) as avg_build_latency_minutes
+    from {{ ref('int_nexus_commits') }}
+    group by 1, 2
 )
 
 select
@@ -63,6 +72,7 @@ select
     -- 精细化分析维度
     b.avg_pickup_delay_hours as wait_time_hours,
     b.avg_review_duration_hours as work_time_hours,
+    round(coalesce(n.avg_build_latency_minutes, 0)::numeric, 2) as build_latency_minutes, -- 新增：从代码提交到打包完成的耗时
     b.primary_bottleneck,
     
     -- 效能评级
@@ -77,4 +87,5 @@ from bottlenecks b
 left join deployments d on b.project_id = d.project_id and b.audit_month = d.month
 left join mttr_by_gitlab mttr on b.project_id = mttr.gitlab_project_id and b.audit_month = mttr.month
 left join projects p on b.project_id = p.gitlab_project_id
+left join nexus_metrics n on b.project_id = n.gitlab_project_id and b.audit_month = n.month
 order by month desc, lead_time_hours asc

@@ -1,5 +1,5 @@
 ---
-status: Proposed (Active)
+status: Completed & Handover (✅)
 date: 2026-03-14
 author: AI Architect
 topic: DORA 2.0 Refinement - End-to-End Metrics with ZenTao & GitLab
@@ -45,9 +45,9 @@ topic: DORA 2.0 Refinement - End-to-End Metrics with ZenTao & GitLab
 - [x] **[dbt-INT-01]** 编写 `int_dora_issue_commit_lifecycle`：计算“需求到代码”的响应与开发耗时。 (2026-03-14)
 - [x] **[dbt-INT-02]** 编写 `int_dora_production_incidents`：锁定 P1 级生产事故。 (2026-03-14)
 
-### 第三阶段：DORA 看板 2.0 (Marts) (执行中 🏗️)
+### 第三阶段：DORA 看板 2.0 (Marts) (已交付 ✅)
 - [x] **[dbt-FCT-05]** 建立 `fct_dora_metrics_v2` 精修事实表：引入 Release 频率与生产事故 MTTR。 (2026-03-14)
-- [ ] **[Streamlit]** 绘制“交付漏斗图”与“瓶颈雷达图”。 (待开启)
+- [x] **[Streamlit]** 绘制“交付漏斗图”与“瓶颈雷达图”：已完成 `21_DORA_Refined.py`。 (2026-03-14)
 
 ---
 
