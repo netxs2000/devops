@@ -9,6 +9,10 @@ components as (
     select * from {{ ref('stg_nexus_components') }}
 ),
 
+seed_map as (
+    select * from {{ ref('seed_nexus_component_map') }}
+),
+
 rates as (
     select * from {{ ref('seed_nexus_storage_rates') }}
 ),
@@ -17,7 +21,7 @@ rates as (
 component_sizes as (
     select
         component_id,
-        sum(size_bytes) as total_bytes,
+        sum(file_size_bytes) as total_bytes,
         count(asset_id) as asset_count
     from assets
     group by 1
@@ -26,11 +30,11 @@ component_sizes as (
 -- 2. 关联组件详情与费率，并进行金额换算
 cost_calculation as (
     select
-        c.product_id,
+        m.mdm_product_id as product_id,
         c.repository_name,
-        c.group_name,
-        c.name as component_name,
-        c.version,
+        c.component_group,
+        c.component_name,
+        c.component_version as version,
         sz.total_bytes,
         sz.asset_count,
         -- 换算为 GB (1024^3)
@@ -39,6 +43,7 @@ cost_calculation as (
         coalesce(r.price_per_gb_per_month, (select price_per_gb_per_month from rates where repository_type = 'default')) as rate
     from components c
     join component_sizes sz on c.component_id = sz.component_id
+    left join seed_map m on c.component_name = cast(m.name as {{ dbt.type_string() }})
     left join rates r on c.repository_name = r.repository_type
     where c.is_deleted = false
 )
@@ -47,7 +52,7 @@ select
     -- 业务主键
     product_id,
     repository_name,
-    group_name,
+    component_group,
     component_name,
     version,
     
