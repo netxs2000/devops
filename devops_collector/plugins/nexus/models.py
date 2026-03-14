@@ -34,6 +34,7 @@ class NexusComponent(Base, TimestampMixin, SCDMixin, OwnableMixin):
     name = Column(String(255), nullable=False)
     version = Column(String(100))
     product_id = Column(String(100), ForeignKey("mdm_product.product_id"), nullable=True)
+    commit_sha = Column(String(100), index=True)  # 新增：直接存储 Git Commit SHA，提升 DORA 关联性能
 
     product = relationship("Product")
     assets = relationship("NexusAsset", back_populates="component", cascade="all, delete-orphan")

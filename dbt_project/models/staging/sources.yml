@@ -98,3 +98,9 @@ sources:
         description: "Jenkins 任务定义表"
       - name: jenkins_builds
         description: "Jenkins 构建详细记录表"
+
+      # 8. Nexus 原始数据 (Artifact Repositories)
+      - name: nexus_components
+        description: "Nexus 3.x 制品组件表"
+      - name: nexus_assets
+        description: "Nexus 3.x 制品资产详情表"

@@ -220,7 +220,10 @@ class NexusWorker(BaseWorker):
             
             commit_sha = props.get("commit_sha")
             if commit_sha:
-                # 将元数据持久化到组件的 raw_data 中
+                # 1. 直接填入“专座”（物理列）
+                component.commit_sha = commit_sha
+                
+                # 2. 同时也保留在元数据大合集里备用
                 if not component.raw_data:
                     component.raw_data = {}
                 
