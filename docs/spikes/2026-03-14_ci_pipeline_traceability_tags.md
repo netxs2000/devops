@@ -36,6 +36,13 @@ topic: CI/CD Pipeline Artifact Traceability Strategy (Jenkins & GitLab CI)
       }
   }
   ```
+
+  > 💡 **小白专区：Jenkins 的变量从哪里来？**
+  > Jenkins 的逻辑与 GitLab 类似。在 Pipeline 跑到 `sh` 这行命令时，系统上下文（`env.` 环境变量字典）中已经为您准备好了这些现成的参数：
+  > - `GIT_COMMIT`：这是 Jenkins 的标准 **Git 插件**在拉取代码时，自动向环境注入的当时那一刻代码提交哈希值（也就是身份证）。
+  > - `JOB_NAME` 和 `BUILD_NUMBER`：则是 Jenkins 本身给这趟列车（流水线）贴的“车次号”和“排班名称”。
+  > 
+  > 就像上菜前贴上一张打印小票一样，这三句简单的 `echo` 会在 JAR 包旁生成一张便签（`.properties` 文件）。研发以后想查出线上某个包出了 Bug，随时能根据这个标签对齐追溯到谁在什么时候提交了哪行代码！
 * **GitLab CI (`.gitlab-ci.yml`)**:
   ```yaml
   build-and-deploy:
