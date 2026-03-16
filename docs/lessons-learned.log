@@ -1,0 +1,53 @@
+# DevOps 平台 Lessons Learned Log
+
+> **说明**：本文件由 AI 自动维护，按时间倒序记录实战中发现的隐蔽风险与排障结论。
+
+| Timestamp | Domain | Phenomenon | Root Cause | Universal Rule (The Defense) |
+| :--- | :--- | :--- | :--- | :--- |
+| 2026-03-16 | SQLAlchemy/ORM | `AmbiguousForeignKeysError` 打地鼠式爆发 | 模型中使用了 `TimestampMixin`（内含 `created_by` 等指向 `User` 的外键）。当子类模型定义新的 `relationship("User")` 时，SQLAlchemy 看到 3 个或以上的 `User` 外键，无法自动推断 Join 条件，引发报错。 | **显式外键声明 (Explicit FK Declaration)**：凡是继承自带有统一外键引用的 Mixin（如 TimestampMixin 指向用户表）的模型，在定义同目标表的关系时，**必须强制显式声明** `foreign_keys=[..._id]`，不可依赖 SQLAlchemy 的自动推断。 |
+| 2026-03-16 | Data/Lifecycle | 主数据变更与存量对齐 | 业务项目/产品 ID 和名称变更，残留旧数据导致统计混淆。 | **定向刷新 (Directed Master Data Refresh)**：1. 对主数据层（MDM）实施“先解关联、后清空、再重注”的定向刷新策略。2. 解除关联时需覆盖所有外部插件层（zentao_*, gitlab_*）及审计层（commit_metrics）的物理外键引用，确保业务数据存量不丢但逻辑归属归零。 |
+| 2026-03-16 | Data/Resilience | 禅道同步报外键冲突 | 议题引用的 `plan_id` 在计划列表中不存在（脏数据或逻辑删除），导致严格外键约束触发。 | **业务桩数据与防御解析 (Stubbing & Defending)**：1. 对非核心外键引用，必须在解析层增加合法性探测，缺失时回退为 `NULL` 或创建桩记录。2. 业务韧性优于严格模式。 |
+| 2026-03-16 | Concurrency | 身份映射唯一键冲突 | 大规模并行割取时，多个 Worker 为相同邮箱/工号同时写入 `mdm_identity_mappings`，由于 ON CONFLICT 仅覆盖了单个索引，导致并发击穿。 | **原子隔离与多级索引保护 (Atomic Isolation)**：1. ON CONFLICT 必须针对每个高频冲突路径建立保护逻辑。2. 对多唯一键表，必须配合 `session.begin_nested()` 子事务捕获竞争波动，防止 Session 损坏。 |
+| 2026-03-16 | Metrics | 指标感知偏向 (Metric Bias) | GitLab 完成度 1.4% vs 禅道 14%，前者看似缓慢但吞吐了 23 万条提交量。 | **多维进度度量 (Multi-dim Progress)**：DevOps 数据同步必须同时度量“项目覆盖率”与“记录吞吐量 (Ingestion rate)”，防止因大型仓库导致的进度焦虑。 |
+| 2026-03-14 | dbt/SQL | JSONB 转数值抛错 | `JSONB->>'field'` 提取出的内容可能带有字面量双引号 (如 `"123.4"`) 或空字符串，直接 `cast` 会报非法输入。 | **强类型防御转换 (Defense Cast)**：1. 必须使用 `trim(both '"' from field)` 清除引号。2. 配合 `nullif` 与 `coalesce` 过滤空值。 |
+| 2026-03-14 | Infra/Config | 脚本获取环境变量报错 | `os.getenv("KEY", 600)` 在某些逻辑分支中返回整数，但在需要字符串拼接或特定 Pydantic 校验时崩溃。 | **环境变量字符串优先 (String-First Defaults)**：`os.getenv` 的所有默认值必须显式设为字符串（如 `"600"`），在使用处再进行类型转换。 |
+| 2026-03-14 | dbt/Build | 数据库死锁/内存溢出 | 在小规格容器执行 `dbt build` 时，默认多线程并发导致锁冲突或 `PostgreSQL` 连接瞬间爆表。 | **并发限速器 (Concurrency Throttle)**：资源受限环境下，强制通过 `--threads 1` 或环境变量限制并发，牺牲速度换取稳定性。 |
+| 2026-03-14 | Data/Mapping | 指标归因计算偏差 (DORA) | 依赖 GitLab 项目 URL 路径进行关联，因项目重命名或子组迁移导致历史数据丢帧。 | **标识符溯源原子化**：1. 拓扑表必须全面弃用 URL 路径，改用系统原生数字 ID (Integer)。2. 映射关系必须在采集层即刻固化。 |
+| 2026-03-13 | dbt/Namespace | Seed 与 Source 命名冲突 | `ldap_accounts` 既是种子又是原始表。dbt 在 `full-refresh` 加载种子时执行 `DROP TABLE CASCADE`，导致依赖原始表的 Staging 视图被物理删除，引发后续模型报错。 | **种子对齐契约 (Seed-Source Isolation)**：1. 种子文件必须强制增加 `seed_` 前缀（如 `seed_ldap_accounts.csv`）。2. Staging 视图严禁直接 `ref` 种子，除非该数据仅作为静态字典存在且不从源端同步。 |
+| 2026-03-13 | dbt/Type | 跨层级关联类型匹配失败 | `fct_delivery_costs` 在关联 GitLab (Int) 与 DWS 层 Master ID (Varchar) 时因类型不匹配报错 `integer = character varying`。 | **ID 桥接规程**：1. 跨系统 ID 关联必须通过 `int_project_resource_map` 转发。2. 在 Staging 与 Intermediate 交互层强制执行 `::text` 转换以确保桥接主键的类型一致性。 |
+| 2026-03-13 | dbt/Expectations | 业务审计用例失效 | `int_raw_activities` 的 `activity_type` 校验因未包含禅道独有的 `BUG/TASK/STORY` 类型而导致 `dbt build` 熔断。 | **全源感知审计 (Source-Aware Testing)**：新增数据源时，必须同步交叉检查 `dbt-expectations` 的列值允许集（set），确保业务特有类型被纳入白名单。 |
+| 2026-03-13 | Sync/Identity | 人员对齐导致崩溃 | `IdentityManager.get_or_create_user` 针对缺失主数据的信号返回 `None`，导致 Worker 因 `u.global_user_id` 引用报错。 | **身份安全访问规程**：1. 严禁直接链式调用 User 对象属性，必须使用 `if u:` 守护。2. 允许业务表存储 `NULL` 身份 ID 以记录“原始触达信号”，交由后续 dbt 审计修正。 |
+| 2026-03-13 | Data/Mapping | 禅道集成统计为 0 | 1. 资源映射表通过 `master_project_id is not null` 默认过滤。 2. 禅道记录分布在产品(Product)和迭代(Execution)两个并行层级，单一层级映射导致漏计。 | **全栈对齐策略**：1. 映射表必须采用“多级捕获（产品直接映射+迭代递归追溯）”逻辑。2. 诊断“空报表”时，首选检查中间层映射视图的 Inner Join 损耗。 |
+| 2026-03-13 | Data/Mapping | 跨系统挂载不一致 | ZenTao 产品代号缺少统一的 `PROJ-` 前缀，导致中间映射表生成孤立主键 (如 `GLA`) 而非标准的主项目 ID (`PROJ-GLA`)。 | **Staging 强隔离与前缀归一化 (Prefix Normalization)**：严禁在 DWS/FCT 事实表中引入 `replace(..., 'PROJ-', '')` 等降级模糊匹配来擦屁股。映射前缀等系统性脏数据必须在 **第一道防线 (Staging)** 完成统一清洗和补全。 |
+| 2026-03-13 | Metrics/MTTR | MTTR 恢复时效统计为 0 | `dws/fct` 计算事故恢复时长时未考虑到 ZenTao `bug` 状态机导致的 `closed_at` 空值，缺少 `resolvedDate` 兜底。 | **状态机防逃逸**：统计事件耗时不能仅依赖终态时间戳 (Closed)。必须使用 `coalesce` 引入次终态时间 (Resolved) 组合作为截断点，并在 stg 层固化该聚合逻辑 (`closed_at` 向下兼容)。 |
+| 2026-03-13 | GitLab/Sync | 统计数据重复/漏计 | `gitlab-corp` 与 `gitlab-prod` 并存导致系统代码识别偏差；URL 路径映射易受重命名干扰。 | **标识符数字化 (ID over URL)**：1. 严禁基于 URL 路径进行长期映射记录。2. 拓扑表必须全量迁移为系统原生数字 ID (Integer)。3. 定期清理 `mdm_systems_registry` 中的僵尸系统代码。 |
+| 2026-03-13 | dbt/Ref | SQL 编译列名错误 | `int_project_resource_map` 引用 `stg_mdm_entity_topology` 时误用 `project_id` (实际已在 stg 层重命名为 `master_project_id`)。 | **Staging 接口契约规范**：编写 downstream 逻辑前，必须查看 stg 模型定义的 `renamed` CTE，确保引用的 alias 与物理列名一致。 |
+| 2026-03-13 | SQL/Type | round 函数报错 | Postgres 的 `round(double precision, integer)` 不存在，计算含浮点数 (如 coverage) 的分值时报错。 | **显式数值转型**：涉及 `round` 的计算必须显式 `cast(... as numeric)` 以对齐 Postgres 的函数重载要求。 |
+| 2026-03-13 | dbt/Build | Downstream Relation 缺失 | 跨层级构建 (如从 raw 直跳 fct) 或变更 view logic 后，下游相关 view 报错 `relation does not exist`。 | **全链路自愈构建**：变更中间层逻辑后，应优先执行一次全链路 `dbt build --select +target_model` 以确保 DAG 逐级物化，避免跳级错误。 |
+| 2026-03-13 | Sync/Resil | 禅道详情报 404 错误 | 1. 索引 API 返回已删除资源的引用。2. 某些历史产品权限受限，导致详情子资源（如 executions）返回 404。 | **子资源韧性 (Sub-resource Resilience)**：同步循环内必须支持 `allow_404` 模式，将非核心子资源的 404 视为“空集合”并降级跳过，而非中断主任务。 |
+| 2026-03-13 | Data/Mapping | 映射表匹配报错 | CSV 文档说明为 ID，但实际填充了产品代号 (Code) 字符串。 | **标识符多态匹配**：lookup 逻辑必须兼容 `int(ID)` 和 `str(Code)` 双重模式，支持 fallback 匹配。 |
+| 2026-03-13 | Arch/Extens | Worker 集群实例化崩溃 | 注册中心新增 `correlation_id` 但插件 Worker 构造函数未同步适配。 | **解耦构造函数**：插件 Worker 必须通过 `**kwargs` 承接透传参数，并调用 `super().__init__`。 |
+| 2026-03-13 | Infra/Hygiene | 容器内脚本报 SyntaxError | 跨平台编辑导致 docstring 中文乱码或 triple-quotes 损坏。 | **编码强约束**：1. 脚本头部指定 `utf-8`。2. 容器执行前必要时进行 `errors='replace'` 重整。 |
+| 2026-03-12 | Env/Hygiene | 根目录临时文件堆积 | 缺乏明确的临时输出重定向规范及清理机制。 | **重定向与清理红线**：1. 临时文件必须强制指向 `./tmp/`。2. DoD 前必须执行 `make clean`。 |
+| 2026-03-12 | Infra/Init | `mdm_organizations` 初始化死锁 | 业务唯一键约束与 SCD2 `is_current` 过滤导致 INSERT 触发物理冲突。 | **全局感知初始化**：唯一键存在时，GetOrCreate 必须无视 `is_current` 进行全局探测。 |
+| 2026-03-12 | Type/Logic | SQLAlchemy 监听器/模型匹配报错 | 在不当场景使用 `is_(None)` 或非标准匹配逻辑。 | **ORM 惯用法守则**：强制使用标准 `== None`；严禁在复杂 Filter 逻辑中混入非标准 Event Listener。 |
+| 2026-03-12 | ZenTao/Auth | 同步过程报 401 错误 | 长时间同步任务导致 Token/Session 失效；简单的重试可能导致认证死循环。 | **认证弹性与防止重试风暴**：1. Client 必须实现 401 自动重试。2. 必须引入 `is_retry` 状态位确保认证重试仅触发一次，防止死循环。 |
+| 2026-03-06 | Identity | 部门归属为空/错 | 仅依赖 is_current 快照导致缺失历史归属；不同系统 ID 体系冲突（ Zentao vs HR）。 | **归一化与自愈**：1. 强制在中间层（int 层）建立名为 `int_org_normalization` 的名称对齐模型。 2. 对身份主数据实施 SCD2 历史回溯自愈。 |
+| 2026-03-06 | Observability | 任务链路断裂 | 1000+ 项目并行执行时无法定位日志属于哪个任务。 | **Correlation ID 穿透**：MQ Payload 必须携带并由 Worker 透传 UUID。所有 Staging 表和日志必须持久化该 ID。 |
+| 2026-03-06 | dbt/Build | 字段/表名引用错误 | `mdm_entities_topology` vs `mdm_entity_topology` 拼写及单复数不一致。 | **Schema 物理对齐**：dbt 模型引用必须严格以 `sources.yml` 中定义的物理表名为准，严禁凭直觉猜测命名。 |
+| 2026-03-06 | Schema | 插件层查询慢 | GitLab/ZenTao 模型的 ForeignKey 列和高频查询字段（`project_id`, `state`, `created_at` 等）缺少索引，PostgreSQL 不会自动为 FK 建索引。 | **FK 必建索引**：所有 `ForeignKey` 列必须显式 `index=True`；DORA 指标相关的时间字段必须建索引；低选择性字段不加索引。 |
+| 2026-03-06 | Env/PS | `git push` 报红色错误但实际成功 | PowerShell 将 Git 的 stderr 进度输出（如 `To github.com:...`）误判为 `NativeCommandError`。 | **PowerShell stderr 陷阱**：Git 的 stderr 输出不等于失败，判断成功与否应看 `main -> main` 输出和实际 exit code。 |
+| 2026-03-06 | DB/SCD | UniqueViolation | SCD Type 2 与 Unique 索引冲突。查询历史记录 (`is_current=False`) 时若漏查，会导致 INSERT 触发物理唯一冲突。 | **全局 ID 感知**：在 Unique 约束存在的表上，GetOrCreate 逻辑必须无视 `is_current` 标志位进行全局查找，并采用事务 Savepoint 处理并发竞争。 |
+| 2026-03-06 | dbt/Build | `relation already exists` | dbt 构建失败残留 `__dbt_backup` 状态表。 | **原子清理**：在 `dbt build --full-refresh` 前执行 `drop_b.py` 物理清理备份表。 |
+| 2026-03-06 | DB/Lock | 模型构建无限挂起 | 未关闭的事务或交互会话持有行锁/元数据锁。 | **活锁清理**：耗时异常时通过 `pg_stat_activity` 探查并终止 `idle in transaction` 或僵尸进程。 |
+| 2026-03-06 | Type | 字段加减类型报错 | `JSONB` 提取的字段默认为文本，直接进行数值运算会报错。 | **强类型 Cast**：所有来自 JSONB 的工时/计数必须显式经过 `numeric` 或 `int` 的类型转换。 |
+| 2026-03-05 | MQ/Sync | 队列积压阻塞 | 多个高频/低频源共享单队列导致的「饥饿效应」。 | **资源隔离优先**：不同数据源必须物理隔离队列，防止洪泛。 |
+| 2026-03-05 | DB/Resil | 连接耗尽故障 | Worker 处理任务时频繁重复调用 `create_engine` 产生大量僵尸连接。 | **连接池单例化**：数据库引擎必须作为模块级单例管理。 |
+| 2026-03-05 | ZenTao | FK Violation | 禅道用 `0` 表示 `NULL` 语义（如 plan_id=0）。 | **非标语义对齐**：所有源端 ID=0 必须在入库前映射为 NULL。 |
+| 2026-03-05 | ZenTao | Auth Timeout | 长同步任务执行中途因登录态失效报错 401。 | **异常拦截重刷**：必须实现 401 拦截器自动刷新 Token。 |
+| 2026-03-04 | GitLab | MQ Timeout | 同步超大仓库时消费者异常退出。 | **心跳防御**：长任务连接串必须强制携带 `heartbeat=600`。 |
+| 2026-03-04 | ZenTao | DB Error | 无法序列化 dict 类型（psycopg2 can't adapt type dict）。 | **强类型序列化**：对非确定类型的 JSON 字段入库前强制执行 json.dumps。 |
+| 2026-03-04 | Logic | DetachedInstance | 跨函数访问已关闭 Session 的模型属性。 | **局部上下文封闭**：Worker 必须在单一事务闭环内完成所有关联查询。 |
+
+---
+*End of Log*

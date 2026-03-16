@@ -12,6 +12,7 @@
 """
 
 from datetime import UTC, datetime
+import sqlalchemy as sa
 
 from sqlalchemy import (
     JSON,
@@ -75,7 +76,7 @@ class GitLabGroup(Base):
     web_url = Column(String(500))
     created_at = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True))
-    children = relationship("GitLabGroup", backref=backref("parent", remote_side=[id]))
+    children = relationship("GitLabGroup", backref=backref("parent", remote_side="GitLabGroup.id", foreign_keys=[parent_id]))
     projects = relationship("GitLabProject", back_populates="group")
     raw_data = Column(JSON)
     members = relationship("GitLabGroupMember", back_populates="group", cascade="all, delete-orphan")
@@ -177,13 +178,13 @@ class GitLabProject(Base):
     commit_count = Column(Integer)
     tags_count = Column(Integer)
     branches_count = Column(Integer)
-    organization_id = Column(String(100), ForeignKey("mdm_organizations.org_id"))
+    organization_id = Column(Integer, ForeignKey("mdm_organizations.id"))
     organization = relationship(
         "Organization",
-        primaryjoin="and_(Organization.org_id==GitLabProject.organization_id, Organization.is_current==True)",
+        primaryjoin="and_(Organization.id==GitLabProject.organization_id, Organization.is_current==True)",
         back_populates="gitlab_projects",
     )
-    mdm_project_id = Column(String(100), ForeignKey("mdm_projects.project_id"), nullable=True)
+    mdm_project_id = Column(Integer, ForeignKey("mdm_projects.id"), nullable=True)
     from devops_collector.models.base_models import ProjectMaster
 
     mdm_project = relationship("ProjectMaster", back_populates="gitlab_repos")
@@ -416,7 +417,8 @@ class GitLabMergeRequest(Base):
                 score *= 0.2
             elif "refactor" in cat:
                 score *= 0.8
-        return min(round(score, 1), 100.0)
+        # LL #24: Explicitly cast to numeric for PostgreSQL round() support
+        return min(sa.func.round(sa.cast(score, sa.Numeric), 1), 100.0)
 
     external_issue_id = Column(String(100))
     issue_source = Column(String(50))

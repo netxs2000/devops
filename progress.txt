@@ -1,38 +1,22 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
+# 最后更新: 2026-03-16 | 操作者: Antigravity
 
-##  当前状态 (Current Focus)
-- 正在进行禅道与 GitLab 全量数据割取。已将主数据重置逻辑标准化为 `scripts/refresh_master_data.py`，并更新了开发规范。
-- [阶段：执行态 - 持续同步中]
+🎯 当前状态 (Current Focus): [阶段：执行中] 代码提交与容器化部署验证。
 
-##  进行中 (In Progress)
+🏗️ 进行中 (In Progress):
+- [P1] 提交本轮全部修改并验证 `make deploy` (2026-03-16)
 - [P1][Sync] 深度割取 GitLab 提交历史与禅道工作项（已处理 23万+ 记录）。
 
-##  接下来 (Backlog)
+📅 接下来 (Backlog):
 - [P2][Dashboard] 构建基于 Apple Style 的 DORA 指标动态看板前端页面。
-- [P3][Audit] 执行全量数据质量审计，验证新主数据下的 DORA 准确性。
+- [P2][Docs] 更新 `DATA_DICTIONARY.md` 以反映新的自增 ID Schema。
 
-##  最近完成 (Recently Completed)
+📋 最近完成 (Recently Completed):
+- (2026-03-16) [P2] 验证插件模型（GitLab/ZenTao/Jenkins）自省与关联正确性 — 全部通过。
+- (2026-03-16) [P0] 解决因 `TimestampMixin` 外键导致的全量 `AmbiguousForeignKeysError`，显式固化全部外键推断。
+- (2026-03-16) [P1] 使用 `refresh_master_data.py` 成功重置且处理了存量数据对齐。
+- (2026-03-16) [P0] 完成 `base_models.py` 及所有核心插件的 Surrogate PK 重构。
+- (2026-03-16) [P0] 执行 Alembic 迁移脚本 `24a4cf7d18f5`。
+- (2026-03-13) [P1] 完成禅道增量同步逻辑与身份映射自愈。
 
-1. **[L2][Ops] 主数据定向刷新工具标准化 (Master Data Tooling)** (2026-03-16)
-    - 结果：将临时的刷新脚本重构为标准运维工具 [`scripts/refresh_master_data.py`](scripts/refresh_master_data.py)，支持 `--scope` 参数（产品/项目/全量）及自动化解关联逻辑。
-    - 验证：在容器内通过 `--help` 指令验证，并更新 `contexts.md` 运维规范。
-2. **[L2][Frontend] DORA 指标大屏性能预聚合 (DORA Dashboard Optimization)** (2026-03-16)
-    - 结果：新增了 [`rpt_dora_dashboard_summary.sql`](dbt_project/models/marts/rpt_dora_dashboard_summary.sql) 报表模型，实现了月度趋势计算、效能评级映射及 Apple Style 视觉标签预注。
-    - 验证：成功构建为物理表，前端大屏现在可以直接通过单一 Query 获取所有产品的核心指标与趋势。
-3. **[L2][Docs] 更新开发者文档与 dbt 建模规范 (DBT Standards Documentation)** (2026-03-16)
-    - 结果：编制了全新的 [`DBT_MODELING_GUIDE.md`](docs/guides/DBT_MODELING_GUIDE.md)，明确了 Staging/Intermediate/Marts 分层职责、JSONB 防御性解析模板、ID 归一化协议。
-    - 验证：文档已关联至 `contexts.md`，内容覆盖了近期实战中总结的 JSONB 乱码清理与身份自愈逻辑。
-4. **[L2][Data] 定向刷新产品与项目主数据 (Directed Master Data Refresh)** (2026-03-16)
-    - 结果：针对 `products.csv` 编码与名称变更，实施了定向刷新策略。成功清理并重新注入了 140 个产品和 70 个项目主数据。
-    - 验证：数据库 `mdm_product` 和 `mdm_projects` 表已更新，条目确认匹配。
-5. **[L2][Resilience] 加固身份解析与业务外键韧性 (Identity & ZenTao Resilience)** (2026-03-16)
-    - 结果：增强 `IdentityManager` 并发安全与禅道 Worker `plan_id` 存在性探测，解决 Ghost Foreign Keys 导致的同步中断。
-    - 验证：成功审计 GitLab 23万+ 提交，禅道产品完成度推进至 14% 且无全局 FAILED 阻断。
-6. **[L2][Data & dbt] 建立 DORA 2.0 效能精修事实表 (fct_dora_metrics_v2)** (2026-03-14)
-    - 结果：通过禅道 browser 字段识别生产事故，并以 Release 为部署准绳，完成了高度贴合业务的 DORA 2.0 建模。
-    - 验证：指标报表已上线，支持 change_failure_rate 与 mean_time_to_recovery 的全自动归因。
-
-*更多已完成记录见 [progress_archive.md](file:///c:/Users/netxs/devops/devops/progress_archive.md)*
-
----
-*最后更新时间：2026-03-16 13:50 (Antigravity)*
+签名：Antigravity-AI
