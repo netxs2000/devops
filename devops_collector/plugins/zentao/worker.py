@@ -389,7 +389,14 @@ class ZenTaoWorker(BaseWorker):
             est = data.get("estimate")
             issue.estimate = est if isinstance(est, (dict, list)) else str(est)
 
-        issue.plan_id = _safe_int(data.get("plan"))
+        # 业务韧性：验证 plan_id 物理存在，防止由于脏数据或逻辑删除导致的外键冲突 (ForeignKeyViolation)
+        plan_id = _safe_int(data.get("plan"))
+        if plan_id:
+            existing_plan = self.session.query(ZenTaoProductPlan).filter_by(id=plan_id).first()
+            if not existing_plan:
+                logger.warning(f"Plan {plan_id} not found for issue {data.get('id')}, ignoring to prevent crash.")
+                plan_id = None
+        issue.plan_id = plan_id
         issue.title = _safe_str(data.get("title") or data.get("name"))
         issue.status = _safe_str(data.get("status"))
         issue.priority = _safe_int(data.get("priority") or data.get("pri"))
@@ -650,8 +657,14 @@ class ZenTaoWorker(BaseWorker):
         else:
             rel.build_id = None
 
-        # 仅同步 API 直接提供的计划关联 (如有)
-        rel.plan_id = _safe_int(data.get("plan"))
+        # 业务韧性：仅同步 API 直接提供的计划关联且必须物理存在
+        plan_id = _safe_int(data.get("plan"))
+        if plan_id:
+            existing_plan = self.session.query(ZenTaoProductPlan).filter_by(id=plan_id).first()
+            if not existing_plan:
+                logger.warning(f"Plan {plan_id} not found for release {data.get('id')}, setting to NULL.")
+                plan_id = None
+        rel.plan_id = plan_id
 
         opened = _safe_str(data.get("openedBy"))
         rel.opened_by = str(opened) if opened else None

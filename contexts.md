@@ -84,6 +84,8 @@
 - **通信机制**: 跨组件通信通过 `CustomEvent` 实现，严禁随意污染全局 `window` 命名空间。
 
 ## 7. 数据建模与 dbt (Data Transformation)
+> 📘 **开发指南**: 详细的模型开发手册及代码模式请参见 [`docs/guides/DBT_MODELING_GUIDE.md`](docs/guides/DBT_MODELING_GUIDE.md)。
+
 - **分层逻辑**: 
     | 层级 | 前缀 | 说明 |
     | :--- | :--- | :--- |
@@ -291,6 +293,7 @@
 ### 12.3 项目操作速查 (Project Operational Commands)
 - **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
 - **代码自查 (Self-Review Routine)**: 交付前必须运行 `/code-review` 和 `/lint` 流水线。
+- **主数据重置**: 需要定向刷新产品、项目或组织架构时，执行 `python scripts/refresh_master_data.py --scope all --force`。
 
 
 ## 13. 分支开发与版本控制规范 (Branching & Versioning)

@@ -74,37 +74,55 @@ class IdentityManager:
 
         # 6. 建立映射关系 (如果不存在)
         if not mapping:
-            # 使用 Postgres ON CONFLICT DO NOTHING 彻底避免并发击穿
-            stmt = insert(IdentityMapping).values(
-                global_user_id=user.global_user_id if user else None,
-                source_system=source,
-                external_user_id=ext_id_str,
-                external_username=name,
-                external_email=email_lower,
-                mapping_status="AUTO" if user and user.is_survivor else "PENDING",
-                confidence_score=1.0 if user and user.is_survivor else 0.5,
-            ).on_conflict_do_nothing(
-                index_elements=["source_system", "external_user_id"]
-            )
-            session.execute(stmt)
-            # 对于全局用户的第二个联合唯一键也要提供保护
+            # 并发加固：在插入前再次尝试根据 Global User ID 查找，防止 uq_source_global_user 冲突
             if user:
-                stmt_global = insert(IdentityMapping).values(
-                    global_user_id=user.global_user_id,
-                    source_system=source,
-                    external_user_id=ext_id_str,
-                    external_username=name,
-                    external_email=email_lower,
-                    mapping_status="AUTO" if user.is_survivor else "PENDING",
-                    confidence_score=1.0 if user.is_survivor else 0.5,
-                ).on_conflict_do_nothing(
-                    index_elements=["source_system", "global_user_id"]
-                )
-                session.execute(stmt_global)
+                mapping = session.query(IdentityMapping).filter_by(
+                    source_system=source, global_user_id=user.global_user_id
+                ).first()
+            
+            if not mapping:
+                try:
+                    # 使用子事务保护，防止 IntegrityError 破坏外部 Session
+                    with session.begin_nested():
+                        # 第一步：处理 external_user_id 冲突
+                        stmt = insert(IdentityMapping).values(
+                            global_user_id=user.global_user_id if user else None,
+                            source_system=source,
+                            external_user_id=ext_id_str,
+                            external_username=name,
+                            external_email=email_lower,
+                            mapping_status="AUTO" if user and user.is_survivor else "PENDING",
+                            confidence_score=1.0 if user and user.is_survivor else 0.5,
+                        ).on_conflict_do_nothing(
+                            index_elements=["source_system", "external_user_id"]
+                        )
+                        session.execute(stmt)
+
+                        # 第二步：处理 global_user_id 冲突 (如果 user 存在且没触发第一步冲突)
+                        if user:
+                            # 再次使用子事务或直接执行 ON CONFLICT (后者更稳健)
+                            stmt_global = insert(IdentityMapping).values(
+                                global_user_id=user.global_user_id,
+                                source_system=source,
+                                external_user_id=ext_id_str,
+                                external_username=name,
+                                external_email=email_lower,
+                                mapping_status="AUTO" if user.is_survivor else "PENDING",
+                                confidence_score=1.0 if user.is_survivor else 0.5,
+                            ).on_conflict_do_nothing(
+                                index_elements=["source_system", "global_user_id"]
+                            )
+                            session.execute(stmt_global)
+                    session.flush()
+                except Exception as e:
+                    # 如果仍有冲突（极少数情况），不再报错，由后续查询补齐
+                    logger.debug(f"Recovered from concurrent identity insertion: {e}")
+                    session.rollback()
 
             # 为了使 session 状态保持一致，重新查询 mapping
             mapping = session.query(IdentityMapping).filter_by(source_system=source, external_user_id=ext_id_str).first()
-            logger.info(f"建立身份映射查询结束: {source}:{ext_id_str}")
+            if mapping:
+                 logger.info(f"Identity mapping secured: {source}:{ext_id_str}")
 
         if user:
             cls._local_cache[cache_key] = user.global_user_id
