@@ -59,7 +59,7 @@ def refresh_master_data(scope):
                 "UPDATE zentao_executions SET mdm_project_id = NULL",
                 "UPDATE gitlab_projects SET mdm_project_id = NULL",
                 "UPDATE mdm_entity_topology SET project_id = NULL",
-                "UPDATE commit_metrics SET project_id = NULL",
+                "UPDATE rpt_commit_metrics SET project_id = NULL",
                 "UPDATE mdm_compliance_issues SET entity_id = NULL WHERE issue_type IN ('PROJECT', 'SERVICE')"
             ]
             
@@ -80,13 +80,13 @@ def refresh_master_data(scope):
             
         if scope in ["all", "products"]:
             logger.info("清理产品主表 (处理自引用约束)...")
-            conn.execute(text("UPDATE mdm_product SET parent_product_id = NULL"))
-            conn.execute(text("DELETE FROM mdm_product"))
+            conn.execute(text("UPDATE mdm_products SET parent_product_id = NULL"))
+            conn.execute(text("DELETE FROM mdm_products"))
 
         if scope == "all":
             logger.info("清理组织架构 (处理自引用约束)...")
-            conn.execute(text("UPDATE mdm_organizations SET parent_org_id = NULL"))
-            conn.execute(text("DELETE FROM mdm_organizations WHERE org_id != 'ORG-HQ'"))
+            conn.execute(text("UPDATE mdm_organizations SET parent_id = NULL"))
+            conn.execute(text("DELETE FROM mdm_organizations WHERE org_code != 'ORG-HQ'"))
 
     # 3. 重新注入数据
     logger.info("第三阶段：重新注入主数据...")

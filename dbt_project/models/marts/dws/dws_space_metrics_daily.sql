@@ -26,7 +26,7 @@ satisfaction as (
         u.user_id,
         s.date as metric_date,
         avg(s.score) as avg_satisfaction_score
-    from {{ source('raw', 'satisfaction_records') }} s
+    from {{ source('raw', 'rpt_satisfaction_records') }} s
     join {{ ref('stg_mdm_identities') }} u on s.user_email = u.email
     group by 1, 2
 ),

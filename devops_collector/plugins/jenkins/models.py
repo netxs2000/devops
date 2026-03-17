@@ -50,14 +50,14 @@ class JenkinsJob(Base):
 
     # MDM 拓扑关联与部署属性
     mdm_project_id = Column(
-        String(100),
-        ForeignKey("mdm_projects.project_id"),
+        Integer,
+        ForeignKey("mdm_projects.id"),
         nullable=True,
         comment="关联的 MDM 项目 ID",
     )
     mdm_product_id = Column(
-        String(100),
-        ForeignKey("mdm_product.product_id"),
+        Integer,
+        ForeignKey("mdm_products.id"),
         nullable=True,
         comment="关联的 MDM 产品 ID",
     )

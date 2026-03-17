@@ -1,6 +1,6 @@
 
 with source as (
-    select * from {{ source('raw', 'mdm_epic') }}
+    select * from {{ source('raw', 'mdm_epics') }}
 ),
 
 renamed as (

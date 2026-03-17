@@ -46,7 +46,7 @@ def seed_organizations(session: Session, csv_path: Path):
 
     # Clear existing organizations to start fresh
     session.execute(text("UPDATE mdm_identities SET department_id = NULL"))
-    session.execute(text("UPDATE mdm_product SET owner_team_id = NULL"))
+    session.execute(text("UPDATE mdm_products SET owner_team_id = NULL"))
     session.execute(text("UPDATE mdm_organizations SET parent_org_id = NULL"))
     session.execute(text("DELETE FROM mdm_organizations"))
     session.commit()

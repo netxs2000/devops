@@ -16,6 +16,12 @@ sources:
         description: "外部账号映射关系表"
       - name: mdm_organizations
         description: "组织架构主数据表"
+      - name: mdm_companies
+        identifier: mdm_companies
+        description: "集团公司/主体表"
+      - name: mdm_vendors
+        identifier: mdm_vendors
+        description: "外部供应商表"
 
       # 2. GitLab 原始数据 (Engineering Activity)
       - name: gitlab_projects
@@ -63,14 +69,16 @@ sources:
       # 5. 其他 MDM 子系统与元数据 (System & Cost)
       - name: mdm_projects
         description: "业务主项目定义表"
-      - name: mdm_epic
+      - name: mdm_epics
+        identifier: mdm_epics
         description: "跨团队史诗需求表"
       - name: mdm_entity_topology
         description: "实体拓扑关系表"
       - name: mdm_resource_costs
         identifier: stg_mdm_resource_costs
         description: "资源与人力费率快照表"
-      - name: satisfaction_records
+      - name: rpt_satisfaction_records
+        identifier: rpt_satisfaction_records
         description: "SPACE 框架满意度调查记录表 (Satisfaction)"
 
       # 6. 禅道原始数据 (Project & Quality Management)

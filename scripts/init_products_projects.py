@@ -48,10 +48,12 @@ def init_products(session: Session):
     if not PRD_CSV.exists():
         return {}
     logger.info("同步产品主数据...")
-    prod_map = {}
+    prod_map_obj = {}  # code -> Object
+    prod_map_id = {}    # code -> Integer ID
 
     # 预加载组织和用户索引
-    orgs = {o.org_name: o.org_id for o in session.query(Organization).filter_by(is_current=True).all()}
+    # 注意：Organization 现在使用 org_code
+    orgs = {o.org_name: o.id for o in session.query(Organization).filter_by(is_current=True).all()}
     email_idx, name_idx = build_user_indexes(session)
 
     # 第一遍：创建产品并构建名称映射 (First Pass: Create Products & Build Map)
@@ -63,17 +65,19 @@ def init_products(session: Session):
             if not name:
                 continue
 
-            prod_id = row.get("PRODUCT_ID", "").strip()
-            # 自动生成ID逻辑
-            final_id = prod_id if prod_id else f"PRD-{uuid.uuid5(uuid.NAMESPACE_DNS, name).hex[:8].upper()}"
+            # 业务主键
+            prod_code = row.get("PRODUCT_ID", "").strip()
+            if not prod_code:
+                prod_code = f"PRD-{uuid.uuid5(uuid.NAMESPACE_DNS, name).hex[:8].upper()}"
 
-            # 创建/更新产品对象
-            product = session.query(Product).filter_by(product_name=name).first()
+            # 创建/更新产品对象 (使用 product_code)
+            product = session.query(Product).filter_by(product_code=prod_code).first()
             if not product:
-                product = Product(product_id=final_id, product_name=name, product_description=name, version_schema="SemVer")
+                product = Product(product_code=prod_code, product_name=name, product_description=name, version_schema="SemVer", is_current=True)
                 session.add(product)
 
             # 更新属性 (Update Attributes)
+            product.product_name = name
             product.node_type = row.get("节点类型", row.get("node_type", "APP")).strip().upper()
             product.category = row.get("产品分类", row.get("category", "")).strip()
 
@@ -81,33 +85,29 @@ def init_products(session: Session):
             team_name = row.get("负责团队", row.get("owner_team_id", "")).strip()
             if team_name in orgs:
                 product.owner_team_id = orgs[team_name]
+            elif team_name:
+                # 尝试通过 org_code 匹配
+                org_by_code = session.query(Organization).filter_by(org_code=team_name).first()
+                if org_by_code:
+                    product.owner_team_id = org_by_code.id
 
             # 人员解析
-            pm_val = row.get("产品经理", row.get("pm_email", "")).strip()
-            uid = resolve_user(pm_val, email_idx, name_idx, "产品经理")
-            if uid:
-                product.product_manager_id = uid
-
-            dev_val = row.get("开发经理", "").strip()
-            uid = resolve_user(dev_val, email_idx, name_idx, "开发经理")
-            if uid:
-                product.dev_lead_id = uid
-
-            qa_val = row.get("测试经理", "").strip()
-            uid = resolve_user(qa_val, email_idx, name_idx, "测试经理")
-            if uid:
-                product.qa_lead_id = uid
-
-            rel_val = row.get("发布经理", "").strip()
-            uid = resolve_user(rel_val, email_idx, name_idx, "发布经理")
-            if uid:
-                product.release_lead_id = uid
+            for csv_col, attr in [
+                ("产品经理", "product_manager_id"),
+                ("开发经理", "dev_lead_id"),
+                ("测试经理", "qa_lead_id"),
+                ("发布经理", "release_lead_id"),
+            ]:
+                val = row.get(csv_col, "").strip()
+                uid = resolve_user(val, email_idx, name_idx, csv_col)
+                if uid:
+                    setattr(product, attr, uid)
 
             session.flush()
-            # 记录到映射表 (Name -> ID) 和 (ID -> ID)
-            prod_map[name] = product.product_id
-            prod_map[product.product_id] = product.product_id
-
+            # 记录到映射表 (Code -> ID)
+            prod_map_id[prod_code] = product.id
+            prod_map_id[name] = product.id  # 支持名称查找
+            
             # 暂存行数据以便第二遍处理父级关系
             product_rows.append((product, row))
 
@@ -115,11 +115,11 @@ def init_products(session: Session):
     for product, row in product_rows:
         parent_ref = row.get("上级产品ID", row.get("parent_product_id", "")).strip()
         if parent_ref:
-            # 尝试通过 名称 或 ID 查找父级 ID
-            parent_id = prod_map.get(parent_ref)
+            # 尝试通过 名称 或 Code 查找父级 ID
+            parent_id = prod_map_id.get(parent_ref)
             if parent_id:
                 # 防止自引用循环
-                if parent_id != product.product_id:
+                if parent_id != product.id:
                     product.parent_product_id = parent_id
                 else:
                     logger.warning(f"Product {product.product_name} cannot set itself as parent.")
@@ -129,38 +129,43 @@ def init_products(session: Session):
             product.parent_product_id = None
 
     session.commit()
-    return prod_map
+    return prod_map_id
 
 
-def init_projects(session: Session, prod_map):
+def init_projects(session: Session, prod_map_id):
     if not PROJ_CSV.exists():
         return
     logger.info("同步项目主数据...")
 
     email_idx, name_idx = build_user_indexes(session)
+    # 预加载组织
+    orgs_by_name = {o.org_name: o.id for o in session.query(Organization).filter_by(is_current=True).all()}
 
     with open(PROJ_CSV, encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            code = row.get("项目代号", "").strip()
+            code_val = row.get("项目代号", "").strip()
             name = row.get("项目名称", "").strip()
             prod_name = row.get("所属产品", "").strip()
 
-            if not code or not name:
+            if not code_val or not name:
                 continue
 
-            proj_id = f"PROJ-{code}"
-            project = session.query(ProjectMaster).filter_by(project_id=proj_id).first()
+            proj_code = f"PROJ-{code_val}"
+            project = session.query(ProjectMaster).filter_by(project_code=proj_code).first()
             if not project:
-                project = ProjectMaster(project_id=proj_id, project_name=name, status="ACTIVE", is_current=True)
+                project = ProjectMaster(project_code=proj_code, project_name=name, status="ACTIVE", is_current=True)
                 session.add(project)
 
             # 关联部门 (通过名称反查ID)
             dept_name = row.get("负责部门", "").strip()
-            if dept_name:
-                org = session.query(Organization).filter_by(org_name=dept_name).first()
-                if org:
-                    project.org_id = org.org_id
+            if dept_name in orgs_by_name:
+                project.org_id = orgs_by_name[dept_name]
+            elif dept_name:
+                 # 尝试通过 org_code 匹配
+                org_by_code = session.query(Organization).filter_by(org_code=dept_name).first()
+                if org_by_code:
+                    project.org_id = org_by_code.id
 
             # 关联代码仓库
             # 建立 entity_topology 关联
@@ -169,27 +174,28 @@ def init_projects(session: Session, prod_map):
                 # 确保 SystemRegistry 存在
                 system = ensure_system_registry(session)
 
+                # 必须先 flush 确保 project 有 ID
+                session.flush()
+
                 # 检查是否已存在关联
-                topology = session.query(EntityTopology).filter_by(project_id=proj_id, external_resource_id=repo_url, element_type="source-code").first()
+                topology = session.query(EntityTopology).filter_by(
+                    project_id=project.id, 
+                    external_resource_id=repo_url, 
+                    element_type="source-code"
+                ).first()
 
                 if not topology:
                     topology = EntityTopology(
-                        project_id=proj_id,
+                        project_id=project.id,
                         service_id=None,
-                        system_code=system.system_code,
+                        system_id=system.id,
                         external_resource_id=repo_url,
                         resource_name=urlparse(repo_url).path.strip("/").removesuffix(".git"),
                         element_type="source-code",
                         is_active=True,
                     )
                     session.add(topology)
-                    logger.info(f"Created topology link for project {proj_id} -> {repo_url}")
-
-                # 保留原来的 description 逻辑作为备份显示
-                if not project.description:
-                    project.description = ""
-                if repo_url not in project.description:
-                    project.description += f"\nRepo: {repo_url}"
+                    logger.info(f"Created topology link for project {proj_code} -> {repo_url}")
 
             # 关联项目成员 (支持邮箱或姓名)
             for csv_col, attr in [
@@ -206,13 +212,13 @@ def init_projects(session: Session, prod_map):
 
             session.flush()
             # 建立产品关联
-            target_prod_id = prod_map.get(prod_name)
+            target_prod_id = prod_map_id.get(prod_name)
             if target_prod_id:
-                rel = session.query(ProjectProductRelation).filter_by(project_id=proj_id, product_id=target_prod_id).first()
+                rel = session.query(ProjectProductRelation).filter_by(project_id=project.id, product_id=target_prod_id).first()
                 if not rel and project.org_id:
                     session.add(
                         ProjectProductRelation(
-                            project_id=proj_id,
+                            project_id=project.id,
                             product_id=target_prod_id,
                             org_id=project.org_id,
                             relation_type="PRIMARY",
