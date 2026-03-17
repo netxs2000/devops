@@ -51,3 +51,7 @@
 
 ---
 *End of Log*
+- **Alembic 迁移空库报错 (2026-03-17)**: 
+    - **现象**: 在空数据库上执行 `alembic upgrade head` 时，若脚本包含 `drop_table` 但表不存在，会导致 `UndefinedTable` 错误中断流水线。
+    - **原因**: Autogenerate 脚本捕获了与当前模型无关但存在于旧 DB 中的表。
+    - **对策**: 在 `upgrade()` 中使用 `inspector.get_table_names()` 预检，或使用 `stamp head` 强行跳过已由 `Base.metadata.create_all` 构建的初始态。
