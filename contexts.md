@@ -46,7 +46,19 @@
 - **Security Scans**: 采用 **CI-Driven** 模式。DevOps 平台不运行本地扫描器（如 Java/Dependency-Check），而是通过 API 接收 CI 流水线上传的 JSON 报告。这降低了平台容器的体积与资源消耗。
 
 ## 5. 数据库开发规范 (Database & SCD)
-- **审计与安全性 (分层要求)**:
+
+### 5.1 Surrogate PK 准则 (Surrogate PK Principle) [MANDATORY]
+- **物理主键 (Physical PK)**: **所有**数据库表（除部分 N:N 关联表外）必须强制包含一个名为 `id` 的物理主键，严禁使用业务编码作为物理 PK。
+- **主键类型 (PK Types)**:
+    - `User` (mdm_identities): 使用 `UUID` (字段名为 `global_user_id` 并别名为 `id`)，以支持多源身份归一。
+    - **其它表**: 统一使用 **BigInteger** 自增主键。
+- **关联解耦 (Relationship Decoupling)**: 所有的 `ForeignKey` 必须指向父表的物理 `id`。严禁跨表透传业务编码（如 `project_id`, `org_id`）作为关联手段，防止业务重命名时触发级联故障。
+- **业务标识 (Logical Keys)**: 原有的 `org_id`, `project_id`, `product_id` 等业务键降级为逻辑标识，重命名为 `org_code`, `project_code`, `product_code` 等，并设置 `UNIQUE INDEX`，仅用于数据导入时的匹配。
+- **命名公约 (Naming Convention)**:
+    - 后缀 `_id`: 专指指向物理 PK 的外键（BigInt/UUID）。
+    - 后缀 `_code`: 专指业务逻辑编码（String），如 `cost_center_code`。
+
+### 5.2 审计与安全性 (分层要求)
     - **MDM 层 (`mdm_*`)**: 强制继承 `TimestampMixin`（`created_at`, `updated_at`）+ `SCDMixin`（`is_deleted`, `is_current`, `effective_from/to`）。SCD 机制已覆盖软删除与版本追踪。
     - **系统层 (`sys_*`)**: 强制继承 `TimestampMixin`。RBAC 关联表（如 `sys_user_roles`, `sys_role_menu`）应至少包含 `created_at`，以支持安全审计。
     - **插件层 (`{source}_*`)**: 不强制继承 `TimestampMixin`。插件模型的 `created_at`/`updated_at` 保留**源系统 API 返回的时间语义**（如 MR 在 GitLab 的创建时间），不与系统入库时间混淆。生命周期由 `sync_status` 管理。
@@ -289,6 +301,25 @@
 4.  **配置/路由定义时刻 (The Setup Moment)**：新增 API Router、修改 `.env.example` 或 `requirements.txt` 后。
 
 **执行准则**：AI 应先执行文档同步，最后在回复中通过 `[Status]: Documentation Synced` 闭环。
+
+### 12.5 会话交接与上下文连续性 (Session Handover & Continuity) [NEW/MANDATORY]
+为了解决 IDE 重启或会话切换导致的“记忆断层”，所有 Agent 必须严格执行以下交接协议：
+
+1.  **新会话首条红线 (Cold Start Redline)**：
+    - 任何新会话的**第一条回复**，必须首先执行 `/session-handover` 工作流。
+    - **严禁**在未确认当前 Git 分支、脏代码状态及 `progress.txt` 进展前直接修改代码。
+    - 回复首部必须包含 **📍 会话恢复摘要**，列出：`Branch`, `Status`, `Focus`, `Backlog`。
+
+2.  **原子任务快照 (Atomic Steps in progress.txt)**：
+    - `🏗️ 进行中` 的任务必须拆解为 3-5 个原子化的可勾选子任务（Checkbox）。
+    - 正在执行的子任务末尾应标注 `(Doing)`，已完成的标注 `(Done)`。
+
+3.  **接力留言 (Handover Memory)**：
+    - 每次任务中断或会话结束前，必须在 `progress.txt` 的 `🎯 当前状态` 后追加 `[Handover Memory]`。
+    - 内容包括：当前的逻辑死胡同、已尝试失败的方案、下一步建议尝试的 API/函数。
+
+4.  **物理真实高于逻辑推理**：
+    - 严禁回答“我记得做完了”。必须通过 `git log`, `git status`, `ls` 的输出作为进度的唯一判定标准。
 
 ### 12.3 项目操作速查 (Project Operational Commands)
 - **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
