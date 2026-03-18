@@ -37,21 +37,14 @@ class MergeRequestMixin:
     def _save_mrs_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存合并请求记录。
 
-        第一阶段：Extract & Load (Staging) - 原始数据落盘
+        第一阶段：Extract & Load (Staging) - 原始数据落盘 (COPY FROM 批量)
         第二阶段：Transform & Load (DW) - 业务逻辑解析
 
         Args:
             project (GitLabProject): 关联的项目实体。
             batch (List[dict]): 包含多个 MR 原始数据的列表。
         """
-        for data in batch:
-            self.save_to_staging(
-                source="gitlab",
-                entity_type="merge_request",
-                external_id=data["id"],
-                payload=data,
-                schema_version=self.SCHEMA_VERSION,
-            )
+        self.bulk_save_to_staging("gitlab", "merge_request", batch)
         self._transform_mrs_batch(project, batch)
 
     def _transform_mrs_batch(self, project: GitLabProject, batch: list[dict]) -> None:

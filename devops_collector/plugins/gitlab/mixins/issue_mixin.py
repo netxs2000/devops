@@ -49,14 +49,7 @@ class IssueMixin:
             project (GitLabProject): 关联的 GitLabProject 模型对象。
             batch (List[dict]): 包含多个 Issue 原始 JSON 数据的列表。
         """
-        for data in batch:
-            self.save_to_staging(
-                source="gitlab",
-                entity_type="issue",
-                external_id=data["id"],
-                payload=data,
-                schema_version=self.SCHEMA_VERSION,
-            )
+        self.bulk_save_to_staging("gitlab", "issue", batch)
         self._transform_issues_batch(project, batch)
 
     def _transform_issues_batch(self, project: GitLabProject, batch: list[dict]) -> None:

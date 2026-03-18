@@ -34,21 +34,14 @@ class PipelineMixin:
         """批量保存流水线及其基本指标。
 
         此方法包含两个步骤：
-        1. 将原始数据保存到 Staging 表。
+        1. 将原始数据保存到 Staging 表 (COPY FROM 批量)。
         2. 将数据转换并保存到业务模型表 (Pipeline)。
 
         Args:
             project (GitLabProject): 关联的项目实体。
             batch (List[dict]): 流水线原始数据列表。
         """
-        for data in batch:
-            self.save_to_staging(
-                source="gitlab",
-                entity_type="pipeline",
-                external_id=data["id"],
-                payload=data,
-                schema_version=self.SCHEMA_VERSION,
-            )
+        self.bulk_save_to_staging("gitlab", "pipeline", batch)
         self._transform_pipelines_batch(project, batch)
 
     def _transform_pipelines_batch(self, project: GitLabProject, batch: list[dict]) -> None:
@@ -89,20 +82,13 @@ class PipelineMixin:
     def _save_deployments_batch(self, project: GitLabProject, batch: list[dict]) -> None:
         """批量保存部署信息。
 
-        包含 Staging 和 Transform 两个阶段。
+        包含 Staging (COPY FROM 批量) 和 Transform 两个阶段。
 
         Args:
             project (GitLabProject): 关联的项目实体。
             batch (List[dict]): 部署记录原始数据列表。
         """
-        for data in batch:
-            self.save_to_staging(
-                source="gitlab",
-                entity_type="deployment",
-                external_id=data["id"],
-                payload=data,
-                schema_version=self.SCHEMA_VERSION,
-            )
+        self.bulk_save_to_staging("gitlab", "deployment", batch)
         self._transform_deployments_batch(project, batch)
 
     def _transform_deployments_batch(self, project: GitLabProject, batch: list[dict]) -> None:

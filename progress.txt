@@ -1,24 +1,27 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
-# 最后更新: 2026-03-17 | 操作者: Antigravity
+# 最后更新: 2026-03-18 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-建立并验证了会话交接协议与 Surrogate PK 重构。目前系统已通过容器化部署验证，数据库 Schema 已对齐。 [阶段：执行中]
+完成数据加载器批量写入优化。GitLab/ZenTao 全链路 Staging 升级为 COPY FROM，已在容器内验证通过。 [阶段：执行中]
 
 🏗️ 进行中 (In Progress)
 - [P1] 全量 GitLab/禅道数据同步割取 (预计 23W+ 记录) (2026-03-18)
+  - [x] 验证 ZenTao 标题缺失兜底方案 (已生效，SUCCESS 记录增长) (2026-03-17)
+  - [ ] 累计同步 GitLab 提交 4.4k+，禅道 Issue 1.1k+，同步日志近 2k (数据稳健增长中) (2026-03-18)
   - [ ] 验证 20万+ 记录下的 dbt 增量构建性能 (Pending)
   - [ ] 同步速率监控埋点添加 (Pending)
 
 📅 接下来 (Backlog)
-- [P2] 优化数据加载器 (Generic Loader) 性能 (2026-03-19)
+- [P2] 基于 Nexus 分析脚本构建定期僵尸资产清理工具 (2026-03-xx)
+- [P2] 集成 SonarQube 插件，通过代码指纹源头排查第三方依赖安全漏洞 (CVE) (2026-03-xx)
 - [P2][Dashboard] 构建基于 Apple Style 的 DORA 指标动态看板前端页面。
 - [P2][Docs] 更新 `DATA_DICTIONARY.md` 以反映新的自增 ID Schema。
 
 📋 最近完成 (Recently Completed)
-- (2026-03-17) [P0] 修复 Alembic 迁移死锁与空库报错。解决方法：增加表存在性校验并执行 `stamp head` 对齐状态。
-- (2026-03-17) [P1] 固化会话交接文明规程，解决 AI 重启“金鱼记忆”问题。
+- (2026-03-18) [P2] 数据加载器批量写入优化完成。GitLab Issue/MR/Pipeline + ZenTao Issue/Task Staging 升级为 COPY FROM。预计提速 3-5x。
+- (2026-03-18) [S] Nexus 漏洞整合能力 Spike 完成。结论：OSS 版 API 不暴露 CVE，需 Trivy 或 SonarQube 桥接。
+- (2026-03-17) [P0] 修复 Alembic 迁移死锁与空库报错。
 - (2026-03-17) [P0] Surrogate PK 系统性切换完成，统一物理 ID 体系。
-- (2026-03-17) [L2] 建立“会话交接红线”规范，强化上下文连续性保障。
 - (2026-03-16) [P0] 解决因 `TimestampMixin` 外键导致的全量 `AmbiguousForeignKeysError`。
 
 签名：Antigravity-AI

@@ -675,7 +675,9 @@ class SyncLog(Base, TimestampMixin):
 
     __tablename__ = "sys_sync_logs"
     id = Column(Integer, primary_key=True, autoincrement=True, comment="自增主键")
-    project_id = Column(Integer, ForeignKey("mdm_projects.id"), index=True, comment="关联项目物理ID")
+    project_id = Column(Integer, ForeignKey("mdm_projects.id"), nullable=True, index=True, comment="关联项目物理ID")
+    external_id = Column(String(100), index=True, comment="来源系统原始ID")
+    source = Column(String(50), index=True, comment="来源系统类型 (gitlab/zentao/sonarqube)")
     status = Column(String(50), comment="同步状态 (SUCCESS/FAILED/RUNNING)")
     message = Column(Text, comment="同步结果信息")
     correlation_id = Column(String(100), index=True, comment="关联追踪ID")

@@ -45,6 +45,23 @@
 - **身份治理映射**: 全球唯一 `global_user_id` 连接各系统账号，置信度通过 `IdentityResolver` 算法动态计算。
 - **Security Scans**: 采用 **CI-Driven** 模式。DevOps 平台不运行本地扫描器（如 Java/Dependency-Check），而是通过 API 接收 CI 流水线上传的 JSON 报告。这降低了平台容器的体积与资源消耗。
 
+### 4.1 数据采集管道性能规范 (Data Pipeline Performance) [MANDATORY]
+
+> **背景**: 2026-03-18 在优化数据加载器时发现，逐条 `save_to_staging` 在 23W+ 记录量级下成为主要性能瓶颈。
+> 以下规范为从实战中提炼的强制性准则。
+
+- **Staging 写入分级 (Tiered Staging Write)**:
+    - **批量实体 (Commit, Issue, MR, Pipeline, Task, Bug)**: 必须调用 `bulk_save_to_staging()`。该方法使用 PostgreSQL 原生 `COPY FROM` + 临时表 Upsert，将 N 次数据库往返压缩为 2 次。
+    - **单条低频实体 (Product, Project, Group)**: 允许使用 `save_to_staging()`（逐条 Upsert）。
+    - **判断标准**: 若单次同步周期内该实体类型的记录数可能超过 **10 条**，必须走 `bulk_save_to_staging`。
+- **Transform 层批处理 (Batch Transform)** [MANDATORY]:
+    - **预加载模式**: 严禁在循环内逐条执行 `session.query(Model).filter_by(id=x).first()`（N+1 查询反模式）。必须在循环前通过 `session.query(Model).filter(Model.id.in_(batch_ids))` 一次性加载为 Map。
+    - **延迟 Flush**: 严禁在循环内逐条 `session.flush()`。所有 ORM 对象变更必须在循环结束后统一执行一次 `session.flush()`。
+    - **批次粒度**: 默认 batch_size = 500（`BaseMixin._process_generator`）。GitLab 类插件必须使用该框架。ZenTao 类插件若一次性获取全量数据，应在调用方先收集为 list 再传入批量方法。
+- **事务安全 (Transaction Safety)**:
+    - 批量方法执行后必须显式 `session.commit()`，失败时必须 `session.rollback()`，严禁吞噬异常。
+    - 单条兼容接口（如 `_sync_issue`）必须内部委托给批量方法，传入 `[data]`，确保代码路径统一。
+
 ## 5. 数据库开发规范 (Database & SCD)
 
 ### 5.1 Surrogate PK 准则 (Surrogate PK Principle) [MANDATORY]

@@ -25,10 +25,12 @@ def init_nexus_links():
     try:
         logger.info("开始同步 Nexus 组件关联 (高性能模式)...")
 
-        # 1. 预加载所有有效产品到内存
-        all_products = session.query(Product.product_id).filter(Product.is_current).all()
-        valid_product_ids = {p.product_id for p in all_products}
-        logger.info(f"已加载 {len(valid_product_ids)} 个有效产品。")
+        # 1. 预加载所有有效产品到内存 (映射 Code -> ID)
+        all_products = session.query(Product.id, Product.product_code).filter(Product.is_current).all()
+        # 建立双向映射或优先 Code 映射，确保 CSV 中的业务代号能找到物理 ID
+        product_code_map = {p.product_code: p.id for p in all_products}
+        product_id_set = {p.id for p in all_products}
+        logger.info(f"已加载 {len(product_code_map)} 个有效产品。")
 
         # 2. 预加载并编译所有映射规则
         rules = []
@@ -37,20 +39,27 @@ def init_nexus_links():
             for row in reader:
                 group_pat = row.get("group", "").strip()
                 name_pat = row.get("name", "").strip()
-                mdm_prod_id = row.get("mdm_product_id", "").strip()
+                mdm_prod_id_raw = row.get("mdm_product_id", "").strip()
                 match_type = row.get("match_type", "exact").strip().lower()
 
-                if (not group_pat and not name_pat) or not mdm_prod_id:
+                if (not group_pat and not name_pat) or not mdm_prod_id_raw:
                     continue
 
-                if mdm_prod_id not in valid_product_ids:
-                    logger.warning(f"MDM 产品 {mdm_prod_id} 不存在，跳过该规则.")
+                # 识别 mdm_prod_id_raw 是业务 Code 还是物理 ID
+                actual_pid = None
+                if mdm_prod_id_raw in product_code_map:
+                    actual_pid = product_code_map[mdm_prod_id_raw]
+                elif mdm_prod_id_raw.isdigit() and int(mdm_prod_id_raw) in product_id_set:
+                    actual_pid = int(mdm_prod_id_raw)
+
+                if actual_pid is None:
+                    logger.warning(f"MDM 产品标识 '{mdm_prod_id_raw}' 不存在或非当前版本，跳过该规则.")
                     continue
 
                 rule = {
                     "group": group_pat,
                     "name": name_pat,
-                    "pid": mdm_prod_id,
+                    "pid": actual_pid,
                     "type": match_type,
                     "group_re": re.compile(group_pat) if match_type == "regex" and group_pat else None,
                     "name_re": re.compile(name_pat) if match_type == "regex" and name_pat else None,
