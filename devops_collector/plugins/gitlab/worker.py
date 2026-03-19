@@ -71,7 +71,7 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
                 since_dt = max(project.last_synced_at, cutoff_date)
             else:
                 since_dt = cutoff_date
-            
+
             since = since_dt.isoformat()
 
             # 核心数据同步
@@ -107,12 +107,12 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
 
             log_msg = f"Synced: {stats['commits']} commits, {stats['issues']} issues, {stats['mrs']} MRs"
             sync_log = SyncLog(
-                project_id=project.mdm_project_id if hasattr(project, 'mdm_project_id') else None,
+                project_id=project.mdm_project_id if hasattr(project, "mdm_project_id") else None,
                 external_id=str(project_id),
                 source="gitlab",
                 status="SUCCESS",
                 message=log_msg,
-                correlation_id=self.correlation_id
+                correlation_id=self.correlation_id,
             )
             self.session.add(sync_log)
 
@@ -130,14 +130,16 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
                 p_failed = self.session.query(GitLabProject).filter_by(id=project_id).first()
                 if p_failed:
                     p_failed.sync_status = "FAILED"
-                    self.session.add(SyncLog(
-                        project_id=p_failed.mdm_project_id if hasattr(p_failed, 'mdm_project_id') else None,
-                        external_id=str(project_id),
-                        source="gitlab",
-                        status="FAILED",
-                        message=str(e)[:500],
-                        correlation_id=self.correlation_id
-                    ))
+                    self.session.add(
+                        SyncLog(
+                            project_id=p_failed.mdm_project_id if hasattr(p_failed, "mdm_project_id") else None,
+                            external_id=str(project_id),
+                            source="gitlab",
+                            status="FAILED",
+                            message=str(e)[:500],
+                            correlation_id=self.correlation_id,
+                        )
+                    )
                     self.session.commit()
             except Exception:
                 pass

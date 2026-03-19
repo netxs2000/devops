@@ -77,7 +77,7 @@ class MessageQueue:
             self.connect()
         source = task.get("source", "gitlab")
         queue_name = f"{source}_tasks"
-        
+
         # 注入 Correlation ID
         correlation_id = task.get("correlation_id")
         if not correlation_id:
@@ -88,10 +88,7 @@ class MessageQueue:
             exchange="",
             routing_key=queue_name,
             body=json.dumps(task),
-            properties=pika.BasicProperties(
-                delivery_mode=2,
-                correlation_id=correlation_id
-            ),
+            properties=pika.BasicProperties(delivery_mode=2, correlation_id=correlation_id),
         )
         logger.info(f"Published task to {queue_name} [CorrelationID: {correlation_id}]: {task}")
 

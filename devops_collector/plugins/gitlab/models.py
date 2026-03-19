@@ -12,8 +12,8 @@
 """
 
 from datetime import UTC, datetime
-import sqlalchemy as sa
 
+import sqlalchemy as sa
 from sqlalchemy import (
     JSON,
     BigInteger,

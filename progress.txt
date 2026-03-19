@@ -2,12 +2,13 @@
 # 最后更新: 2026-03-18 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-完成数据加载器批量写入优化。GitLab/ZenTao 全链路 Staging 升级为 COPY FROM，已在容器内验证通过。 [阶段：执行中]
+功能分支 `refactor/mdm-schema-standardization` 进行中。已完成数据加载器批量写入优化 (COPY FROM) 及 Surrogate PK 全量切换，正在执行合并前检查流水线。 [阶段：执行中]
 
 🏗️ 进行中 (In Progress)
 - [P1] 全量 GitLab/禅道数据同步割取 (预计 23W+ 记录) (2026-03-18)
-  - [x] 验证 ZenTao 标题缺失兜底方案 (已生效，SUCCESS 记录增长) (2026-03-17)
-  - [ ] 累计同步 GitLab 提交 4.4k+，禅道 Issue 1.1k+，同步日志近 2k (数据稳健增长中) (2026-03-18)
+  - [x] 验证 ZenTao 标题缺失兜底方案 (2026-03-17)
+  - [x] 分支 `refactor/mdm-schema-standardization` 通过 Rebase + Lint + 本地单元测试 (2026-03-19)
+  - [ ] 累计同步 GitLab 提交 4.4k+，禅道 Issue 1.1k+，同步日志近 2k (进行中)
   - [ ] 验证 20万+ 记录下的 dbt 增量构建性能 (Pending)
   - [ ] 同步速率监控埋点添加 (Pending)
 

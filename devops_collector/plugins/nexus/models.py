@@ -1,6 +1,6 @@
 """Nexus 插件数据模型。"""
 
-from sqlalchemy import JSON, BigInteger, Column, DateTime, ForeignKey, Integer, String, Index
+from sqlalchemy import JSON, BigInteger, Column, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import relationship
 
 from devops_collector.models.base_models import (
@@ -37,9 +37,7 @@ class NexusComponent(Base, TimestampMixin, SCDMixin, OwnableMixin):
     commit_sha = Column(String(100), index=True)  # 新增：直接存储 Git Commit SHA，提升 DORA 关联性能
 
     # 索引优化：为常用的查询组合建立联合索引
-    __table_args__ = (
-        Index('ix_nexus_components_lookup', 'repository', 'group', 'name'),
-    )
+    __table_args__ = (Index("ix_nexus_components_lookup", "repository", "group", "name"),)
 
     product = relationship("Product")
     assets = relationship("NexusAsset", back_populates="component", cascade="all, delete-orphan")

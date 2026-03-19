@@ -49,7 +49,7 @@ def init_products(session: Session):
         return {}
     logger.info("同步产品主数据...")
     prod_map_obj = {}  # code -> Object
-    prod_map_id = {}    # code -> Integer ID
+    prod_map_id = {}  # code -> Integer ID
 
     # 预加载组织和用户索引
     # 注意：Organization 现在使用 org_code
@@ -107,7 +107,7 @@ def init_products(session: Session):
             # 记录到映射表 (Code -> ID)
             prod_map_id[prod_code] = product.id
             prod_map_id[name] = product.id  # 支持名称查找
-            
+
             # 暂存行数据以便第二遍处理父级关系
             product_rows.append((product, row))
 
@@ -162,7 +162,7 @@ def init_projects(session: Session, prod_map_id):
             if dept_name in orgs_by_name:
                 project.org_id = orgs_by_name[dept_name]
             elif dept_name:
-                 # 尝试通过 org_code 匹配
+                # 尝试通过 org_code 匹配
                 org_by_code = session.query(Organization).filter_by(org_code=dept_name).first()
                 if org_by_code:
                     project.org_id = org_by_code.id
@@ -178,11 +178,7 @@ def init_projects(session: Session, prod_map_id):
                 session.flush()
 
                 # 检查是否已存在关联
-                topology = session.query(EntityTopology).filter_by(
-                    project_id=project.id, 
-                    external_resource_id=repo_url, 
-                    element_type="source-code"
-                ).first()
+                topology = session.query(EntityTopology).filter_by(project_id=project.id, external_resource_id=repo_url, element_type="source-code").first()
 
                 if not topology:
                     topology = EntityTopology(

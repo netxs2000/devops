@@ -12,8 +12,11 @@ from sqlalchemy.orm import sessionmaker
 sys.path.append(os.getcwd())
 
 # Ensure all models are loaded for SQLAlchemy mapper initialization
-import devops_collector.models
 from sqlalchemy.orm import configure_mappers
+
+import devops_collector.models
+
+
 try:
     configure_mappers()
 except Exception:
@@ -56,7 +59,7 @@ def sync_all_zentao_products():
                     try:
                         logger.info(f"发现远程产品: {p_data['name']} (ID: {p_data['id']})")
                         worker._sync_product(p_data["id"])
-                        session.commit() # 发现一个存一个
+                        session.commit()  # 发现一个存一个
                     except Exception as pe:
                         logger.warning(f"同步产品元数据失败 (ID: {p_data['id']}): {pe}")
                         session.rollback()

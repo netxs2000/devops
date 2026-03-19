@@ -15,17 +15,19 @@ from .models import NexusAsset, NexusComponent
 SYNC_SINCE_DATE = datetime(2024, 1, 1)
 TRACE_FILE_NAME = "devops-trace.properties"
 
+
 def _is_after_cutoff(dt_str: str | None) -> bool:
     """判断给定时间字符串是否在 cutoff_date 之后"""
     if not dt_str:
-        return True # 如果没有时间，保守起见默认拉取
+        return True  # 如果没有时间，保守起见默认拉取
     try:
         dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
         if dt.tzinfo:
             dt = dt.replace(tzinfo=None)
         return dt >= SYNC_SINCE_DATE
     except Exception:
-        return True # 解析失败默认拉取
+        return True  # 解析失败默认拉取
+
 
 logger = logging.getLogger(__name__)
 
@@ -155,14 +157,14 @@ class NexusWorker(BaseWorker):
                 comp.product_id = resolved_pid
 
             comp.raw_data = data
-            
+
             # 使用最新可用时间来进行时间隔离网判断
             # 如果资产中的 last_modified 都小于 2024 年，也可以在 asset 级别拦截
             self._sync_assets(comp, data.get("assets", []))
-            
+
             # 尝试从资产中解析追溯信息
             self._try_parse_traceability(comp)
-            
+
         self.session.commit()
 
     def _sync_assets(self, component: NexusComponent, assets_data: list[dict]) -> None:
@@ -187,12 +189,12 @@ class NexusWorker(BaseWorker):
                 size_bytes=asset_data.get("fileSize"),
                 raw_data=asset_data,
             )
-            
+
             # Nexus API lastModified example: '2022-09-08T12:00:00.000+00:00'
             last_modified_str = asset_data.get("lastModified")
             if not _is_after_cutoff(last_modified_str):
-                continue # 如果文件本身是在 2024年1月1日之前修改/创建的，跳过入库
-            
+                continue  # 如果文件本身是在 2024年1月1日之前修改/创建的，跳过入库
+
             checksums = asset_data.get("checksum", {})
             asset.checksum_sha1 = checksums.get("sha1")
             asset.checksum_sha256 = checksums.get("sha256")
@@ -209,7 +211,7 @@ class NexusWorker(BaseWorker):
         try:
             logger.info(f"Found trace file for component {component.name}: {trace_asset.path}")
             content = self.client.download_asset_content(trace_asset.download_url)
-            
+
             # 简单解析 properties 格式 (key=value)
             props = {}
             for line in content.splitlines():
@@ -217,21 +219,21 @@ class NexusWorker(BaseWorker):
                 if "=" in line and not line.startswith("#") and not line.startswith("!"):
                     k, v = line.split("=", 1)
                     props[k.strip()] = v.strip()
-            
+
             commit_sha = props.get("commit_sha")
             if commit_sha:
                 # 1. 直接填入“专座”（物理列）
                 component.commit_sha = commit_sha
-                
+
                 # 2. 同时也保留在元数据大合集里备用
                 if not component.raw_data:
                     component.raw_data = {}
-                
+
                 if "ext_info" not in component.raw_data:
                     component.raw_data["ext_info"] = {}
-                
+
                 component.raw_data["ext_info"]["commit_sha"] = commit_sha
                 logger.info(f"Successfully linked component {component.name} to commit {commit_sha}")
-                
+
         except Exception as e:
             logger.warning(f"Failed to parse trace file {trace_asset.path}: {e}")

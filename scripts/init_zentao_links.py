@@ -38,13 +38,7 @@ def ensure_system_registry(session: Session):
     """Ensure ZenTao is registered."""
     system = session.query(SystemRegistry).filter_by(system_code="zentao-prod").first()
     if not system:
-        system = SystemRegistry(
-            system_code="zentao-prod", 
-            system_name="ZenTao ALM", 
-            system_type="PROJECT", 
-            is_active=True,
-            env_tag="PROD"
-        )
+        system = SystemRegistry(system_code="zentao-prod", system_name="ZenTao ALM", system_type="PROJECT", is_active=True, env_tag="PROD")
         session.add(system)
         session.flush()
     return system
@@ -58,7 +52,7 @@ def init_product_links(session: Session):
 
     logger.info("Syncing ZenTao product links...")
     with open(PRODUCT_MAP_CSV, encoding="utf-8-sig") as f:
-        lines = [line for line in f if not line.strip().startswith('#')]
+        lines = [line for line in f if not line.strip().startswith("#")]
         reader = csv.DictReader(lines)
         for row in reader:
             try:
@@ -71,12 +65,16 @@ def init_product_links(session: Session):
                     continue
 
                 # Find MDM Product
-                mdm_product = session.query(Product).filter(
-                    (Product.product_id == mdm_ref) | 
-                    (Product.product_id == f"PRD-{mdm_ref}") |
-                    (Product.product_name == mdm_name) |
-                    (Product.product_name == mdm_ref) 
-                ).first()
+                mdm_product = (
+                    session.query(Product)
+                    .filter(
+                        (Product.product_id == mdm_ref)
+                        | (Product.product_id == f"PRD-{mdm_ref}")
+                        | (Product.product_name == mdm_name)
+                        | (Product.product_name == mdm_ref)
+                    )
+                    .first()
+                )
 
                 if not mdm_product:
                     logger.warning(f"Skip: MDM Product not found (Ref={mdm_ref}, Name={mdm_name})")
@@ -91,12 +89,12 @@ def init_product_links(session: Session):
 
                 if zt_product:
                     zt_product.mdm_product_id = mdm_product.product_id
-                    
-                    topology = session.query(EntityTopology).filter_by(
-                        system_code="zentao-prod", 
-                        external_resource_id=str(zt_product.id), 
-                        element_type="issue-tracker-product"
-                    ).first()
+
+                    topology = (
+                        session.query(EntityTopology)
+                        .filter_by(system_code="zentao-prod", external_resource_id=str(zt_product.id), element_type="issue-tracker-product")
+                        .first()
+                    )
                     if not topology:
                         topology = EntityTopology(
                             system_code="zentao-prod",
@@ -127,7 +125,7 @@ def init_project_links(session: Session):
 
     logger.info("Syncing ZenTao project/execution links...")
     with open(PROJECT_MAP_CSV, encoding="utf-8-sig") as f:
-        lines = [line for line in f if not line.strip().startswith('#')]
+        lines = [line for line in f if not line.strip().startswith("#")]
         reader = csv.DictReader(lines)
         for row in reader:
             try:
@@ -143,12 +141,16 @@ def init_project_links(session: Session):
                     session.commit()
 
                 # Find MDM Project
-                mdm_project = session.query(ProjectMaster).filter(
-                    (ProjectMaster.project_id == mdm_ref) |
-                    (ProjectMaster.project_id == f"PROJ-{mdm_ref}") |
-                    (ProjectMaster.project_name == mdm_ref) |
-                    (ProjectMaster.project_name == zt_name)
-                ).first()
+                mdm_project = (
+                    session.query(ProjectMaster)
+                    .filter(
+                        (ProjectMaster.project_id == mdm_ref)
+                        | (ProjectMaster.project_id == f"PROJ-{mdm_ref}")
+                        | (ProjectMaster.project_name == mdm_ref)
+                        | (ProjectMaster.project_name == zt_name)
+                    )
+                    .first()
+                )
 
                 if not mdm_project:
                     logger.warning(f"Skip: MDM Project not found (Ref={mdm_ref})")
@@ -163,18 +165,18 @@ def init_project_links(session: Session):
 
                 if target_node:
                     target_node.mdm_project_id = mdm_project.project_id
-                    
+
                     # Inheritance
                     search_pattern = f"%,{target_node.id},%"
                     children = session.query(ZenTaoExecution).filter(ZenTaoExecution.path.like(search_pattern), ZenTaoExecution.id != target_node.id).all()
                     for child in children:
                         child.mdm_project_id = mdm_project.project_id
 
-                    topology = session.query(EntityTopology).filter_by(
-                        system_code="zentao-prod", 
-                        external_resource_id=str(target_node.id), 
-                        element_type="issue-tracker"
-                    ).first()
+                    topology = (
+                        session.query(EntityTopology)
+                        .filter_by(system_code="zentao-prod", external_resource_id=str(target_node.id), element_type="issue-tracker")
+                        .first()
+                    )
                     if not topology:
                         topology = EntityTopology(
                             system_code="zentao-prod",
@@ -196,11 +198,11 @@ def init_project_links(session: Session):
                         if product_executions:
                             for exec_node in product_executions:
                                 exec_node.mdm_project_id = mdm_project.project_id
-                                topology = session.query(EntityTopology).filter_by(
-                                    system_code="zentao-prod", 
-                                    external_resource_id=str(exec_node.id), 
-                                    element_type="issue-tracker"
-                                ).first()
+                                topology = (
+                                    session.query(EntityTopology)
+                                    .filter_by(system_code="zentao-prod", external_resource_id=str(exec_node.id), element_type="issue-tracker")
+                                    .first()
+                                )
                                 if not topology:
                                     topology = EntityTopology(
                                         system_code="zentao-prod",

@@ -104,7 +104,7 @@ class ZenTaoWorker(BaseWorker):
                 self._sync_org_structure()
             except Exception as e:
                 logger.warning(f"Failed to sync ZenTao organization structure: {e}")
-            
+
             try:
                 self._sync_zentao_users()
             except Exception as e:
@@ -118,7 +118,7 @@ class ZenTaoWorker(BaseWorker):
             # 2. 同步层级结构 (Program -> Project -> Execution)
             # 这是一个全局同步，因为它涉及到跨项目的层级
             logger.info("Syncing ZenTao hierarchy (Programs/Projects/Executions)...")
-            
+
             # 2.1 同步项目集 Programs
             try:
                 programs = self.client.get_programs()
@@ -126,7 +126,7 @@ class ZenTaoWorker(BaseWorker):
                     self._sync_execution(product.id, p_data)
             except Exception as e:
                 logger.warning(f"Failed to sync programs: {e}")
-                
+
             # 2.2 同步项目 Projects
             try:
                 projects = self.client.get_projects()
@@ -140,7 +140,7 @@ class ZenTaoWorker(BaseWorker):
                                 p_id_list.append(_safe_int(item.get("id")))
                             else:
                                 p_id_list.append(_safe_int(item))
-                    
+
                     # 如果该项目关联到当前产品，或者它是全局的，我们就同步它
                     self._sync_execution(product.id if product.id in p_id_list else None, p_data)
             except Exception as e:
@@ -181,7 +181,8 @@ class ZenTaoWorker(BaseWorker):
                     if not _is_after_cutoff(tc_data.get("openedDate")):
                         continue
                     tc = self._sync_test_case(product.id, tc_data)
-                    if not tc: continue
+                    if not tc:
+                        continue
                     try:
                         results = self.client.get_test_results(tc.id)
                         for r_data in results:
@@ -237,14 +238,16 @@ class ZenTaoWorker(BaseWorker):
 
             # 记录成功日志
             msg = f"ZenTao product {product_id} synced successfully."
-            self.session.add(SyncLog(
-                project_id=product.mdm_project_id if hasattr(product, 'mdm_project_id') else None,
-                external_id=str(product_id),
-                source="zentao",
-                status="SUCCESS",
-                message=msg,
-                correlation_id=self.correlation_id
-            ))
+            self.session.add(
+                SyncLog(
+                    project_id=product.mdm_project_id if hasattr(product, "mdm_project_id") else None,
+                    external_id=str(product_id),
+                    source="zentao",
+                    status="SUCCESS",
+                    message=msg,
+                    correlation_id=self.correlation_id,
+                )
+            )
             self.session.commit()
         except Exception as e:
             self.session.rollback()
@@ -256,14 +259,16 @@ class ZenTaoWorker(BaseWorker):
                 p_failed = self.session.query(ZenTaoProduct).filter_by(id=product_id).first()
                 if p_failed:
                     p_failed.sync_status = "FAILED"
-                    self.session.add(SyncLog(
-                        project_id=p_failed.mdm_project_id if hasattr(p_failed, 'mdm_project_id') else None,
-                        external_id=str(product_id),
-                        source="zentao",
-                        status="FAILED",
-                        message=f"ZenTao sync failed: {str(e)[:500]}",
-                        correlation_id=self.correlation_id
-                    ))
+                    self.session.add(
+                        SyncLog(
+                            project_id=p_failed.mdm_project_id if hasattr(p_failed, "mdm_project_id") else None,
+                            external_id=str(product_id),
+                            source="zentao",
+                            status="FAILED",
+                            message=f"ZenTao sync failed: {str(e)[:500]}",
+                            correlation_id=self.correlation_id,
+                        )
+                    )
                     self.session.commit()
             except Exception as inner_e:
                 logger.error(f"Failed to record error status for product {product_id}: {inner_e}")
@@ -303,7 +308,7 @@ class ZenTaoWorker(BaseWorker):
 
     def _sync_execution(self, product_id: int | None, data: dict) -> ZenTaoExecution:
         """同步禅道层级节点（项目集/项目/迭代/阶段）。
-        
+
         Args:
             product_id: 关联的产品 ID。如果是项目集或全局项目，可能为 None。
             data: API 返回的原始数据。
@@ -325,7 +330,7 @@ class ZenTaoWorker(BaseWorker):
         exe.status = data.get("status")
         exe.parent_id = _safe_int(data.get("parent"))
         exe.path = data.get("path")
-        
+
         # 只有在明确提供或者原本没值的情况下更新 product_id
         if product_id and not exe.product_id:
             exe.product_id = product_id
@@ -337,14 +342,14 @@ class ZenTaoWorker(BaseWorker):
                 p_id = _safe_int(first_p.get("id")) if isinstance(first_p, dict) else _safe_int(first_p)
                 if p_id:
                     exe.product_id = p_id
-            
+
         # 如果还是没找到 product_id，为了满足非空约束，可能需要跳过或填一个默认值
         # 但禅道中有些节点确实没有 product_id (如顶级 Program)，我们需要确认模型是否允许为 null
         # 模型中 product_id 是 nullable=False。这可能是一个设计缺陷，因为 Program 不属于 Product。
         if not exe.product_id:
             # 暂时归口，如果全局节点不属于任何产品，则设为 None (已改为 nullable)
             exe.product_id = product_id if product_id is not None else None
-            
+
         exe.begin = _safe_date(data.get("begin"))
         exe.end = _safe_date(data.get("end"))
         exe.raw_data = data
@@ -398,9 +403,7 @@ class ZenTaoWorker(BaseWorker):
 
         # 2. 批量 Transform：预加载已存在的记录
         batch_ids = [d["id"] for d in batch]
-        existing = self.session.query(ZenTaoIssue).filter(
-            ZenTaoIssue.id.in_(batch_ids), ZenTaoIssue.type == issue_type
-        ).all()
+        existing = self.session.query(ZenTaoIssue).filter(ZenTaoIssue.id.in_(batch_ids), ZenTaoIssue.type == issue_type).all()
         existing_map = {i.id: i for i in existing}
 
         for data in batch:
@@ -414,12 +417,7 @@ class ZenTaoWorker(BaseWorker):
             issue_title = _safe_str(data.get("title") or data.get("name")) or f"Untitled {issue_type.capitalize()} {data['id']}"
 
             if not issue:
-                issue = ZenTaoIssue(
-                    id=data["id"],
-                    product_id=product_id,
-                    type=issue_type,
-                    title=issue_title
-                )
+                issue = ZenTaoIssue(id=data["id"], product_id=product_id, type=issue_type, title=issue_title)
                 if payload_est:
                     issue.estimate = payload_est
                 self.session.add(issue)
@@ -480,9 +478,7 @@ class ZenTaoWorker(BaseWorker):
 
         # 2. 批量 Transform：预加载已存在的记录
         batch_ids = [d["id"] for d in batch]
-        existing = self.session.query(ZenTaoIssue).filter(
-            ZenTaoIssue.id.in_(batch_ids), ZenTaoIssue.type == "task"
-        ).all()
+        existing = self.session.query(ZenTaoIssue).filter(ZenTaoIssue.id.in_(batch_ids), ZenTaoIssue.type == "task").all()
         existing_map = {i.id: i for i in existing}
 
         for data in batch:
@@ -491,13 +487,7 @@ class ZenTaoWorker(BaseWorker):
 
             if not issue:
                 real_exe_id = _safe_int(execution_id)
-                issue = ZenTaoIssue(
-                    id=data["id"],
-                    product_id=product_id,
-                    execution_id=real_exe_id,
-                    type="task",
-                    title=issue_title
-                )
+                issue = ZenTaoIssue(id=data["id"], product_id=product_id, execution_id=real_exe_id, type="task", title=issue_title)
                 self.session.add(issue)
             else:
                 issue.title = issue_title
@@ -556,13 +546,7 @@ class ZenTaoWorker(BaseWorker):
         if not issue:
             # 强化：如果传入的 execution_id 为 0，视为 None
             real_exe_id = _safe_int(execution_id)
-            issue = ZenTaoIssue(
-                id=data["id"], 
-                product_id=product_id, 
-                execution_id=real_exe_id, 
-                type="task",
-                title=issue_title
-            )
+            issue = ZenTaoIssue(id=data["id"], product_id=product_id, execution_id=real_exe_id, type="task", title=issue_title)
             self.session.add(issue)
         else:
             issue.title = issue_title

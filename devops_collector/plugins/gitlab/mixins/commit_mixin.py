@@ -78,24 +78,26 @@ class CommitMixin:
                 self._apply_traceability_extraction(commit)
             self._apply_commit_behavior_analysis(commit)
 
-            insert_values.append({
-                "id": commit.id,
-                "project_id": commit.project_id,
-                "short_id": commit.short_id,
-                "title": commit.title,
-                "author_name": commit.author_name,
-                "author_email": commit.author_email,
-                "message": commit.message,
-                "authored_date": commit.authored_date,
-                "committed_date": commit.committed_date,
-                "additions": commit.additions,
-                "deletions": commit.deletions,
-                "total": commit.total,
-                "is_off_hours": commit.is_off_hours,
-                "linked_issue_ids": getattr(commit, "linked_issue_ids", None),
-                "issue_source": getattr(commit, "issue_source", None),
-                "gitlab_user_id": getattr(commit, "gitlab_user_id", None),
-            })
+            insert_values.append(
+                {
+                    "id": commit.id,
+                    "project_id": commit.project_id,
+                    "short_id": commit.short_id,
+                    "title": commit.title,
+                    "author_name": commit.author_name,
+                    "author_email": commit.author_email,
+                    "message": commit.message,
+                    "authored_date": commit.authored_date,
+                    "committed_date": commit.committed_date,
+                    "additions": commit.additions,
+                    "deletions": commit.deletions,
+                    "total": commit.total,
+                    "is_off_hours": commit.is_off_hours,
+                    "linked_issue_ids": getattr(commit, "linked_issue_ids", None),
+                    "issue_source": getattr(commit, "issue_source", None),
+                    "gitlab_user_id": getattr(commit, "gitlab_user_id", None),
+                }
+            )
             commit_objs.append(commit)
 
         new_commits = []

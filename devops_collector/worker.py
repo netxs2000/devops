@@ -38,7 +38,7 @@ def process_task(ch, method, properties, body):
     """处理 MQ 消息的回调函数。"""
     task = {}
     session = None
-    
+
     # 获取 Correlation ID (优先从 properties 获取，兼容旧版本从 task 获取)
     correlation_id = properties.correlation_id
     try:
@@ -49,7 +49,7 @@ def process_task(ch, method, properties, body):
         correlation_id = correlation_id or "corrupt-payload"
 
     adapter = logging.LoggerAdapter(logger, {"correlation_id": correlation_id})
-    
+
     start_time = time.perf_counter()
     try:
         source = task.get("source", "unknown")
@@ -80,17 +80,11 @@ def process_task(ch, method, properties, body):
         # 5. 执行任务
         worker.process_task(task)
         ch.basic_ack(delivery_tag=method.delivery_tag)
-        
+
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         adapter.info(
             f"Task for {source} processed successfully.",
-            extra={
-                "metric_type": "sync_task",
-                "status": "success",
-                "source": source,
-                "job_type": job_type,
-                "duration_ms": duration_ms
-            }
+            extra={"metric_type": "sync_task", "status": "success", "source": source, "job_type": job_type, "duration_ms": duration_ms},
         )
 
     except Exception as e:
@@ -98,13 +92,7 @@ def process_task(ch, method, properties, body):
         adapter.error(
             f"Error processing task: {e}",
             exc_info=True,
-            extra={
-                "metric_type": "sync_task",
-                "status": "failure",
-                "error_type": type(e).__name__,
-                "source": source,
-                "duration_ms": duration_ms
-            }
+            extra={"metric_type": "sync_task", "status": "failure", "error_type": type(e).__name__, "source": source, "duration_ms": duration_ms},
         )
         if session:
             session.rollback()

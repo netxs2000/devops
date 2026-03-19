@@ -36,8 +36,20 @@ class TimestampMixin:
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), comment="创建时间")
     updated_at = Column(DateTime(timezone=True), onupdate=lambda: datetime.now(UTC), comment="最后更新时间")
-    created_by = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id", use_alter=True, name="fk_audit_created_by"), nullable=True, index=True, comment="创建者ID")
-    updated_by = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id", use_alter=True, name="fk_audit_updated_by"), nullable=True, index=True, comment="最后操作者ID")
+    created_by = Column(
+        UUID(as_uuid=True),
+        ForeignKey("mdm_identities.global_user_id", use_alter=True, name="fk_audit_created_by"),
+        nullable=True,
+        index=True,
+        comment="创建者ID",
+    )
+    updated_by = Column(
+        UUID(as_uuid=True),
+        ForeignKey("mdm_identities.global_user_id", use_alter=True, name="fk_audit_updated_by"),
+        nullable=True,
+        index=True,
+        comment="最后操作者ID",
+    )
 
 
 class SCDMixin:
@@ -84,7 +96,7 @@ class Organization(Base, TimestampMixin, SCDMixin):
     is_active = Column(Boolean, default=True, comment="是否启用")
     cost_center = Column(String(100), nullable=True, comment="成本中心编码")
     business_line = Column(String(50), nullable=True, comment="所属业务线/体系 (如 研发体系/交付体系/营销体系)")
-    
+
     # Relationships
     parent = relationship(
         "Organization",
@@ -118,9 +130,7 @@ class User(Base, TimestampMixin, SCDMixin):
     username = Column(String(100), comment="登录用户名")
     full_name = Column(String(200), comment="用户姓名")
     primary_email = Column(String(255), unique=True, index=True, comment="主邮箱地址")
-    department_id = Column(
-        Integer, ForeignKey("mdm_organizations.id", use_alter=True, name="fk_user_dept"), index=True, comment="所属部门ID"
-    )
+    department_id = Column(Integer, ForeignKey("mdm_organizations.id", use_alter=True, name="fk_user_dept"), index=True, comment="所属部门ID")
     position = Column(String(100), comment="职位/岗位名称")
     hr_relationship = Column(String(50), comment="人事关系 (如：正式/外协/实习)")
     location_id = Column(Integer, ForeignKey("mdm_locations.id"), nullable=True, index=True, comment="常驻办公地点ID")
@@ -141,7 +151,6 @@ class User(Base, TimestampMixin, SCDMixin):
     managed_products_as_release = relationship("Product", back_populates="release_lead", foreign_keys="Product.release_lead_id")
     project_memberships = relationship("GitLabProjectMember", back_populates="user", foreign_keys="GitLabProjectMember.user_id")
     team_memberships = relationship("TeamMember", back_populates="user", foreign_keys="TeamMember.user_id")
-
 
     total_eloc = Column(Float, default=0.0, comment="累计有效代码行数")
     eloc_rank = Column(Integer, default=0, comment="ELOC排名")

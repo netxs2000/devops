@@ -4,8 +4,7 @@
 """
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from devops_collector.config import settings
 
@@ -16,8 +15,12 @@ auth_engine = create_engine(settings.database.uri)
 # 创建认证模块专用的会话工厂
 AuthSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=auth_engine)
 
+
 # 基础类声明
-AuthBase = declarative_base()
+class AuthBase(DeclarativeBase):
+    """认证模块 SQLAlchemy 声明式基类。"""
+
+    pass
 
 
 def get_auth_db():

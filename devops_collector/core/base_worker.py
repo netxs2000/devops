@@ -134,11 +134,7 @@ class BaseWorker(ABC):
         except Exception as e:
             # 如果核心 Upsert 语法失败（例如某些不支持 upsert 的 PG 版本），则尝试回退到手动查询更新
             self.logger.debug(f"Upsert failed, falling back to manual merge for {entity_type}:{external_id}: {e}")
-            existing = self.session.query(RawDataStaging).filter_by(
-                source=source, 
-                entity_type=entity_type, 
-                external_id=str(external_id)
-            ).first()
+            existing = self.session.query(RawDataStaging).filter_by(source=source, entity_type=entity_type, external_id=str(external_id)).first()
             if existing:
                 for k, v in data.items():
                     setattr(existing, k, v)
@@ -147,7 +143,7 @@ class BaseWorker(ABC):
                 try:
                     self.session.flush()
                 except Exception:
-                    self.session.rollback() # 真的没法救了再 rollback
+                    self.session.rollback()  # 真的没法救了再 rollback
 
     def bulk_save_to_staging(self, source: str, entity_type: str, items: list[dict], id_field: str = "id", schema_version: str = "1.0") -> None:
         """高性能批量存放原始数据到 Staging 层。
@@ -165,7 +161,7 @@ class BaseWorker(ABC):
 
         # 获取底层 psycopg 的连接对象
         raw_conn = self.session.connection().connection
-        if hasattr(raw_conn, 'dbapi_connection'):
+        if hasattr(raw_conn, "dbapi_connection"):
             raw_conn = raw_conn.dbapi_connection
 
         csv_file = io.StringIO()

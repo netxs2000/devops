@@ -26,6 +26,7 @@ def upgrade() -> None:
     # 检查表是否存在后再删除，防止在从空库初始化时报错
     bind = op.get_bind()
     from sqlalchemy import inspect
+
     inspector = inspect(bind)
     existing_tables = inspector.get_table_names()
 

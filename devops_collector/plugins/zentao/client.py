@@ -59,6 +59,7 @@ class ZenTaoClient(BaseClient):
     def _get(self, endpoint: str, params: dict[str, Any] | None = None, allow_404: bool = False, is_retry: bool = False) -> Any:
         """发送 GET 请求，支持 Token 自动过期重连及 404 容错。"""
         import requests
+
         try:
             return super()._get(endpoint, params)
         except requests.exceptions.HTTPError as e:
@@ -69,7 +70,7 @@ class ZenTaoClient(BaseClient):
                     if self._refresh_token():
                         # 重新请求一次，标记为 is_retry 以防死循环
                         return self._get(endpoint, params=params, allow_404=allow_404, is_retry=True)
-                
+
                 # 处理 404 容错
                 if e.response.status_code == 404 and allow_404:
                     return e.response
@@ -113,7 +114,7 @@ class ZenTaoClient(BaseClient):
             endpoint = f"projects/{project_id}/executions"
         elif product_id:
             endpoint = f"products/{product_id}/executions"
-            
+
         response = self._get(endpoint, allow_404=True)
         return self._handle_list_response(response, "executions")
 
