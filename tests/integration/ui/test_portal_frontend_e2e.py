@@ -17,6 +17,7 @@ def driver():
     driver.quit()
 
 
+@pytest.mark.slow
 def test_portal_navigation_and_modals(driver):
     """集成测试：验证门户导航与重构后的 Handler 交互。"""
     # 1. 访问登录页并模拟登录 (此处假设后端/静态服务运行在 8999 端口)
@@ -56,6 +57,7 @@ def test_portal_navigation_and_modals(driver):
     assert "devex_pulse.html" in iframe.get_attribute("src")
 
 
+@pytest.mark.slow
 def test_unit_test_page_execution(driver):
     """执行前端单元测试运行器并验证其通过情况。"""
     driver.get("http://localhost:8999/tests/test_runner.html")

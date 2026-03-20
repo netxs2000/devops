@@ -1,7 +1,6 @@
 import os
 import sys
 
-import pandas as pd
 from sqlalchemy import create_engine, text
 
 
@@ -16,8 +15,8 @@ def generate_report():
     with engine.connect() as conn:
         # 1. Unaligned GitLab Projects
         query_gitlab = text("""
-            SELECT project_name, path_with_namespace 
-            FROM public_intermediate.int_entity_alignment 
+            SELECT project_name, path_with_namespace
+            FROM public_intermediate.int_entity_alignment
             WHERE master_entity_id IS NULL
             ORDER BY path_with_namespace
         """)
@@ -25,8 +24,8 @@ def generate_report():
 
         # 2. Unaligned ZenTao Executions
         query_zentao = text("""
-            SELECT execution_id, execution_name 
-            FROM public_staging.stg_zentao_executions 
+            SELECT execution_id, execution_name
+            FROM public_staging.stg_zentao_executions
             WHERE mdm_project_id IS NULL
             ORDER BY execution_name
         """)
@@ -34,7 +33,7 @@ def generate_report():
 
         # 3. MDM Projects for reference
         query_mdm = text("""
-            SELECT project_id, project_name 
+            SELECT project_id, project_name
             FROM public_marts.dim_projects
         """)
         rows_mdm = conn.execute(query_mdm).fetchall()

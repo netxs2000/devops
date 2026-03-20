@@ -214,8 +214,8 @@ class NexusWorker(BaseWorker):
 
             # 简单解析 properties 格式 (key=value)
             props = {}
-            for line in content.splitlines():
-                line = line.strip()
+            for raw_line in content.splitlines():
+                line = raw_line.strip()
                 if "=" in line and not line.startswith("#") and not line.startswith("!"):
                     k, v = line.split("=", 1)
                     props[k.strip()] = v.strip()

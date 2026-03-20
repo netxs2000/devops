@@ -108,14 +108,14 @@ class AdminService:
         self.session.commit()
         return True
 
-    def link_repo_to_mdm_project(self, mdm_project_id: str, gitlab_project_id: int, is_lead: bool = False) -> bool:
+    def link_repo_to_mdm_project(self, mdm_project_code: str, gitlab_project_id: int, is_lead: bool = False) -> bool:
         """关联 GitLab 仓库到 MDM 项目。"""
         repo = self.session.query(GitLabProject).filter(GitLabProject.id == gitlab_project_id).first()
-        mdm_p = self.session.query(ProjectMaster).filter(ProjectMaster.project_id == mdm_project_id).first()
+        mdm_p = self.session.query(ProjectMaster).filter(ProjectMaster.project_code == mdm_project_code).first()
         if not repo or not mdm_p:
             return False
 
-        repo.mdm_project_id = mdm_p.project_id
+        repo.mdm_project_id = mdm_p.id  # 使用 Surrogate Key (Integer)
         repo.organization_id = mdm_p.org_id
         if is_lead:
             mdm_p.lead_repo_id = repo.id
@@ -129,7 +129,7 @@ class AdminService:
     def create_product(self, data: schemas.ProductCreate) -> Product:
         """创建新产品。"""
         new_product = Product(
-            product_id=data.product_id,
+            product_code=data.product_id,
             product_name=data.product_name,
             product_description=data.product_description,
             category=data.category,
@@ -144,7 +144,7 @@ class AdminService:
 
     def link_product_to_project(self, data: schemas.ProjectProductRelationCreate) -> ProjectProductRelation:
         """建立产品与项目的关联。"""
-        project = self.session.query(ProjectMaster).filter(ProjectMaster.project_id == data.project_id).first()
+        project = self.session.query(ProjectMaster).filter(ProjectMaster.project_code == data.project_id).first()
         if not project:
             raise ValueError(f"Project {data.project_id} not found")
 
@@ -152,11 +152,16 @@ class AdminService:
         if not org_id:
             raise ValueError(f"Project {data.project_id} does not belong to any organization")
 
+        # 校验产品存在性并获取 ID
+        product = self.session.query(Product).filter(Product.product_code == data.product_id).first()
+        if not product:
+            raise ValueError(f"Product {data.product_id} not found")
+
         relation = (
             self.session.query(ProjectProductRelation)
             .filter(
-                ProjectProductRelation.project_id == data.project_id,
-                ProjectProductRelation.product_id == data.product_id,
+                ProjectProductRelation.project_id == project.id,
+                ProjectProductRelation.product_id == product.id,
             )
             .first()
         )
@@ -167,8 +172,8 @@ class AdminService:
             relation.org_id = org_id
         else:
             relation = ProjectProductRelation(
-                project_id=data.project_id,
-                product_id=data.product_id,
+                project_id=project.id,
+                product_id=product.id,
                 relation_type=data.relation_type,
                 allocation_ratio=data.allocation_ratio,
                 org_id=org_id,
@@ -200,7 +205,7 @@ class AdminService:
     def create_organization(self, data: schemas.OrganizationCreate) -> Organization:
         """创建新的组织实体。"""
         new_org = Organization(
-            org_id=data.org_id,
+            org_code=data.org_id,
             org_name=data.org_name,
             org_level=data.org_level,
             parent_org_id=data.parent_org_id,
@@ -208,7 +213,6 @@ class AdminService:
             cost_center=data.cost_center,
             is_active=data.is_active,
             is_current=True,
-            sync_version=1,
         )
         self.session.add(new_org)
         self.session.commit()
@@ -307,7 +311,7 @@ class AdminService:
                     else:
                         mgr_uid = mgr_users[0].global_user_id
 
-                org = self.session.query(Organization).filter(Organization.org_id == org_id).first()
+                org = self.session.query(Organization).filter(Organization.org_code == org_id).first()
                 if org:
                     org.org_name = name
                     org.org_level = level
@@ -316,14 +320,13 @@ class AdminService:
                     org.updated_at = datetime.now(UTC)
                 else:
                     org = Organization(
-                        org_id=org_id,
+                        org_code=org_id,
                         org_name=name,
                         org_level=level,
                         parent_org_id=parent_id,
                         manager_user_id=mgr_uid,
                         is_active=True,
                         is_current=True,
-                        sync_version=1,
                     )
                     self.session.add(org)
                 summary.success_count += 1
@@ -357,7 +360,7 @@ class AdminService:
             pm_email = p.product_manager.primary_email if p.product_manager else ""
             writer.writerow(
                 [
-                    p.product_id,
+                    p.product_code,
                     p.product_name,
                     p.node_type,
                     p.parent_product_id,
@@ -386,7 +389,7 @@ class AdminService:
                 if phase == 1:
                     summary.total_processed += 1
 
-                pid = row.get("product_id")
+                pid = row.get("product_code") or row.get("product_id")
                 name = row.get("product_name")
 
                 if not pid or not name:
@@ -396,7 +399,7 @@ class AdminService:
                     continue
 
                 try:
-                    product = self.session.query(Product).filter(Product.product_id == pid).first()
+                    product = self.session.query(Product).filter(Product.product_code == pid).first()
 
                     if phase == 1:
                         # 基础信息 Upsert
@@ -404,7 +407,7 @@ class AdminService:
                         pm_uid = user_map.get(pm_email).global_user_id if pm_email and pm_email in user_map else None
 
                         if not product:
-                            product = Product(product_id=pid)
+                            product = Product(product_code=pid)
                             self.session.add(product)
 
                         product.product_name = name
@@ -420,7 +423,7 @@ class AdminService:
                         parent_id = row.get("parent_product_id")
                         if parent_id:
                             # 校验父节点是否存在
-                            if self.session.query(Product).filter(Product.product_id == parent_id).count() > 0:
+                            if self.session.query(Product).filter(Product.product_code == parent_id).count() > 0:
                                 product.parent_product_id = parent_id
 
                 except Exception as e:
@@ -481,14 +484,18 @@ class AdminService:
                     raise ValueError(f"Project {proj_id} not found")
 
                 # 查找或创建关联
+                prod = self.session.query(Product).filter(Product.product_code == prod_id).first()
+                if not prod:
+                    raise ValueError(f"Product {prod_id} not found")
+
                 rel = (
                     self.session.query(ProjectProductRelation)
-                    .filter(ProjectProductRelation.project_id == proj_id, ProjectProductRelation.product_id == prod_id)
+                    .filter(ProjectProductRelation.project_id == project.id, ProjectProductRelation.product_id == prod.id)
                     .first()
                 )
 
                 if not rel:
-                    rel = ProjectProductRelation(project_id=proj_id, product_id=prod_id)
+                    rel = ProjectProductRelation(project_id=project.id, product_id=prod.id)
                     self.session.add(rel)
 
                 rel.relation_type = row.get("relation_type", "PRIMARY")

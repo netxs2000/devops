@@ -32,8 +32,8 @@ async def list_business_projects(current_user: User = Depends(get_current_user),
     # 查找所有已建立关联且项目有受理仓库的产品
     products = (
         db.query(Product)
-        .join(ProjectProductRelation, Product.product_id == ProjectProductRelation.product_id)
-        .join(ProjectMaster, ProjectProductRelation.project_id == ProjectMaster.project_id)
+        .join(ProjectProductRelation, Product.product_code == ProjectProductRelation.product_id)
+        .join(ProjectMaster, ProjectProductRelation.project_id == ProjectMaster.id)
         .filter(Product.is_current.is_(True), ProjectMaster.is_current.is_(True), ProjectMaster.lead_repo_id.is_not(None))
         .distinct()
         .all()
@@ -42,9 +42,9 @@ async def list_business_projects(current_user: User = Depends(get_current_user),
     # 如果没有配置了受理中心的产品，则降级返回所有产品（为了让下拉框不为空，方便后期配置）
     if not products:
         products = db.query(Product).filter(Product.is_current.is_(True)).all()
-        return [{"id": p.product_id, "name": p.product_name, "description": p.product_description, "status": "no_lead"} for p in products]
+        return [{"id": p.product_code, "name": p.product_name, "description": p.product_description, "status": "no_lead"} for p in products]
 
-    return [{"id": p.product_id, "name": p.product_name, "description": p.product_description} for p in products]
+    return [{"id": p.product_code, "name": p.product_name, "description": p.product_description} for p in products]
 
 
 @router.post("/upload")
@@ -56,7 +56,7 @@ async def upload_service_desk_attachment(
 ):
     """基于 MDM 项目 ID 的附件上传路由。"""
     try:
-        mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == mdm_id).first()
+        mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_code == mdm_id).first()
         if not mdm_p or not mdm_p.lead_repo_id:
             raise HTTPException(status_code=400, detail="该项目未配置受理仓库")
 
@@ -83,15 +83,16 @@ async def submit_bug_via_service_desk(
     client: GitLabClient = Depends(get_user_gitlab_client),
 ):
     """【三层映射】通过产品 ID 查找到归属项目，并通过其受理中心提交 Bug。"""
-    from devops_collector.models.base_models import ProjectProductRelation
+    from devops_collector.models.base_models import Product, ProjectProductRelation
 
     try:
-        # 1. 尝试找到关联该产品且配置了受理仓库的项目
+        # 1. 尝试通过 product_code 找到关联项目且配置了受理仓库的项目
         mdm_p = (
             db.query(ProjectMaster)
-            .join(ProjectProductRelation, ProjectMaster.project_id == ProjectProductRelation.project_id)
+            .join(ProjectProductRelation, ProjectMaster.id == ProjectProductRelation.project_id)
+            .join(Product, ProjectProductRelation.product_id == Product.id)
             .filter(
-                ProjectProductRelation.product_id == mdm_id,
+                Product.product_code == mdm_id,
                 ProjectMaster.lead_repo_id.is_not(None),
                 ProjectMaster.is_current.is_(True),
             )
@@ -138,15 +139,16 @@ async def submit_requirement_via_service_desk(
     client: GitLabClient = Depends(get_user_gitlab_client),
 ):
     """【三层映射】通过产品 ID 查找到归属项目，并通过其受理中心提交需求。"""
-    from devops_collector.models.base_models import ProjectProductRelation
+    from devops_collector.models.base_models import Product, ProjectProductRelation
 
     try:
         # 相同逻辑查找归属项目
         mdm_p = (
             db.query(ProjectMaster)
-            .join(ProjectProductRelation, ProjectMaster.project_id == ProjectProductRelation.project_id)
+            .join(ProjectProductRelation, ProjectMaster.id == ProjectProductRelation.project_id)
+            .join(Product, ProjectProductRelation.product_id == Product.id)
             .filter(
-                ProjectProductRelation.product_id == mdm_id,
+                Product.product_code == mdm_id,
                 ProjectMaster.lead_repo_id.is_not(None),
                 ProjectMaster.is_current.is_(True),
             )
@@ -279,19 +281,19 @@ async def list_all_users_for_admin(
 
     query = db.query(User).filter(User.is_current)
     if status == "pending":
-        query = query.filter(not User.is_active, User.is_survivor)  # survivor and inactive means pending
+        query = query.filter(User.is_active.is_(False), User.is_survivor.is_(True))  # survivor and inactive means pending
     elif status == "approved":
-        query = query.filter(User.is_active)
+        query = query.filter(User.is_active.is_(True))
     elif status == "rejected":
-        query = query.filter(not User.is_active, not User.is_survivor)  # not active and not survivor means rejected
+        query = query.filter(User.is_active.is_(False), User.is_survivor.is_(False))  # not active and not survivor means rejected
 
     users = query.all()
 
     # 获取统计信息
     total = db.query(User).filter(User.is_current).count()
-    pending = db.query(User).filter(User.is_current, not User.is_active, User.is_survivor).count()
-    approved = db.query(User).filter(User.is_current, User.is_active).count()
-    rejected = db.query(User).filter(User.is_current, not User.is_active, not User.is_survivor).count()
+    pending = db.query(User).filter(User.is_current, User.is_active.is_(False), User.is_survivor.is_(True)).count()
+    approved = db.query(User).filter(User.is_current, User.is_active.is_(True)).count()
+    rejected = db.query(User).filter(User.is_current, User.is_active.is_(False), User.is_survivor.is_(False)).count()
 
     results = []
     for u in users:

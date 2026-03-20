@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from devops_collector.config import settings
-from devops_collector.models import Base, Organization
+from devops_collector.models import Organization
 from scripts.utils import build_user_indexes, resolve_user
 
 

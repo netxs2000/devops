@@ -370,7 +370,7 @@ class ProductView(BaseModel):
     """产品视图模型"""
 
     model_config = ConfigDict(from_attributes=True)
-    product_id: str
+    product_id: str = Field(validation_alias="product_code")
     product_name: str
     product_description: str
     category: str | None = None
@@ -396,8 +396,8 @@ class ProjectProductRelationView(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
     id: int
-    project_id: str
-    product_id: str
+    project_id: int
+    product_id: int
     relation_type: str
     allocation_ratio: float
     product_name: str | None = None
@@ -415,7 +415,7 @@ class ProjectProductRelationCreate(BaseModel):
 class OrganizationCreate(BaseModel):
     """创建组织的请求模型"""
 
-    org_id: str
+    org_id: str = Field(validation_alias="org_code")
     org_name: str
     org_level: int | None = 1
     parent_org_id: str | None = None
@@ -502,4 +502,4 @@ class DependencyScanSummary(BaseModel):
     high_risk_licenses: int | None = 0
     scan_status: str
     ci_job_url: str | None = None
-    project: dict[str, Any] | None = None
+    project: Any | None = None

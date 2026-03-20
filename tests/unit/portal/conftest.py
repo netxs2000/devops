@@ -14,6 +14,8 @@ os.environ["JWT_SECRET_KEY"] = "testsecret"
 os.environ["JWT_ALGORITHM"] = "HS256"
 
 # Import after setting env vars
+import uuid
+
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.models.base_models import Base, User
 
@@ -21,32 +23,39 @@ from devops_collector.models.base_models import Base, User
 from devops_portal.main import app
 
 
-# Setup database in a more isolated way
-@pytest.fixture(scope="function")
-def db_session():
-    """Create a fresh database session for each test using a temporary file."""
-    import os
-    import uuid
+from sqlalchemy.pool import StaticPool
 
-    db_file = f"test_{uuid.uuid4()}.db"
-    db_url = f"sqlite:///{db_file}"
+SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
-    _engine = create_engine(db_url, connect_args={"check_same_thread": False})
-    _TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False)
+_engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 
-    # Create all tables
+_SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False)
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_database():
+    """Create all tables once per session, ensuring all models are registered."""
+    from devops_collector.models.base_models import Base
+    # Import all models to register them on the metadata
+    import devops_collector.models  # This should trigger imports in __init__.py
     Base.metadata.create_all(bind=_engine)
-    db = _TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        _engine.dispose()
-        if os.path.exists(db_file):
-            try:
-                os.remove(db_file)
-            except Exception:
-                pass
+    return _engine
+
+@pytest.fixture(scope="function")
+def db_session(setup_database):
+    """Create a nested transaction session for each test to ensure isolation & speed."""
+    connection = setup_database.connect()
+    transaction = connection.begin()
+    session = _SessionLocal(bind=connection)
+
+    yield session
+
+    session.close()
+    transaction.rollback()
+    connection.close()
 
 
 @pytest.fixture(scope="function")

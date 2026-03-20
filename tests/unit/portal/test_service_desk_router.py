@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from devops_collector.auth.auth_dependency import get_user_gitlab_client
-from devops_collector.models.base_models import Product, ProjectMaster, ProjectProductRelation
+from devops_collector.models.base_models import Organization, Product, ProjectMaster, ProjectProductRelation
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_portal.dependencies import get_current_user
 from devops_portal.main import app
@@ -32,18 +32,21 @@ def test_list_business_projects(authenticated_client, db_session):
     pid = generate_id("MDM")
     prod_id = generate_id("PROD")
 
-    project = ProjectMaster(project_id=pid, project_name="Biz Project 1", is_current=True, lead_repo_id=10)
+    project = ProjectMaster(project_code=pid, project_name="Biz Project 1", is_current=True, lead_repo_id=10)
     product = Product(
-        product_id=prod_id,
+        product_code=prod_id,
         product_name="Core Product",
         product_description="Desc",
         is_current=True,
         version_schema="SemVer",
     )
-    relation = ProjectProductRelation(project_id=pid, product_id=prod_id, org_id="ORG001")
-
+    org = Organization(org_code="TEST_ORG", org_name="Test Org")
+    db_session.add(org)
     db_session.add(project)
     db_session.add(product)
+    db_session.flush()
+    relation = ProjectProductRelation(project_id=project.id, product_id=product.id, org_id=org.id)
+
     db_session.add(relation)
     db_session.commit()
 
@@ -63,7 +66,7 @@ async def test_upload_service_desk_attachment(authenticated_client, db_session, 
     app.dependency_overrides[get_user_gitlab_client] = lambda: mock_gitlab_client
 
     pid = generate_id("MDM")
-    project = ProjectMaster(project_id=pid, project_name="Biz Project 1", lead_repo_id=10)
+    project = ProjectMaster(project_code=pid, project_name="Biz Project 1", lead_repo_id=10)
     db_session.add(project)
     db_session.commit()
 
@@ -89,17 +92,20 @@ async def test_submit_bug(authenticated_client, db_session, mock_gitlab_client):
     product_id = generate_id("PROD_BUG")
     pid = generate_id("MDM")
 
-    project = ProjectMaster(project_id=pid, project_name="Biz Project 1", lead_repo_id=10, is_current=True)
+    project = ProjectMaster(project_code=pid, project_name="Biz Project 1", lead_repo_id=10, is_current=True)
     product = Product(
-        product_id=product_id,
+        product_code=product_id,
         product_name="Product Bug",
         product_description="Desc",
         is_current=True,
         version_schema="SemVer",
     )
-    relation = ProjectProductRelation(project_id=pid, product_id=product_id, org_id="ORG001")
+    org = Organization(org_code="TEST_ORG_BUG", org_name="Test Org Bug")
+    db_session.add(org)
     db_session.add(project)
     db_session.add(product)
+    db_session.flush()
+    relation = ProjectProductRelation(project_id=project.id, product_id=product.id, org_id=org.id)
     db_session.add(relation)
     db_session.commit()
 
@@ -132,17 +138,20 @@ async def test_submit_requirement(authenticated_client, db_session, mock_gitlab_
     product_id = generate_id("PROD_REQ")
     pid = generate_id("MDM")
 
-    project = ProjectMaster(project_id=pid, project_name="Biz Project 1", lead_repo_id=10, is_current=True)
+    project = ProjectMaster(project_code=pid, project_name="Biz Project 1", lead_repo_id=10, is_current=True)
     product = Product(
-        product_id=product_id,
+        product_code=product_id,
         product_name="Product Req",
         product_description="Desc",
         is_current=True,
         version_schema="SemVer",
     )
-    relation = ProjectProductRelation(project_id=pid, product_id=product_id, org_id="ORG001")
+    org = Organization(org_code="TEST_ORG_REQ", org_name="Test Org Req")
+    db_session.add(org)
     db_session.add(project)
     db_session.add(product)
+    db_session.flush()
+    relation = ProjectProductRelation(project_id=project.id, product_id=product.id, org_id=org.id)
     db_session.add(relation)
     db_session.commit()
 

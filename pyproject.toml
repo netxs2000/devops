@@ -72,12 +72,14 @@ dev = [
     "mypy>=1.15.0,<2.0.0",
     "sphinx>=8.1.0,<9.0.0",
     "sphinx-rtd-theme>=3.0.0,<4.0.0",
+    "pytest-timeout>=2.3.1",
 ]
 test = [
     "pytest>=9.0.0,<10.0.0",
     "pytest-cov>=4.0.0,<5.0.0",
     "requests-mock>=1.12.0,<2.0.0",
     "pytest-asyncio>=0.24.0",
+    "pytest-timeout>=2.3.1",
 ]
 e2e = [
     "pytest>=9.0.0,<10.0.0",
@@ -103,7 +105,7 @@ devops_collector = ["sql/*.sql"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --strict-markers"
+addopts = "-ra -q --strict-markers --timeout=30 -m 'not slow'"
 testpaths = [
     "tests/unit",
     "tests/integration",
@@ -114,9 +116,11 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 markers = [
-    "slow: 标记为慢速测试",
+    "slow: 标记为慢速测试 (默认非显式排除)",
     "smoke: 冒烟测试 (快速验证核心功能)",
     "reliability: 幂等性/一致性验证测试",
+    "api: 快速业务集成测试 (Router/DB/Service)",
+    "ui: 重型浏览器集成测试 (Selenium/Playwright)",
 ]
 
 [tool.black]

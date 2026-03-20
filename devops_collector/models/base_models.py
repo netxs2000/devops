@@ -753,11 +753,15 @@ class OKRObjective(Base, TimestampMixin, SCDMixin):
     period = Column(String(20), index=True, comment="周期 (2024-Q1/2024-H1)")
     owner_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), index=True, comment="负责人")
     org_id = Column(Integer, ForeignKey("mdm_organizations.id"), index=True, comment="所属组织ID")
+    parent_id = Column(Integer, ForeignKey("mdm_okr_objectives.id"), index=True, comment="上级目标ID")
+    product_id = Column(Integer, ForeignKey("mdm_products.id"), index=True, comment="关联产品ID")
     status = Column(String(20), default="ACTIVE", comment="状态 (ACTIVE/COMPLETED/ABANDONED)")
     progress = Column(Float, default=0.0, comment="进度 (0.0-1.0)")
 
     owner = relationship("User", foreign_keys=[owner_id])
     organization = relationship("Organization", foreign_keys=[org_id])
+    parent = relationship("OKRObjective", remote_side=[id], backref=backref("children", cascade="all"))
+    product = relationship("Product", foreign_keys=[product_id], backref=backref("objectives", cascade="all"))
     key_results = relationship("OKRKeyResult", back_populates="objective", cascade="all, delete-orphan")
 
 
@@ -770,10 +774,11 @@ class OKRKeyResult(Base, TimestampMixin):
     title = Column(String(255), nullable=False, comment="KR标题")
     target_value = Column(Float, nullable=False, comment="目标值")
     current_value = Column(Float, default=0.0, comment="当前值")
-    unit = Column(String(20), comment="单位 (%/天/个)")
+    metric_unit = Column(String(20), comment="单位 (%/天/个)")
     weight = Column(Float, default=1.0, comment="权重")
     owner_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), index=True, comment="负责人")
     progress = Column(Float, default=0.0, comment="进度 (0.0-1.0)")
+    linked_metrics_config = Column(JSON, comment="关联度量配置 (JSON)")
 
     objective = relationship("OKRObjective", back_populates="key_results")
     owner = relationship("User", foreign_keys=[owner_id])

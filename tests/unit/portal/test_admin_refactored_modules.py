@@ -5,6 +5,7 @@ import pytest
 from devops_collector.models.base_models import (
     IdentityMapping,
     Organization,
+    Product,
     ProjectMaster,
     ProjectProductRelation,
     SysRole,
@@ -86,6 +87,7 @@ def test_product_lifecycle(admin_client, db_session):
         "category": "CORE",
         "lifecycle_status": "ACTIVE",
         "product_description": "Core system",
+        "version_schema": "SemVer",
     }
     resp = admin_client.post("/admin/products", json=payload)
     assert resp.status_code == 200, resp.text
@@ -98,9 +100,10 @@ def test_product_lifecycle(admin_client, db_session):
     assert len(resp.json()) >= 1
 
     # 3. Create Project to Link
-    org = Organization(org_id="GZ_CENTER", org_name="Guangzhou Center", is_current=True)
+    org = Organization(org_code="GZ_CENTER", org_name="Guangzhou Center", is_current=True)
     db_session.add(org)
-    proj = ProjectMaster(project_id="PRJ-001", project_name="Upgrade 2.0", org_id="GZ_CENTER", is_current=True)
+    db_session.flush()
+    proj = ProjectMaster(project_code="PRJ-001", project_name="Upgrade 2.0", org_id=org.id, is_current=True)
     db_session.add(proj)
     db_session.commit()
 
@@ -108,16 +111,17 @@ def test_product_lifecycle(admin_client, db_session):
     link_payload = {
         "project_id": "PRJ-001",
         "product_id": "PROD-001",
-        "relation_type": "PRIMARY",  # Assuming this is a valid type
+        "relation_type": "PRIMARY",
         "allocation_ratio": 100.0,
     }
     resp = admin_client.post("/admin/link-product", json=link_payload)
     assert resp.status_code == 200
 
     # Verify DB
-    rel = db_session.query(ProjectProductRelation).filter_by(project_id="PRJ-001").first()
+    rel = db_session.query(ProjectProductRelation).filter_by(project_id=proj.id).first()
     assert rel is not None
-    assert rel.product_id == "PROD-001"
+    prod = db_session.query(Product).filter_by(product_code="PROD-001").first()
+    assert rel.product_id == prod.id
 
 
 # --- Tests: 2. Project Mapping (adm_projects) ---
@@ -127,8 +131,9 @@ def test_project_mapping_flow(admin_client, db_session):
     """Test MDM Project Creation and Repo Linking."""
 
     # Setup: Org
-    org = Organization(org_id="GZ_CENTER", org_name="GZ", is_current=True)
+    org = Organization(org_code="GZ_CENTER", org_name="GZ", is_current=True)
     db_session.add(org)
+    db_session.flush()
 
     # Setup: Unlinked Repo
     repo = GitLabProject(id=1001, name="legacy-repo", path_with_namespace="group/legacy-repo", raw_data={"web_url": "http://git"})
@@ -137,13 +142,13 @@ def test_project_mapping_flow(admin_client, db_session):
 
     # 1. Create MDM Project
     payload = {
-        "project_id": "MDM-2025",
+        "project_code": "MDM-2025",
         "project_name": "New Architecture",
-        "org_id": "GZ_CENTER",
+        "org_id": org.id,
         "project_type": "SPRINT",
     }
     resp = admin_client.post("/admin/mdm-projects", json=payload)
-    assert resp.status_code == 200
+    assert resp.status_code == 200, f"Create project failed: {resp.text}"
 
     # 2. List Unlinked Repos
     resp = admin_client.get("/admin/unlinked-repos")
@@ -152,17 +157,18 @@ def test_project_mapping_flow(admin_client, db_session):
     assert any(r["id"] == 1001 for r in repos)
 
     # 3. Link Repo
-    link_payload = {"mdm_project_id": "MDM-2025", "gitlab_project_id": 1001, "is_lead": True}
+    link_payload = {"mdm_project_code": "MDM-2025", "gitlab_project_id": 1001, "is_lead": True}
     resp = admin_client.post("/admin/link-repo", json=link_payload)
     assert resp.status_code == 200
 
     # Verify
     db_session.refresh(repo)
-    assert repo.mdm_project_id == "MDM-2025"
+    mdm_p = db_session.query(ProjectMaster).filter_by(project_code="MDM-2025").first()
+    assert repo.mdm_project_id == mdm_p.id
 
     # Verify Lead Config
-    proj = db_session.query(ProjectMaster).filter_by(project_id="MDM-2025").first()
-    assert proj.lead_repo_id == 1001
+    proj_check = db_session.query(ProjectMaster).filter_by(project_code="MDM-2025").first()
+    assert proj_check.lead_repo_id == 1001
 
 
 # --- Tests: 3. Employee Identity (adm_users) ---

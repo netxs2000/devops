@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Initialize ZenTao project and product mappings.
 
 This script reads docs/zentao_product_map.csv and docs/zentao_project_map.csv,

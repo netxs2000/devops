@@ -65,9 +65,10 @@ def test_list_teams(authenticated_client, db_session):
 
 
 def test_list_mdm_projects(authenticated_client, db_session):
-    org = Organization(org_id="ORG1", org_name="Org 1")
+    org = Organization(org_code="ORG1", org_name="Org 1")
     db_session.add(org)
-    project = ProjectMaster(project_id="PROJ1", project_name="Project 1", org_id="ORG1", status="PLAN")
+    db_session.flush()
+    project = ProjectMaster(project_code="PROJ1", project_name="Project 1", org_id=org.id, status="PLAN")
     db_session.add(project)
     db_session.commit()
 

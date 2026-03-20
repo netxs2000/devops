@@ -8,15 +8,15 @@ from sqlalchemy.pool import StaticPool
 # Use check_same_thread=False for SQLite
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
-engine = create_engine(
+# --- REFACTORED FOR PERFORMANCE (Session-scoped Engine) ---
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+_engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
-
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
-
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -24,30 +24,25 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
+_SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-from devops_collector.models.base_models import Base
-
+@pytest.fixture(scope="session", autouse=True)
+def setup_database():
+    """Create all tables once per session."""
+    from devops_collector.models.base_models import Base
+    # Trigger full model registration via package import
+    import devops_collector.models
+    Base.metadata.create_all(bind=_engine)
 
 @pytest.fixture(scope="function")
 def db_session():
-    """Create a fresh database session for each test."""
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        # Disable foreign keys for cleanup
-        with engine.connect() as conn:
-            conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+    """Create a nested transaction session for each test to ensure isolation & speed."""
+    connection = _engine.connect()
+    transaction = connection.begin()
+    session = _SessionLocal(bind=connection)
 
-        # Drop all tables after test
-        Base.metadata.drop_all(bind=engine)
+    yield session
 
-        # Re-enable foreign keys (though strictly engine-level listener handles new connections,
-        # this is for good measure if we reused connections, but we use StaticPool so...)
-        with engine.connect() as conn:
-            conn.exec_driver_sql("PRAGMA foreign_keys=ON")
+    session.close()
+    transaction.rollback()
+    connection.close()

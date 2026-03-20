@@ -26,33 +26,35 @@ def db_session():
 
 def test_project_master_creation(db_session):
     """测试 ProjectMaster 模型的创建。"""
-    org = Organization(org_id="DEPT_IT_001", org_name="IT部门", is_current=True)
+    org = Organization(org_code="DEPT_IT_001", org_name="IT部门", is_current=True)
     db_session.add(org)
+    db_session.flush()  # 获取 org.id
     pm = ProjectMaster(
-        project_id="PRJ_TEST_001",
+        project_code="PRJ_TEST_001",
         project_name="测试主项目",
         project_type="SPRINT",
         status="PLAN",
-        org_id="DEPT_IT_001",
+        org_id=org.id,
         budget_code="B_2026_01",
         budget_type="CAPEX",
     )
     db_session.add(pm)
     db_session.commit()
-    retrieved = db_session.query(ProjectMaster).filter_by(project_id="PRJ_TEST_001").first()
+    retrieved = db_session.query(ProjectMaster).filter_by(project_code="PRJ_TEST_001").first()
     assert retrieved is not None
     assert retrieved.project_name == "测试主项目"
-    assert retrieved.org_id == "DEPT_IT_001"
+    assert retrieved.org_id == org.id
 
 
 def test_project_linkage_and_lead_repo(db_session):
     """测试两层架构中的关联逻辑与受理仓库。"""
-    pm = ProjectMaster(project_id="MDM_PAY_001", project_name="支付系统", org_id="DEPT_PAY")
+    pm = ProjectMaster(project_code="MDM_PAY_001", project_name="支付系统")
     db_session.add(pm)
+    db_session.flush()
     repo1 = Project(id=101, name="Pay-Frontend", path_with_namespace="pay/frontend")
     repo2 = Project(id=102, name="Pay-Backend", path_with_namespace="pay/backend")
-    repo1.mdm_project_id = pm.project_id
-    repo2.mdm_project_id = pm.project_id
+    repo1.mdm_project_id = pm.id
+    repo2.mdm_project_id = pm.id
     pm.lead_repo_id = repo2.id
     db_session.add_all([repo1, repo2])
     db_session.commit()

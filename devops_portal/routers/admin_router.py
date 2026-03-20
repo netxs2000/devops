@@ -57,9 +57,9 @@ async def export_organizations(db: Session = Depends(get_auth_db), admin_user: U
     orgs = db.query(Organization).options(joinedload(Organization.manager)).filter(Organization.is_current).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["org_id", "org_name", "org_level", "parent_org_id", "负责人"])
+    writer.writerow(["org_code", "org_name", "org_level", "parent_org_id", "负责人"])
     for o in orgs:
-        writer.writerow([o.org_id, o.org_name, o.org_level, o.parent_org_id, o.manager.full_name if o.manager else ""])
+        writer.writerow([o.org_code, o.org_name, o.org_level, o.parent_org_id, o.manager.full_name if o.manager else ""])
 
     output.seek(0)
     return StreamingResponse(
@@ -282,9 +282,9 @@ async def add_team_member(
 class MDMProjectCreate(BaseModel):
     '''"""TODO: Add class description."""'''
 
-    project_id: str
+    project_code: str
     project_name: str
-    org_id: str
+    org_id: int
     project_type: str | None = "SPRINT"
     status: str | None = "PLAN"
     pm_user_id: str | None = None
@@ -298,7 +298,7 @@ class MDMProjectCreate(BaseModel):
 class RepoLinkRequest(BaseModel):
     '''"""TODO: Add class description."""'''
 
-    mdm_project_id: str
+    mdm_project_code: str
     gitlab_project_id: int
     is_lead: bool | None = False
 
@@ -329,7 +329,7 @@ async def list_mdm_projects(
 
     return [
         {
-            "project_id": p.project_id,
+            "project_id": p.project_code,
             "project_name": p.project_name,
             "project_type": p.project_type,
             "status": p.status,
@@ -359,7 +359,7 @@ async def create_mdm_project(
     """创建新的业务主项目。"""
     # 已通过 RoleRequired 校验权限
     new_p = ProjectMaster(
-        project_id=payload.project_id,
+        project_code=payload.project_code,
         project_name=payload.project_name,
         org_id=payload.org_id,
         project_type=payload.project_type,
@@ -373,13 +373,13 @@ async def create_mdm_project(
     )
     db.add(new_p)
     db.commit()
-    return {"status": "success", "project_id": new_p.project_id}
+    return {"status": "success", "project_id": new_p.project_code}
 
 
 @router.get("/unlinked-repos")
 async def list_unlinked_repos(db: Session = Depends(get_auth_db)):
     """列出尚未关联主项目的 GitLab 仓库。"""
-    repos = db.query(GitLabProject).filter(GitLabProject.mdm_project_id is None).all()
+    repos = db.query(GitLabProject).filter(GitLabProject.mdm_project_id.is_(None)).all()
     return [{"id": r.id, "name": r.name, "path": r.path_with_namespace} for r in repos]
 
 
@@ -391,7 +391,7 @@ async def link_repo_to_project(
 ):
     """将 GitLab 仓库关联到业务主项目。"""
     # 已通过 RoleRequired 校验权限
-    success = service.link_repo_to_mdm_project(payload.mdm_project_id, payload.gitlab_project_id, payload.is_lead)
+    success = service.link_repo_to_mdm_project(payload.mdm_project_code, payload.gitlab_project_id, payload.is_lead)
     if not success:
         raise HTTPException(status_code=404, detail="Entity not found")
     return {"status": "success"}
@@ -399,14 +399,14 @@ async def link_repo_to_project(
 
 @router.post("/mdm-projects/{project_id}/set-lead")
 async def set_lead_repo(
-    project_id: str,
+    project_code: str,
     gitlab_project_id: int = Body(..., embed=True),
     db: Session = Depends(get_auth_db),
     admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """设置主项目的受理中心仓库。"""
     # 已通过 RoleRequired 校验权限
-    mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_id == project_id).first()
+    mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_code == project_code).first()
     if not mdm_p:
         raise HTTPException(status_code=404, detail="MDM Project not found")
     mdm_p.lead_repo_id = gitlab_project_id

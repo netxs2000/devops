@@ -28,13 +28,9 @@ class GitLabClient(BaseClient):
         )
 
     def test_connection(self) -> bool:
-        """测试与 GitLab 的连接状态 (快速探测，不进行重试)。"""
+        """测试与 GitLab 的连接状态 (快速探测)。"""
         try:
-            url = f"{self.base_url}/version"
-            import requests
-
-            response = requests.get(url, headers=self.headers, timeout=5, verify=self.verify)
-            response.raise_for_status()
+            self._get("version")
             return True
         except Exception:
             return False

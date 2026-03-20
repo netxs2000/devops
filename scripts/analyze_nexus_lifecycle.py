@@ -1,7 +1,5 @@
 import logging
-import os
-import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from devops_collector.plugins.nexus.client import NexusClient
 from devops_collector.plugins.nexus.config import get_config
@@ -14,7 +12,7 @@ def analyze_nexus_lifecycle():
     config = get_config()["client"]
     client = NexusClient(url=config["url"], user=config["user"], password=config["password"], rate_limit=50)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     periods = {
         "7_days": timedelta(days=7),
         "30_days": timedelta(days=30),
@@ -84,7 +82,7 @@ def analyze_nexus_lifecycle():
                             dt = datetime.fromisoformat(dl_str.replace("Z", "+00:00"))
                             if last_download is None or dt > last_download:
                                 last_download = dt
-                        except:
+                        except Exception:
                             pass
 
                     if mod_str:
@@ -92,7 +90,7 @@ def analyze_nexus_lifecycle():
                             dt = datetime.fromisoformat(mod_str.replace("Z", "+00:00"))
                             if last_modified is None or dt > last_modified:
                                 last_modified = dt
-                        except:
+                        except Exception:
                             pass
 
                 repo_stats["total_size_mb"] += comp_size / (1024 * 1024)
@@ -150,7 +148,7 @@ def analyze_nexus_lifecycle():
             if stats["total_components"] == 0:
                 continue
 
-            print(f"  • Developer Pull Activity (Downloaded to Local):")
+            print("  • Developer Pull Activity (Downloaded to Local):")
             print(f"    - Last 7 days   : {stats['download_last_7_days']}")
             print(f"    - Last 30 days  : {stats['download_last_30_days']}")
             print(f"    - Last 90 days  : {stats['download_last_90_days']}")
@@ -159,7 +157,7 @@ def analyze_nexus_lifecycle():
             print(f"    - NEVER Pulled  : {stats['never_downloaded']} (Cached but never used / Uploaded but unused)")
 
             if stats["type"] == "proxy":
-                print(f"  • Upstream Pull Activity (Fetched from Internet to Nexus):")
+                print("  • Upstream Pull Activity (Fetched from Internet to Nexus):")
                 print(f"    - Last 7 days   : {stats['pulled_from_internet_7_days']}")
                 print(f"    - Last 30 days  : {stats['pulled_from_internet_30_days']}")
                 print(f"    - Last 90 days  : {stats['pulled_from_internet_90_days']}")

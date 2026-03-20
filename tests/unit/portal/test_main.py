@@ -21,7 +21,7 @@ def test_list_jenkins_jobs(authenticated_client, db_session):
     db_session.add(job)
     db_session.commit()
 
-    response = authenticated_client.get("/jenkins/jobs")
+    response = authenticated_client.get("/plugins/jenkins/jobs")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -37,7 +37,7 @@ def test_list_jenkins_builds(authenticated_client, db_session):
     db_session.add(build)
     db_session.commit()
 
-    response = authenticated_client.get(f"/jenkins/jobs/{job.id}/builds")
+    response = authenticated_client.get(f"/plugins/jenkins/jobs/{job.id}/builds")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -52,7 +52,7 @@ def test_gitlab_webhook(client):
         "labels": [{"title": "type::test"}],
     }
     headers = {"X-Gitlab-Event": "Issue Hook"}
-    response = client.post("/webhook", json=payload, headers=headers)
+    response = client.post("/webhooks/gitlab", json=payload, headers=headers)
     assert response.status_code == 200
     assert response.json() == {"status": "accepted"}
 
@@ -62,7 +62,7 @@ def test_list_jfrog_artifacts(authenticated_client, db_session):
     db_session.add(artifact)
     db_session.commit()
 
-    response = authenticated_client.get("/artifacts/jfrog")
+    response = authenticated_client.get("/plugins/artifacts/jfrog")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
@@ -74,7 +74,7 @@ def test_list_nexus_components(authenticated_client, db_session):
     db_session.add(comp)
     db_session.commit()
 
-    response = authenticated_client.get("/artifacts/nexus")
+    response = authenticated_client.get("/plugins/artifacts/nexus")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 1

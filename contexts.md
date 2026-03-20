@@ -15,9 +15,9 @@
 
 ## 3. 开发环境与兼容性 (Environment)
 - **开发与测试环境 (Dev & Test Env)**: 
-    - **宿主机**: Windows + Python 3.12 (适配 PowerShell 调试)。
-    - **容器机**: Docker Desktop (Linux 模式) + Python 3.9-3.11。
-    - **标准原则**: 开发者机器即为第一测试环境。任何功能在本地开发完成后，**必须**在 Docker Desktop 容器内通过 `make test` 或同等命令验证，严禁“仅在 Windows 跑通就提交”。
+    - **主验证环境 (Primary)**: **Docker Desktop (Linux 模式)**。所有功能逻辑、数据库变更、集成测试**必须**首先在容器内验证。
+    - **辅助/调试环境 (Auxiliary)**: Windows + PowerShell。仅用于代码编写、轻量级 Lint 检查及辅助脚本调试。
+    - **核心原则**: 严禁以“Windows 能跑通”作为提测标准。物理真实环境以 Docker 内的 Linux 表现为准。通过 `make test` 或 `docker-compose exec api pytest` 确保 100% 环境对齐。
 - **路径处理**: 强制使用 `pathlib` 确保跨平台路径兼容。
 - **临时输出归集 [MANDATORY]**: 严禁在根目录直接生成临时过程文件或导出结果。所有临时调试脚本、手动导出 CSV、日志重定向（Redirect）必须明确指向 `./tmp/` 或 `./data/temp/` 目录。
 - **CSV 编码**: 所有 CSV 文件的生成、读取及模版任务强制使用 `utf-8-sig` 编码，确保在 Windows Office/Excel 环境下打开不出现汉字乱码。
@@ -172,40 +172,26 @@
 ## 9. 测试与质量门禁 (Testing)
 - **覆盖率目标**: 核心模块 (`core/`, `models/`) >= 80%，插件模块 >= 60%。
 
-### 9.1 测试目录分层规范 (Test Directory & Hierarchy)
-为防止测试代码腐化，严格遵循以下四层物理结构。禁止在 `tests/` 根目录或业务代码目录中直接存放测试文件。
+### 9.1 测试目录分层规范 (Test Directory & Hierarchy) [REVISED]
+为防止测试代码腐化，严格遵循以下物理结构。**严禁**跨层级存放脚本（如在 unit 中存放 selenium 脚本）。
 
-| 层级 | 目录路径 | 职责定义 | 外部依赖 | 运行频率 |
+| 层级 | 目录路径 | 职责定义 | 外部依赖 | 默认状态 |
 | :--- | :--- | :--- | :--- | :--- |
-| **Unit** | `tests/unit/` | 验证单一函数/类/模块的逻辑正确性。 | **严禁**。必须 Mock 所有 DB、网络、文件系统 IO。 | **每次 Commit** (秒级) |
-| **Integration** | `tests/integration/` | 验证多模块交互、数据库约束、API 契约。 | **允许**。可使用 `sqlite:///:memory:` 或本地 Docker 服务的 DB/Redis。 | **合并前 (PR Check)** (分级) |
-| **E2E** | `tests/e2e/` | 验证端到端业务流程、UI 交互。 | **必须**。需启动完整后端 + 前端服务 (Playwright)。 | **发布前 (Release)** (小时级) |
-| **Scripts** | `tests/scripts/` | 辅助性手工验证脚本、造数工具。 | 任意。不计入自动测试覆盖率。 | 按需执行 |
+| **Unit** | `tests/unit/` | 验证纯业务逻辑、Service 层、Helper。 | **禁止**。必须 100% Mock。 | **必选 (Fast)** |
+| **Integration (API)** | `tests/integration/api/` | 验证 Router -> Service -> DB 的契约。 | **允许**。仅限 `sqlite:///:memory:`。 | **必选 (Internal)** |
+| **Integration (UI)** | `tests/integration/ui/` | 验证前端 DOM -> 后端 API 的端到端。 | **必须**。Selenium / Playwright。 | **可选 (Slow)** |
+| **E2E / System** | `tests/e2e/` | 跨服务大周期验证（完整容器链）。 | **必须**。独立 Compose 环境。 | **发布准入** |
 
-- **命名规范**：所有测试文件必须以 `test_` 开头 (如 `test_auth_service.py`)，确保 `pytest` 自动发现。
+- **隔离原则**：集成测试必须进一步划分为 `api` 和 `ui` 子目录。Selenium/浏览器相关逻辑**强制**放入 `integration/ui`。
 
-### 9.2 测试原子性与准入原则 (Atomicity & Criteria)
-测试代码必须视为生产代码同等对待，严格遵守以下原则：
-
-1.  **独立性 (Independence)**: 
-    - 每个测试用例 (Test Case) 必须是**自包含**的。
-    - **严禁** Test B 依赖 Test A 产生的数据或状态。
-    - **严禁** 依赖测试执行顺序 (pytest-randomly 应能随意打乱执行)。
-
-2.  **无状态 (Statelessness)**:
-    - **Setup/Teardown**: 必须在 `fixture` 中完成数据准备与清理。
-    - **Global State**: 严禁修改全局变量 (Global Variables) 或单例状态而不复原。
-    - **DB Isolation**: 集成测试必须通过 Transaction Rollback 或 `sqlite:///:memory:` 保证每个 Case 拥有干净的数据库环境。
-
-3.  **确定性 (Determinism)**:
-    - 消除 "Flaky Tests" (时而通过时而失败)。
-    - 避免使用 `sleep()` 等待异步操作，必须使用轮询断言 (`wait_for`)。
-    - 固定时间/随机种子：涉及时间计算的测试，必须 Mock `datetime.now()`。
-
-4.  **准入标准 (Gate Criteria)**:
-    - **Unit Test**: 必须在 **100ms** 内完成单个文件执行。
-    - **Integration Test**: 必须兼容 Windows/Linux 双平台路径。
-    - **Coverage**: 新增代码必须包含对应的 Unit Test，否则 PR 不予合并。
+### 9.2 测试原子性与准入原则 (Criteria) [MANDATORY]
+1.  **100ms 准则**: 单个 Unit Test 文件执行时间严禁超过 100ms。
+2.  **超时熔断 (Timeout)**: 每个测试用例由 `pytest-timeout` 强制守护，上限为 **30s**。超过此阈值的任务必须被物理杀死。
+3.  **Windows 性能守卫**: 
+    - 为规避 Windows 下频繁建表/删表的 I/O 阻塞，集成测试的数据库 Engine 必须设置为 `scope="session"`。
+    - 数据库表（Base.metadata）只需在会话开始时创建一次。
+4.  **默认运行策略**: 为保证开发敏捷性，`pyproject.toml` 的 `addopts` 必须默认包含 `-m "not slow"`。所有耗时超过 2s 的脚本必须手动标记为 `@pytest.mark.slow`。
+5.  **模型导入警告**: 在 `conftest.py` 中执行 `create_all` 前，必须显式导入所有相关的 `models` 模块，否则 `sqlite` 将因“no such table”报错。
 
 ### 9.3 Mock 策略与 E2E 规范
 - **Mock 策略**: 外部 API 调用 (GitLab, SonarQube) 必须使用 `requests-mock` 或 `pytest-httpx` 隔离。
@@ -268,6 +254,7 @@
 | **API 路由** | `/api/{prefix}/{resource}` | `/api/sd/tickets` |
 | **后端文件 (Router)** | `{prefix}_{resource}_router.py` | `sd_ticket_router.py` |
 | **后端文件 (Service)** | `{prefix}_{resource}_service.py` | `sd_ticket_service.py` |
+| **测试文件 (Test)** | `test_{prefix}_{resource}_{type}.py` | `test_sd_ticket_api.py`, `test_portal_frontend_ui.py` |
 | **前端 CSS Class** | `.{prefix}-{component}` | `.sd-ticket-card` |
 | **错误码** | `{PREFIX}_{ERROR_KEY}` | `PM_REQUIREMENT_NOT_FOUND` |
 

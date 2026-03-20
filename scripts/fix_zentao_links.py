@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import csv
 import os
 import sys
@@ -12,7 +11,7 @@ sys.path.append(os.getcwd())
 
 from devops_collector.config import settings
 from devops_collector.models import EntityTopology
-from devops_collector.plugins.zentao.models import ZenTaoExecution, ZenTaoProduct
+from devops_collector.plugins.zentao.models import ZenTaoProduct
 
 
 def main():

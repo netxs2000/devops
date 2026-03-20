@@ -14,8 +14,6 @@ sys.path.append(os.getcwd())
 # Ensure all models are loaded for SQLAlchemy mapper initialization
 from sqlalchemy.orm import configure_mappers
 
-import devops_collector.models
-
 
 try:
     configure_mappers()

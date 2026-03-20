@@ -215,140 +215,52 @@ class TestGitLabClient(unittest.TestCase):
         self.client._get.assert_called_with("projects/1/repository/commits/sha1/diff")
 
     def test_get_project_merge_requests(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        self.client._get.return_value.json.return_value = [{"id": 1}]
+        self.client._get.return_value.json.side_effect = [[{"id": 1}], []]
         result = list(self.client.get_project_merge_requests(1))
         self.assertEqual(len(result), 1)
-        self.client._get.assert_called_with("projects/1/merge_requests", params={"per_page": 100, "page": 1})
+        self.client._get.assert_any_call("projects/1/merge_requests", params={"per_page": 100, "page": 1})
 
     def test_get_project_pipelines(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        self.client._get.return_value.json.return_value = [{"id": 1}]
+        self.client._get.return_value.json.side_effect = [[{"id": 1}], []]
         result = list(self.client.get_project_pipelines(1))
         self.assertEqual(len(result), 1)
-        self.client._get.assert_called_with("projects/1/pipelines", params={"per_page": 100, "page": 1})
+        self.client._get.assert_any_call("projects/1/pipelines", params={"per_page": 100, "page": 1})
 
     def test_get_project_deployments(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        self.client._get.return_value.json.return_value = [{"id": 1}]
+        self.client._get.return_value.json.side_effect = [[{"id": 1}], []]
         result = list(self.client.get_project_deployments(1))
         self.assertEqual(len(result), 1)
-        self.client._get.assert_called_with("projects/1/deployments", params={"per_page": 100, "page": 1})
+        self.client._get.assert_any_call("projects/1/deployments", params={"per_page": 100, "page": 1})
 
     def test_get_issue_notes(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        self.client._get.return_value.json.return_value = [{"id": 1}]
+        self.client._get.return_value.json.side_effect = [[{"id": 1}], []]
         result = list(self.client.get_issue_notes(1, 100))
         self.assertEqual(len(result), 1)
-        self.client._get.assert_called_with("projects/1/issues/100/notes", params={"per_page": 100, "page": 1})
+        self.client._get.assert_any_call("projects/1/issues/100/notes", params={"per_page": 100, "page": 1})
 
     def test_get_mr_notes(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        self.client._get.return_value.json.return_value = [{"id": 1}]
+        self.client._get.return_value.json.side_effect = [[{"id": 1}], []]
         result = list(self.client.get_mr_notes(1, 100))
         self.assertEqual(len(result), 1)
-        self.client._get.assert_called_with("projects/1/merge_requests/100/notes", params={"per_page": 100, "page": 1})
+        self.client._get.assert_any_call("projects/1/merge_requests/100/notes", params={"per_page": 100, "page": 1})
 
     def test_get_project_tags(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        self.client._get.return_value.json.return_value = [{"name": "v1"}]
+        self.client._get.return_value.json.side_effect = [[{"name": "v1"}], []]
         result = list(self.client.get_project_tags(1))
         self.assertEqual(len(result), 1)
-        self.client._get.assert_called_with("projects/1/repository/tags", params={"per_page": 100, "page": 1})
+        self.client._get.assert_any_call("projects/1/repository/tags", params={"per_page": 100, "page": 1})
 
     def test_get_project_branches(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        self.client._get.return_value.json.return_value = [{"name": "main"}]
+        self.client._get.return_value.json.side_effect = [[{"name": "main"}], []]
         result = list(self.client.get_project_branches(1))
         self.assertEqual(len(result), 1)
-        self.client._get.assert_called_with("projects/1/repository/branches", params={"per_page": 100, "page": 1})
+        self.client._get.assert_any_call("projects/1/repository/branches", params={"per_page": 100, "page": 1})
 
     def test_get_project_members(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        self.client._get.return_value.json.return_value = [{"username": "user1"}]
+        self.client._get.return_value.json.side_effect = [[{"username": "user1"}], []]
         result = list(self.client.get_project_members(1))
         self.assertEqual(len(result), 1)
-        self.client._get.assert_called_with("projects/1/members/all", params={"per_page": 100, "page": 1})
+        self.client._get.assert_any_call("projects/1/members/all", params={"per_page": 100, "page": 1})
 
     def test_get_user(self):
         '''"""TODO: Add description.

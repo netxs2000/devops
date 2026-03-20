@@ -7,6 +7,7 @@ Create Date: 2026-03-16 08:36:39.454648
 """
 
 from collections.abc import Sequence
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql

@@ -25,27 +25,49 @@ from devops_collector.models.base_models import Base
 from devops_portal.main import app
 
 
+# --- REFACTORED FOR PERFORMANCE (Session-scoped Engine) ---
+from sqlalchemy.pool import StaticPool
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+SQLALCHEMY_DATABASE_URL = os.environ["DB_URI"]
+
+_engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+_SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False)
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_database():
+    """Create all tables once per session."""
+    from devops_collector.models.base_models import Base
+    # Import models to register with Base.metadata
+    import devops_collector.models.base_models
+    import devops_collector.models.mdm_organizations
+    # ...
+    Base.metadata.create_all(bind=_engine)
+
 @pytest.fixture(scope="function")
 def db_session():
-    """Create a fresh database session for each test using a temporary file."""
-    db_file = f"test_{uuid.uuid4()}.db"
-    db_url = f"sqlite:///{db_file}"
+    """Create a nested transaction session for each test for speed & isolation."""
+    connection = _engine.connect()
+    transaction = connection.begin()
+    session = _SessionLocal(bind=connection)
 
-    _engine = create_engine(db_url, connect_args={"check_same_thread": False})
-    _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False)
+    yield session
 
-    Base.metadata.create_all(bind=_engine)
-    db = _SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-        _engine.dispose()
-        if os.path.exists(db_file):
-            try:
-                os.remove(db_file)
-            except OSError:
-                pass
+    session.close()
+    transaction.rollback()
+    connection.close()
 
 
 @pytest.fixture(scope="function")

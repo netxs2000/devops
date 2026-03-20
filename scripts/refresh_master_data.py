@@ -17,7 +17,6 @@ import sys
 from pathlib import Path
 
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import Session
 
 
 # 添加项目根目录到路径

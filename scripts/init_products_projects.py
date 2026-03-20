@@ -48,7 +48,6 @@ def init_products(session: Session):
     if not PRD_CSV.exists():
         return {}
     logger.info("同步产品主数据...")
-    prod_map_obj = {}  # code -> Object
     prod_map_id = {}  # code -> Integer ID
 
     # 预加载组织和用户索引

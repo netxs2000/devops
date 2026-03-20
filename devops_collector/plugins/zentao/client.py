@@ -75,7 +75,7 @@ class ZenTaoClient(BaseClient):
                 if e.response.status_code == 404 and allow_404:
                     return e.response
             raise
-        except Exception as e:
+        except Exception:
             raise
 
     def test_connection(self) -> bool:

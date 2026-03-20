@@ -1,7 +1,7 @@
 # DevOps 效能平台 - 数据字典 (Data Dictionary)
 
-> **生成时间**: 2026-03-06 02:02:28  
-> **版本**: v2.2 (企业级标准版)  
+> **生成时间**: 2026-03-20 02:16:15
+> **版本**: v2.2 (企业级标准版)
 > **状态**: 有效 (Active)
 
 ---
@@ -32,12 +32,12 @@
 ### 核心主数据域
 - `mdm_business_systems` - BusinessSystem
 - `mdm_calendar` - Calendar
-- `mdm_company` - Company
+- `mdm_companies` - Company
 - `mdm_compliance_issues` - ComplianceIssue
 - `mdm_contract_payment_nodes` - ContractPaymentNode
 - `mdm_cost_codes` - CostCode
 - `mdm_entity_topology` - EntityTopology
-- `mdm_epic` - EpicMaster
+- `mdm_epics` - EpicMaster
 - `mdm_identities` - User
 - `mdm_identity_mappings` - IdentityMapping
 - `mdm_incidents` - Incident
@@ -47,7 +47,7 @@
 - `mdm_okr_key_results` - OKRKeyResult
 - `mdm_okr_objectives` - OKRObjective
 - `mdm_organizations` - Organization
-- `mdm_product` - Product
+- `mdm_products` - Product
 - `mdm_projects` - ProjectMaster
 - `mdm_purchase_contracts` - PurchaseContract
 - `mdm_rel_project_product` - ProjectProductRelation
@@ -57,7 +57,7 @@
 - `mdm_slo_definitions` - SLO
 - `mdm_systems_registry` - SystemRegistry
 - `mdm_traceability_links` - TraceabilityLink
-- `mdm_vendor` - Vendor
+- `mdm_vendors` - Vendor
 - `stg_mdm_resource_costs` - ResourceCost
 
 ### 测试管理域
@@ -65,7 +65,7 @@
 - `gtm_test_case_issue_links` - GTMTestCaseIssueLink
 - `gtm_test_cases` - GTMTestCase
 - `gtm_test_execution_records` - GTMTestExecutionRecord
-- `jenkins_test_executions` - JenkinsTestExecution
+- `qa_jenkins_test_executions` - JenkinsTestExecution
 
 ### GitLab 集成域
 - `gitlab_branches` - GitLabBranch
@@ -90,8 +90,6 @@
 - `sys_user_roles` - UserRole
 
 ### 其他辅助域
-- `commit_metrics` - CommitMetrics
-- `daily_dev_stats` - DailyDevStats
 - `dependencies` - Dependency
 - `dependency_cves` - DependencyCVE
 - `dependency_scans` - DependencyScan
@@ -100,6 +98,8 @@
 - `jira_projects` - JiraProject
 - `jira_sprints` - JiraSprint
 - `license_risk_rules` - LicenseRiskRule
+- `rpt_commit_metrics` - CommitMetrics
+- `rpt_daily_dev_stats` - DailyDevStats
 - `service_desk_tickets` - ServiceDeskTicket
 - `sonar_issues` - SonarIssue
 - `sonar_measures` - SonarMeasure
@@ -137,8 +137,10 @@
 | `dr_level` | String(50) | - | 是 | - | 容灾等级要求 (双活/冷备/单点) |
 | `owner_id` | UUID | FK | 是 | - | 技术负责人 |
 | `business_owner_id` | UUID | FK | 是 | - | 业务负责人 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -169,12 +171,14 @@
 | `fiscal_quarter` | String(20) | - | 是 | - | 财务季度 |
 | `week_of_year` | Integer | - | 是 | - | 年内周数 |
 | `season_tag` | String(20) | - | 是 | - | 季节标签 (春/夏/秋/冬) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
-### Company (`mdm_company`)
+### Company (`mdm_companies`)
 
 **业务描述**: 公司实体参考表 (Legal Entity)。 用于定义集团内的法律实体/纳税主体，支持财务核算和合同签署主体的管理。
 
@@ -182,17 +186,25 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `company_id` | String(50) | PK | 否 | - | 公司唯一标识 (如 COM-BJ-01) |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `company_code` | String(50) | UNIQUE, INDEX | 否 | - | 公司唯一业务标识 (如 COM-BJ-01) |
 | `name` | String(200) | - | 否 | - | 公司注册全称 |
 | `short_name` | String(100) | - | 是 | - | 公司简称 |
 | `tax_id` | String(50) | UNIQUE, INDEX | 是 | - | 统一社会信用代码/税号 |
 | `currency` | String(10) | - | 是 | CNY | 本位币种 (CNY/USD) |
 | `fiscal_year_start` | String(10) | - | 是 | 01-01 | 财年开始日期 (MM-DD) |
 | `registered_address` | String(255) | - | 是 | - | 注册地址 |
-| `location_id` | String(50) | FK | 是 | - | 主要办公地点ID |
+| `location_id` | Integer | FK, INDEX | 是 | - | 主要办公地点ID |
 | `is_active` | Boolean | - | 是 | True | 是否存续经营 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
@@ -215,8 +227,10 @@
 | `status` | String(20) | - | 是 | OPEN | 状态 (OPEN/IN_REVIEW/RESOLVED/ACCEPTED) |
 | `description` | Text | - | 是 | - | 问题详情 |
 | `metadata_payload` | JSON | - | 是 | - | 额外元数据 (JSON) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
@@ -229,7 +243,7 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `contract_id` | Integer | FK | 否 | - | 关联合同ID |
+| `contract_id` | Integer | FK, INDEX | 否 | - | 关联合同ID |
 | `node_name` | String(200) | - | 否 | - | 节点名称 |
 | `billing_percentage` | Numeric | - | 是 | - | 收款比例 (%) |
 | `billing_amount` | Numeric | - | 是 | - | 收款金额 |
@@ -237,8 +251,10 @@
 | `linked_milestone_id` | Integer | - | 是 | - | 关联里程碑ID |
 | `is_achieved` | Boolean | - | 是 | False | 是否已达成 |
 | `achieved_at` | DateTime | - | 是 | - | 达成时间 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -262,8 +278,10 @@
 | `parent_id` | Integer | FK | 是 | - | 上级科目ID |
 | `default_capex_opex` | String(10) | - | 是 | - | 默认CAPEX/OPEX属性 |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -282,8 +300,8 @@
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
 | `service_id` | Integer | FK, INDEX | 是 | - | 所属业务服务ID |
-| `project_id` | String(100) | FK, INDEX | 是 | - | 所属项目ID |
-| `system_code` | String(50) | FK | 否 | - | 来源系统代码 (如 gitlab-corp) |
+| `project_id` | Integer | FK, INDEX | 是 | - | 所属项目ID |
+| `system_id` | Integer | FK, INDEX | 否 | - | 来源系统物理ID (如 gitlab-corp 对应的 ID) |
 | `external_resource_id` | String(100) | - | 否 | - | 外部资源唯一标识 (如 Project ID, Repo URL) |
 | `resource_name` | String(200) | - | 是 | - | 资源显示名称快照 (如 backend/payment-service) |
 | `env_tag` | String(20) | - | 是 | PROD | 环境标签 (PROD/UAT/TEST/DEV) |
@@ -291,8 +309,10 @@
 | `is_active` | Boolean | - | 是 | True | 关联是否有效 |
 | `last_verified_at` | DateTime | - | 是 | - | 最后一次验证连接有效的时间 |
 | `meta_info` | JSON | - | 是 | - | 额外元数据连接信息 (JSON, 如 webhook_id, bind_key) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 | `sync_version` | Integer | - | 否 | 1 | - |
 | `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
@@ -307,7 +327,7 @@
 
 ---
 
-### EpicMaster (`mdm_epic`)
+### EpicMaster (`mdm_epics`)
 
 **业务描述**: 跨团队/长期史诗需求 (Epic) 主数据。 用于管理跨越多个迭代、涉及多个团队的战略级需求组件 (Initiatives/Epics)。
 
@@ -316,17 +336,17 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `parent_id` | Integer | FK | 是 | - | 父级 Epic ID (支持多层级) |
+| `parent_id` | Integer | FK, INDEX | 是 | - | 父级 Epic ID (支持多层级) |
 | `epic_code` | String(50) | UNIQUE, INDEX | 否 | - | 史诗唯一编码 (如 EPIC-24Q1-001) |
 | `title` | String(200) | - | 否 | - | 史诗标题 |
 | `description` | Text | - | 是 | - | 价值陈述与详细描述 |
 | `status` | String(50) | - | 是 | ANALYSIS | 状态 (ANALYSIS/BACKLOG/IN_PROGRESS/DONE/CANCELLED) |
 | `priority` | String(20) | - | 是 | P1 | 优先级 (P0-Strategic / P1-High) |
-| `okr_objective_id` | Integer | FK | 是 | - | 关联战略目标ID |
+| `okr_objective_id` | Integer | FK, INDEX | 是 | - | 关联战略目标ID |
 | `investment_theme` | String(100) | - | 是 | - | 投资主题 (如 技术债/新业务/合规/客户体验) |
 | `budget_cap` | Numeric | - | 是 | - | 预算上限 (人天或金额) |
-| `owner_id` | UUID | FK | 是 | - | 史诗负责人 |
-| `group_id` | String(100) | FK | 是 | - | 所属群组/组织ID (GitLab Group) |
+| `owner_id` | UUID | FK, INDEX | 是 | - | 史诗负责人 |
+| `org_id` | Integer | FK, INDEX | 是 | - | 负责人所属组织/部门ID |
 | `start_date_is_fixed` | Boolean | - | 是 | False | 是否固定开始时间 (False则自动继承子任务) |
 | `due_date_is_fixed` | Boolean | - | 是 | False | 是否固定结束时间 |
 | `planned_start_date` | Date | - | 是 | - | 计划开始日期 |
@@ -340,13 +360,15 @@
 | `external_id` | String(50) | - | 是 | - | 外部系统ID (如 GitLab Epic IID) |
 | `involved_teams` | JSON | - | 是 | - | 涉及团队列表 (JSON List) |
 | `tags` | JSON | - | 是 | - | 标签 (JSON List) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
 - **owner**: many-to-one -> `User`
-- **group**: many-to-one -> `Organization`
+- **organization**: many-to-one -> `Organization`
 - **okr_objective**: many-to-one -> `OKRObjective`
 - **parent**: many-to-one -> `EpicMaster`
 - **children**: one-to-many -> `EpicMaster`
@@ -366,16 +388,18 @@
 | `username` | String(100) | - | 是 | - | 登录用户名 |
 | `full_name` | String(200) | - | 是 | - | 用户姓名 |
 | `primary_email` | String(255) | UNIQUE, INDEX | 是 | - | 主邮箱地址 |
-| `department_id` | String(100) | FK | 是 | - | 所属部门ID |
+| `department_id` | Integer | FK, INDEX | 是 | - | 所属部门ID |
 | `position` | String(100) | - | 是 | - | 职位/岗位名称 |
 | `hr_relationship` | String(50) | - | 是 | - | 人事关系 (如：正式/外协/实习) |
-| `location_id` | String(50) | FK | 是 | - | 常驻办公地点ID |
+| `location_id` | Integer | FK, INDEX | 是 | - | 常驻办公地点ID |
 | `is_active` | Boolean | - | 是 | True | 是否在职 |
 | `is_survivor` | Boolean | - | 是 | False | 是否通过合并保留的账号 |
 | `total_eloc` | Numeric | - | 是 | 0.0 | 累计有效代码行数 |
 | `eloc_rank` | Integer | - | 是 | 0 | ELOC排名 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 | `sync_version` | Integer | - | 否 | 1 | - |
 | `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
@@ -418,8 +442,10 @@
 | `mapping_status` | String(20) | - | 是 | VERIFIED | 映射状态 (VERIFIED/PENDING/REJECTED) |
 | `confidence_score` | Numeric | - | 是 | 1.0 | 匹配置信度 (0.0-1.0) |
 | `last_active_at` | DateTime | - | 是 | - | 最后活跃时间 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -443,16 +469,23 @@
 | `occurred_at` | DateTime | - | 是 | - | 故障发生时间 (用于计算 TTI: Time to Impact) |
 | `detected_at` | DateTime | - | 是 | - | 故障发现时间 (用于计算 MTTD: Time to Detect) |
 | `resolved_at` | DateTime | - | 是 | - | 业务恢复时间 (用于计算 MTTR: Time to Restore) |
-| `location_id` | String(50) | FK | 是 | - | 故障发生地点ID |
+| `location_id` | Integer | FK, INDEX | 是 | - | 故障发生地点ID |
 | `root_cause_category` | String(50) | - | 是 | - | 根因分类 (Code Change/Config Change/Capacity/Infrastructure/Exteanl) |
 | `post_mortem_url` | String(255) | - | 是 | - | 复盘报告链接 (Confluence/Doc URL) |
 | `affected_users` | Integer | - | 是 | - | 受影响用户数量预估 |
 | `financial_loss` | Numeric | - | 是 | 0.0 | 预估经济损失金额 (CNY) |
-| `owner_id` | UUID | FK | 是 | - | 主责任人 |
-| `project_id` | String(100) | FK | 是 | - | 关联项目ID |
-| `service_id` | Integer | FK | 是 | - | 故障服务ID |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `owner_id` | UUID | FK, INDEX | 是 | - | 主责任人 |
+| `project_id` | Integer | FK, INDEX | 是 | - | 关联项目ID |
+| `service_id` | Integer | FK, INDEX | 是 | - | 故障服务ID |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
@@ -478,8 +511,10 @@
 | `currency` | String(10) | - | 是 | CNY | 币种 |
 | `effective_date` | DateTime | - | 是 | - | 生效日期 |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
@@ -492,17 +527,19 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `location_id` | String(50) | UNIQUE, INDEX | 是 | - | 位置唯一标识 (如 UUID) |
-| `code` | String(20) | UNIQUE, INDEX | 是 | - | 行政区划或业务编码 (如 CN-GD, 440000) |
+| `location_code` | String(50) | UNIQUE, INDEX | 是 | - | 位置唯一业务标识 (如 LOC_BJ_01) |
+| `code` | String(20) | INDEX | 是 | - | 行政区划或业务编码 (如 CN-GD, 440000) |
 | `location_name` | String(200) | - | 否 | - | 位置名称 (如 广东省) |
 | `short_name` | String(50) | - | 是 | - | 简称 (如 广东) |
 | `location_type` | String(50) | - | 是 | - | 位置类型 (country/province/city/site/datacenter) |
-| `parent_id` | String(50) | - | 是 | - | 上级位置ID |
+| `parent_id` | Integer | FK | 是 | - | 上级位置物理ID |
 | `region` | String(50) | - | 是 | - | 区域 (华北/华东/华南) |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
 | `manager_user_id` | UUID | FK | 是 | - | 负责人 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
@@ -514,7 +551,8 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `metric_code` | String(100) | PK | 否 | - | 指标唯一编码 (如 DORA_MTTR_PROD) |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `metric_code` | String(100) | UNIQUE, INDEX | 否 | - | 指标唯一编码 (如 DORA_MTTR_PROD) |
 | `metric_name` | String(200) | - | 否 | - | 指标展示名称 (如 生产环境平均修复时间) |
 | `domain` | String(50) | - | 否 | - | 所属业务域 (DEVOPS/FINANCE/OPERATION) |
 | `metric_type` | String(50) | - | 是 | - | 指标类型 (ATOMIC:原子指标 / DERIVED:派生指标 / COMPOSITE:复合指标) |
@@ -524,17 +562,26 @@
 | `source_model` | String(200) | - | 是 | - | 来源数据模型 (关联 dbt 模型或数据库表名) |
 | `dimension_scope` | JSON | - | 是 | - | 允许下钻的维度列表 (JSON List, 如 ["dept", "application", "priority"]) |
 | `is_standard` | Boolean | - | 是 | True | 是否集团标准指标 (True: 锁定口径, 不允许随意修改) |
-| `business_owner_id` | UUID | FK | 是 | - | 业务负责人 |
+| `business_owner_id` | UUID | FK, INDEX | 是 | - | 业务负责人 |
+| `technical_owner_id` | UUID | FK, INDEX | 是 | - | 技术负责人 |
 | `time_grain` | String(50) | - | 是 | - | 统计时间粒度 (Daily, Weekly, Monthly) |
 | `update_cycle` | String(50) | - | 是 | - | 数据刷新周期 (Realtime, T+1, Hourly) |
 | `status` | String(50) | - | 是 | RELEASED | 生命周期状态 (DRAFT:草稿 / RELEASED:已发布 / DEPRECATED:已废弃) |
 | `is_active` | Boolean | - | 是 | True | 是否启用 (逻辑删除标志) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
 - **business_owner**: many-to-one -> `User`
+- **technical_owner**: many-to-one -> `User`
 
 ---
 
@@ -547,16 +594,19 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `objective_id` | Integer | FK | 否 | - | 关联目标ID |
+| `objective_id` | Integer | FK, INDEX | 否 | - | 关联目标ID |
 | `title` | String(255) | - | 否 | - | KR标题 |
 | `target_value` | Numeric | - | 否 | - | 目标值 |
 | `current_value` | Numeric | - | 是 | 0.0 | 当前值 |
-| `unit` | String(20) | - | 是 | - | 单位 (%/天/个) |
+| `metric_unit` | String(20) | - | 是 | - | 单位 (%/天/个) |
 | `weight` | Numeric | - | 是 | 1.0 | 权重 |
-| `owner_id` | UUID | FK | 是 | - | 负责人 |
+| `owner_id` | UUID | FK, INDEX | 是 | - | 负责人 |
 | `progress` | Numeric | - | 是 | 0.0 | 进度 (0.0-1.0) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `linked_metrics_config` | JSON | - | 是 | - | 关联度量配置 (JSON) |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -578,18 +628,30 @@
 | `title` | String(255) | - | 否 | - | 目标标题 |
 | `description` | Text | - | 是 | - | 目标描述 |
 | `period` | String(20) | INDEX | 是 | - | 周期 (2024-Q1/2024-H1) |
-| `owner_id` | UUID | FK | 是 | - | 负责人 |
-| `org_id` | String(100) | FK | 是 | - | 所属组织ID |
+| `owner_id` | UUID | FK, INDEX | 是 | - | 负责人 |
+| `org_id` | Integer | FK, INDEX | 是 | - | 所属组织ID |
+| `parent_id` | Integer | FK, INDEX | 是 | - | 上级目标ID |
+| `product_id` | Integer | FK, INDEX | 是 | - | 关联产品ID |
 | `status` | String(20) | - | 是 | ACTIVE | 状态 (ACTIVE/COMPLETED/ABANDONED) |
 | `progress` | Numeric | - | 是 | 0.0 | 进度 (0.0-1.0) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 #### 关系映射
 
 - **owner**: many-to-one -> `User`
 - **organization**: many-to-one -> `Organization`
+- **parent**: many-to-one -> `OKRObjective`
+- **product**: many-to-one -> `Product`
 - **key_results**: one-to-many -> `OKRKeyResult`
+- **children**: one-to-many -> `OKRObjective`
 
 ---
 
@@ -602,16 +664,18 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `org_id` | String(100) | UNIQUE, INDEX | 否 | - | 组织唯一标识 (HR系统同步) |
+| `org_code` | String(100) | UNIQUE, INDEX | 否 | - | 组织唯一标识 (HR系统同步) |
 | `org_name` | String(200) | - | 否 | - | 组织名称 |
 | `org_level` | Integer | - | 是 | 1 | 组织层级 (1=公司, 2=部门, 3=团队) |
-| `parent_org_id` | String(100) | FK | 是 | - | 上级组织ID |
-| `manager_user_id` | UUID | FK | 是 | - | 部门负责人 |
+| `parent_id` | Integer | FK, INDEX | 是 | - | 上级组织ID |
+| `manager_user_id` | UUID | FK, INDEX | 是 | - | 部门负责人 |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
 | `cost_center` | String(100) | - | 是 | - | 成本中心编码 |
 | `business_line` | String(50) | - | 是 | - | 所属业务线/体系 (如 研发体系/交付体系/营销体系) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 | `sync_version` | Integer | - | 否 | 1 | - |
 | `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
@@ -630,7 +694,7 @@
 
 ---
 
-### Product (`mdm_product`)
+### Product (`mdm_products`)
 
 **业务描述**: 产品主数据表 (mdm_product)。 支持 SCD Type 2，记录产品生命周期状态、负责人变更及规格调整的历史轨迹。
 
@@ -638,7 +702,8 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `product_id` | String(100) | PK | 否 | - | 产品唯一标识 |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `product_code` | String(100) | UNIQUE, INDEX | 否 | - | 产品业务唯一标识 |
 | `product_name` | String(255) | - | 否 | - | 产品名称 |
 | `product_description` | Text | - | 否 | - | 产品描述 |
 | `category` | String(100) | - | 是 | - | 产品分类 (平台/应用/组件) |
@@ -649,16 +714,18 @@
 | `lifecycle_status` | String(50) | - | 是 | Active | 生命周期状态 (Active/Deprecated/EOL) |
 | `repo_url` | String(255) | - | 是 | - | 主代码仓库URL |
 | `artifact_path` | String(255) | - | 是 | - | 制品存储路径 |
-| `owner_team_id` | String(100) | FK | 是 | - | 负责团队ID |
-| `product_manager_id` | UUID | FK | 是 | - | 产品经理 |
-| `dev_lead_id` | UUID | FK | 是 | - | 开发经理 |
-| `qa_lead_id` | UUID | FK | 是 | - | 测试经理 |
-| `release_lead_id` | UUID | FK | 是 | - | 发布经理 |
+| `owner_team_id` | Integer | FK, INDEX | 是 | - | 负责团队ID |
+| `product_manager_id` | UUID | FK, INDEX | 是 | - | 产品经理 |
+| `dev_lead_id` | UUID | FK, INDEX | 是 | - | 开发经理 |
+| `qa_lead_id` | UUID | FK, INDEX | 是 | - | 测试经理 |
+| `release_lead_id` | UUID | FK, INDEX | 是 | - | 发布经理 |
 | `matching_patterns` | JSON | - | 是 | - | 自动识别匹配模式列表 (JSON) |
-| `parent_product_id` | String(100) | FK | 是 | - | 上级产品ID |
+| `parent_product_id` | Integer | FK, INDEX | 是 | - | 上级产品ID |
 | `node_type` | String(20) | - | 是 | APP | 节点类型 (LINE=产品线 / APP=应用) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 | `sync_version` | Integer | - | 否 | 1 | - |
 | `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
@@ -675,6 +742,7 @@
 - **release_lead**: many-to-one -> `User`
 - **project_relations**: one-to-many -> `ProjectProductRelation`
 - **children**: one-to-many -> `Product`
+- **objectives**: one-to-many -> `OKRObjective`
 
 ---
 
@@ -686,30 +754,33 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `project_id` | String(100) | PK | 否 | - | 项目唯一标识 |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `project_code` | String(100) | UNIQUE, INDEX | 否 | - | 项目业务唯一标识 |
 | `project_name` | String(200) | - | 否 | - | 项目名称 |
 | `project_type` | String(50) | - | 是 | - | 项目类型 (研发项目/运维项目/POC) |
 | `status` | String(50) | - | 是 | PLAN | 项目状态 (PLAN/ACTIVE/SUSPENDED/CLOSED) |
 | `is_active` | Boolean | - | 是 | True | 是否启用 |
-| `pm_user_id` | UUID | FK | 是 | - | 项目经理 |
-| `product_owner_id` | UUID | FK | 是 | - | 产品经理 |
-| `dev_lead_id` | UUID | FK | 是 | - | 开发经理 |
-| `qa_lead_id` | UUID | FK | 是 | - | 测试经理 |
-| `release_lead_id` | UUID | FK | 是 | - | 发布经理 |
-| `org_id` | String(100) | FK | 是 | - | 负责部门ID |
-| `location_id` | String(50) | FK | 是 | - | 项目所属/实施地点ID |
+| `pm_user_id` | UUID | FK, INDEX | 是 | - | 项目经理 |
+| `product_owner_id` | UUID | FK, INDEX | 是 | - | 产品经理 |
+| `dev_lead_id` | UUID | FK, INDEX | 是 | - | 开发经理 |
+| `qa_lead_id` | UUID | FK, INDEX | 是 | - | 测试经理 |
+| `release_lead_id` | UUID | FK, INDEX | 是 | - | 发布经理 |
+| `org_id` | Integer | FK, INDEX | 是 | - | 负责部门ID |
+| `location_id` | Integer | FK, INDEX | 是 | - | 项目所属/实施地点ID |
 | `plan_start_date` | Date | - | 是 | - | 计划开始日期 |
 | `plan_end_date` | Date | - | 是 | - | 计划结束日期 |
 | `actual_start_at` | DateTime | - | 是 | - | 实际开始时间 |
 | `actual_end_at` | DateTime | - | 是 | - | 实际结束时间 |
 | `external_id` | String(100) | UNIQUE | 是 | - | 外部系统项目ID |
-| `system_code` | String(50) | FK | 是 | - | 数据来源系统 |
+| `system_id` | Integer | FK, INDEX | 是 | - | 数据来源系统 |
 | `budget_code` | String(100) | - | 是 | - | 预算编码 |
 | `budget_type` | String(50) | - | 是 | - | 预算类型 (CAPEX/OPEX) |
 | `lead_repo_id` | Integer | - | 是 | - | 主代码仓库ID |
 | `description` | Text | - | 是 | - | 项目描述 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 | `sync_version` | Integer | - | 否 | 1 | - |
 | `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
@@ -747,10 +818,12 @@
 | `currency` | String(10) | - | 是 | CNY | 币种 |
 | `start_date` | Date | - | 是 | - | 合同开始日期 |
 | `end_date` | Date | - | 是 | - | 合同结束日期 |
-| `cost_code_id` | Integer | FK | 是 | - | 成本科目ID |
+| `cost_code_id` | Integer | FK, INDEX | 是 | - | 成本科目ID |
 | `capex_opex_flag` | String(10) | - | 是 | - | CAPEX/OPEX标志 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -767,13 +840,15 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `project_id` | String(100) | FK, INDEX | 否 | - | 项目ID |
-| `org_id` | String(100) | INDEX | 否 | - | 所属组织ID |
-| `product_id` | String(100) | FK, INDEX | 否 | - | 产品ID |
+| `project_id` | Integer | FK, INDEX | 否 | - | 项目ID |
+| `org_id` | Integer | FK, INDEX | 否 | - | 所属组织ID |
+| `product_id` | Integer | FK, INDEX | 否 | - | 产品ID |
 | `relation_type` | String(50) | - | 是 | PRIMARY | 关联类型 (PRIMARY/SECONDARY) |
 | `allocation_ratio` | Numeric | - | 是 | 1.0 | 工作量分配比例 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -797,9 +872,11 @@
 | `total_value` | Numeric | - | 是 | 0.0 | 合同总额 |
 | `currency` | String(10) | - | 是 | CNY | 币种 |
 | `sign_date` | Date | - | 是 | - | 签约日期 |
-| `product_id` | String(100) | FK | 是 | - | 关联产品ID |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `product_id` | Integer | FK, INDEX | 是 | - | 关联产品ID |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -817,11 +894,13 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `service_id` | Integer | FK | 否 | - | 服务ID |
+| `service_id` | Integer | FK, INDEX | 否 | - | 服务ID |
 | `source` | String(50) | - | 是 | - | 项目来源系统 (gitlab/jira) |
 | `project_id` | Integer | - | 是 | - | 外部项目ID |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -840,15 +919,17 @@
 | `id` | Integer | PK | 否 | - | 自增主键 |
 | `name` | String(200) | - | 否 | - | 服务名称 |
 | `tier` | String(20) | - | 是 | - | 服务级别 (T0/T1/T2/T3) |
-| `org_id` | String(100) | FK | 是 | - | 负责组织ID |
+| `org_id` | Integer | FK | 是 | - | 负责组织ID |
 | `description` | Text | - | 是 | - | 服务描述 |
 | `system_id` | Integer | FK | 是 | - | 所属业务系统ID |
 | `lifecycle` | String(20) | - | 是 | production | 生命周期 (experimental/production/deprecated) |
 | `component_type` | String(20) | - | 是 | service | 组件类型 (service/library/website/tool) |
 | `tags` | JSON | - | 是 | - | 标签列表 (JSON) |
 | `links` | JSON | - | 是 | - | 相关链接 (JSON) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 | `sync_version` | Integer | - | 否 | 1 | - |
 | `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
@@ -875,14 +956,16 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `service_id` | Integer | FK | 否 | - | 关联服务ID |
+| `service_id` | Integer | FK, INDEX | 否 | - | 关联服务ID |
 | `name` | String(100) | - | 否 | - | SLO 名称 |
 | `indicator_type` | String(50) | - | 是 | - | 指标类型 (Availability/Latency/Throughput) |
 | `target_value` | Numeric | - | 是 | - | 目标值 |
 | `metric_unit` | String(20) | - | 是 | - | 度量单位 (%/ms) |
 | `time_window` | String(20) | - | 是 | - | 统计窗口期 (28d/7d) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -898,7 +981,8 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `system_code` | String(50) | PK | 否 | - | 系统唯一标准代号 (如 gitlab-corp) |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `system_code` | String(50) | UNIQUE, INDEX | 否 | - | 系统唯一标准代号 (如 gitlab-corp) |
 | `system_name` | String(100) | - | 否 | - | 系统显示名称 |
 | `system_type` | String(50) | - | 是 | - | 工具类型 (VCS/TICKET/CI/SONAR/K8S) |
 | `env_tag` | String(20) | - | 是 | PROD | 环境标签 (PROD/Stage/Test) |
@@ -912,13 +996,15 @@
 | `enabled_plugins` | String(255) | - | 是 | - | 启用的采集插件列表 (逗号分隔) |
 | `data_sensitivity` | String(20) | - | 是 | - | 数据敏感级 (L1-L4) |
 | `sla_level` | String(20) | - | 是 | - | 服务等级 (P0-Critical / P1-High) |
-| `technical_owner_id` | UUID | FK | 是 | - | 技术负责人 |
+| `technical_owner_id` | UUID | FK, INDEX | 是 | - | 技术负责人 |
 | `is_active` | Boolean | - | 是 | True | 是否启用采集 |
 | `last_heartbeat` | DateTime | - | 是 | - | 最后连通性检查时间 |
 | `last_sync_at` | DateTime | - | 是 | - | 最后一次数据同步时间 |
 | `remarks` | Text | - | 是 | - | 备注说明 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 | `sync_version` | Integer | - | 否 | 1 | - |
 | `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
@@ -949,12 +1035,14 @@
 | `target_id` | String(100) | INDEX | 是 | - | 目标实体ID |
 | `link_type` | String(50) | - | 是 | - | 链路类型 (implements/tests/deploys) |
 | `raw_data` | JSON | - | 是 | - | 原始关联数据 (JSON) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
-### Vendor (`mdm_vendor`)
+### Vendor (`mdm_vendors`)
 
 **业务描述**: 外部供应商主数据表。
 
@@ -962,7 +1050,8 @@
 
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
-| `vendor_code` | String(50) | PK | 否 | - | 供应商唯一编码 |
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `vendor_code` | String(50) | UNIQUE, INDEX | 否 | - | 供应商唯一业务编码 |
 | `name` | String(200) | - | 否 | - | 供应商全称 |
 | `short_name` | String(100) | - | 是 | - | 供应商简称 |
 | `category` | String(50) | - | 是 | - | 供应商类别 (人力外包/软件许可/云服务/硬件) |
@@ -974,8 +1063,15 @@
 | `contact_email` | String(100) | - | 是 | - | 联系邮箱 |
 | `contact_phone` | String(50) | - | 是 | - | 联系电话 |
 | `rating` | Numeric | - | 是 | 0.0 | 供应商绩效评分 (0-5) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
+| `sync_version` | Integer | - | 否 | 1 | - |
+| `effective_from` | DateTime | - | 是 | (auto) | - |
+| `effective_to` | DateTime | - | 是 | - | - |
+| `is_current` | Boolean | INDEX | 是 | True | - |
+| `is_deleted` | Boolean | - | 是 | False | - |
 
 ---
 
@@ -988,9 +1084,9 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `service_id` | Integer | FK | 是 | - | 关联服务ID |
-| `cost_code_id` | Integer | FK | 是 | - | 成本科目ID |
-| `purchase_contract_id` | Integer | FK | 是 | - | 采购合同ID |
+| `service_id` | Integer | FK, INDEX | 是 | - | 关联服务ID |
+| `cost_code_id` | Integer | FK, INDEX | 是 | - | 成本科目ID |
+| `purchase_contract_id` | Integer | FK, INDEX | 是 | - | 采购合同ID |
 | `period` | String(20) | INDEX | 是 | - | 费用周期 (YYYY-MM) |
 | `amount` | Numeric | - | 是 | 0.0 | 费用金额 |
 | `currency` | String(10) | - | 是 | CNY | 币种 |
@@ -999,8 +1095,11 @@
 | `vendor_name` | String(200) | - | 是 | - | 供应商名称 |
 | `capex_opex_flag` | String(10) | - | 是 | - | CAPEX/OPEX标志 |
 | `source_system` | String(100) | - | 是 | - | 数据来源系统 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `correlation_id` | String(100) | INDEX | 是 | - | 关联追踪ID |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -1027,8 +1126,10 @@
 | `title` | String(255) | - | 否 | - | - |
 | `description` | Text | - | 是 | - | - |
 | `state` | String(20) | - | 是 | opened | - |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -1049,8 +1150,10 @@
 | `id` | Integer | PK | 否 | - | - |
 | `test_case_id` | Integer | FK | 否 | - | - |
 | `issue_id` | Integer | FK | 否 | - | - |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
@@ -1072,8 +1175,10 @@
 | `pre_conditions` | Text | - | 是 | - | - |
 | `description` | Text | - | 是 | - | - |
 | `test_steps` | JSON | - | 是 | [] | - |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -1104,8 +1209,10 @@
 | `pipeline_id` | Integer | - | 是 | - | - |
 | `environment` | String(50) | - | 是 | Default | - |
 | `title` | String(255) | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -1113,7 +1220,7 @@
 
 ---
 
-### JenkinsTestExecution (`jenkins_test_executions`)
+### JenkinsTestExecution (`qa_jenkins_test_executions`)
 
 **业务描述**: Jenkins 测试执行汇总记录表。 存储来自 Jenkins 持续集成工具的测试报告汇总数据。
 
@@ -1133,8 +1240,10 @@
 | `pass_rate` | Numeric | - | 是 | 0.0 | 通过率 (%) |
 | `duration_ms` | Integer | - | 是 | 0 | 执行时长 (毫秒) |
 | `raw_data` | JSON | - | 是 | - | 原始测试报告 JSON |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
@@ -1174,14 +1283,14 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | String | PK | 否 | - | - |
-| `project_id` | Integer | FK | 是 | - | - |
+| `project_id` | Integer | FK, INDEX | 是 | - | - |
 | `short_id` | String | - | 是 | - | - |
 | `title` | String | - | 是 | - | - |
 | `author_name` | String | - | 是 | - | - |
 | `author_email` | String | - | 是 | - | - |
 | `message` | Text | - | 是 | - | - |
 | `authored_date` | DateTime | - | 是 | - | - |
-| `committed_date` | DateTime | - | 是 | - | - |
+| `committed_date` | DateTime | INDEX | 是 | - | - |
 | `additions` | Integer | - | 是 | 0 | - |
 | `deletions` | Integer | - | 是 | 0 | - |
 | `total` | Integer | - | 是 | 0 | - |
@@ -1208,9 +1317,9 @@
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | - |
 | `iid` | Integer | - | 是 | - | - |
-| `project_id` | Integer | FK | 是 | - | - |
+| `project_id` | Integer | FK, INDEX | 是 | - | - |
 | `status` | String | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | INDEX | 是 | - | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `ref` | String | - | 是 | - | - |
 | `sha` | String | - | 是 | - | - |
@@ -1287,11 +1396,11 @@
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | - |
 | `iid` | Integer | - | 是 | - | - |
-| `project_id` | Integer | FK | 是 | - | - |
+| `project_id` | Integer | FK, INDEX | 是 | - | - |
 | `title` | String | - | 是 | - | - |
 | `description` | String | - | 是 | - | - |
-| `state` | String | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | - | - |
+| `state` | String | INDEX | 是 | - | - |
+| `created_at` | DateTime | INDEX | 是 | - | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `closed_at` | DateTime | - | 是 | - | - |
 | `time_estimate` | Integer | - | 是 | - | - |
@@ -1330,14 +1439,14 @@
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | - |
 | `iid` | Integer | - | 是 | - | - |
-| `project_id` | Integer | FK | 是 | - | - |
+| `project_id` | Integer | FK, INDEX | 是 | - | - |
 | `title` | String | - | 是 | - | - |
 | `description` | String | - | 是 | - | - |
-| `state` | String | - | 是 | - | - |
+| `state` | String | INDEX | 是 | - | - |
 | `author_username` | String | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | INDEX | 是 | - | - |
 | `updated_at` | DateTime | - | 是 | - | - |
-| `merged_at` | DateTime | - | 是 | - | - |
+| `merged_at` | DateTime | INDEX | 是 | - | - |
 | `closed_at` | DateTime | - | 是 | - | - |
 | `reviewers` | JSON | - | 是 | - | - |
 | `changes_count` | String | - | 是 | - | - |
@@ -1453,13 +1562,13 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | - |
-| `project_id` | Integer | FK | 是 | - | - |
+| `project_id` | Integer | FK, INDEX | 是 | - | - |
 | `status` | String | - | 是 | - | - |
 | `ref` | String | - | 是 | - | - |
 | `sha` | String | - | 是 | - | - |
 | `source` | String | - | 是 | - | - |
 | `duration` | Integer | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | INDEX | 是 | - | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 | `coverage` | String | - | 是 | - | - |
 | `failure_reason` | String | - | 是 | - | - |
@@ -1514,7 +1623,7 @@
 | `created_at` | DateTime | - | 是 | - | - |
 | `last_activity_at` | DateTime | - | 是 | - | - |
 | `last_synced_at` | DateTime | - | 是 | - | - |
-| `sync_status` | String | - | 是 | PENDING | - |
+| `sync_status` | String | INDEX | 是 | PENDING | - |
 | `raw_data` | JSON | - | 是 | - | - |
 | `sync_state` | JSON | - | 是 | {} | - |
 | `storage_size` | BigInteger | - | 是 | - | - |
@@ -1524,8 +1633,8 @@
 | `commit_count` | Integer | - | 是 | - | - |
 | `tags_count` | Integer | - | 是 | - | - |
 | `branches_count` | Integer | - | 是 | - | - |
-| `organization_id` | String(100) | FK | 是 | - | - |
-| `mdm_project_id` | String(100) | FK | 是 | - | - |
+| `organization_id` | Integer | FK | 是 | - | - |
+| `mdm_project_id` | Integer | FK | 是 | - | - |
 | `updated_at` | DateTime | - | 是 | - | - |
 
 #### 关系映射
@@ -1610,8 +1719,10 @@
 | `user_id` | UUID | FK, UNIQUE | 是 | - | 用户ID |
 | `password_hash` | String(255) | - | 否 | - | 密码哈希值 |
 | `last_login_at` | DateTime | - | 是 | - | 最后登录时间 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -1628,14 +1739,16 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `user_id` | String(100) | INDEX | 是 | - | 用户标识 |
+| `user_id` | UUID | FK, INDEX | 是 | - | 关联用户ID |
 | `provider` | String(50) | INDEX | 是 | - | OAuth 提供商 (gitlab/github/azure) |
 | `access_token` | String(1024) | - | 否 | - | 访问令牌 (加密存储) |
 | `refresh_token` | String(1024) | - | 是 | - | 刷新令牌 |
 | `token_type` | String(50) | - | 是 | - | 令牌类型 (Bearer) |
 | `expires_at` | DateTime | - | 是 | - | 过期时间 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
@@ -1653,55 +1766,6 @@
 ---
 
 ## 其他辅助域
-
-### CommitMetrics (`commit_metrics`)
-
-**业务描述**: 单个提交的详细度量数据 (ELOC)。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `commit_id` | String(100) | PK | 否 | - | 提交SHA哈希值 |
-| `project_id` | String(100) | FK | 是 | - | 所属业务项目ID |
-| `author_email` | String(255) | INDEX | 是 | - | 提交者邮箱 |
-| `committed_at` | DateTime | - | 是 | - | 提交时间 |
-| `raw_additions` | Integer | - | 是 | 0 | 原始新增行数 |
-| `raw_deletions` | Integer | - | 是 | 0 | 原始删除行数 |
-| `eloc_score` | Numeric | - | 是 | 0.0 | 有效代码行数得分 |
-| `impact_score` | Numeric | - | 是 | 0.0 | 代码影响力得分 |
-| `churn_lines` | Integer | - | 是 | 0 | 代码翻动行数 |
-| `comment_lines` | Integer | - | 是 | 0 | 注释行数 |
-| `test_lines` | Integer | - | 是 | 0 | 测试代码行数 |
-| `file_count` | Integer | - | 是 | 0 | 涉及文件数 |
-| `is_merge` | Boolean | - | 是 | False | 是否为合并提交 |
-| `is_legacy_refactor` | Boolean | - | 是 | False | 是否为遗留代码重构 |
-| `refactor_ratio` | Numeric | - | 是 | 0.0 | 重构代码占比 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
-
----
-
-### DailyDevStats (`daily_dev_stats`)
-
-**业务描述**: 开发人员行为的每日快照。
-
-#### 字段定义
-
-| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
-|:-------|:---------|:-----|:-----|:-------|:-----|
-| `id` | Integer | PK | 否 | - | 自增主键 |
-| `user_id` | UUID | FK, INDEX | 是 | - | 用户ID |
-| `date` | Date | INDEX | 是 | - | 统计日期 |
-| `first_commit_time` | DateTime | - | 是 | - | 当日首次提交时间 |
-| `last_commit_time` | DateTime | - | 是 | - | 当日最后提交时间 |
-| `commit_count` | Integer | - | 是 | 0 | 当日提交次数 |
-| `total_impact` | Numeric | - | 是 | 0.0 | 当日总影响力得分 |
-| `total_churn` | Integer | - | 是 | 0 | 当日总代码翻动行数 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
-
----
 
 ### Dependency (`dependencies`)
 
@@ -1736,8 +1800,10 @@
 | `description` | Text | - | 是 | - | - |
 | `homepage_url` | Text | - | 是 | - | - |
 | `raw_data` | JSON | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -1769,8 +1835,10 @@
 | `references` | JSON | - | 是 | - | - |
 | `is_ignored` | Boolean | - | 是 | False | - |
 | `ignore_reason` | Text | - | 是 | - | - |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -1803,8 +1871,9 @@
 | `scan_duration_seconds` | Numeric | - | 是 | - | Scan Duration (Seconds) |
 | `raw_json` | JSON | - | 是 | - | - |
 | `created_by` | UUID | FK | 是 | - | 创建人 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 | `sync_version` | Integer | - | 否 | 1 | - |
 | `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |
@@ -1957,8 +2026,64 @@
 | `description` | Text | - | 是 | - | - |
 | `policy_notes` | Text | - | 是 | - | - |
 | `is_active` | Boolean | - | 是 | True | - |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
+
+---
+
+### CommitMetrics (`rpt_commit_metrics`)
+
+**业务描述**: 单个提交的详细度量数据 (ELOC)。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `commit_sha` | String(100) | UNIQUE, INDEX | 是 | - | 提交SHA哈希值 |
+| `project_id` | Integer | FK, INDEX | 是 | - | 所属项目物理ID |
+| `author_email` | String(255) | INDEX | 是 | - | 提交者邮箱 |
+| `committed_at` | DateTime | - | 是 | - | 提交时间 |
+| `raw_additions` | Integer | - | 是 | 0 | 原始新增行数 |
+| `raw_deletions` | Integer | - | 是 | 0 | 原始删除行数 |
+| `eloc_score` | Numeric | - | 是 | 0.0 | 有效代码行数得分 |
+| `impact_score` | Numeric | - | 是 | 0.0 | 代码影响力得分 |
+| `churn_lines` | Integer | - | 是 | 0 | 代码翻动行数 |
+| `comment_lines` | Integer | - | 是 | 0 | 注释行数 |
+| `test_lines` | Integer | - | 是 | 0 | 测试代码行数 |
+| `file_count` | Integer | - | 是 | 0 | 涉及文件数 |
+| `is_merge` | Boolean | - | 是 | False | 是否为合并提交 |
+| `is_legacy_refactor` | Boolean | - | 是 | False | 是否为遗留代码重构 |
+| `refactor_ratio` | Numeric | - | 是 | 0.0 | 重构代码占比 |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
+
+---
+
+### DailyDevStats (`rpt_daily_dev_stats`)
+
+**业务描述**: 开发人员行为的每日快照。
+
+#### 字段定义
+
+| 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
+|:-------|:---------|:-----|:-----|:-------|:-----|
+| `id` | Integer | PK | 否 | - | 自增主键 |
+| `user_id` | UUID | FK, INDEX | 是 | - | 用户ID |
+| `date` | Date | INDEX | 是 | - | 统计日期 |
+| `first_commit_time` | DateTime | - | 是 | - | 当日首次提交时间 |
+| `last_commit_time` | DateTime | - | 是 | - | 当日最后提交时间 |
+| `commit_count` | Integer | - | 是 | 0 | 当日提交次数 |
+| `total_impact` | Numeric | - | 是 | 0.0 | 当日总影响力得分 |
+| `total_churn` | Integer | - | 是 | 0 | 当日总代码翻动行数 |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
@@ -2097,8 +2222,8 @@
 | `name` | String(255) | - | 是 | - | - |
 | `qualifier` | String(10) | - | 是 | - | - |
 | `gitlab_project_id` | Integer | FK | 是 | - | - |
-| `mdm_project_id` | String(100) | FK | 是 | - | 关联的 MDM 项目 ID |
-| `mdm_product_id` | String(100) | FK | 是 | - | 关联的 MDM 产品 ID |
+| `mdm_project_id` | Integer | FK | 是 | - | 关联的 MDM 项目 ID |
+| `mdm_product_id` | Integer | FK | 是 | - | 关联的 MDM 产品 ID |
 | `last_analysis_date` | DateTime | - | 是 | - | - |
 | `last_synced_at` | DateTime | - | 是 | - | - |
 | `sync_status` | String(20) | - | 是 | PENDING | - |
@@ -2128,9 +2253,12 @@
 | `external_id` | String(100) | INDEX | 是 | - | 外部系统记录ID |
 | `payload` | JSON | - | 是 | - | 原始 JSON 数据负载 |
 | `schema_version` | String(20) | - | 是 | - | Payload 结构版本 |
+| `correlation_id` | String(100) | INDEX | 是 | - | 关联追踪ID |
 | `collected_at` | DateTime | - | 是 | - | 采集时间 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
@@ -2157,8 +2285,10 @@
 | `perms` | String(100) | - | 是 | - | 权限标识 (e.g. system:user:list) |
 | `icon` | String(100) | - | 是 | # | 菜单图标 |
 | `remark` | String(500) | - | 是 |  | 备注 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -2183,10 +2313,12 @@
 | `data_scope` | Integer | - | 是 | 1 | 数据范围 |
 | `parent_id` | Integer | - | 是 | 0 | 父角色ID (RBAC1) |
 | `status` | Boolean | - | 是 | True | 角色状态 |
-| `del_flag` | Boolean | - | 是 | False | 删除标志 |
+| `is_deleted` | Boolean | - | 是 | False | 删除标志 |
 | `remark` | String(500) | - | 是 | - | 备注 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -2205,7 +2337,7 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `role_id` | Integer | PK, FK | 否 | - | - |
-| `dept_id` | String(100) | PK, FK | 否 | - | - |
+| `dept_id` | Integer | PK, FK | 否 | - | - |
 
 ---
 
@@ -2231,11 +2363,16 @@
 | 字段名 | 数据类型 | 约束 | 可空 | 默认值 | 说明 |
 |:-------|:---------|:-----|:-----|:-------|:-----|
 | `id` | Integer | PK | 否 | - | 自增主键 |
-| `project_id` | String(100) | INDEX | 是 | - | 关联项目ID |
+| `project_id` | Integer | FK, INDEX | 是 | - | 关联项目物理ID |
+| `external_id` | String(100) | INDEX | 是 | - | 来源系统原始ID |
+| `source` | String(50) | INDEX | 是 | - | 来源系统类型 (gitlab/zentao/sonarqube) |
 | `status` | String(50) | - | 是 | - | 同步状态 (SUCCESS/FAILED/RUNNING) |
 | `message` | Text | - | 是 | - | 同步结果信息 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `correlation_id` | String(100) | INDEX | 是 | - | 关联追踪ID |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 ---
 
@@ -2252,8 +2389,10 @@
 | `user_id` | UUID | FK | 否 | - | 成员用户ID |
 | `role_code` | String(50) | - | 是 | MEMBER | 团队角色 (LEADER/MEMBER/CONSULTANT) |
 | `allocation_ratio` | Numeric | - | 是 | 1.0 | 工作量分配比例 (0.0-1.0) |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 
 #### 关系映射
 
@@ -2275,10 +2414,12 @@
 | `team_code` | String(50) | UNIQUE, INDEX | 是 | - | 团队代码 |
 | `description` | Text | - | 是 | - | 团队描述 |
 | `parent_id` | Integer | FK | 是 | - | 上级团队ID |
-| `org_id` | String(100) | FK | 是 | - | 所属组织ID |
+| `org_id` | Integer | FK | 是 | - | 所属组织ID |
 | `leader_id` | UUID | FK | 是 | - | 团队负责人 |
-| `created_at` | DateTime | - | 是 | (auto) | - |
-| `updated_at` | DateTime | - | 是 | - | - |
+| `created_at` | DateTime | - | 是 | (auto) | 创建时间 |
+| `updated_at` | DateTime | - | 是 | - | 最后更新时间 |
+| `created_by` | UUID | FK, INDEX | 是 | - | 创建者ID |
+| `updated_by` | UUID | FK, INDEX | 是 | - | 最后操作者ID |
 | `sync_version` | Integer | - | 否 | 1 | - |
 | `effective_from` | DateTime | - | 是 | (auto) | - |
 | `effective_to` | DateTime | - | 是 | - | - |

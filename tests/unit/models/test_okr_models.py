@@ -27,17 +27,17 @@ class TestOKRModels(unittest.TestCase):
 
     def test_okr_hierarchy_and_ownership(self):
         """测试 OKR 目标的层级结构与归属关系。"""
-        center = Organization(name="研发中心", level="Center")
-        dept = Organization(name="架构部", level="Department")
-        user = User(username="leader_a", name="张三", email="zhangsan@example.com")
+        center = Organization(org_code="COMPANY_CENTER", org_name="研发中心", org_level=1)
+        dept = Organization(org_code="DEPT_ARCH", org_name="架构部", org_level=2)
+        user = User(username="leader_a", full_name="张三", primary_email="zhangsan@example.com")
         self.session.add_all([center, dept, user])
         self.session.flush()
         company_obj = OKRObjective(
             title="提升公司数字化转型深度",
             period="2025-Annual",
             status="active",
-            owner_id=user.id,
-            organization_id=center.id,
+            owner_id=user.global_user_id,
+            org_id=center.id,
         )
         self.session.add(company_obj)
         self.session.flush()
@@ -46,16 +46,16 @@ class TestOKRModels(unittest.TestCase):
             period="2025-Q1",
             status="active",
             parent_id=company_obj.id,
-            owner_id=user.id,
-            organization_id=dept.id,
+            owner_id=user.global_user_id,
+            org_id=dept.id,
         )
         self.session.add(dept_obj)
         self.session.commit()
         saved_dept_obj = self.session.query(OKRObjective).filter_by(title="完成 DevOps 平台全量上线").first()
         self.assertIsNotNone(saved_dept_obj)
         self.assertEqual(saved_dept_obj.parent.title, "提升公司数字化转型深度")
-        self.assertEqual(saved_dept_obj.owner.name, "张三")
-        self.assertEqual(saved_dept_obj.organization.name, "架构部")
+        self.assertEqual(saved_dept_obj.owner.full_name, "张三")
+        self.assertEqual(saved_dept_obj.organization.org_name, "架构部")
         saved_company_obj = self.session.query(OKRObjective).filter_by(title="提升公司数字化转型深度").first()
         self.assertEqual(len(saved_company_obj.children), 1)
         self.assertEqual(saved_company_obj.children[0].title, "完成 DevOps 平台全量上线")
@@ -68,19 +68,19 @@ class TestOKRModels(unittest.TestCase):
         kr1 = OKRKeyResult(
             objective_id=objective.id,
             title="核心接口耗时降至 200ms 以下",
-            target_value="200",
-            current_value="450",
+            target_value=200.0,
+            current_value=450.0,
             metric_unit="ms",
-            progress=40,
+            progress=0.4,
             linked_metrics_config={"source": "prometheus", "query": "avg_latency"},
         )
         kr2 = OKRKeyResult(
             objective_id=objective.id,
             title="代码覆盖率提升至 80%",
-            target_value="80",
-            current_value="65",
+            target_value=80.0,
+            current_value=65.0,
             metric_unit="%",
-            progress=60,
+            progress=0.6,
             linked_metrics_config={"source": "sonarqube", "metric": "coverage"},
         )
         self.session.add_all([kr1, kr2])
@@ -89,8 +89,8 @@ class TestOKRModels(unittest.TestCase):
         self.assertEqual(len(saved_obj.key_results), 2)
         krs = sorted(saved_obj.key_results, key=lambda x: x.progress)
         self.assertEqual(krs[0].metric_unit, "ms")
-        self.assertEqual(krs[0].progress, 40)
-        self.assertEqual(krs[1].progress, 60)
+        self.assertEqual(krs[0].progress, 0.4)
+        self.assertEqual(krs[1].progress, 0.6)
         self.assertEqual(krs[1].linked_metrics_config["source"], "sonarqube")
 
     def test_cascade_delete(self):
@@ -110,17 +110,17 @@ class TestOKRModels(unittest.TestCase):
         """测试 OKR 与 Product 的绑定关系。"""
         from devops_collector.models.base_models import Product
 
-        product = Product(name="智慧金融分析系统", level="Product")
+        product = Product(product_code="FIN_ANALYSIS", product_name="智慧金融分析系统", version_schema="SemVer")
         self.session.add(product)
         self.session.flush()
         objective = OKRObjective(title="Q1 产品稳定性提升", period="2025-Q1", product_id=product.id)
         self.session.add(objective)
         self.session.commit()
-        saved_prod = self.session.query(Product).filter_by(name="智慧金融分析系统").first()
+        saved_prod = self.session.query(Product).filter_by(product_name="智慧金融分析系统").first()
         self.assertEqual(len(saved_prod.objectives), 1)
         self.assertEqual(saved_prod.objectives[0].title, "Q1 产品稳定性提升")
         saved_obj = self.session.query(OKRObjective).filter_by(title="Q1 产品稳定性提升").first()
-        self.assertEqual(saved_obj.product.name, "智慧金融分析系统")
+        self.assertEqual(saved_obj.product.product_name, "智慧金融分析系统")
 
 
 if __name__ == "__main__":

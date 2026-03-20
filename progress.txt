@@ -1,16 +1,23 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
-# 最后更新: 2026-03-18 | 操作者: Antigravity
+# 最后更新: 2026-03-19 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-功能分支 `refactor/mdm-schema-standardization` 进行中。已完成数据加载器批量写入优化 (COPY FROM) 及 Surrogate PK 全量切换，正在执行合并前检查流水线。 [阶段：执行中]
+功能分支 `refactor/mdm-schema-standardization` 完工验证通过。Admin (9/9) 与 Service Desk (10/10) 测试已全绿。测试架构已优化完成，实现 30s 熔断与物理分层。 [阶段：完工 - 待交接]
 
 🏗️ 进行中 (In Progress)
+- [P1] MDM Schema 重构后测试修复| 2026-03-20 | Testing/Windows | 单元测试执行极慢 (14min+) 甚至挂起 | Windows 下频繁创建/删除物理 .db 文件引发磁盘 I/O 尖峰，且 `Base.metadata.create_all` (94张表) 在每个 function-scoped 夹具中执行造成巨大 CPU 开销。 | **Windows 测试性能守卫 (In-Memory/Session-scoped DB)**：1. 强制将建表逻辑 (`create_all`) 提升至 `session` 作用域。2. 使用 `pytest-timeout` 设定进程级熔断 (30s)，防止因文件锁或其他挂起导致的静默 Token 消耗。 |
+| 2026-03-19 | ORM/Pydantic | 在 SQLAlchemy Model 上添加 `@property` (如 `product_id` → `product_code`) 后，所有通过 `Model(product_id=xxx)` 构造对象的代码全部报 `AttributeError: property has no setter` | SQLAlchemy 的 `declarative_constructor` 使用 `setattr(self, k, kwargs[k])` 来初始化字段。`@property` 没有 setter 时，`setattr` 会拦截赋值操作，导致所有旧代码中以 `project_id=xxx` 传参的构造调用全部崩溃。 | **ORM 模型严禁添加与列名冲突的 @property**：若需在 API 层做字段重命名映射（如 `product_code` → `product_id`），必须在 Pydantic Schema 层使用 `validation_alias` 处理，绝不可在 ORM Model 层添加同名 property。ORM 层的属性名必须与数据库列名一一对应。 |
+  - [x] 物理分层：`tests/integration/` 细分为 `api` 和 `ui` 子目录。 (Done)
 - [P1] 全量 GitLab/禅道数据同步割取 (预计 23W+ 记录) (2026-03-18)
   - [x] 验证 ZenTao 标题缺失兜底方案 (2026-03-17)
-  - [x] 分支 `refactor/mdm-schema-standardization` 通过 Rebase + Lint + 本地单元测试 (2026-03-19)
+  - [x] 分支通过 Rebase + Lint + 容器内全量测试 (2026-03-20)
+  - [x] 自动更新 `DATA_DICTIONARY.md` (2026-03-20)
+  - [ ] 验证 20万+ 记录下的 dbt 增量构建性能 (Pending)
+- [P1] 全量 GitLab/禅道数据同步割取 (预计 23W+ 记录) (2026-03-18)
+  - [x] 验证 ZenTao 标题缺失兜底方案 (2026-03-17)
+  - [x] 分支通过 Rebase + Lint + 本地单元测试 (2026-03-19)
   - [ ] 累计同步 GitLab 提交 4.4k+，禅道 Issue 1.1k+，同步日志近 2k (进行中)
   - [ ] 验证 20万+ 记录下的 dbt 增量构建性能 (Pending)
-  - [ ] 同步速率监控埋点添加 (Pending)
 
 📅 接下来 (Backlog)
 - [P2] 基于 Nexus 分析脚本构建定期僵尸资产清理工具 (2026-03-xx)
@@ -19,10 +26,13 @@
 - [P2][Docs] 更新 `DATA_DICTIONARY.md` 以反映新的自增 ID Schema。
 
 📋 最近完成 (Recently Completed)
-- (2026-03-18) [P2] 数据加载器批量写入优化完成。GitLab Issue/MR/Pipeline + ZenTao Issue/Task Staging 升级为 COPY FROM。预计提速 3-5x。
-- (2026-03-18) [S] Nexus 漏洞整合能力 Spike 完成。结论：OSS 版 API 不暴露 CVE，需 Trivy 或 SonarQube 桥接。
-- (2026-03-17) [P0] 修复 Alembic 迁移死锁与空库报错。
-- (2026-03-17) [P0] Surrogate PK 系统性切换完成，统一物理 ID 体系。
-- (2026-03-16) [P0] 解决因 `TimestampMixin` 外键导致的全量 `AmbiguousForeignKeysError`。
+- (2026-03-20) [P1] 测试架构分层治理：将 Selenium 脚本归类至 `integration/ui`，API 脚本归类至 `integration/api`。
+- (2026-03-20) [P1] 解决 Windows 测试性能瓶颈：引入 `pytest-timeout` (30s) 并将 DB 建表提升至 Session 级。
+- (2026-03-20) [P1] Service Desk 模块测试全面通过：修复了 `org_id` 缺失导致的 3 个 FK 约束错误。
+- (2026-03-19) [P1] Admin 模块测试全面修复：admin_refactored_modules (4/4) + admin_router (5/5) 通过
+- (2026-03-19) [P1] 修复 AdminService.link_product_to_project FK 类型不匹配 (String→Integer)
+- (2026-03-19) [P1] 修复 list_unlinked_repos SQLAlchemy `is None` 过滤器语法错误 → `is_(None)`
+- (2026-03-18) [P2] 数据加载器批量写入优化完成。GitLab/ZenTao Staging 升级为 COPY FROM。
+- (2026-03-18) [S] Nexus 漏洞整合能力 Spike 完成。
 
-签名：Antigravity-AI
+签名：Antigravity-AI (2026-03-20T10:18+08:00)
