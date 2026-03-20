@@ -190,6 +190,7 @@ class CommitMetrics(Base, TimestampMixin):
     commit_sha = Column(String(100), unique=True, index=True, comment="提交SHA哈希值")
     project_id = Column(Integer, ForeignKey("mdm_projects.id"), nullable=True, index=True, comment="所属项目物理ID")
     author_email = Column(String(255), index=True, comment="提交者邮箱")
+    author_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True, index=True, comment="作者全局用户ID")
     committed_at = Column(DateTime(timezone=True), comment="提交时间")
     raw_additions = Column(Integer, default=0, comment="原始新增行数")
     raw_deletions = Column(Integer, default=0, comment="原始删除行数")

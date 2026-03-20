@@ -25,7 +25,7 @@ measures as (
         p.sonar_project_name,
         p.gitlab_project_id,
         -- 对齐到 MDM Master Entity ID
-        coalesce(p.mdm_project_id, 'UNKNOWN') as master_entity_id,
+        coalesce(p.mdm_project_id, -1) as master_entity_id,
         
         m.analysis_date,
         date_trunc('day', m.analysis_date)::date as analysis_day,

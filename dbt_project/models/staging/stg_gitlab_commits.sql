@@ -13,7 +13,14 @@ renamed as (
         committed_date,
         message,
         -- 使用正则提取 #123 格式的禅道 ID
-        substring(message from '#([0-9]+)') as zentao_id
+        substring(message from '#([0-9]+)') as zentao_id,
+        eloc_score,
+        impact_score,
+        churn_lines,
+        file_count,
+        test_lines,
+        comment_lines,
+        refactor_ratio
     from source
 )
 

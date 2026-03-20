@@ -5,10 +5,11 @@ with source as (
 
 renamed as (
     select
-        org_id,
+        id as mdm_org_id,
+        org_code,
         org_name,
         org_level,
-        parent_org_id,
+        parent_id as parent_mdm_org_id,
         manager_user_id,
         is_active,
         sync_version,

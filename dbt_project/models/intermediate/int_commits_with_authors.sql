@@ -24,7 +24,14 @@ joined as (
              order by priority asc limit 1),
             '00000000-0000-0000-0000-000000000000'::uuid
         ) as author_user_id,
-        c.author_email
+        c.author_email,
+        c.eloc_score,
+        c.impact_score,
+        c.churn_lines,
+        c.file_count,
+        c.test_lines,
+        c.comment_lines,
+        c.refactor_ratio
     from commits c
 )
 

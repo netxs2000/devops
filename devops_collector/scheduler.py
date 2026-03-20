@@ -15,6 +15,7 @@ from .config import Config
 from .core.plugin_loader import PluginLoader
 from .models.base_models import Base
 from .mq import MessageQueue
+from .core.promotion_service import PromotionService
 
 
 logging.basicConfig(level=Config.LOG_LEVEL)
@@ -98,7 +99,18 @@ def main() -> None:
                     sp.sync_status = "QUEUED"
                     session.commit()
 
-            # 3. 执行 dbt 转换与反向 ETL
+            # 3. 数据转正 (Promotion) - 将插件Staging数据提拔至 MDM
+            try:
+                logger.info("Triggering data promotion...")
+                promoted_count = PromotionService.promote_gitlab_commits(session)
+                if promoted_count > 0:
+                    logger.info(f"Successfully promoted {promoted_count} GitLab records.")
+                    session.commit()
+            except Exception as e:
+                logger.error(f"Data promotion failed: {e}")
+                session.rollback()
+
+            # 4. 执行 dbt 转换与反向 ETL
             try:
                 logger.info("Triggering dbt run...")
                 result = subprocess.run(

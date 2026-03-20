@@ -10,7 +10,6 @@ from dateutil import parser
 
 from devops_collector.core.analytics.eloc import ELOCAnalyzer
 from devops_collector.core.utils import parse_iso8601
-from devops_collector.models.base_models import CommitMetrics  # Import Core Model
 
 from ..models import GitLabCommit, GitLabCommitFileStats, GitLabProject
 
@@ -207,31 +206,19 @@ class CommitMixin:
                 if result.raw_additions > 0 or result.raw_deletions > 0:
                     file_count += 1
 
-            # --- 5. Persist to Core CommitMetrics (For Streamlit) ---
-            # Create or Update
-            metrics = self.session.query(CommitMetrics).filter_by(commit_id=commit.id).first()
-            if not metrics:
-                metrics = CommitMetrics(commit_id=commit.id)
-
-            metrics.project_id = str(project.id)  # Ensure string format
-            metrics.author_email = commit.author_email
-            metrics.committed_at = commit.committed_date
-            metrics.raw_additions = commit.additions
-            metrics.raw_deletions = commit.deletions
-
-            # New Advanced Metrics
-            metrics.eloc_score = total_eloc
-            metrics.impact_score = total_impact
-            metrics.churn_lines = total_churn_lines
-            metrics.file_count = file_count
-            metrics.test_lines = int(total_test_lines)
-            metrics.comment_lines = int(total_comment_lines)
+            # --- 5. Persist to Plugin-Specific GitLabCommit fields (Decoupled from Core) ---
+            commit.eloc_score = total_eloc
+            commit.impact_score = total_impact
+            commit.churn_lines = total_churn_lines
+            commit.file_count = file_count
+            commit.test_lines = int(total_test_lines)
+            commit.comment_lines = int(total_comment_lines)
 
             # Simple Refactor Ratio Approximation (Deletions / Total Changes)
             total_changes = commit.additions + commit.deletions
-            metrics.refactor_ratio = (commit.deletions / total_changes) if total_changes > 0 else 0.0
+            commit.refactor_ratio = (commit.deletions / total_changes) if total_changes > 0 else 0.0
 
-            self.session.add(metrics)
+            self.session.add(commit)
 
             # Also update the original GitLabCommit object with summary data if needed
             commit.total = total_changes

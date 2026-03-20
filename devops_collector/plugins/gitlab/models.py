@@ -539,6 +539,16 @@ class GitLabCommit(Base):
     gitlab_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True)
     author = relationship("User", primaryjoin="and_(User.global_user_id==GitLabCommit.gitlab_user_id, User.is_current==True)")
 
+    # [Advanced Metrics] - Added for Option A Architecture Alignment
+    eloc_score = Column(Float, default=0.0, comment="有效代码行数得分")
+    impact_score = Column(Float, default=0.0, comment="代码影响力得分")
+    churn_lines = Column(Integer, default=0, comment="代码翻动行数")
+    file_count = Column(Integer, default=0, comment="涉及文件数")
+    test_lines = Column(Integer, default=0, comment="测试代码行数")
+    comment_lines = Column(Integer, default=0, comment="注释行数")
+    refactor_ratio = Column(Float, default=0.0, comment="重构代码占比")
+    promoted_at = Column(DateTime(timezone=True), nullable=True, comment="上架到主数据的时间")
+
     def __repr__(self) -> str:
         return f"<GitLabCommit(id='{self.short_id}', project_id={self.project_id})>"
 
