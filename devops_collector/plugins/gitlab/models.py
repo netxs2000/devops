@@ -1082,6 +1082,9 @@ class GitLabDeployment(Base):
     sha = Column(String)
     environment = Column(String)
     raw_data = Column(JSON)
+    mdm_project_id = Column(Integer, ForeignKey("mdm_projects.id"), nullable=True, index=True, comment="关联的 MDM 项目 ID")
+    is_production = Column(Boolean, default=False, index=True, comment="是否为生产环境部署")
+    promoted_at = Column(DateTime(timezone=True), nullable=True, comment="上架时间")
     project = relationship("GitLabProject", back_populates="deployments")
 
     @hybrid_property

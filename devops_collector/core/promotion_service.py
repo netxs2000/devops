@@ -10,8 +10,9 @@ from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
 from devops_collector.core.identity_manager import IdentityManager
-from devops_collector.models.base_models import CommitMetrics
+from devops_collector.models.base_models import CommitMetrics, Product, ProjectMaster
 from devops_collector.plugins.gitlab.models import GitLabCommit
+from devops_collector.plugins.zentao.models import ZenTaoExecution, ZenTaoProduct
 
 
 logger = logging.getLogger(__name__)
@@ -96,4 +97,74 @@ class PromotionService:
 
         session.flush()
         logger.info(f"Promoted {count} GitLab commits to rpt_commit_metrics")
+        return count
+
+    @staticmethod
+    def promote_zentao_products(session: Session, limit: int = 100) -> int:
+        """将 ZenTaoProduct 转正为 MDM Product。"""
+        unpromoted = (
+            session.query(ZenTaoProduct)
+            .filter(ZenTaoProduct.promoted_at.is_(None))
+            .limit(limit)
+            .all()
+        )
+        count = 0
+        for zp in unpromoted:
+            try:
+                # 寻找或创建 MDM Product
+                product_code = f"ZT_{zp.id}"
+                mdm_p = session.query(Product).filter_by(product_code=product_code, is_current=True).first()
+                if not mdm_p:
+                    mdm_p = Product(
+                        product_code=product_code,
+                        product_name=zp.name,
+                        product_description=zp.description or "",
+                        version_schema="SemVer",
+                    )
+                    session.add(mdm_p)
+                    session.flush()
+
+                zp.mdm_product_id = mdm_p.id
+                zp.promoted_at = datetime.now(UTC)
+                count += 1
+            except Exception as e:
+                logger.error(f"Failed to promote ZenTao product {zp.id}: {e}")
+        session.flush()
+        return count
+
+    @staticmethod
+    def promote_zentao_executions(session: Session, limit: int = 100) -> int:
+        """将 ZenTaoExecution (项目/迭代) 转正为 MDM Project。"""
+        unpromoted = (
+            session.query(ZenTaoExecution)
+            .filter(ZenTaoExecution.promoted_at.is_(None))
+            .limit(limit)
+            .all()
+        )
+        count = 0
+        for ze in unpromoted:
+            try:
+                # 仅转正 Project 或 Execution 类型
+                if ze.type not in ["project", "execution"]:
+                    ze.promoted_at = datetime.now(UTC)  # 标记已处理 (跳过)
+                    continue
+
+                project_code = f"ZT_{ze.id}"
+                mdm_proj = session.query(ProjectMaster).filter_by(project_code=project_code, is_current=True).first()
+                if not mdm_proj:
+                    mdm_proj = ProjectMaster(
+                        project_code=project_code,
+                        project_name=ze.name,
+                        project_type="研发项目" if ze.type == "project" else "迭代",
+                        status="ACTIVE" if ze.status in ["doing", "active"] else "CLOSED",
+                    )
+                    session.add(mdm_proj)
+                    session.flush()
+
+                ze.mdm_project_id = mdm_proj.id
+                ze.promoted_at = datetime.now(UTC)
+                count += 1
+            except Exception as e:
+                logger.error(f"Failed to promote ZenTao execution {ze.id}: {e}")
+        session.flush()
         return count

@@ -2,11 +2,10 @@
 # 最后更新: 2026-03-21 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-[阶段：验证通过 - 兼容性修复完成] 修复了 BaseWorker.bulk_save_to_staging 的 SQLite 兼容性问题，并对齐了 GitLab 同步链路的集成测试。 (2026-03-21)
+[阶段：执行中] 开始实现 [L2][P2] DORA 2.0 指标重平衡：基于转正后的 `rpt_commit_metrics` 重新计算 Lead Time。 (2026-03-21)
 
 🏗️ 进行中 (In Progress)
-- [L3][P1] 禅道 (ZenTao) 插件逻辑对齐：将 Issue/Task 写入逻辑从 MDM 剥离到插件专属 Staging。 (2026-03-21)
-- [L2][P2] DORA 2.0 指标重平衡：基于转正后的 `rpt_commit_metrics` 重新计算 Lead Time。 (Backlog)
+- [L2][P2] DORA 2.0 指标重平衡：基于转正后的 `rpt_commit_metrics` 重新计算 Lead Time。 (Doing)
 - [L1][P2] 物理测试目录收尾：清理 tests/integration/ 根目录下冗余脚本，彻底对齐规约。 (Doing)
 
 📅 接下来 (Backlog)
@@ -15,11 +14,12 @@
 - [P2] 集成 SonarQube 插件，通过代码指纹源头排查第三方依赖安全漏洞 (CVE)。
 
 📋 最近完成 (Recently Completed)
+- (2026-03-21) [L3] 禅道 (ZenTao) 插件逻辑对齐：完成模型字段增强、转正服务集成及状态归一化，通过模拟验证。 (Verified)
 - (2026-03-21) [L2] 修复 `BaseWorker.bulk_save_to_staging` 的 `sqlite3.Cursor` 类型错误，支持 dialect-aware 降级逻辑。 (Verified)
 - (2026-03-21) [L2] 修复 `CommitMixin` 的 PostgreSQL 专用 insert 语法在 SQLite 下的异常，支持 merge 兼容。 (Verified)
 - (2026-03-21) [L2] 对齐 `test_gitlab_sync_flow.py` 集成测试，修正 SyncLog.external_id 检索逻辑。 (Passed)
 - (2026-03-21) [L2] 修复 `test_gitlab_worker.py` 单元测试中失效的 Patch 路径与 Mock 校验逻辑。 (Passed)
 - (2026-03-20) [L4] 实现 `PromotionService` 并在调度器 (Scheduler) 中完成自动化集成，实现数据自动转正。 (Verified)
 
-签名：Antigravity-AI (2026-03-21T18:40+08:00)
+签名：Antigravity-AI (2026-03-21T19:20+08:00)
 

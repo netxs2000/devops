@@ -53,6 +53,8 @@ class ZenTaoProduct(Base):
     releases = relationship("ZenTaoRelease", back_populates="product", cascade="all, delete-orphan")
     actions = relationship("ZenTaoAction", back_populates="product", cascade="all, delete-orphan")
 
+    promoted_at = Column(DateTime(timezone=True), nullable=True, comment="上架到主数据的时间")
+
     def __repr__(self) -> str:
         """返回禅道产品的字符串表示。"""
         return f"<ZenTaoProduct(id={self.id}, name='{self.name}')>"
@@ -124,6 +126,8 @@ class ZenTaoExecution(Base):
     product = relationship("ZenTaoProduct", back_populates="executions")
     raw_data = Column(JSON)
 
+    promoted_at = Column(DateTime(timezone=True), nullable=True, comment="上架到主数据的时间")
+
     def __repr__(self) -> str:
         """返回迭代执行的字符串表示。"""
         return f"<ZenTaoExecution(id={self.id}, name='{self.name}')>"
@@ -174,6 +178,8 @@ class ZenTaoIssue(Base):
     closed_at = Column(DateTime(timezone=True))
     raw_data = Column(JSON)
     first_commit_sha = Column(String(100))
+    standard_status = Column(String(50), index=True, comment="平台标准状态 (Backlog, InProgress, Testing, Completed, Cancelled)")
+    promoted_at = Column(DateTime(timezone=True), nullable=True, comment="上架到主数据的时间")
     first_fix_date = Column(DateTime(timezone=True))
     product = relationship("ZenTaoProduct", back_populates="issues", foreign_keys=[product_id])
     plan = relationship("ZenTaoProductPlan", back_populates="issues", foreign_keys=[plan_id])
@@ -212,6 +218,8 @@ class ZenTaoTestCase(Base):
     product = relationship("ZenTaoProduct", back_populates="test_cases")
     results = relationship("ZenTaoTestResult", back_populates="test_case", cascade="all, delete-orphan")
     raw_data = Column(JSON)
+
+    promoted_at = Column(DateTime(timezone=True), nullable=True, comment="上架到主数据的时间")
 
     def __repr__(self) -> str:
         """返回测试用例的字符串表示。"""
@@ -265,6 +273,8 @@ class ZenTaoBuild(Base):
     product = relationship("ZenTaoProduct", back_populates="builds")
     raw_data = Column(JSON)
 
+    promoted_at = Column(DateTime(timezone=True), nullable=True, comment="上架到主数据的时间")
+
     def __repr__(self) -> str:
         """返回构建版本的字符串表示。"""
         return f"<ZenTaoBuild(id={self.id}, name='{self.name}')>"
@@ -295,6 +305,8 @@ class ZenTaoRelease(Base):
     product = relationship("ZenTaoProduct", back_populates="releases")
     raw_data = Column(JSON)
 
+    promoted_at = Column(DateTime(timezone=True), nullable=True, comment="上架到主数据的时间")
+
     def __repr__(self) -> str:
         """返回发布记录的字符串表示。"""
         return f"<ZenTaoRelease(id={self.id}, name='{self.name}')>"
@@ -324,6 +336,8 @@ class ZenTaoAction(Base):
     comment = Column(Text)
     product = relationship("ZenTaoProduct", back_populates="actions")
     raw_data = Column(JSON)
+
+    promoted_at = Column(DateTime(timezone=True), nullable=True, comment="上架到主数据的时间")
 
     def __repr__(self) -> str:
         """返回操作日志的字符串表示。"""

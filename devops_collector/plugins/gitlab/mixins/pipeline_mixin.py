@@ -98,15 +98,25 @@ class PipelineMixin:
             project (GitLabProject): 关联的项目实体。
             batch (List[dict]): 部署记录原始数据列表。
         """
+        from devops_collector.config import settings
+
         ids = [item["id"] for item in batch]
         existing = self.session.query(GitLabDeployment).filter(GitLabDeployment.id.in_(ids)).all()
         existing_map = {d.id: d for d in existing}
+        
+        # 获取生产环境关键词配置
+        prod_envs = settings.analysis.production_env_mapping
+        if isinstance(prod_envs, str):
+            prod_envs = [i.strip() for i in prod_envs.split(",")]
+
         for data in batch:
             d = existing_map.get(data["id"])
             if not d:
                 d = GitLabDeployment(id=data["id"])
                 self.session.add(d)
+                
             d.project_id = project.id
+            d.mdm_project_id = project.mdm_project_id
             d.iid = data["iid"]
             d.status = data["status"]
             d.environment = data.get("environment", {}).get("name")
@@ -114,3 +124,12 @@ class PipelineMixin:
             d.updated_at = parse_iso8601(data.get("updated_at"))
             d.ref = data.get("ref")
             d.sha = data.get("sha")
+            
+            # 识别是否为生产环境部署
+            if d.environment:
+                d.is_production = any(p.lower() in d.environment.lower() for p in prod_envs)
+            
+            # 标记为可见 (Option A), 部署数据通常直接用于分析，这里设为当前转正
+            if d.status == "success":
+                from datetime import datetime
+                d.promoted_at = datetime.now()

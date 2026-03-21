@@ -42,20 +42,56 @@ class AgileMetrics:
         return None
 
     @staticmethod
-    def calculate_lead_time(created_at: datetime, resolved_at: datetime | None) -> float | None:
-        """计算 Lead Time (前置时间/总耗时)。
-
+    def calculate_dora_lead_time(commit_times: list[datetime], deployment_time: datetime) -> float | None:
+        """计算 DORA 标准的 Lead Time for Changes (变更引入前置时间)。
+        
+        算法：Lead Time = 部署时间 - 首次提交时间。
+        
         Args:
-            created_at: 创建时间。
-            resolved_at: 解决/完成时间。
-
+            commit_times: 属于该部署/MR 的所有提交时间列表。
+            deployment_time: 成功部署到生产环境的时间。
+            
         Returns:
             以小时为单位的时长。
         """
-        if created_at and resolved_at and (resolved_at > created_at):
-            duration = resolved_at - created_at
+        if not commit_times or not deployment_time:
+            return None
+            
+        first_commit = min(commit_times)
+        if deployment_time > first_commit:
+            duration = deployment_time - first_commit
             return duration.total_seconds() / 3600.0
-        return None
+        return 0.0
+
+    @staticmethod
+    def calculate_deployment_frequency(deployment_count: int, days: int) -> float:
+        """计算部署频率。"""
+        if days <= 0:
+            return 0.0
+        return deployment_count / days
+
+    @staticmethod
+    def calculate_change_failure_rate(failed_deployments: int, total_deployments: int) -> float:
+        """计算变更失败率。"""
+        if total_deployments <= 0:
+            return 0.0
+        return (failed_deployments / total_deployments) * 100.0
+
+    @staticmethod
+    def calculate_mttr(incidents: list[Any]) -> float | None:
+        """计算平均恢复时长 (MTTR)。
+        
+        Args:
+            incidents: Incident 对象列表，需具有 occurred_at 和 resolved_at 属性。
+        """
+        durations = []
+        for inc in incidents:
+            if hasattr(inc, "resolved_at") and hasattr(inc, "occurred_at") and inc.resolved_at and inc.occurred_at:
+                durations.append((inc.resolved_at - inc.occurred_at).total_seconds() / 3600.0)
+        
+        if not durations:
+            return None
+        return sum(durations) / len(durations)
 
 
 class CodeMetrics:

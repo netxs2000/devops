@@ -76,6 +76,45 @@ def _is_after_cutoff(val: Any) -> bool:
     return dt >= SYNC_SINCE_DATE
 
 
+class ZenTaoTransformer:
+    """禅道数据预处理器，负责将原始状态转换为平台标准状态。"""
+
+    # 平台标准 5 状态: Backlog, InProgress, Testing, Completed, Cancelled
+    STORY_STATUS_MAP = {
+        "draft": "Backlog",
+        "active": "Backlog",
+        "changed": "InProgress",
+        "closed": "Completed",
+    }
+    BUG_STATUS_MAP = {
+        "active": "Backlog",
+        "resolved": "Testing",
+        "closed": "Completed",
+    }
+    TASK_STATUS_MAP = {
+        "wait": "Backlog",
+        "doing": "InProgress",
+        "done": "Completed",
+        "pause": "Cancelled",
+        "cancel": "Cancelled",
+        "closed": "Completed",
+    }
+
+    @classmethod
+    def get_standard_status(cls, issue_type: str, raw_status: str) -> str:
+        """根据实体类型和原始状态获取标准状态。"""
+        if not raw_status:
+            return "Backlog"
+        raw_status = raw_status.lower()
+        if issue_type == "feature":  # ZenTao Story
+            return cls.STORY_STATUS_MAP.get(raw_status, "Backlog")
+        if issue_type == "bug":
+            return cls.BUG_STATUS_MAP.get(raw_status, "Backlog")
+        if issue_type == "task":
+            return cls.TASK_STATUS_MAP.get(raw_status, "Backlog")
+        return "Backlog"
+
+
 class ZenTaoWorker(BaseWorker):
     """禅道全量数据采集 Worker。"""
 
@@ -303,16 +342,12 @@ class ZenTaoWorker(BaseWorker):
                 raw_data=p_data,
             )
             self.session.add(product)
+            product.promoted_at = None
             self.session.flush()
         return product
 
     def _sync_execution(self, product_id: int | None, data: dict) -> ZenTaoExecution:
-        """同步禅道层级节点（项目集/项目/迭代/阶段）。
-
-        Args:
-            product_id: 关联的产品 ID。如果是项目集或全局项目，可能为 None。
-            data: API 返回的原始数据。
-        """
+        """同步禅道层级节点。"""
         exe = self.session.query(ZenTaoExecution).filter_by(id=data["id"]).first()
         if not exe:
             exe = ZenTaoExecution(id=data["id"], product_id=product_id)
@@ -330,6 +365,8 @@ class ZenTaoWorker(BaseWorker):
         exe.status = data.get("status")
         exe.parent_id = _safe_int(data.get("parent"))
         exe.path = data.get("path")
+        exe.promoted_at = None  # 重置转正状态
+        # ... (其它字段)
 
         # 只有在明确提供或者原本没值的情况下更新 product_id
         if product_id and not exe.product_id:
@@ -390,6 +427,7 @@ class ZenTaoWorker(BaseWorker):
         if data.get("openedDate"):
             plan.opened_date = datetime.fromisoformat(data["openedDate"].replace(" ", "T"))
         plan.raw_data = data
+        plan.promoted_at = None  # 变更后重置转正状态
         self.session.flush()
         return plan
 
@@ -427,6 +465,10 @@ class ZenTaoWorker(BaseWorker):
                     issue.estimate = payload_est
 
             issue.priority = _safe_int(data.get("priority") or data.get("pri"))
+            issue.status = _safe_str(data.get("status"))
+            # 状态归一化
+            issue.standard_status = ZenTaoTransformer.get_standard_status(issue_type, issue.status)
+            issue.promoted_at = None  # 变更后重置
 
             opened = _safe_str(data.get("openedBy"))
             issue.opened_by = str(opened) if opened else None
@@ -493,6 +535,9 @@ class ZenTaoWorker(BaseWorker):
                 issue.title = issue_title
 
             issue.status = _safe_str(data.get("status"))
+            # 状态归一化
+            issue.standard_status = ZenTaoTransformer.get_standard_status("task", issue.status)
+            issue.promoted_at = None
             issue.priority = _safe_int(data.get("pri") or data.get("priority"))
             issue.task_type = _safe_str(data.get("type"))
 
@@ -636,6 +681,7 @@ class ZenTaoWorker(BaseWorker):
         if data.get("openedDate"):
             tc.opened_date = datetime.fromisoformat(data["openedDate"].replace(" ", "T"))
         tc.raw_data = data
+        tc.promoted_at = None
         self.session.flush()
         return tc
 
@@ -701,6 +747,7 @@ class ZenTaoWorker(BaseWorker):
         if data.get("date"):
             build.date = datetime.fromisoformat(str(data["date"]).replace(" ", "T"))
         build.raw_data = data
+        build.promoted_at = None
         self.session.flush()
         return build
 
@@ -769,6 +816,7 @@ class ZenTaoWorker(BaseWorker):
                 rel.opened_by_user_id = u.global_user_id
 
         rel.raw_data = data
+        rel.promoted_at = None
         self.session.flush()
         return rel
 
