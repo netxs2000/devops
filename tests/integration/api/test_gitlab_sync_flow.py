@@ -77,6 +77,6 @@ def test_gitlab_worker_sync_project_and_commits(session):
     # Verify SyncLog (Core Model)
     from devops_collector.models.base_models import SyncLog
 
-    log = session.query(SyncLog).filter_by(project_id=101).order_by(SyncLog.id.desc()).first()
+    log = session.query(SyncLog).filter_by(external_id="101").order_by(SyncLog.id.desc()).first()
     assert log is not None
     assert "Synced" in log.message

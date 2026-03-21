@@ -156,7 +156,14 @@ class BaseWorker(ABC):
         import io
         import json
 
-        if not items:
+        # 判断数据库方言。非 PostgreSQL 环境（如集成测试中的 SQLite）不支持 COPY FROM 和特定的 JSONB 转换。
+        # 此时降级到逐条 save_to_staging，虽然性能略低但能保证集成测试通过。
+        dialect = self.session.bind.dialect.name
+        if dialect != "postgresql":
+            self.logger.debug(f"Non-PostgreSQL dialect ({dialect}) detected, using graceful fallback for bulk_save_to_staging")
+            for item in items:
+                ext_id = item.get(id_field, "")
+                self.save_to_staging(source, entity_type, ext_id, item, schema_version)
             return
 
         # 获取底层 psycopg 的连接对象
@@ -176,7 +183,9 @@ class BaseWorker(ABC):
         csv_file.seek(0)
         temp_table = f"tmp_stg_{source}_{entity_type}_{id(self)}"
 
-        with raw_conn.cursor() as cursor:
+        # 并不是所有 DBAPI cursor 都支持 context manager (如 SQLite)，因此在原始连接操作时建议显式关闭
+        cursor = raw_conn.cursor()
+        try:
             # 创建仅限于当前事务内的临时表
             cursor.execute(f"CREATE TEMP TABLE {temp_table} (LIKE stg_raw_data INCLUDING DEFAULTS) ON COMMIT DROP")
 
@@ -200,3 +209,5 @@ class BaseWorker(ABC):
 
             # 删除临时表结束加载
             cursor.execute(f"DROP TABLE {temp_table}")
+        finally:
+            cursor.close()

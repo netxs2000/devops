@@ -45,14 +45,13 @@ class CommitMixin:
 
         优化：直接使用 COPY 接管 Staging 落盘，并通过 PostreSQL On-Conflict 替换查改逻辑。
         """
-        from sqlalchemy.dialects.postgresql import insert
-
-        # 1. 采用 PostgreSQL 原生 COPY FROM 极速倒入原始宽表
+        # 1. 采用 Staging 落盘 (BaseWorker 内部已处理方言兼容)
         self.bulk_save_to_staging("gitlab", "commit", batch)
 
         if not batch:
             return
 
+        dialect = self.session.bind.dialect.name
         commit_objs = []
         insert_values = []
 
@@ -101,12 +100,23 @@ class CommitMixin:
 
         new_commits = []
         if insert_values:
-            # 2. 使用原生 ON CONFLICT 避免读写竞争击穿
-            stmt = insert(GitLabCommit).values(insert_values)
-            stmt = stmt.on_conflict_do_nothing(index_elements=["id"]).returning(GitLabCommit.id)
-            result = self.session.execute(stmt)
-            inserted_ids = {row[0] for row in result.fetchall()}
-            new_commits = [c for c in commit_objs if c.id in inserted_ids]
+            if dialect == "postgresql":
+                from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+                # 2. 使用原生 ON CONFLICT 避免读写竞争击穿
+                stmt = pg_insert(GitLabCommit).values(insert_values)
+                stmt = stmt.on_conflict_do_nothing(index_elements=["id"]).returning(GitLabCommit.id)
+                result = self.session.execute(stmt)
+                inserted_ids = {row[0] for row in result.fetchall()}
+                new_commits = [c for c in commit_objs if c.id in inserted_ids]
+            else:
+                # SQLite/Other 降级方案：逐条 merge
+                for commit in commit_objs:
+                    # 使用 merge 确保幂等性且不抛出 Duplicate Key 错误
+                    # 在集成测试环境下性能可接受
+                    self.session.merge(commit)
+                    new_commits.append(commit)
+                self.session.flush()
 
         if self.enable_deep_analysis and new_commits:
             for commit in new_commits:
