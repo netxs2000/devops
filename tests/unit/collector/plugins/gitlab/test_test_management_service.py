@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from devops_collector.models.base_models import ProjectProductRelation
+from devops_collector.models.base_models import Organization, Product, ProjectMaster, ProjectProductRelation
 from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_collector.plugins.gitlab.parser import GitLabTestParser
 from devops_collector.plugins.gitlab.test_management_service import TestManagementService
@@ -138,15 +138,29 @@ class TestTestManagementService:
     async def test_get_aggregated_test_cases_should_work(self, service, mock_client, db_session):
         """Test aggregating test cases across multiple projects based on product association."""
         # Setup DB data
-        p1 = GitLabProject(id=1, name="P1", mdm_project_id=1001)
-        rel = ProjectProductRelation(product_id="PROD1", project_id=1001, org_id="ORG1")
+        org = Organization(org_code="ORG1", org_name="Org 1", org_level=1)
+        product = Product(
+            product_code="PROD1",
+            product_name="Product 1",
+            product_description="Test Product Description",
+            version_schema="SemVer",
+        )
+        db_session.add_all([org, product])
+        db_session.flush()
+
+        project_master = ProjectMaster(project_code="PM1", project_name="PM 1", org_id=org.id)
+        db_session.add(project_master)
+        db_session.flush()
+
+        p1 = GitLabProject(id=1, name="P1", mdm_project_id=project_master.id)
+        rel = ProjectProductRelation(product_id=product.id, project_id=project_master.id, org_id=org.id)
         db_session.add_all([p1, rel])
         db_session.commit()
 
         # Mock client for get_test_cases (called internally)
         mock_client.get_project_issues.return_value = []
 
-        cases = await service.get_aggregated_test_cases(db_session, None, product_id="PROD1")
+        cases = await service.get_aggregated_test_cases(db_session, None, product_id=product.id)
         assert isinstance(cases, list)
         mock_client.get_project_issues.assert_called_with(1)
 

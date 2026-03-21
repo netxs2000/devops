@@ -1,5 +1,5 @@
 # 第一阶段：编译环境
-FROM python:3.11-slim-bookworm AS builder
+FROM 192.168.5.64:8082/library/python:3.11-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -12,17 +12,17 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件并安装 (由于是企业环境，采用三级回退逻辑：1.Nexus私服 -> 2.官方源 -> 3.清华源)
-# 使用 BuildKit 缓存挂载点保存 pip 缓存，并去除 --no-cache-dir 强制使用本地缓存
+# 复制 uv 二进制文件 (显式使用本地 Nexus 镜像加速安装，仅在 builder 阶段可见)
+COPY --from=192.168.5.64:8082/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# 复制依赖文件并安装 (uv pip 支持原生并发安装，速度提升 10x-100x)
+# 使用 BuildKit 缓存挂载点保存 uv 缓存路径 /root/.cache/uv
 COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --prefix=/install --default-timeout=5 \
-    -i http://192.168.5.64:8082/repository/group-pypi/simple --trusted-host 192.168.5.64 -r requirements.txt || \
-    pip install --prefix=/install --default-timeout=30 -r requirements.txt || \
-    pip install -i https://pypi.tuna.tsinghua.edu.cn/simple --default-timeout=60 --prefix=/install -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system --target /install --index-url http://192.168.5.64:8082/repository/group-pypi/simple --extra-index-url https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host 192.168.5.64 -r requirements.txt
 
 # 第二阶段：运行时环境
-FROM python:3.11-slim-bookworm
+FROM 192.168.5.64:8082/library/python:3.11-slim-bookworm
 
 WORKDIR /app
 
