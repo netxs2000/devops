@@ -16,14 +16,14 @@ os.environ["JWT_ALGORITHM"] = "HS256"
 # Import after setting env vars
 import uuid
 
+from sqlalchemy.pool import StaticPool
+
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.models.base_models import Base, User
 
 # Import ServiceDeskTicket to register it with Base.metadata before create_all
 from devops_portal.main import app
 
-
-from sqlalchemy.pool import StaticPool
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
@@ -35,14 +35,14 @@ _engine = create_engine(
 
 _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False)
 
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
     """Create all tables once per session, ensuring all models are registered."""
-    from devops_collector.models.base_models import Base
     # Import all models to register them on the metadata
-    import devops_collector.models  # This should trigger imports in __init__.py
     Base.metadata.create_all(bind=_engine)
     return _engine
+
 
 @pytest.fixture(scope="function")
 def db_session(setup_database):
@@ -79,7 +79,6 @@ def client(db_session):
 @pytest.fixture
 def mock_user():
     """Create a mock user object with admin privileges."""
-    import uuid
 
     u = User(
         global_user_id=uuid.uuid4(),

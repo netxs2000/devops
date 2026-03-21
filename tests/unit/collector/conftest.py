@@ -12,11 +12,13 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
+
 _engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -24,15 +26,18 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
+
 _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
+
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
     """Create all tables once per session."""
-    from devops_collector.models.base_models import Base
     # Trigger full model registration via package import
-    import devops_collector.models
+    from devops_collector.models.base_models import Base
+
     Base.metadata.create_all(bind=_engine)
+
 
 @pytest.fixture(scope="function")
 def db_session():

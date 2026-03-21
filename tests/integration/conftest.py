@@ -5,7 +5,6 @@
 """
 
 import os
-import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,15 +19,16 @@ os.environ.setdefault("GITLAB_TOKEN", "testtoken")
 os.environ.setdefault("JWT_SECRET_KEY", "testsecret")
 os.environ.setdefault("JWT_ALGORITHM", "HS256")
 
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+# --- REFACTORED FOR PERFORMANCE (Session-scoped Engine) ---
+from sqlalchemy.pool import StaticPool
+
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.models.base_models import Base
 from devops_portal.main import app
 
-
-# --- REFACTORED FOR PERFORMANCE (Session-scoped Engine) ---
-from sqlalchemy.pool import StaticPool
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
 
 SQLALCHEMY_DATABASE_URL = os.environ["DB_URI"]
 
@@ -38,23 +38,24 @@ _engine = create_engine(
     poolclass=StaticPool,
 )
 
+
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
+
 _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False)
+
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
     """Create all tables once per session."""
-    from devops_collector.models.base_models import Base
     # Import models to register with Base.metadata
-    import devops_collector.models.base_models
-    import devops_collector.models.mdm_organizations
     # ...
     Base.metadata.create_all(bind=_engine)
+
 
 @pytest.fixture(scope="function")
 def db_session():

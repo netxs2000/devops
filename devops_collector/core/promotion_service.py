@@ -59,9 +59,9 @@ class PromotionService:
                 user = IdentityManager.get_or_create_user(
                     session,
                     source="gitlab",
-                    external_id=str(gc.project_id), # GitLab 用户 ID 有时在 commit 中不可靠，仅作为辅助
+                    external_id=str(gc.project_id),  # GitLab 用户 ID 有时在 commit 中不可靠，仅作为辅助
                     email=gc.author_email,
-                    name=gc.author_name
+                    name=gc.author_name,
                 )
 
                 # 4. Upsert 到核心度量表 (CommitMetrics)

@@ -50,8 +50,10 @@ class TestIdentityManager(unittest.TestCase):
         """测试创建全新用户。"""
         # Note: IdentityManager.get_or_create_user only creates mappings, not users anymore
         # We should create the user first if we want to test alignment
-        from devops_collector.models.base_models import User
         import uuid
+
+        from devops_collector.models.base_models import User
+
         user_new = User(global_user_id=uuid.uuid4(), primary_email="user1@example.com", full_name="User One", is_current=True)
         self.session.add(user_new)
         self.session.commit()
@@ -65,8 +67,10 @@ class TestIdentityManager(unittest.TestCase):
 
     def test_identity_matching_by_email(self):
         """测试通过 Email 自动完成跨系统身份对齐。"""
-        from devops_collector.models.base_models import User
         import uuid
+
+        from devops_collector.models.base_models import User
+
         user_common = User(global_user_id=uuid.uuid4(), primary_email="common@example.com", full_name="Common Name", is_current=True)
         self.session.add(user_common)
         self.session.commit()
@@ -92,8 +96,10 @@ class TestIdentityManager(unittest.TestCase):
 
     def test_existing_mapping(self):
         """测试命中已存在映射时的幂等性。"""
-        from devops_collector.models.base_models import User
         import uuid
+
+        from devops_collector.models.base_models import User
+
         user_id = uuid.uuid4()
         user_u1 = User(global_user_id=user_id, primary_email="u1@ex.com", full_name="User U1", is_current=True)
         self.session.add(user_u1)

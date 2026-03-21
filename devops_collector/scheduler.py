@@ -13,9 +13,9 @@ from sqlalchemy.orm import sessionmaker
 
 from .config import Config
 from .core.plugin_loader import PluginLoader
+from .core.promotion_service import PromotionService
 from .models.base_models import Base
 from .mq import MessageQueue
-from .core.promotion_service import PromotionService
 
 
 logging.basicConfig(level=Config.LOG_LEVEL)
