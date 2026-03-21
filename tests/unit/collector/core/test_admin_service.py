@@ -22,17 +22,18 @@ def admin_service(db_session: Session):
 def test_create_product(admin_service, db_session):
     """单元测试：验证产品主数据创建控制。"""
     payload = schemas.ProductCreate(
-        product_id="PD-001",
+        product_id="PD-001", # schema still uses product_id
         product_name="Mobile Application",
         product_description="Test Description",
         category="Software",
+        version_schema="SemVer",
     )
     product = admin_service.create_product(payload)
 
-    assert product.product_id == "PD-001"
+    assert product.product_code == "PD-001"
 
     # 验证数据库中存在
-    db_product = db_session.query(Product).filter_by(product_id="PD-001").first()
+    db_product = db_session.query(Product).filter_by(product_code="PD-001").first()
     assert db_product is not None
 
 
@@ -41,25 +42,27 @@ def test_link_product_to_project(admin_service, db_session):
     # 准备数据
     from devops_collector.models.base_models import Organization, ProjectMaster
 
-    org = Organization(org_id="O1", org_name="Test Org")
+    org = Organization(org_code="O1", org_name="Test Org")
     db_session.add(org)
+    db_session.flush()
 
-    project = ProjectMaster(project_id="PROJ-001", project_name="Test Project", org_id="O1")
+    project = ProjectMaster(project_code="PROJ-001", project_name="Test Project", org_id=org.id)
     db_session.add(project)
+    db_session.flush()
 
     product = Product(
-        product_id="PROD-001",
+        product_code="PROD-001",
         product_name="Test Product",
         product_description="Desc",  # Required
         version_schema="semver",  # Required
     )
     db_session.add(product)
-    db_session.commit()
+    db_session.flush()
 
     payload = schemas.ProjectProductRelationCreate(project_id="PROJ-001", product_id="PROD-001", relation_type="CORE", allocation_ratio=0.8)
 
     relation = admin_service.link_product_to_project(payload)
-    assert relation.project_id == "PROJ-001"
+    assert relation.project.project_code == "PROJ-001"
     assert relation.allocation_ratio == 0.8
 
     # 验证数据库

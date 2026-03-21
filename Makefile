@@ -302,6 +302,13 @@ e2e-show-trace: ## [本地] 打开 Playwright Trace Viewer 分析失败测试
 	@echo "$(GREEN)Opening Playwright Trace Viewer...$(RESET)"
 	playwright show-trace test-results/
 
+full-gate: ## [MANDATORY] 核心卡点：代码合并前全量校验 (Lint -> Test -> Build)
+	@echo "$(CYAN)Launching Project Full Gate (Grader 3)...$(RESET)"
+	python scripts/gatekeeper.py --mode full
+
+fast-gate: ## [L2/CI] 快速卡点：跳过容器构建阶段
+	python scripts/gatekeeper.py --mode fast
+
 
 # 定义 DataHub CLI 运行命令 (临时容器)
 DATAHUB_CMD := docker-compose run --rm datahub-cli

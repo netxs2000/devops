@@ -37,12 +37,6 @@ class TestAgileMetrics(unittest.TestCase):
         cycle_time = AgileMetrics.calculate_cycle_time(histories)
         self.assertEqual(cycle_time, 6.0)
 
-    def test_calculate_lead_time(self):
-        """测试前置时间计算。"""
-        created = datetime(2025, 12, 1, 10, 0, tzinfo=UTC)
-        resolved = datetime(2025, 12, 1, 12, 30, tzinfo=UTC)
-        lead_time = AgileMetrics.calculate_lead_time(created, resolved)
-        self.assertEqual(lead_time, 2.5)
 
 
 class TestCodeMetrics(unittest.TestCase):

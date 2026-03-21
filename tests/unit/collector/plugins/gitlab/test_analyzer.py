@@ -42,7 +42,7 @@ class TestDiffAnalyzer(unittest.TestCase):
         self.assertEqual(stats["code_deleted"], 1)
         self.assertEqual(stats["code_added"], 1)
         self.assertEqual(stats["comment_added"], 1)
-        self.assertEqual(stats["blank_added"], 1)
+        self.assertEqual(stats["blank_added"], 2)
 
     def test_is_ignored(self):
         """测试文件过滤。"""

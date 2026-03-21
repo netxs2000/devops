@@ -43,20 +43,20 @@ class AgileMetrics:
 
     @staticmethod
     def calculate_dora_lead_time(commit_times: list[datetime], deployment_time: datetime) -> float | None:
-        """计算 DORA 标准的 Lead Time for Changes (变更引入前置时间)。
-        
-        算法：Lead Time = 部署时间 - 首次提交时间。
-        
+        """计算 DORA 标准的变更前置时间 (Lead Time for Changes)。
+
+        计算逻辑：部署时间 - 最早一次代码提交时间。
+
         Args:
             commit_times: 属于该部署/MR 的所有提交时间列表。
             deployment_time: 成功部署到生产环境的时间。
-            
+
         Returns:
             以小时为单位的时长。
         """
         if not commit_times or not deployment_time:
             return None
-            
+
         first_commit = min(commit_times)
         if deployment_time > first_commit:
             duration = deployment_time - first_commit
@@ -71,16 +71,24 @@ class AgileMetrics:
         return deployment_count / days
 
     @staticmethod
-    def calculate_change_failure_rate(failed_deployments: int, total_deployments: int) -> float:
-        """计算变更失败率。"""
-        if total_deployments <= 0:
+    def calculate_change_failure_rate(total_deployments: int, failed_deployments: int) -> float:
+        """计算变更失败率。
+
+        Args:
+            total_deployments: 总部署次数。
+            failed_deployments: 失败的部署次数。
+
+        Returns:
+            失败率百分比 (0-100)。
+        """
+        if total_deployments == 0:
             return 0.0
-        return (failed_deployments / total_deployments) * 100.0
+        return (failed_deployments / total_deployments) * 100
 
     @staticmethod
     def calculate_mttr(incidents: list[Any]) -> float | None:
         """计算平均恢复时长 (MTTR)。
-        
+
         Args:
             incidents: Incident 对象列表，需具有 occurred_at 和 resolved_at 属性。
         """
@@ -88,7 +96,7 @@ class AgileMetrics:
         for inc in incidents:
             if hasattr(inc, "resolved_at") and hasattr(inc, "occurred_at") and inc.resolved_at and inc.occurred_at:
                 durations.append((inc.resolved_at - inc.occurred_at).total_seconds() / 3600.0)
-        
+
         if not durations:
             return None
         return sum(durations) / len(durations)
@@ -197,15 +205,15 @@ class CodeMetrics:
 
     @staticmethod
     def get_file_category(file_path: str) -> str:
-        """根据文件路径和扩展名识别文件分类。"""
         path = file_path.lower()
-        if any(p in path for p in ["/test/", "/tests/", "test_", "_test."]):
+        if any(p in path for p in ["/test/", "test/", "/tests/", "tests/", "test_", "_test.", "_spec."]):
             return "Test"
         iac_exts = {".tf", ".yaml", ".yml", ".json", ".sh"}
-        iac_dirs = {"terraform/", "ansible/", "k8s/", "docker/", "ci-scripts/", "deploy/"}
-        if any(dir_path in path for dir_path in iac_dirs) or path.endswith(tuple(iac_exts)):
-            if "dockerfile" in path or "jenkinsfile" in path or ".gitlab-ci" in path:
-                return "IaC"
+        iac_dirs = {"terraform/", "ansible/", "k8s/", "docker/", "ci-scripts/", "deploy/", "scripts/"}
+        if any(dir_path in path for dir_path in iac_dirs) and path.endswith(tuple(iac_exts)):
+            return "IaC"
+        if "dockerfile" in path or "jenkinsfile" in path or ".gitlab-ci" in path:
+            return "IaC"
         config_exts = {".conf", ".config", ".ini", ".env", ".properties", ".xml"}
         if path.endswith(tuple(config_exts)) or "config/" in path:
             return "Config"

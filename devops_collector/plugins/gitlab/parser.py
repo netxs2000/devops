@@ -30,9 +30,9 @@ class GitLabTestParser:
         """
         if not description:
             return {"priority": "P2", "test_type": "功能测试", "pre_conditions": "", "test_steps": []}
-        priority_match = re.search("用例优先级\\]: \\[(P\\d)\\]", description)
+        priority_match = re.search(r"用例优先级.*?: \[(P\d)\]", description)
         priority = priority_match.group(1) if priority_match else "P2"
-        type_match = re.search("测试类型\\]: \\[(.*?)\\]", description)
+        type_match = re.search(r"测试类型.*?: \[(.*?)\]", description)
         test_type = type_match.group(1) if type_match else "功能测试"
         pre_conditions = ""
         if "## 🛠️ 前置条件" in description:
@@ -46,8 +46,8 @@ class GitLabTestParser:
                 pass
         test_steps = []
         try:
-            step_actions = re.findall("\\d+\\. \\*\\*操作描述\\*\\*: (.*)", description)
-            expected_results = re.findall("\\d+\\. \\*\\*反馈\\*\\*: (.*)", description)
+            step_actions = re.findall(r"\d+\. \*\*操作描述\*\*: (.*)", description)
+            expected_results = re.findall(r"\*\*反馈\*\*: (.*)", description)
             for i, action in enumerate(step_actions):
                 test_steps.append(
                     {
@@ -75,5 +75,5 @@ class GitLabTestParser:
         Returns:
             Optional[int]: 关联的 Issue IID，若未找到则返回 None。
         """
-        match = re.search("关联需求\\]: # (\\d+)", description)
+        match = re.search(r"关联需求.*?: # (\d+)", description)
         return int(match.group(1)) if match else None

@@ -202,6 +202,13 @@
     - **视觉锚定**: 涉及可视化大屏或核心 UI 组件，必要时使用 `expect(page).to_have_screenshot()`。
 - **伴生测试**: 新增功能必须同步提交对应的 `pytest` 脚本。
 
+### 9.4 AI 代理自动测试与验证规范 (AI Agent Auto-Testing & Verification) [NEW]
+为确保 AI 生成代码的质量与生产环境一致性，AI 代理必须严格执行以下验证规程：
+1.  **强制测试与运行 (Mandatory Test & Run)**：AI 代理在生成或修改逻辑代码后，**必须**自行编写对应的 `pytest` 测试用例并执行验证。
+2.  **测试持久化 (Test Persistence)**：**严禁**仅使用 `tmp/` 下的一次性验证脚本作为终态交付。所有核心逻辑（如 Transformer, Service, Algorithms）的验证必须直接在 `tests/unit/` 或 `tests/integration/` 下创建永久性测试文件。
+3.  **容器内验证 (Container-In Validation) [MANDATORY]**：所有测试执行**必须**在 Docker 容器内完成（使用 `make test` 或 `docker-compose exec api pytest`），**严禁**在宿主机环境（如 Windows）下进行单纯的 Python 逻辑验证，以确保在 Linux 环境下的完全兼容。
+4.  **DoD 增强 (DoD Enhancement)**：在向用户汇报“任务完成”或“验证通过”前，AI 代理必须提供容器内 pytest 运行成功的日志明细，作为交付成果的一部分。
+
 ## 10. 异常处理与日志规范 (Error Handling & Logging)
 - **统一异常体系**: 
     - **业务异常**: 所有业务逻辑错误必须抛出自定义异常（继承 `BusinessException`），严禁在 Service 层直接抛出 `HTTPException`。
@@ -489,6 +496,10 @@
 - **移除无用导入**: 严禁在非 `__init__.py` 文件中残留未使用的导入。
 - **行宽限制 (Line Length)**: 默认限制为 **160**。对于超长的 SQL 字符串，若无法拆分，允许在行尾添加 `# noqa: E501` 或保持原样（若全局已忽略）。
 
-### 18.3 完工标准 (DoD)
-- 任何 PR 在合入 `main` 分支前，必须确保 `make lint` 输出为 0 错误（Green Build）。
-- 如果因架构需求必须引入复杂逻辑导致复杂度超标（PLR 规则），必须报备并在 `ruff.toml` 或行内添加显式忽略原因。
+### 18.3 完工标准 (DoD) [REVISED]
+- **Green Build**: 任何 PR 在合入 `main` 分支前，必须确保本地执行 `make full-gate` 通过。
+- **Full Gate 强制卡点**: `make full-gate` 必须涵盖：
+    1.  `make lint`: 0 错误输出。
+    2.  `make test`: 容器内全量测试（单元+集成）100% 通过。
+    3.  `make build`: Docker 镜像构建成功。
+- **复杂度与异常**: 如果因架构需求必须引入复杂逻辑导致复杂度超标（PLR 规则），必须报备并在 `ruff.toml` 或行内添加显式忽略原因。

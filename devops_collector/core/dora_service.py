@@ -1,31 +1,25 @@
 import logging
-from datetime import datetime, timedelta, date, UTC
-from typing import List, Any
+from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from devops_collector.models.base_models import (
-    DORAMetrics, 
-    ProjectMaster, 
-    CommitMetrics, 
-    Incident
-)
-from devops_collector.plugins.gitlab.models import GitLabDeployment, GitLabMergeRequest
 from devops_collector.core.algorithms import AgileMetrics
+from devops_collector.models.base_models import CommitMetrics, DORAMetrics, Incident, ProjectMaster
+from devops_collector.plugins.gitlab.models import GitLabDeployment, GitLabMergeRequest
+
 
 logger = logging.getLogger(__name__)
 
 class DORAService:
     """DORA 2.0 数据计算与聚合服务。
-    
+
     负责跨插件采集 DORA 核心指标，并将其持久化到 MDM (rpt_dora_metrics) 表中。
     """
 
     @staticmethod
     def calculate_project_metrics(session: Session, project_id: int, days: int = 30) -> DORAMetrics:
         """计算指定项目的 DORA 指标并持久化。
-        
+
         Args:
             session: 数据库会话。
             project_id: MDM 项目 ID。
@@ -39,7 +33,7 @@ class DORAService:
         # 获取该 MDM 项目关联的所有 GitLab 项目 ID (可能存在多个代码库支撑一个项目)
         from devops_collector.plugins.gitlab.models import GitLabProject
         gitlab_project_ids = [p.id for p in session.query(GitLabProject).filter_by(mdm_project_id=project_id).all()]
-        
+
         if not gitlab_project_ids:
             logger.warning(f"No GitLab projects linked to MDM Project {project_id}, skipping DORA calculation.")
             return None
@@ -50,7 +44,7 @@ class DORAService:
             GitLabDeployment.status == "success",
             GitLabDeployment.created_at >= start_dt
         ).all()
-        
+
         dept_count = len(deployments)
         freq = AgileMetrics.calculate_deployment_frequency(dept_count, days)
 
@@ -61,7 +55,7 @@ class DORAService:
             GitLabMergeRequest.state == "merged",
             GitLabMergeRequest.merged_at >= start_dt
         ).all()
-        
+
         lead_times = []
         for mr in mrs:
             # 获取该 MR 关联的所有提交时间 (利用 rpt_commit_metrics 归集后的数据)
@@ -71,16 +65,16 @@ class DORAService:
                 CommitMetrics.committed_at >= mr.created_at,
                 CommitMetrics.committed_at <= mr.merged_at
             ).all()
-            
+
             commit_times = [c.committed_at for c in commits]
-            
+
             # 变更前置时间 = 部署时间 - 首次提交时间
             # 寻找该 MR 对应的部署建议值（如果是滚动发布，通常取 MR 合并后的最近一次成功部署）
             # 这里简化逻辑：将合并时间作为部署完成时间的近似值 (或寻找后续部署)
             lt = AgileMetrics.calculate_dora_lead_time(commit_times, mr.merged_at)
             if lt is not None:
                 lead_times.append(lt)
-        
+
         lt_avg = sum(lead_times) / len(lead_times) if lead_times else 0.0
 
         # 3. 变更失败率 (Change Failure Rate)
@@ -89,7 +83,7 @@ class DORAService:
             Incident.project_id == project_id,
             Incident.occurred_at >= start_dt
         ).all()
-        
+
         failure_rate = AgileMetrics.calculate_change_failure_rate(len(incidents), dept_count)
 
         # 4. 平均恢复时长 (MTTR)
@@ -97,11 +91,11 @@ class DORAService:
 
         # 5. 持久化分析结果 (SCD 对齐)
         metric_record = session.query(DORAMetrics).filter_by(
-            entity_id=project_id, 
+            entity_id=project_id,
             entity_type="PROJECT",
             date=end_date
         ).first()
-        
+
         if not metric_record:
             metric_record = DORAMetrics(
                 entity_id=project_id,
@@ -109,17 +103,17 @@ class DORAService:
                 date=end_date
             )
             session.add(metric_record)
-        
+
         metric_record.deployment_count = dept_count
         metric_record.deployment_frequency = freq
         metric_record.lead_time_for_changes_avg = lt_avg
         metric_record.change_failure_rate = failure_rate
         metric_record.mttr_avg = mttr or 0.0
         metric_record.incident_count = len(incidents)
-        
+
         # 综合评级
         metric_record.score_grade = DORAService._calculate_grade(freq, lt_avg)
-        
+
         session.flush()
         logger.info(f"DORA 2.0 metrics calculated for Project {project_id}: Freq={freq:.2f}, LT_Avg={lt_avg:.2f}h")
         return metric_record

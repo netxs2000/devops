@@ -30,14 +30,14 @@ from devops_collector.plugins.gitlab.models import (
 
 
 def test_get_business_linked_roles_should_return_dept_manager_when_user_is_org_manager(db_session):
-    # Setup
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="manager", full_name="Manager")
     db_session.add(user)
+    db_session.flush() # Ensure user exists before being referenced as manager
 
-    org = Organization(org_id="ORG_001", org_name="Test Org", manager_user_id=user_id, is_current=True, sync_version=1)
+    org = Organization(org_code="ORG_DEPT_1", org_name="Test Org", manager_user_id=user_id, is_current=True, sync_version=1)
     db_session.add(org)
-    db_session.commit()
+    db_session.flush()
 
     # execution
     roles = get_business_linked_roles(db_session, user_id)
@@ -51,9 +51,10 @@ def test_get_business_linked_roles_should_return_product_manager_when_user_is_pm
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="pm", full_name="PM")
     db_session.add(user)
+    db_session.flush()
 
     product = Product(
-        product_id="PROD_001",
+        product_code="PROD_CODE_1",
         product_name="Test Product",
         product_description="Test",
         version_schema="SemVer",
@@ -62,7 +63,7 @@ def test_get_business_linked_roles_should_return_product_manager_when_user_is_pm
         sync_version=1,
     )
     db_session.add(product)
-    db_session.commit()
+    db_session.flush()
 
     # execution
     roles = get_business_linked_roles(db_session, user_id)
@@ -76,10 +77,11 @@ def test_get_business_linked_roles_should_return_project_manager_when_user_is_pr
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="pl", full_name="PL")
     db_session.add(user)
+    db_session.flush()
 
-    project = ProjectMaster(project_id="PROJ_001", project_name="Test Project", pm_user_id=user_id, is_current=True, sync_version=1)
+    project = ProjectMaster(project_code="PROJ_001", project_name="Test Project", pm_user_id=user_id, is_current=True, sync_version=1)
     db_session.add(project)
-    db_session.commit()
+    db_session.flush()
 
     # execution
     roles = get_business_linked_roles(db_session, user_id)
@@ -93,10 +95,11 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_team_
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="tl", full_name="TL")
     db_session.add(user)
+    db_session.flush()
 
     team = Team(name="Test Team", team_code="TEAM_001", leader_id=user_id, is_current=True, sync_version=1)
     db_session.add(team)
-    db_session.commit()
+    db_session.flush()
 
     # execution
     roles = get_business_linked_roles(db_session, user_id)
@@ -108,13 +111,13 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_team_
 def test_get_dynamic_permissions_should_aggregate_all_perms_from_business_roles(db_session):
     # Setup roles and menus
     # 1. Roles
-    dept_role = SysRole(id=1, role_name="Dept Manager", role_key="DEPT_MANAGER")
-    pm_role = SysRole(id=2, role_name="Product Manager", role_key="PRODUCT_MANAGER")
+    dept_role = SysRole(role_name="Dept Manager", role_key="DEPT_MANAGER")
+    pm_role = SysRole(role_name="Product Manager", role_key="PRODUCT_MANAGER")
     db_session.add_all([dept_role, pm_role])
 
     # 2. Menus
-    menu1 = SysMenu(id=101, menu_name="Org View", perms="org:view", status=True)
-    menu2 = SysMenu(id=102, menu_name="Prod Manage", perms="prod:manage", status=True)
+    menu1 = SysMenu(menu_name="Org View", perms="org:view", status=True)
+    menu2 = SysMenu(menu_name="Prod Manage", perms="prod:manage", status=True)
     db_session.add_all([menu1, menu2])
     db_session.flush()
 
@@ -126,10 +129,11 @@ def test_get_dynamic_permissions_should_aggregate_all_perms_from_business_roles(
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="boss", full_name="Boss")
     db_session.add(user)
+    db_session.flush()
 
-    org = Organization(org_id="O1", org_name="O1", manager_user_id=user_id, is_current=True, sync_version=1)
+    org = Organization(org_code="O1", org_name="O1", manager_user_id=user_id, is_current=True, sync_version=1)
     prod = Product(
-        product_id="P1",
+        product_code="P1",
         product_name="P1",
         product_description="P1",
         version_schema="S",
@@ -138,7 +142,7 @@ def test_get_dynamic_permissions_should_aggregate_all_perms_from_business_roles(
         sync_version=1,
     )
     db_session.add_all([org, prod])
-    db_session.commit()
+    db_session.flush()
 
     # execution
     perms = get_dynamic_permissions(db_session, user_id)
@@ -169,7 +173,7 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_gitla
 
     membership = GitLabGroupMember(group_id=101, user_id=user_id, access_level=40)
     db_session.add(membership)
-    db_session.commit()
+    db_session.flush()
 
     # execution
     roles = get_business_linked_roles(db_session, user_id)
@@ -192,7 +196,7 @@ def test_get_business_linked_roles_should_return_project_manager_when_user_is_gi
 
     membership = GitLabProjectMember(project_id=201, user_id=user_id, access_level=50)
     db_session.add(membership)
-    db_session.commit()
+    db_session.flush()
 
     # execution
     roles = get_business_linked_roles(db_session, user_id)

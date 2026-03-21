@@ -12,9 +12,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from .config import Config
+from .core.dora_service import DORAService
 from .core.plugin_loader import PluginLoader
 from .core.promotion_service import PromotionService
-from .core.dora_service import DORAService
 from .models.base_models import Base
 from .mq import MessageQueue
 
@@ -107,7 +107,7 @@ def main() -> None:
                 p_count += PromotionService.promote_gitlab_commits(session)
                 p_count += PromotionService.promote_zentao_products(session)
                 p_count += PromotionService.promote_zentao_executions(session)
-                
+
                 if p_count > 0:
                     logger.info(f"Successfully promoted {p_count} records.")
                     session.commit()
@@ -135,7 +135,7 @@ def main() -> None:
                     sync_talent_tags_to_mdm(session)
                     sync_aligned_entities_to_mdm(session)
                     sync_shadow_it_findings(session)
-                    
+
                     # 5. DORA 2.0 指标重平衡 (Metric Re-balancing)
                     logger.info("Recalculating DORA 2.0 metrics...")
                     DORAService.aggregate_all_projects(session)

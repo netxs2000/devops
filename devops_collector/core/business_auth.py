@@ -37,13 +37,13 @@ def get_business_linked_roles(db: Session, user_id: Any) -> list[str]:
     roles = []
 
     # 1. 检查是否为部门负责人
-    managed_orgs = db.query(Organization.org_id).filter_by(manager_user_id=user_id, is_current=True).all()
+    managed_orgs = db.query(Organization.org_code).filter_by(manager_user_id=user_id, is_current=True).all()
     if managed_orgs:
         roles.append(BUSINESS_ROLE_MAP["org_manager"])
 
     # 2. 检查是否为产品负责人
     managed_prods = (
-        db.query(Product.product_id)
+        db.query(Product.product_code)
         .filter(
             (Product.product_manager_id == user_id) | (Product.dev_lead_id == user_id) | (Product.qa_lead_id == user_id),
             Product.is_current,
@@ -55,7 +55,7 @@ def get_business_linked_roles(db: Session, user_id: Any) -> list[str]:
 
     # 3. 检查是否为项目负责人
     managed_projects = (
-        db.query(ProjectMaster.project_id)
+        db.query(ProjectMaster.project_code)
         .filter(
             (ProjectMaster.pm_user_id == user_id) | (ProjectMaster.dev_lead_id == user_id),
             ProjectMaster.is_current,

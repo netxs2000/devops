@@ -21,7 +21,7 @@ class TestRateLimiter(unittest.TestCase):
         self.assertLess(limiter.tokens, 6)
         time.sleep(0.5)
         limiter.get_token()
-        self.assertGreater(limiter.tokens, 9)
+        self.assertGreaterEqual(limiter.tokens, 9)
 
     def test_wait_for_token_blocking(self):
         """测试 wait_for_token 的延迟阻塞。"""

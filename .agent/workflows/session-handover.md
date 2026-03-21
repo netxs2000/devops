@@ -68,13 +68,29 @@ Get-Content docs/lessons-learned.log | Select-Object -Last 15
 - 更新 `progress.txt`（将已完成的移到「最近完成」，新发现的加入「接下来」）
 - 确保所有有价值的中间状态已 Commit 或 Stash
 
-### 2. 交接备忘 (Handover Notes)
+### 2. 🚨 知识割取 Harvest [MANDATORY — 不得跳过]
+> **触发判断**：本次会话中是否有任何问题经历了 **2 次以上尝试才解决**？或发现了数据源/工具链的**非标行为**？
+> **回答 YES → 必须立即执行，不得以 Token 不足为由推迟。**
+
+自问清单（逐条过）：
+- [ ] 有没有 Mock/测试工具与 ORM 不兼容的坑？
+- [ ] 有没有 Schema/FK 类型不匹配导致的错误？
+- [ ] 有没有正则/解析逻辑的边界 bug？
+- [ ] 有没有断言边界值（时序、数值精度）的失效？
+- [ ] 有没有 Pydantic / SQLAlchemy 版本行为的差异？
+
+对每一个 YES 项，在 `docs/lessons-learned.log` 末尾追加一行，格式：
+```
+| {date} | {Domain} | {现象} | {根因} | {防线规则} |
+```
+
+### 3. 交接备忘 (Handover Notes)
 在 `progress.txt` 的 [当前状态] 区域，留下给下一个 Agent/会话的简要说明：
 - 当前卡在哪里？
 - 下一步最该做什么？
 - 有什么已经尝试过但失败的方案？（避免重复探索）
 
-### 3. 环境卫生
+### 4. 环境卫生
 // turbo
 ```powershell
 # 清理临时文件

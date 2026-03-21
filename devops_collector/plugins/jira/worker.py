@@ -169,6 +169,7 @@ class JiraWorker(BaseWorker):
         issue.priority = fields.get("priority", {}).get("name")
         issue.issue_type = fields.get("issuetype", {}).get("name")
         if fields.get("assignee"):
+            issue.assignee_name = fields["assignee"].get("displayName")
             u = IdentityManager.get_or_create_user(
                 self.session,
                 "jira",
@@ -176,9 +177,11 @@ class JiraWorker(BaseWorker):
                 fields["assignee"].get("emailAddress"),
                 fields["assignee"].get("displayName"),
             )
-            issue.assignee_user_id = u.global_user_id
-            issue.assignee_name = u.name
+            if u:
+                issue.assignee_user_id = u.global_user_id
+                issue.assignee_name = u.full_name
         if fields.get("reporter"):
+            issue.reporter_name = fields["reporter"].get("displayName")
             u = IdentityManager.get_or_create_user(
                 self.session,
                 "jira",
@@ -186,9 +189,11 @@ class JiraWorker(BaseWorker):
                 fields["reporter"].get("emailAddress"),
                 fields["reporter"].get("displayName"),
             )
-            issue.reporter_user_id = u.global_user_id
-            issue.reporter_name = u.name
+            if u:
+                issue.reporter_user_id = u.global_user_id
+                issue.reporter_name = u.full_name
         if fields.get("creator"):
+            issue.creator_name = fields["creator"].get("displayName")
             u = IdentityManager.get_or_create_user(
                 self.session,
                 "jira",
@@ -196,8 +201,9 @@ class JiraWorker(BaseWorker):
                 fields["creator"].get("emailAddress"),
                 fields["creator"].get("displayName"),
             )
-            issue.creator_user_id = u.global_user_id
-            issue.creator_name = u.name
+            if u:
+                issue.creator_user_id = u.global_user_id
+                issue.creator_name = u.full_name
         if fields.get("created"):
             issue.created_at = datetime.fromisoformat(fields["created"].replace("Z", "+00:00"))
         if fields.get("updated"):
@@ -284,10 +290,10 @@ class JiraWorker(BaseWorker):
         groups = self.client.get_groups()
         for g in groups:
             group_name = g["name"]
-            org = self.session.query(Organization).filter_by(org_id=group_name, is_current=True).first()
+            org = self.session.query(Organization).filter_by(org_code=group_name, is_current=True).first()
             if not org:
                 org = Organization(
-                    org_id=group_name,
+                    org_code=group_name,
                     org_name=group_name,
                     org_level=1,
                     sync_version=1,
@@ -300,7 +306,7 @@ class JiraWorker(BaseWorker):
                 close_current_and_insert_new(
                     self.session,
                     Organization,
-                    {"org_id": group_name},
+                    {"org_code": group_name},
                     {"org_name": group_name, "sync_version": org.sync_version},
                 )
         self.session.flush()

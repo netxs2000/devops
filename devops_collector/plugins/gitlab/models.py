@@ -388,14 +388,14 @@ class GitLabMergeRequest(Base):
         viewonly=True,
     )
 
-    @hybrid_property
+    @property
     def latest_deployment(self):
         """MR 关联的最新部署记录。"""
         if not self.deployments:
             return None
         return sorted(self.deployments, key=lambda d: d.created_at or d.updated_at, reverse=True)[0]
 
-    @hybrid_property
+    @property
     def risk_score(self):
         """变更风险评分 (0-100)。(黑科技 2/4 - AI 降噪)
         基于变更规模、评审轮次、质量门禁以及 AI 分类建议。
@@ -1117,37 +1117,6 @@ class GitLabDeployment(Base):
         """'''
         return cls.status == "success"
 
-    @hybrid_property
-    def is_production(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        if not self.environment:
-            return False
-        return self.environment.lower() in ["production", "prod"]
-
-    @is_production.expression
-    def is_production(cls):
-        '''"""TODO: Add description.
-
-        Args:
-            cls: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
-        return func.lower(cls.environment).in_(["production", "prod"])
 
     def __repr__(self) -> str:
         '''"""TODO: Add description.

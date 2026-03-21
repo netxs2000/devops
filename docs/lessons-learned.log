@@ -57,6 +57,19 @@
 | 2026-03-04 | Logic | DetachedInstance | 跨函数访问已关闭 Session 的模型属性。 | **局部上下文封闭**：Worker 必须在单一事务闭环内完成所有关联查询。 |
 
 ---
+
+## 2026-03-21 单元测试批量修复 — 新增经验条目
+
+| Timestamp | Domain | Phenomenon | Root Cause | Universal Rule (The Defense) |
+| :--- | :--- | :--- | :--- | :--- |
+| 2026-03-21 | Testing/SQLAlchemy | `@hybrid_property` 在 Mock 环境引发 `NotImplementedError` | `@hybrid_property` 会在类级别生成 SQL 表达式描述符。当测试中以 `MagicMock` 替代 Session、或以 SQLite 替代 PG 时，SQLAlchemy 尝试将 Python 逻辑（如 `sorted()`、`.get()`）翻译为 SQL Clause，因无对应 SQL 实现而崩溃。 | **`@hybrid_property` 使用守则**：若属性逻辑中含有纯 Python 运算（排序、字典取值、lambda 等），必须改用普通 `@property`。只有当属性需要同时支持 `Model.attr == value` 这类 SQL 级别过滤时，才需要 `@hybrid_property` + `@attr.expression` 双修，且 expression 分支必须返回合法 SQL Clause。 |
+| 2026-03-21 | Testing/SQLAlchemy | 单元测试用 `MagicMock` 模拟 Session 时，SQLAlchemy ORM 操作符（如 `.filter(Col.in_([...]))`）抛 `NotImplementedError` | SQLAlchemy ORM 查询、比较和 IN 等操作符作用在 Column 对象上时，实际上生成 SQL AST 节点。`MagicMock` 不实现这套协议，调用时无法生成有效 SQL 而报错。 | **测试 SQLAlchemy ORM 必用 in-memory DB**：1. 含 ORM 查询逻辑的测试，必须使用真实 `create_engine("sqlite:///:memory:")` + `sessionmaker`，不得使用 `MagicMock` 替代 Session。2. 若只测纯数据转换逻辑（无 DB 操作），才允许 Mock Session。 |
+| 2026-03-21 | Testing/FK | 测试中向 `ProjectProductRelation` 传入字符串 `"PROD1"` / `"ORG1"` 作为 FK 值，触发 `IntegrityError: NOT NULL constraint` 或类型不匹配 | `ProjectProductRelation.product_id`、`org_id` 均为 Integer FK（指向 `mdm_products.id`、`mdm_organizations.id`）。重构后这些列已从 String 业务编码迁移为 Integer 自增 PK，但旧测试 seed 未同步更新。 | **测试 FK Seed 规程**：1. 测试 seed 数据必须先依次创建父表记录（`flush()` 获取自增 ID），再以整数 ID 建立关联——严禁用字符串直接赋值 Integer FK。2. 每次重构 FK 类型后，必须通过 grep 检索所有测试文件中对该 FK 的直接赋值，统一修正。 |
+| 2026-03-21 | Testing/Pydantic | 向 Pydantic v2 Model 的 `list[MyModel]` 字段传入 `MagicMock()` 实例，触发 `ValidationError: string type expected` | Pydantic v2 在 Model 实例化时对所有字段进行严格类型验证，`MagicMock` 实例无法通过类型守卫，即使在测试中也不例外。 | **Pydantic v2 测试 Mock 规则**：1. Pydantic Model 字段严禁使用 `MagicMock` 填充——必须构造合法的 Schema 实例（即使只填最小必填字段）。2. 若 Schema 构造代价高，可用 `model_construct()` 跳过验证（仅在确认不需要验证逻辑的场景使用）。 |
+| 2026-03-21 | Python/Regex | Issue 描述解析 (`parser.py`) 无法正确提取优先级、测试类型、反馈等字段 | 正则表达式在 Markdown 模板中，字段前有 `**` 加粗标记，原 pattern 硬编码了 `**用例优先级`]: ` 格式。MarkDown 渲染中 `**` 可能位置不固定，且"反馈"行的序号前缀（`1.`）与 pattern 不一致。 | **Markdown 解析正则健壮性规则**：1. 提取语义标签时，正则必须使用 `.*?` 吸收中间的 Markdown 格式字符（如 `**`、`*`、`-`），格式：`r"关键词.*?:\s*\[(.*?)\]"`。2. 行前缀（序号）不稳定时，不应在 pattern 中硬编码 `\d+\.`，应用更宽松的前瞻截取。3. 所有 Python 正则必须使用 `r"..."` raw string，避免 `\\` 双重转义导致的调试困难。 |
+| 2026-03-21 | Testing/Timing | `test_token_bucket_refill` 断言 `assertGreater(limiter.tokens, 9)` 失败（tokens 恰好等于 9） | 令牌桶以 10/s 的速率，sleep 0.5s 后补充 5 个 token，消费 1 个后恰好剩 9 个——数学上不满足严格 `> 9`。边界值在 CI / Docker 容器等精确计时环境下（无 OS 调度抖动）必然触发。 | **时间相关断言必须宽于边界**：1. 涉及 `sleep + rate` 的时序测试，断言阈值必须用 `assertGreaterEqual` 或留出 ±10% 容差，不得使用严格的 `>` 或 `<`。2. 如需精确验证，应 Mock 时钟（`unittest.mock.patch("time.time")`）而非依赖物理 sleep。 |
+
+---
 *End of Log*
 - **Alembic 迁移空库报错 (2026-03-17)**: 
     - **现象**: 在空数据库上执行 `alembic upgrade head` 时，若脚本包含 `drop_table` 但表不存在，会导致 `UndefinedTable` 错误中断流水线。

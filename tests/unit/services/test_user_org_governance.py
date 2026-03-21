@@ -82,14 +82,14 @@ def db_session():
 def test_virtual_team_relationships(db_session):
     """测试虚拟团队的模型关联关系。"""
     # 1. 创建 HR 组织和用户
-    org = Organization(org_id="DEPT_研发", org_name="研发中心", is_current=True)
+    org = Organization(org_code="DEPT_研发", org_name="研发中心", is_current=True)
     user1 = User(global_user_id=uuid.uuid4(), full_name="张三", employee_id="1001", is_current=True)
     user2 = User(global_user_id=uuid.uuid4(), full_name="李四", employee_id="1002", is_current=True)
     db_session.add_all([org, user1, user2])
     db_session.flush()
 
     # 2. 创建虚拟团队
-    team = Team(name="效能平台组", team_code="TEAM_EFF", leader_id=user1.global_user_id, org_id=org.org_id)
+    team = Team(name="效能平台组", team_code="TEAM_EFF", leader_id=user1.global_user_id, org_id=org.id)
     db_session.add(team)
     db_session.flush()
 
@@ -171,7 +171,7 @@ def test_api_user_full_profile(db_session):
     """测试获取用户全景画像接口。"""
     # 1. 构造测试数据
     u_id = uuid.uuid4()
-    org = Organization(org_id="ORG_TEST", org_name="测试部", is_current=True)
+    org = Organization(org_code="ORG_TEST", org_name="测试部", is_current=True)
     db_session.add(org)
     db_session.flush()
     user = User(
@@ -179,11 +179,11 @@ def test_api_user_full_profile(db_session):
         full_name="赵六",
         employee_id="R666",
         primary_email="zhao@ex.com",
-        department_id=org.org_id,
+        department_id=org.id,
         is_current=True,
     )
     db_session.add(user)
-    db_session.commit()  # 物理库必须提交
+    db_session.flush()
 
     mapping = IdentityMapping(
         global_user_id=u_id,

@@ -60,12 +60,14 @@ class TestJiraWorker(unittest.TestCase):
         Raises:
             TODO
         """'''
-        self.mock_client._get.return_value = {
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {
             "key": "TEST",
             "name": "Test Project",
             "description": "Desc",
             "lead": {"displayName": "Project Lead"},
         }
+        self.mock_client._get.return_value = mock_resp
         self.mock_client.get_boards.return_value = []
         self.mock_client.get_groups.return_value = [{"name": "JiraDevs"}]
         self.mock_client.get_all_users.return_value = [
@@ -113,6 +115,26 @@ class TestJiraWorker(unittest.TestCase):
                 },
             }
         ]
+        # Seed Global Users for identity matching
+        from uuid import uuid4
+        users_data = [
+            ("Jira User", "jira@fake.com", "E101"),
+            ("Creator X", "creator@fake.com", "E102"),
+            ("Reporter Y", "reporter@fake.com", "E103"),
+        ]
+        user_map = {}
+        for name, email, eid in users_data:
+            u = GlobalUser(
+                global_user_id=uuid4(),
+                full_name=name,
+                primary_email=email,
+                employee_id=eid,
+                is_current=True
+            )
+            self.session.add(u)
+            user_map[email] = u
+        self.session.flush()
+
         task = {"project_key": "TEST"}
         self.worker.process_task(task)
         project = self.session.query(JiraProject).filter_by(key="TEST").first()
@@ -126,10 +148,13 @@ class TestJiraWorker(unittest.TestCase):
         self.assertIsNotNone(issue.assignee_user_id)
         self.assertIsNotNone(issue.creator_user_id)
         self.assertIsNotNone(issue.reporter_user_id)
-        org = self.session.query(Organization).filter_by(name="JiraDevs").first()
+        org = self.session.query(Organization).filter_by(org_name="JiraDevs").first()
         self.assertIsNotNone(org)
-        user = self.session.query(GlobalUser).filter_by(email="jira@fake.com").first()
+        user = self.session.query(GlobalUser).filter_by(primary_email="jira@fake.com").first()
         self.assertIsNotNone(user)
+        self.assertEqual(issue.assignee_user_id, user.global_user_id)
+        self.assertEqual(issue.creator_user_id, user_map["creator@fake.com"].global_user_id)
+        self.assertEqual(issue.reporter_user_id, user_map["reporter@fake.com"].global_user_id)
 
 
 if __name__ == "__main__":

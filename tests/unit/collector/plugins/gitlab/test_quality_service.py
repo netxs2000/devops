@@ -46,9 +46,10 @@ class TestQualityService:
                 id=1,
                 iid=1,
                 title="R1",
+                description="Test Description",
                 state="opened",
                 review_state="approved",
-                test_cases=[MagicMock()],  # Has 1 test case -> 100% coverage
+                test_cases=[schemas.TestCase(id=1, iid=1, title="Test Case 1")],  # Has 1 test case -> 100% coverage
             )
 
             # 2. Mock client issues (for Bug check)

@@ -227,19 +227,19 @@ class DORAMetrics(Base, TimestampMixin):
     entity_id = Column(Integer, index=True, comment="关联的项目或团队 ID")
     entity_type = Column(String(50), index=True, comment="实体类型 (PROJECT/TEAM)")
     date = Column(Date, index=True, comment="统计日期 (通常为当日或周末)")
-    
+
     deployment_count = Column(Integer, default=0, comment="周期内成功部署次数")
     deployment_frequency = Column(Float, default=0.0, comment="部署频率 (次/天)")
-    
+
     lead_time_for_changes_avg = Column(Float, default=0.0, comment="平均变更前置时间 (小时)")
     lead_time_for_changes_median = Column(Float, default=0.0, comment="变更前置时间中位数 (小时)")
-    
+
     change_failure_rate = Column(Float, default=0.0, comment="变更失败率 (%)")
     failed_deployment_count = Column(Integer, default=0, comment="失败部署次数")
-    
+
     mttr_avg = Column(Float, default=0.0, comment="故障平均恢复时长 (小时)")
     incident_count = Column(Integer, default=0, comment="周期内事故数量")
-    
+
     score_grade = Column(String(20), comment="DORA 综合等级 (Elite/High/Medium/Low)")
 
 

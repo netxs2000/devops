@@ -479,7 +479,7 @@ class AdminService:
 
             try:
                 # 校验实体存在性
-                project = self.session.query(ProjectMaster).filter(ProjectMaster.project_id == proj_id).first()
+                project = self.session.query(ProjectMaster).filter(ProjectMaster.project_code == proj_id).first()
                 if not project:
                     raise ValueError(f"Project {proj_id} not found")
 

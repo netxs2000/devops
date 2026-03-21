@@ -65,13 +65,19 @@ class TestGitLabUserMapping(unittest.TestCase):
             "email": "user@example.com",
             "skype": "Cloud Department",
         }
+        
+        from uuid import uuid4
+        u = User(global_user_id=uuid4(), primary_email="user@example.com", employee_id="EMP003", is_current=True)
+        self.session.add(u)
+        self.session.flush()
+
         user_id = self.resolver.resolve(123)
-        user = self.session.query(User).get(user_id)
-        self.assertEqual(user.department, "Cloud Department")
-        org = self.session.query(Organization).get(user.organization_id)
+        user = self.session.get(User, user_id)
+        self.assertEqual(user.department.org_name, "Cloud Department")
+        org = self.session.get(Organization, user.department_id)
         self.assertIsNotNone(org)
-        self.assertEqual(org.name, "Cloud Department")
-        self.assertEqual(org.level, "Center")
+        self.assertEqual(org.org_name, "Cloud Department")
+        self.assertEqual(org.org_level, 2)
 
 
 if __name__ == "__main__":

@@ -11,10 +11,20 @@ class MockWorker(TraceabilityMixin):
         self.session = session
 
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from devops_collector.models.base_models import Base
+
 class TestTraceabilityExtraction(unittest.TestCase):
     def setUp(self):
-        self.session = MagicMock()
+        self.engine = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(self.engine)
+        Session = sessionmaker(bind=self.engine)
+        self.session = Session()
         self.worker = MockWorker(self.session)
+
+    def tearDown(self):
+        self.session.close()
 
     def test_extract_zentao_ids_standard_format(self):
         """测试标准 #123 格式提取"""
@@ -25,9 +35,6 @@ class TestTraceabilityExtraction(unittest.TestCase):
         mr.id = 101
         mr.iid = 1
 
-        # 模拟数据库查询，返回 None 表示由于是新关联，所以没有现有记录
-        self.session.query.return_value.filter_by.return_value.first.return_value = None
-
         self.worker._apply_traceability_extraction(mr)
 
         # 验证 MR 对象的主字段 (仅存第一个)
@@ -35,8 +42,7 @@ class TestTraceabilityExtraction(unittest.TestCase):
         self.assertEqual(mr.issue_source, "zentao")
 
         # 验证追溯表记录 (保存全部)
-        # 应该调用了 2 次 session.add (120 和 121)
-        added_links = [call.args[0] for call in self.session.add.call_args_list if isinstance(call.args[0], TraceabilityLink)]
+        added_links = self.session.query(TraceabilityLink).all()
         self.assertEqual(len(added_links), 2)
 
         source_ids = [link.source_id for link in added_links]
@@ -55,15 +61,14 @@ class TestTraceabilityExtraction(unittest.TestCase):
         mr.external_issue_id = None
         mr.iid = 5
 
-        self.session.query.return_value.filter_by.return_value.first.return_value = None
-
         self.worker._apply_traceability_extraction(mr)
 
         # 主字段应为第一个 101
         self.assertEqual(mr.external_issue_id, "101")
 
         # 追溯表应只有 101 和 102，且没有重复
-        added_ids = [call.args[0].source_id for call in self.session.add.call_args_list if isinstance(call.args[0], TraceabilityLink)]
+        added_links = self.session.query(TraceabilityLink).all()
+        added_ids = [link.source_id for link in added_links]
         self.assertEqual(len(set(added_ids)), 2)
         self.assertEqual(sorted(added_ids), ["101", "102"])
 
@@ -74,14 +79,12 @@ class TestTraceabilityExtraction(unittest.TestCase):
         mr.description = "正确格式在最后 #999"
         mr.external_issue_id = None
 
-        self.session.query.return_value.filter_by.return_value.first.return_value = None
-
         self.worker._apply_traceability_extraction(mr)
 
         # 应该只匹配到 999
         self.assertEqual(mr.external_issue_id, "999")
 
-        added_links = [link.args[0] for link in self.session.add.call_args_list if isinstance(link.args[0], TraceabilityLink)]
+        added_links = self.session.query(TraceabilityLink).all()
         self.assertEqual(len(added_links), 1)
         self.assertEqual(added_links[0].source_id, "999")
 

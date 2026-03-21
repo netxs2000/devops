@@ -275,7 +275,7 @@ class TestGitLabWorker(unittest.TestCase):
         self.worker._save_commits_batch(project, batch)
         # 兼容 ORM merge 或 PostgreSQL insert
         self.assertTrue(self.session.add.called or self.session.merge.called or self.session.execute.called)
-        
+
         call_args = self.session.add.call_args or self.session.merge.call_args
         if call_args:
             args, _ = call_args
