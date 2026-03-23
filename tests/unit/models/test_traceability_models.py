@@ -113,6 +113,7 @@ class TestTraceabilityModels(unittest.TestCase):
         self.session.flush()
         zt_issue = ZenTaoIssue(
             id=401,
+            type="feature",
             product_id=zt_prod.id,
             title="Fixed bug",
             first_commit_sha="sha888",

@@ -502,4 +502,3 @@ class DependencyScanSummary(BaseModel):
     high_risk_licenses: int | None = 0
     scan_status: str
     ci_job_url: str | None = None
-    project: Any | None = None

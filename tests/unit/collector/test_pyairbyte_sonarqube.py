@@ -3,10 +3,14 @@
 验证 AirbyteSonarQubeClient 的适配逻辑。
 """
 
+import importlib.util
 import unittest
 from unittest.mock import MagicMock, patch
 
+_HAS_AIRBYTE = importlib.util.find_spec("airbyte") is not None
 
+
+@unittest.skipUnless(_HAS_AIRBYTE, "airbyte package not installed")
 class TestPyAirbyteSonarQubeIntegration(unittest.TestCase):
     """测试 SonarQube 在 Airbyte 模式下的适配。"""
 

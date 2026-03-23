@@ -500,6 +500,12 @@ class ZenTaoWorker(BaseWorker):
                     issue.closed_at = datetime.fromisoformat(str(data["closedDate"]).replace(" ", "T"))
                 except Exception:
                     pass
+            
+            # 关联计划 (MDM 2.0: 存储计划 ID)
+            plan_id_val = _safe_int(data.get("plan"))
+            if plan_id_val:
+                issue.plan_id = plan_id_val
+                
             issue.raw_data = data
 
         # 3. 批量 flush 一次，替代逐条 flush
@@ -858,17 +864,17 @@ class ZenTaoWorker(BaseWorker):
             org_id = f"zentao_dept_{d['id']}"
             org_name = d["name"]
             # 即使 is_current=False 的历史数据也会触发唯一索引冲突，所以必须全局查询
-            org = self.session.query(Organization).filter_by(org_id=org_id).first()
+            org = self.session.query(Organization).filter_by(org_code=org_id).first()
             if not org:
                 try:
                     with self.session.begin_nested():
-                        org = Organization(org_id=org_id, org_name=org_name, org_level=3, is_current=True, sync_version=1)
+                        org = Organization(org_code=org_id, org_name=org_name, org_level=3, is_current=True, sync_version=1)
                         self.session.add(org)
                         self.session.flush()
                         logger.info(f"Created ZenTao Organization: {org_name}")
                 except Exception:
                     self.session.rollback()
-                    org = self.session.query(Organization).filter_by(org_id=org_id).first()
+                    org = self.session.query(Organization).filter_by(org_code=org_id).first()
             elif org.org_name != org_name:
                 org.org_name = org_name
                 logger.info(f"Updated ZenTao Organization Name: {org_name}")
@@ -876,7 +882,7 @@ class ZenTaoWorker(BaseWorker):
         self.session.flush()
         for d in depts:
             if d.get("parent") and d["parent"] in dept_map:
-                dept_map[d["id"]].parent_org_id = dept_map[d["parent"]].org_id
+                dept_map[d["id"]].parent_id = dept_map[d["parent"]].id
         self.session.flush()
 
     def _sync_zentao_users(self) -> None:
@@ -892,9 +898,9 @@ class ZenTaoWorker(BaseWorker):
             )
             if user:
                 if u_data.get("dept"):
-                    org_id = f"zentao_dept_{u_data['dept']}"
-                    org = self.session.query(Organization).filter_by(org_id=org_id).first()
+                    org_id_val = f"zentao_dept_{u_data['dept']}"
+                    org = self.session.query(Organization).filter_by(org_code=org_id_val).first()
                     if org:
-                        user.department_id = org.org_id
+                        user.department_id = org.id
                 user.raw_data = u_data
         self.session.flush()

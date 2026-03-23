@@ -82,7 +82,7 @@ def test_entity_topology_integration(db_session):
     # 3. Create Topology Mapping
     topo = EntityTopology(
         service_id=service.id,
-        system_code=tool.system_code,
+        system_id=tool.id,
         external_resource_id="project-key-abc",
         element_type="quality-gate",
         meta_info={"branch": "main"},
@@ -112,7 +112,7 @@ def test_cascade_delete_service(db_session):
 
     topo = EntityTopology(
         service_id=service.id,
-        system_code="TEMP_TOOL",
+        system_id=tool.id,
         external_resource_id="temp-1",
     )
     db_session.add(topo)
@@ -138,7 +138,7 @@ def test_topology_integrity_constraint(db_session):
     # Try to link to non-existent system
     topo = EntityTopology(
         service_id=service.id,
-        system_code="INVALID_SYSTEM_CODE",  # Does not exist in SystemRegistry
+        system_id=99999,  # Does not exist in SystemRegistry
         external_resource_id="123",
     )
     db_session.add(topo)
@@ -156,15 +156,15 @@ def test_entity_topology_project_link(db_session):
     db_session.flush()
 
     # 2. Create ProjectMaster
-    project = ProjectMaster(project_id="PROJ-TEST-001", project_name="Test Project", status="ACTIVE", is_current=True)
+    project = ProjectMaster(project_code="PROJ-TEST-001", project_name="Test Project", status="ACTIVE", is_current=True)
     db_session.add(project)
     db_session.flush()
 
     # 3. Create Topology with project_id only (no service_id)
     topo = EntityTopology(
-        project_id=project.project_id,
+        project_id=project.id,
         service_id=None,
-        system_code=tool.system_code,
+        system_id=tool.id,
         external_resource_id="https://gitlab.example.com/test/repo.git",
         resource_name="repo",
         element_type="source-code",
@@ -175,7 +175,7 @@ def test_entity_topology_project_link(db_session):
     db_session.refresh(topo)
 
     # 4. Verify linkage
-    assert topo.project_id == "PROJ-TEST-001"
+    assert topo.project_id == project.id
     assert topo.service_id is None
     assert topo.project.project_name == "Test Project"
     assert topo.element_type == "source-code"

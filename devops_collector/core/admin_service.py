@@ -586,7 +586,7 @@ class AdminService:
                         kr.title,
                         kr.target_value,
                         kr.current_value,
-                        kr.unit or "",
+                        kr.metric_unit or "",
                         f"{kr_progress}%",
                     ]
                 )

@@ -3,10 +3,14 @@
 本测试通过完全 Mock 外部依赖，验证 AirbyteGitLabClient 的数据转换逻辑。
 """
 
+import importlib.util
 import unittest
 from unittest.mock import MagicMock, patch
 
+_HAS_AIRBYTE = importlib.util.find_spec("airbyte") is not None
 
+
+@unittest.skipUnless(_HAS_AIRBYTE, "airbyte package not installed")
 class TestPyAirbyteGitLabIntegration(unittest.TestCase):
     """测试 PyAirbyte 数据适配逻辑。"""
 

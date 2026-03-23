@@ -15,9 +15,9 @@ class TestNexusWorker(unittest.TestCase):
 
         # 模拟产品数据 (带 matching_patterns 字段)
         self.mock_products = [
-            MagicMock(product_id="devops", matching_patterns=None, is_current=True),
-            MagicMock(product_id="portal", matching_patterns=None, is_current=True),
-            MagicMock(product_id="collector", matching_patterns=None, is_current=True),
+            MagicMock(product_code="devops", matching_patterns=None, is_current=True),
+            MagicMock(product_code="portal", matching_patterns=None, is_current=True),
+            MagicMock(product_code="collector", matching_patterns=None, is_current=True),
         ]
         # 统一设置 query().filter().all() 的返回值
         self.session.query.return_value.filter.return_value.all.return_value = self.mock_products
@@ -51,7 +51,7 @@ class TestNexusWorker(unittest.TestCase):
         """测试通过显式定义的 matching_patterns 进行正则匹配。"""
         # 模拟带正则的产品
         mock_products = [
-            MagicMock(product_id="security-app", matching_patterns=["^sec-.*", "com.tjhq.security.*"], is_current=True),
+            MagicMock(product_code="security-app", matching_patterns=["^sec-.*", "com.tjhq.security.*"], is_current=True),
         ]
         self.session.query.return_value.filter.return_value.all.return_value = mock_products
         self.worker._init_product_cache()
@@ -89,7 +89,7 @@ class TestNexusWorker(unittest.TestCase):
 
         self.worker._save_batch(batch)
 
-        # 验证是否创建了组件且绑定了 product_id
+        # 验证是否创建了组件且绑定了 product_code
         args, kwargs = self.session.add.call_args
         comp = args[0]
         self.assertIsInstance(comp, NexusComponent)

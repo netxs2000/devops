@@ -59,9 +59,9 @@ class NexusWorker(BaseWorker):
     def _init_product_cache(self):
         """初始化产品代码缓存及匹配模式列表。"""
         # 查询产品 ID 和匹配模式
-        products = self.session.query(Product.product_id, Product.matching_patterns).filter(Product.is_current).all()
+        products = self.session.query(Product.product_code, Product.matching_patterns).filter(Product.is_current).all()
 
-        self._product_map = {p.product_id.lower(): p.product_id for p in products}
+        self._product_map = {p.product_code.lower(): p.product_code for p in products}
 
         # 编译所有产品的匹配正则
         self._pattern_rules = []
@@ -82,9 +82,9 @@ class NexusWorker(BaseWorker):
                         p_norm = pat.replace(".", r"\.").replace("*", ".*")
                         regex_str = f"^{p_norm}$"
 
-                    self._pattern_rules.append({"re": re.compile(regex_str, re.I), "pid": p.product_id})
+                    self._pattern_rules.append({"re": re.compile(regex_str, re.I), "pid": p.product_code})
                 except Exception as e:
-                    logger.warning(f"Invalid matching pattern '{pat}' for product {p.product_id}: {e}")
+                    logger.warning(f"Invalid matching pattern '{pat}' for product {p.product_code}: {e}")
 
         logger.info(f"Loaded {len(self._product_map)} products and {len(self._pattern_rules)} patterns.")
 

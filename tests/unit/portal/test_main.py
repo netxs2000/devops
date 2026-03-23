@@ -86,7 +86,13 @@ def test_list_dependency_scans(authenticated_client, db_session):
     db_session.add(project)
     db_session.commit()
 
-    scan = DependencyScan(project_id=project.id, scan_status="completed", scanner_name="OWASP Dependency-Check")
+    from datetime import datetime
+    scan = DependencyScan(
+        project_id=project.id, 
+        scan_status="completed", 
+        scanner_name="OWASP Dependency-Check",
+        scan_date=datetime.now()
+    )
     db_session.add(scan)
     db_session.commit()
 

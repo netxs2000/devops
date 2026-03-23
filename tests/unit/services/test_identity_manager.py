@@ -46,10 +46,8 @@ class TestIdentityManager(unittest.TestCase):
         """'''
         self.session.close()
 
-    def test_get_or_create_user_new(self):
-        """测试创建全新用户。"""
-        # Note: IdentityManager.get_or_create_user only creates mappings, not users anymore
-        # We should create the user first if we want to test alignment
+    def test_get_existing_user_by_email(self):
+        """测试根据 Email 获取现有用户。"""
         import uuid
 
         from devops_collector.models.base_models import User
@@ -80,19 +78,6 @@ class TestIdentityManager(unittest.TestCase):
         self.assertEqual(user_a.global_user_id, user_b.global_user_id)
         mappings = self.session.query(IdentityMapping).filter_by(global_user_id=user_a.global_user_id).all()
         self.assertEqual(len(mappings), 2)
-
-    def test_name_conflict_resolution(self):
-        """测试 Username 冲突后的自动后缀逻辑。
-
-        场景：
-        1. 已存在用户 'zhangsan' (Email A)
-        2. 新采集用户 'zhangsan' (Email B)
-        3. 预期新用户的全局 Username 为 'zhangsan_1'
-        """
-        IdentityManager.get_or_create_user(self.session, "src1", "id1", "zs@a.com", "Zhang San", username="zhangsan")
-        user2 = IdentityManager.get_or_create_user(self.session, "src2", "id2", "zs@b.com", "Zhang San 2", username="zhangsan")
-        self.assertEqual(user2.username, "zhangsan_1")
-        self.assertEqual(user2.email, "zs@b.com")
 
     def test_existing_mapping(self):
         """测试命中已存在映射时的幂等性。"""

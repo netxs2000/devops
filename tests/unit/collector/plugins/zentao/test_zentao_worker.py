@@ -36,6 +36,17 @@ class TestZenTaoWorker(unittest.TestCase):
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
         self.mock_client = MagicMock()
+        from devops_collector.models.base_models import User
+        import uuid
+        user = User(global_user_id=uuid.uuid4(), primary_email="dev1@fake.com", employee_id="dev1", is_current=True)
+        self.session.add(user)
+        self.session.commit()
+        from devops_collector.models.base_models import IdentityMapping
+        mapping = IdentityMapping(source_system="zentao", external_user_id="dev1", global_user_id=user.global_user_id)
+        self.session.add(mapping)
+        self.session.commit()
+        from devops_collector.core.identity_manager import IdentityManager
+        IdentityManager._local_cache.clear()
         self.worker = ZenTaoWorker(self.session, self.mock_client)
 
     def tearDown(self):
@@ -64,7 +75,9 @@ class TestZenTaoWorker(unittest.TestCase):
         Raises:
             TODO
         """'''
-        self.mock_client._get.return_value = {"id": 1, "name": "Prod 1"}
+        mock_prod_response = MagicMock()
+        mock_prod_response.json.return_value = {"id": 1, "name": "Prod 1"}
+        self.mock_client._get.return_value = mock_prod_response
         self.mock_client.get_plans.return_value = [{"id": 51, "title": "Plan A", "openedBy": "creator1", "openedDate": "2024-01-01 09:00:00"}]
         self.mock_client.get_executions.return_value = []
         self.mock_client.get_departments.return_value = [{"id": 1, "name": "研发部", "parent": 0}]
@@ -81,6 +94,9 @@ class TestZenTaoWorker(unittest.TestCase):
         ]
         self.mock_client.get_test_cases.return_value = []
         self.mock_client.get_releases.return_value = []
+        self.mock_client.get_programs.return_value = []
+        self.mock_client.get_projects.return_value = []
+        self.mock_client.get_bugs.return_value = []
         self.mock_client.get_actions.return_value = [
             {
                 "id": 101,

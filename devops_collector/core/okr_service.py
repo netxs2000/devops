@@ -81,7 +81,7 @@ class OKRService:
         elif metric_type == "issue_resolved_count":
             new_value = self._get_issue_resolved_count(config)
         if new_value is not None:
-            kr.current_value = str(new_value)
+            kr.current_value = float(new_value)
             kr.progress = self._calculate_progress(kr)
             logger.debug(f"Updated KR {kr.id}: new_value={new_value}, progress={kr.progress}%")
 

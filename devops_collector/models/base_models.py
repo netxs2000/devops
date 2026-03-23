@@ -798,6 +798,7 @@ class OKRKeyResult(Base, TimestampMixin):
     objective_id = Column(Integer, ForeignKey("mdm_okr_objectives.id"), nullable=False, index=True, comment="关联目标ID")
     title = Column(String(255), nullable=False, comment="KR标题")
     target_value = Column(Float, nullable=False, comment="目标值")
+    initial_value = Column(Float, default=0.0, comment="初始基线值")
     current_value = Column(Float, default=0.0, comment="当前值")
     metric_unit = Column(String(20), comment="单位 (%/天/个)")
     weight = Column(Float, default=1.0, comment="权重")

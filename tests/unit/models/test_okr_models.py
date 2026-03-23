@@ -98,7 +98,7 @@ class TestOKRModels(unittest.TestCase):
         objective = OKRObjective(title="临时目标", period="Test")
         self.session.add(objective)
         self.session.flush()
-        kr = OKRKeyResult(objective_id=objective.id, title="临时 KR")
+        kr = OKRKeyResult(objective_id=objective.id, title="临时 KR", target_value=1.0)
         self.session.add(kr)
         self.session.commit()
         self.session.delete(objective)
@@ -110,7 +110,7 @@ class TestOKRModels(unittest.TestCase):
         """测试 OKR 与 Product 的绑定关系。"""
         from devops_collector.models.base_models import Product
 
-        product = Product(product_code="FIN_ANALYSIS", product_name="智慧金融分析系统", version_schema="SemVer")
+        product = Product(product_code="FIN_ANALYSIS", product_name="智慧金融分析系统", version_schema="SemVer", product_description="分析核心系统")
         self.session.add(product)
         self.session.flush()
         objective = OKRObjective(title="Q1 产品稳定性提升", period="2025-Q1", product_id=product.id)

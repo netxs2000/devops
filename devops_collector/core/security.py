@@ -84,7 +84,7 @@ def get_user_org_scope_ids(db: Session, user: User) -> list[str]:
             parent_id: 父级组织 ID。
             db_session: 数据库会话。
         """
-        children = db_session.query(Organization.org_id).filter(Organization.parent_org_id == parent_id, Organization.is_current).all()
+        children = db_session.query(Organization.id).filter(Organization.parent_id == parent_id, Organization.is_current).all()
         for child_row in children:
             child_id = child_row[0]
             scope_ids.append(child_id)
@@ -94,7 +94,7 @@ def get_user_org_scope_ids(db: Session, user: User) -> list[str]:
 
     # --- [核心增强] 业务关联数据范围 ---
     # 额外加入该用户作为 manager 的所有组织及其下级项
-    managed_orgs = db.query(Organization.org_id).filter_by(manager_user_id=user.global_user_id, is_current=True).all()
+    managed_orgs = db.query(Organization.id).filter_by(manager_user_id=user.global_user_id, is_current=True).all()
     for m_row in managed_orgs:
         m_id = m_row[0]
         if m_id not in scope_ids:
@@ -378,7 +378,7 @@ def apply_plugin_privacy_filter(db: Session, query: Query, model_class: Any, cur
         return query.filter(User.department_id.in_(scope_ids), User.is_current)
 
     if model_class == Organization:
-        return query.filter(Organization.org_id.in_(scope_ids), Organization.is_current)
+        return query.filter(Organization.id.in_(scope_ids), Organization.is_current)
 
     return query
 

@@ -55,9 +55,9 @@ class TestOKRService(unittest.TestCase):
         kr = OKRKeyResult(
             objective_id=obj.id,
             title="单测覆盖率达到 80%",
-            initial_value="50",
-            target_value="80",
-            current_value="50",
+            initial_value=50.0,
+            target_value=80.0,
+            current_value=50.0,
             linked_metrics_config={"type": "sonar", "project_key": "my-app", "metric_name": "coverage"},
         )
         self.session.add(kr)
@@ -69,8 +69,8 @@ class TestOKRService(unittest.TestCase):
         self.session.commit()
         self.service.update_all_active_okrs()
         updated_kr = self.session.query(OKRKeyResult).filter_by(title="单测覆盖率达到 80%").first()
-        self.assertEqual(updated_kr.current_value, "65.0")
-        self.assertEqual(updated_kr.progress, 50)
+        self.assertAlmostEqual(updated_kr.current_value, 65.0)
+        self.assertAlmostEqual(updated_kr.progress, 50.0)
 
     def test_update_git_commit_count(self):
         """测试 Git 提交数自动更新。"""
@@ -80,8 +80,8 @@ class TestOKRService(unittest.TestCase):
         kr = OKRKeyResult(
             objective_id=obj.id,
             title="Q1 提交 100 个 Commit",
-            initial_value="0",
-            target_value="100",
+            initial_value=0.0,
+            target_value=100.0,
             linked_metrics_config={"type": "git_commit_count", "project_id": 1},
         )
         self.session.add(kr)
@@ -91,8 +91,8 @@ class TestOKRService(unittest.TestCase):
         self.session.commit()
         self.service.update_all_active_okrs()
         updated_kr = self.session.query(OKRKeyResult).filter_by(title="Q1 提交 100 个 Commit").first()
-        self.assertEqual(updated_kr.current_value, "75")
-        self.assertEqual(updated_kr.progress, 75)
+        self.assertAlmostEqual(updated_kr.current_value, 75.0)
+        self.assertAlmostEqual(updated_kr.progress, 75.0)
 
 
 if __name__ == "__main__":
