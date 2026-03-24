@@ -500,12 +500,12 @@ class ZenTaoWorker(BaseWorker):
                     issue.closed_at = datetime.fromisoformat(str(data["closedDate"]).replace(" ", "T"))
                 except Exception:
                     pass
-            
+
             # 关联计划 (MDM 2.0: 存储计划 ID)
             plan_id_val = _safe_int(data.get("plan"))
             if plan_id_val:
                 issue.plan_id = plan_id_val
-                
+
             issue.raw_data = data
 
         # 3. 批量 flush 一次，替代逐条 flush

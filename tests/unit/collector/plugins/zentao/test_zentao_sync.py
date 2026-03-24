@@ -32,6 +32,7 @@ class TestZenTaoSyncLogic(unittest.TestCase):
         product_id = 1
         execution_id = 101
         from devops_collector.plugins.zentao.models import ZenTaoExecution
+
         execution = ZenTaoExecution(id=101, product_id=product_id, name="Test Execution")
         self.session.add(execution)
         self.session.flush()

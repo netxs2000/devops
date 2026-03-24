@@ -90,7 +90,7 @@ services:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 20
 
   # 5. RabbitMQ 消息队列
   mq:
@@ -100,6 +100,7 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=admin123
+      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK_RELATIVE=0.7
     ports:
       - "5672:5672"
       - "15672:15672" # 管理后台
@@ -107,9 +108,9 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 10s
+      timeout: 10s
+      retries: 60
 
   # 6. DataHub CLI (独立采集容器)
   # datahub-cli:

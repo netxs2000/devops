@@ -161,9 +161,15 @@ prod-down: ## [服务器专用] 停止生产服务
 # Docker 基础操作
 # =============================================================================
 
+NEXUS_PYPI_URL ?= http://192.168.5.64:8082/repository/group-pypi/simple
+
 build: pull-images ## 构建 Docker 镜像 (Local First + BuildKit Cache)
-	@echo "$(GREEN)Building Docker images with BuildKit cache...$(RESET)"
-	@powershell -Command "$$env:DOCKER_BUILDKIT=1; $$env:COMPOSE_DOCKER_CLI_BUILD=1; docker-compose build"
+	@echo "$(GREEN)Building Docker images with BuildKit cache & Nexus args...$(RESET)"
+	@powershell -Command " \
+		$$env:DOCKER_BUILDKIT=1; \
+		$$env:COMPOSE_DOCKER_CLI_BUILD=1; \
+		docker-compose build --build-arg UV_IMAGE=astral-sh/uv:latest --build-arg PIP_INDEX_URL=$(NEXUS_PYPI_URL) \
+	"
 
 up: ## 启动 Docker 容器 (等待健康检查通过)
 	@echo "$(GREEN)Starting services & waiting for DB...$(RESET)"
@@ -248,7 +254,7 @@ sync-all: ## 手动触发全量数据同步
 pull-images: ## [工具] 尝试从 Nexus 预拉取基础镜像并打标 (Fallback 机制)
 	@echo "$(GREEN)Checking base images (Local First Strategy)...$(RESET)"
 	@powershell -Command " \
-		$$images = @('python:3.11-slim-bookworm', 'postgres:15-alpine', 'rabbitmq:3-management-alpine'); \
+		$$images = @('python:3.11-slim-bookworm', 'postgres:15-alpine', 'rabbitmq:3-management-alpine', 'astral-sh/uv:latest'); \
 		foreach ($$img in $$images) { \
 			if (docker images -q $$img) { \
 				Write-Host \"Image $$img already exists locally, skipping pull.\" -ForegroundColor Cyan; \

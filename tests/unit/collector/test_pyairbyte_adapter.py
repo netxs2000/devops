@@ -7,6 +7,7 @@ import importlib.util
 import unittest
 from unittest.mock import MagicMock, patch
 
+
 _HAS_AIRBYTE = importlib.util.find_spec("airbyte") is not None
 
 

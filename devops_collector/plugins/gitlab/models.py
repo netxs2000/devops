@@ -1117,7 +1117,6 @@ class GitLabDeployment(Base):
         """'''
         return cls.status == "success"
 
-
     def __repr__(self) -> str:
         '''"""TODO: Add description.
 

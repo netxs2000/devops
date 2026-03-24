@@ -82,15 +82,15 @@ def import_employees():
                 email = f"{username}@tjhq.com"
 
             # 2. 查找所属组织
-            org_id = get_org_id(center, dept)
-            org = session.query(Organization).filter_by(org_id=org_id).first()
+            target_org_code = get_org_id(center, dept)
+            org = session.query(Organization).filter_by(org_code=target_org_code).first()
             if not org:
                 # 尝试通过 org_name 匹配
                 org = session.query(Organization).filter(Organization.org_name == dept).first()
                 if not org:
                     org = session.query(Organization).filter(Organization.org_name == center).first()
 
-            final_org_id = org.org_id if org else None
+            final_org_id = org.id if org else None
 
             # 3. 创建或更新用户
             user = session.query(User).filter_by(employee_id=employee_id).first()

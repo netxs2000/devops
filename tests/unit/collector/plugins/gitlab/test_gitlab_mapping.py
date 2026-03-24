@@ -65,8 +65,9 @@ class TestGitLabUserMapping(unittest.TestCase):
             "email": "user@example.com",
             "skype": "Cloud Department",
         }
-        
+
         from uuid import uuid4
+
         u = User(global_user_id=uuid4(), primary_email="user@example.com", employee_id="EMP003", is_current=True)
         self.session.add(u)
         self.session.flush()

@@ -33,7 +33,7 @@ def test_get_business_linked_roles_should_return_dept_manager_when_user_is_org_m
     user_id = uuid.uuid4()
     user = User(global_user_id=user_id, username="manager", full_name="Manager")
     db_session.add(user)
-    db_session.flush() # Ensure user exists before being referenced as manager
+    db_session.flush()  # Ensure user exists before being referenced as manager
 
     org = Organization(org_code="ORG_DEPT_1", org_name="Test Org", manager_user_id=user_id, is_current=True, sync_version=1)
     db_session.add(org)

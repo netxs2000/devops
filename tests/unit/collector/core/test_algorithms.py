@@ -38,7 +38,6 @@ class TestAgileMetrics(unittest.TestCase):
         self.assertEqual(cycle_time, 6.0)
 
 
-
 class TestCodeMetrics(unittest.TestCase):
     """测试代码度量算法。"""
 

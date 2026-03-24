@@ -132,4 +132,5 @@ class PipelineMixin:
             # 标记为可见 (Option A), 部署数据通常直接用于分析，这里设为当前转正
             if d.status == "success":
                 from datetime import datetime
+
                 d.promoted_at = datetime.now()

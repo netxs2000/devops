@@ -10,6 +10,7 @@ from devops_collector.plugins.gitlab.models import GitLabDeployment, GitLabMerge
 
 logger = logging.getLogger(__name__)
 
+
 class DORAService:
     """DORA 2.0 数据计算与聚合服务。
 
@@ -32,6 +33,7 @@ class DORAService:
         # 1. 部署频率 (Deployment Frequency)
         # 获取该 MDM 项目关联的所有 GitLab 项目 ID (可能存在多个代码库支撑一个项目)
         from devops_collector.plugins.gitlab.models import GitLabProject
+
         gitlab_project_ids = [p.id for p in session.query(GitLabProject).filter_by(mdm_project_id=project_id).all()]
 
         if not gitlab_project_ids:
@@ -39,32 +41,32 @@ class DORAService:
             return None
 
         # 统计周期内成功部署到生产环境的次数
-        deployments = session.query(GitLabDeployment).filter(
-            GitLabDeployment.project_id.in_(gitlab_project_ids),
-            GitLabDeployment.status == "success",
-            GitLabDeployment.created_at >= start_dt
-        ).all()
+        deployments = (
+            session.query(GitLabDeployment)
+            .filter(GitLabDeployment.project_id.in_(gitlab_project_ids), GitLabDeployment.status == "success", GitLabDeployment.created_at >= start_dt)
+            .all()
+        )
 
         dept_count = len(deployments)
         freq = AgileMetrics.calculate_deployment_frequency(dept_count, days)
 
         # 2. 变更前置时间 (Lead Time for Changes)
         # 获取统计周期内的所有已合并 MR (作为变更单元)
-        mrs = session.query(GitLabMergeRequest).filter(
-            GitLabMergeRequest.project_id.in_(gitlab_project_ids),
-            GitLabMergeRequest.state == "merged",
-            GitLabMergeRequest.merged_at >= start_dt
-        ).all()
+        mrs = (
+            session.query(GitLabMergeRequest)
+            .filter(GitLabMergeRequest.project_id.in_(gitlab_project_ids), GitLabMergeRequest.state == "merged", GitLabMergeRequest.merged_at >= start_dt)
+            .all()
+        )
 
         lead_times = []
         for mr in mrs:
             # 获取该 MR 关联的所有提交时间 (利用 rpt_commit_metrics 归集后的数据)
             # 这里简化为寻找 MR 创建到合并之间的 commits
-            commits = session.query(CommitMetrics).filter(
-                CommitMetrics.project_id == project_id,
-                CommitMetrics.committed_at >= mr.created_at,
-                CommitMetrics.committed_at <= mr.merged_at
-            ).all()
+            commits = (
+                session.query(CommitMetrics)
+                .filter(CommitMetrics.project_id == project_id, CommitMetrics.committed_at >= mr.created_at, CommitMetrics.committed_at <= mr.merged_at)
+                .all()
+            )
 
             commit_times = [c.committed_at for c in commits]
 
@@ -79,10 +81,7 @@ class DORAService:
 
         # 3. 变更失败率 (Change Failure Rate)
         # 寻找周期内关联该项目的线上事故
-        incidents = session.query(Incident).filter(
-            Incident.project_id == project_id,
-            Incident.occurred_at >= start_dt
-        ).all()
+        incidents = session.query(Incident).filter(Incident.project_id == project_id, Incident.occurred_at >= start_dt).all()
 
         failure_rate = AgileMetrics.calculate_change_failure_rate(len(incidents), dept_count)
 
@@ -90,18 +89,10 @@ class DORAService:
         mttr = AgileMetrics.calculate_mttr(incidents)
 
         # 5. 持久化分析结果 (SCD 对齐)
-        metric_record = session.query(DORAMetrics).filter_by(
-            entity_id=project_id,
-            entity_type="PROJECT",
-            date=end_date
-        ).first()
+        metric_record = session.query(DORAMetrics).filter_by(entity_id=project_id, entity_type="PROJECT", date=end_date).first()
 
         if not metric_record:
-            metric_record = DORAMetrics(
-                entity_id=project_id,
-                entity_type="PROJECT",
-                date=end_date
-            )
+            metric_record = DORAMetrics(entity_id=project_id, entity_type="PROJECT", date=end_date)
             session.add(metric_record)
 
         metric_record.deployment_count = dept_count

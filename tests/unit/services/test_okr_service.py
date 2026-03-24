@@ -84,6 +84,10 @@ class TestOKRService(unittest.TestCase):
             target_value=100.0,
             linked_metrics_config={"type": "git_commit_count", "project_id": 1},
         )
+        from devops_collector.plugins.gitlab.models import GitLabProject
+
+        project = GitLabProject(id=1, name="OKR Project", path_with_namespace="test/okr-test")
+        self.session.add(project)
         self.session.add(kr)
         for i in range(75):
             c = Commit(id=f"sha_{i}", project_id=1, author_name="test", authored_date=datetime.now())

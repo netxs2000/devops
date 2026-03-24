@@ -4,6 +4,13 @@
 
 | Timestamp | Domain | Phenomenon | Root Cause | Universal Rule (The Defense) |
 | :--- | :--- | :--- | :--- | :--- |
+| 2026-03-24 | MDM/Scripts | `import_employees.py` 报错 `IntegrityError` (NOT NULL FK) | MDM Schema 重构后，外键 (`org_id`) 已从业务 String 迁为 Integer ID，但旧脚本仍传入 String 编码。 | **数据初始化脚本主键一致性 (Import Script Alignment)**：1. 任何 MDM 架构重构后，必须同步审计所有 `scripts/init_*.py`。2. 必须实现业务码到内部 ID 的解析逻辑（如 `select(Org.id).where(Org.code == code)`）再赋值给 FK。 |
+| 2026-03-24 | Docker/Infra | 构建时拉取 `uv` 工具或 Python 包失败 (Ghcr.io / Pypi 不通) | Dockerfile 中硬编码了互联网源，无法适配受限/离线环境。 | **构建工具链私服化 (Nexus-First Build)**：1. 核心工具镜像（如 `astral-sh/uv`）必须预拉取至内网 Nexus 并打标。2. Dockerfile 必须使用 `ARG` 接收 `UV_IMAGE` 和 `PIP_INDEX_URL`。3. `pip install` 必须带上 `--trusted-host` 以支持本地 HTTP 仓库。 |
+| 2026-03-24 | RabbitMQ | 容器健康检查反复失败导致重启 | 在资源受限或启动较慢的环境下，默认的健康检查时间不足。 | **MQ 健康检查韧性 (RabbitMQ Healthcheck Triage)**：1. 提高 `retries` (60) 和 `start_period`。2. 调整 `RABBITMQ_VM_MEMORY_HIGH_WATERMARK_RELATIVE` (0.7) 减少内存水线误报导致的强制停机。 |
+| 2026-03-24 | Testing/Integrity | OKR 服务测试报错 `IntegrityError` (Foreign Key missing) | 测试用例在向 `gitlab_commits` 插入数据前，未先在当前 Session 注入对应的 `GitLabProject` 记录。 | **测试依赖级联注入 (Cascade Dependency Seeding)**：服务层集成测试必须显式构造并 `add()` 所有强制外键父项。禁绝假设数据库中已有现成底数，确保测试在 `--reuse-db` 场景下依然幂等。 |
+| 2026-03-24 | Registry/Tool | `uv` 访问内网 HTTP 私服报 `400 Bad Request` 但 `pip` 正常 | `uv` 对 TLS 和 User-Agent 的处理较严格，对协议不匹配的内网仓库兼容性不如 `pip`。 | **私服兼容性降级策略 (Registry Fallback)**：在复杂的内网/代理环境下，Dockerfile 的包安装阶段优先使用 `pip` 配合 `--trusted-host`。仅在镜像拉取阶段使用 `uv` 镜像，利用其二进制文件提取的便捷性。 |
+| 2026-03-24 | Testing/ORM | `StatementError` 与 `AttributeError: hex` (UUID 解析错误) | 高版本 SQLAlchemy 2.0.41 对 `UUID(as_uuid=True)` 列进行查询过滤时 (`user_id=str(user_id)`) 会触发严格绑定失败。 | **UUID 强类型防御**：如果模型列被定义为真正的 UUID 对象，在执行查询、修改、新增前，**必须**将其从 String 强制转换为 Python 原生的 `uuid.UUID` 对象，严禁直接传入字符串。 |
+| 2026-03-24 | Testing/DB | 内存数据库执行 `drop_all` 时报 `IntegrityError` 外键冲突 | 在启用 `PRAGMA foreign_keys=ON` 的 SQLite 中，具有复杂闭环外键约束的表在 `Base.metadata.drop_all` 时因销毁时序乱序触发拦截。 | **SQLite 销毁防御时序**：在所有 fixture 的 TearDown 块中，执行 `drop_all(bind=engine)` 前必须通过 `conn.exec_driver_sql("PRAGMA foreign_keys=OFF")` 显式关闭外键检查。 |
 | 2026-03-20 | Testing/Windows | 单元测试执行极慢 (14min+) 甚至挂起 | Windows 下频繁创建/删除物理 .db 文件引发磁盘 I/O 尖峰，且 `Base.metadata.create_all` (94张表) 在每个 function-scoped 夹具中执行造成巨大 CPU 开销。 | **Windows 测试性能守卫 (In-Memory/Session-scoped DB)**：1. 强制将建表逻辑 (`create_all`) 提升至 `session` 作用域。2. 使用 `pytest-timeout` 设定进程级熔断 (30s)，防止因文件锁或其他挂起导致的静默 Token 消耗。 |
 | 2026-03-19 | ORM/Pydantic | 在 SQLAlchemy Model 上添加 `@property` (如 `product_id` → `product_code`) 后，所有通过 `Model(product_id=xxx)` 构造对象的代码全部报 `AttributeError: property has no setter` | SQLAlchemy 的 `declarative_constructor` 使用 `setattr(self, k, kwargs[k])` 来初始化字段。`@property` 没有 setter 时，`setattr` 会拦截赋值操作，导致所有旧代码中以 `project_id=xxx` 传参的构造调用全部崩溃。 | **ORM 模型严禁添加与列名冲突的 @property**：若需在 API 层做字段重命名映射（如 `product_code` → `product_id`），必须在 Pydantic Schema 层使用 `validation_alias` 处理，绝不可在 ORM Model 层添加同名 property。ORM 层的属性名必须与数据库列名一一对应。 |
 | 2026-03-19 | SQLAlchemy/FK | 在 MDM 重构后，`ProjectProductRelation` 的 FK 字段 (`project_id`, `product_id`, `org_id`) 全部变为 Integer (指向 `mdm_*.id`)，但服务层和测试仍传入 String (业务编码)，导致 `FOREIGN KEY constraint failed` | 重构将业务主键从 String 改为 Integer 自增 PK，但未同步更新所有消费方代码。API 层收到的是业务编码 (String)，需要先查询对应 Model 获取 `.id` (Integer)，再赋值给 FK 字段。 | **FK 类型对齐三步法**：1. API 接收业务编码 (String)。2. 查询 Model 获取 surrogate PK (Integer `.id`)。3. 用 `.id` 赋值给 FK 字段。严禁将业务编码直接传入 Integer FK 字段。所有涉及 FK 的测试必须先 `flush()` 获取 auto-increment ID 后再建立关联。 |
@@ -70,8 +77,12 @@
 | 2026-03-21 | Testing/Timing | `test_token_bucket_refill` 断言 `assertGreater(limiter.tokens, 9)` 失败（tokens 恰好等于 9） | 令牌桶以 10/s 的速率，sleep 0.5s 后补充 5 个 token，消费 1 个后恰好剩 9 个——数学上不满足严格 `> 9`。边界值在 CI / Docker 容器等精确计时环境下（无 OS 调度抖动）必然触发。 | **时间相关断言必须宽于边界**：1. 涉及 `sleep + rate` 的时序测试，断言阈值必须用 `assertGreaterEqual` 或留出 ±10% 容差，不得使用严格的 `>` 或 `<`。2. 如需精确验证，应 Mock 时钟（`unittest.mock.patch("time.time")`）而非依赖物理 sleep。 |
 
 ---
-*End of Log*
+
 - **Alembic 迁移空库报错 (2026-03-17)**: 
     - **现象**: 在空数据库上执行 `alembic upgrade head` 时，若脚本包含 `drop_table` 但表不存在，会导致 `UndefinedTable` 错误中断流水线。
     - **原因**: Autogenerate 脚本捕获了与当前模型无关但存在于旧 DB 中的表。
     - **对策**: 在 `upgrade()` 中使用 `inspector.get_table_names()` 预检，或使用 `stamp head` 强行跳过已由 `Base.metadata.create_all` 构建的初始态。
+
+---
+
+*End of Log*

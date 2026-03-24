@@ -1,47 +1,21 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
-# 最后更新: 2026-03-21 | 操作者: Antigravity
+# 最后更新: 2026-03-24 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-[阶段：执行中 - Token 耗尽，会话中断] 正在批量修复全量测试失败项，目标：`pytest tests/unit/` 全绿。(2026-03-21)
-
-⚠️ 交接备忘 (给下一个 Agent)
-- **当前进度**：已修复 73+/219 个测试，剩余约一批失败仍需处理。
-- **已打通**：
-  - `test_traceability_logic.py` 3 tests ✅（NotImplementedError → 换 SQLite DB）
-  - `test_algorithms.py` 5 tests ✅（移除过时的 calculate_lead_time 测试，修复 IaC/Test 分类逻辑）
-  - `test_rate_limiter.py` 2 tests ✅（assertGreater → assertGreaterEqual 边界修正）
-  - `test_analyzer.py` 6 tests ✅（get_file_category 路径匹配逻辑修复）
-  - `test_gitlab_mapping.py` 1 test ✅（种用户 seed + 修正 org_name/org_level 断言）
-  - `test_quality_service.py` 3 tests ✅（Pydantic v2 RequirementDetail 补 description 字段）
-  - `test_jira_worker.py` ✅（多 session 前已修复）
-  - `models.py` 中 [@hybrid_property → @property]（避免 SQLAlchemy 在 Mock 环境引发 NotImplementedError）
-  - `algorithms.py` 中 `get_file_category` 路径匹配与 IaC 规则修正
-  - `parser.py` 中 regex 改为 r-string 宽松匹配，修正 `**反馈**` 提取
-- **下一步应立即执行**：
-  1. 清理临时文件：`Remove-Item tmp_*.txt`
-  2. 运行 `docker-compose exec -T api pytest tests/unit/ --maxfail=1 -v` 看下一个失败点
-  3. 失败集中在 `test_test_management_service.py::test_get_aggregated_test_cases_should_work`，根因是 `ProjectProductRelation` 字段类型不匹配（测试传了字符串 `"PROD1"`, `"ORG1"`，但模型要求 FK Integer）→ **需修正测试的 seed 数据**，先创建 `Product` 和 `Organization` 记录再关联。
-  4. 继续 `--maxfail=1` 循环直到 0 failures。
-  5. 全绿后运行 `make full-gate`，通过后 `git add -A && git commit`。
+[阶段：执行中] 平台环境稳定性验收完毕。`make test` 容器内全量测试（单元+集成）实现 100% Pass。准备切入合并流程。
 
 🏗️ 进行中 (In Progress)
-- [L1][P1] 修复全量单元测试（`tests/unit/` 219 测试 → 目前约 73 passed，仍有多处失败）
-- [L2][P2] DORA 2.0 指标重平衡（已暂停，等测试全绿后继续）
 
 📅 接下来 (Backlog)
-- [P1] 完成全量单元测试修复，运行 make full-gate，提交代码
-- [P2] DORA 2.0 指标重平衡：基于转正后的 `rpt_commit_metrics` 重新计算 Lead Time。
-- [P2] 20万+ 记录下的 dbt 增量构建性能验证与 dbt 模型规范化。
-- [P2] 基于 Nexus 分析脚本构建定期僵尸资产清理工具。
-- [P2] 集成 SonarQube 插件，通过代码指纹源头排查第三方依赖安全漏洞 (CVE)。
+1. [P0] 执行 `/merge` 工作流，合并 `fix/platform-stabilization-20260324` 至主分支。 (2026-03-24)
+2. [P2] 生产环境一键部署演示 (`make deploy-prod`)。 (2026-03-25)
+3. [P3] 优化 `uv` 与内部 HTTP 仓库的 User-Agent 兼容性。 (2026-03-26)
 
 📋 最近完成 (Recently Completed)
-- (2026-03-21) [L1] 修复 test_traceability_logic.py (3 tests)：NotImplementedError → SQLite in-memory DB。(Done)
-- (2026-03-21) [L1] 修复 test_algorithms/test_analyzer/test_rate_limiter：逻辑 bug + 断言边界问题。(Done)
-- (2026-03-21) [L1] 修复 test_gitlab_mapping.py：种 User + 修正 schema 字段名断言。(Done)
-- (2026-03-21) [L1] 修复 test_quality_service.py：Pydantic v2 RequirementDetail 缺 description。(Done)
-- (2026-03-21) [L3] 禅道 (ZenTao) 插件逻辑对齐。(Verified)
-- (2026-03-21) [L2] 修复 BaseWorker.bulk_save_to_staging 的 sqlite3.Cursor 类型错误。(Verified)
-- (2026-03-20) [L4] 实现 PromotionService 并在调度器完成自动化集成。(Verified)
+1. [P0] 解决高版本 SQLAlchemy 2.0.41 在 UUID(as_uuid=True) 上的严格类型绑定异常 (`StatementError`)。 (2026-03-24)
+2. [P0] 修复 SQLite 库销毁时 `FOREIGN KEY constraint failed` 异常 (强制前置关闭外键)。 (2026-03-24)
+3. [P0] 确立 "容器内执行" 作为测试与集成的绝对唯一真理来源 (SSOT)。 (2026-03-24)
+4. [P0] 将 Stabilizing 经验固化至 `contexts.md` 和 `lessons-learned.log`。 (2026-03-24)
+5. [P0] 实现构建工具 (`uv`/`pip`) 针对 Nexus 私服的环境感知回退机制。 (2026-03-24)
 
-签名：Antigravity-AI (2026-03-21T21:26+08:00)
+签名：Antigravity-AI (2026-03-24T11:45+08:00)

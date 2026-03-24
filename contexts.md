@@ -74,6 +74,9 @@
 - **命名公约 (Naming Convention)**:
     - 后缀 `_id`: 专指指向物理 PK 的外键（BigInt/UUID）。
     - 后缀 `_code`: 专指业务逻辑编码（String），如 `cost_center_code`。
+- **MDM 重构同步规程 (Schema Evolution Protocol) [MANDATORY]**:
+    - 任何涉及到 MDM 核心表（`mdm_*`）物理主键或逻辑主键（`code` vs `id`）的重构，**必须同步审计并更新**所有相关的初始化与导入脚本 (`scripts/init_*.py`, `scripts/import_*.py`)。
+    - 脚本中严禁直接将业务编码（String）赋值给整数型外键字段。必须实现先查询（Resolve）业务码获取物理 ID（Integer），再执行赋值的闭环逻辑。
 
 ### 5.2 审计与安全性 (分层要求)
     - **MDM 层 (`mdm_*`)**: 强制继承 `TimestampMixin`（`created_at`, `updated_at`）+ `SCDMixin`（`is_deleted`, `is_current`, `effective_from/to`）。SCD 机制已覆盖软删除与版本追踪。
@@ -153,7 +156,13 @@
     - `make package`: 生成镜像存档 `devops-platform.tar`。
     - `make deploy-offline`: 生产/隔离环境一键镜像加载并启动。
 - **镜像加速与回退**: 项目支持通过 `NEXUS_DOCKER_REGISTRY` 配置私有镜像存储加速。在 `make build` 或 `make package` 时，系统会优先尝试从该私服拉取并打标 (tag) 核心基础镜像 (`python`, `postgres`, `rabbitmq`)，失败则自动回退至官方源。
-- **健康检查**: 所有容器定义 `healthcheck`，容器间依赖依赖 `service_healthy` 状态。
+- **健康检查 (Healthcheck Resilience) [MANDATORY]**: 
+    - 所有容器必须定义 `healthcheck`。对于 RabbitMQ、Postgres 等启动较慢的基础设施，`retries` 必须设为不少于 **60** 次，且配置 `start_period`。
+    - 针对低配环境，必须显式限制内存/磁盘水位（如 `RABBITMQ_VM_MEMORY_HIGH_WATERMARK_RELATIVE=0.7`），防止误报导致的重启风暴。
+- **内网/私服构建规范 (Private Registry Compatibility) [MANDATORY]**:
+    - 为适配离线或受限网络，Dockerfile 严禁硬编码外部公共镜像地址。核心工具（如 `uv`）必须利用 `COPY --from` 与 Makefile 中的本地打标机制从 **NEXUS 镜像仓库**提取。
+    - 镜像构建阶段必须通过 `ARG` 支持 `UV_IMAGE` 和 `PIP_INDEX_URL` 的注入。
+    - 在 Docker 内部安装 Python 包时，必须配合 `--trusted-host` 解决内网 HTTP 私服的认证与安全提示问题，确保“一键内网构建”能力。
 - **异步任务 (RabbitMQ)**:
     - **队列分离 (Queue Isolation) [MANDATORY]**: 每个数据源 (Plugin) 必须拥有独立的 RabbitMQ 队列，命名公约为 `{source}_tasks`（如 `gitlab_tasks`, `zentao_tasks`, `sonarqube_tasks`）。**严禁**将多个数据源的任务混入同一队列，防止高频数据源（如 GitLab 1000+ 项目）的任务洪泛 (Flood) 饿死低频但高优先级的数据源（如 ZenTao）。
     - **动态路由与 SSOT**: `MessageQueue.publish_task()` 根据任务 payload 中的 `source` 字段自动路由到对应队列。队列名称列表应从 `PluginRegistry.list_sources()` 动态生成（格式 `{source}_tasks`），Registry 是队列名称的**唯一事实来源 (SSOT)**，严禁在 MQ 模块中硬编码队列列表。
@@ -192,6 +201,9 @@
     - 数据库表（Base.metadata）只需在会话开始时创建一次。
 4.  **默认运行策略**: 为保证开发敏捷性，`pyproject.toml` 的 `addopts` 必须默认包含 `-m "not slow"`。所有耗时超过 2s 的脚本必须手动标记为 `@pytest.mark.slow`。
 5.  **模型导入警告**: 在 `conftest.py` 中执行 `create_all` 前，必须显式导入所有相关的 `models` 模块，否则 `sqlite` 将因“no such table”报错。
+6.  **集成测试依赖级联注入规范 (Dependency Seeding) [MANDATORY]**:
+    - Service 层或 API 层的集成测试**严禁**假设数据库中已有现成底数。
+    - 任何涉及外键约束的操作（如向 `gitlab_commits` 插入记录），测试 Setup 阶段必须显式创建并 `flush()` 其所有强制关联的父表实体（如 `GitLabProject`），确保测试在 `--reuse-db` 模式下依然具备原子性与幂等性。
 
 ### 9.3 Mock 策略与 E2E 规范
 - **Mock 策略**: 外部 API 调用 (GitLab, SonarQube) 必须使用 `requests-mock` 或 `pytest-httpx` 隔离。

@@ -22,7 +22,7 @@ def admin_service(db_session: Session):
 def test_create_product(admin_service, db_session):
     """单元测试：验证产品主数据创建控制。"""
     payload = schemas.ProductCreate(
-        product_id="PD-001", # schema still uses product_id
+        product_id="PD-001",  # schema still uses product_id
         product_name="Mobile Application",
         product_description="Test Description",
         category="Software",

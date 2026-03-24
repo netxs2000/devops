@@ -102,12 +102,7 @@ class PromotionService:
     @staticmethod
     def promote_zentao_products(session: Session, limit: int = 100) -> int:
         """将 ZenTaoProduct 转正为 MDM Product。"""
-        unpromoted = (
-            session.query(ZenTaoProduct)
-            .filter(ZenTaoProduct.promoted_at.is_(None))
-            .limit(limit)
-            .all()
-        )
+        unpromoted = session.query(ZenTaoProduct).filter(ZenTaoProduct.promoted_at.is_(None)).limit(limit).all()
         count = 0
         for zp in unpromoted:
             try:
@@ -135,12 +130,7 @@ class PromotionService:
     @staticmethod
     def promote_zentao_executions(session: Session, limit: int = 100) -> int:
         """将 ZenTaoExecution (项目/迭代) 转正为 MDM Project。"""
-        unpromoted = (
-            session.query(ZenTaoExecution)
-            .filter(ZenTaoExecution.promoted_at.is_(None))
-            .limit(limit)
-            .all()
-        )
+        unpromoted = session.query(ZenTaoExecution).filter(ZenTaoExecution.promoted_at.is_(None)).limit(limit).all()
         count = 0
         for ze in unpromoted:
             try:

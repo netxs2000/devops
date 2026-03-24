@@ -62,12 +62,12 @@ class TestProductModel(unittest.TestCase):
         self.session.add_all([pm, dev])
         self.session.flush()
         pline = Product(
-            product_code="BANK_LINE", 
-            product_name="Retail Banking Line", 
-            node_type="LINE", 
+            product_code="BANK_LINE",
+            product_name="Retail Banking Line",
+            node_type="LINE",
             owner_team_id=center.id,
             product_description="Retail Banking Product Line",
-            version_schema="SemVer"
+            version_schema="SemVer",
         )
         self.session.add(pline)
         self.session.flush()
@@ -80,7 +80,7 @@ class TestProductModel(unittest.TestCase):
             product_manager_id=pm.global_user_id,
             dev_lead_id=dev.global_user_id,
             product_description="Mobile App for Banking",
-            version_schema="SemVer"
+            version_schema="SemVer",
         )
         self.session.add(prod)
         self.session.commit()

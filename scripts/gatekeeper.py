@@ -11,6 +11,7 @@ CYAN = "\033[96m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 
+
 def run_command(command, description):
     print(f"\n{CYAN}>>> [{description}] Executing: {command}{RESET}")
     start_time = time.time()
@@ -26,7 +27,7 @@ def run_command(command, description):
             encoding="utf-8",
             errors="replace",
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
         )
 
         # 实时打印输出流
@@ -49,12 +50,14 @@ def run_command(command, description):
         print(f"{RED}[X] [{description}] ERROR: {str(e)}{RESET}")
         return False
 
+
 def main():
     # 强制设置控制台输出为 UTF-8 (Python 3.7+)
-    if sys.stdout.encoding.lower() != 'utf-8':
+    if sys.stdout.encoding.lower() != "utf-8":
         try:
             import io
-            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
         except Exception:
             pass
 
@@ -90,6 +93,7 @@ def main():
     print(f"        SUCCESS: FULL GATE PASSED ({overall_duration:.1f}s)            ")
     print("        Your code is now ready for merge/deployment.                ")
     print(f"===================================================================={RESET}")
+
 
 if __name__ == "__main__":
     main()

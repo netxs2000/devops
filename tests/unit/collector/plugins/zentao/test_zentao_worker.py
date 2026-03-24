@@ -36,16 +36,20 @@ class TestZenTaoWorker(unittest.TestCase):
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
         self.mock_client = MagicMock()
-        from devops_collector.models.base_models import User
         import uuid
+
+        from devops_collector.models.base_models import User
+
         user = User(global_user_id=uuid.uuid4(), primary_email="dev1@fake.com", employee_id="dev1", is_current=True)
         self.session.add(user)
         self.session.commit()
         from devops_collector.models.base_models import IdentityMapping
+
         mapping = IdentityMapping(source_system="zentao", external_user_id="dev1", global_user_id=user.global_user_id)
         self.session.add(mapping)
         self.session.commit()
         from devops_collector.core.identity_manager import IdentityManager
+
         IdentityManager._local_cache.clear()
         self.worker = ZenTaoWorker(self.session, self.mock_client)
 

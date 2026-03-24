@@ -190,7 +190,13 @@ def auth_get_gitlab_token(db: Session, user_id: Any) -> Any | None:
     """
     from devops_collector.models.base_models import UserOAuthToken
 
-    return db.query(UserOAuthToken).filter_by(user_id=str(user_id), provider="gitlab").first()
+    # 强制转换为 UUID 对象，以符合 SQLAlchemy 2.0.41 的 UUID(as_uuid=True) 严格校验要求
+    if isinstance(user_id, str):
+        user_uuid = uuid.UUID(user_id)
+    else:
+        user_uuid = user_id
+
+    return db.query(UserOAuthToken).filter_by(user_id=user_uuid, provider="gitlab").first()
 
 
 def auth_upsert_gitlab_token(db: Session, user_id: Any, token_data: dict) -> Any:
@@ -206,10 +212,15 @@ def auth_upsert_gitlab_token(db: Session, user_id: Any, token_data: dict) -> Any
     """
     from devops_collector.models.base_models import UserOAuthToken
 
-    token_rec = auth_get_gitlab_token(db, user_id)
+    if isinstance(user_id, str):
+        user_uuid = uuid.UUID(user_id)
+    else:
+        user_uuid = user_id
+
+    token_rec = auth_get_gitlab_token(db, user_uuid)
     if not token_rec:
         token_rec = UserOAuthToken(
-            user_id=str(user_id),
+            user_id=user_uuid,
             provider="gitlab",
             access_token=token_data["access_token"],
             token_type=token_data.get("token_type", "Bearer"),

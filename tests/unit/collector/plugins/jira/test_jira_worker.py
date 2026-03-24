@@ -117,6 +117,7 @@ class TestJiraWorker(unittest.TestCase):
         ]
         # Seed Global Users for identity matching
         from uuid import uuid4
+
         users_data = [
             ("Jira User", "jira@fake.com", "E101"),
             ("Creator X", "creator@fake.com", "E102"),
@@ -124,13 +125,7 @@ class TestJiraWorker(unittest.TestCase):
         ]
         user_map = {}
         for name, email, eid in users_data:
-            u = GlobalUser(
-                global_user_id=uuid4(),
-                full_name=name,
-                primary_email=email,
-                employee_id=eid,
-                is_current=True
-            )
+            u = GlobalUser(global_user_id=uuid4(), full_name=name, primary_email=email, employee_id=eid, is_current=True)
             self.session.add(u)
             user_map[email] = u
         self.session.flush()
