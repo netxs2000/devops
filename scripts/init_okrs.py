@@ -70,9 +70,9 @@ def init_okrs():
                     continue
 
                 # 2. 获取或创建 Objective
-                obj_key = (o_title, period, org.org_id)
+                obj_key = (o_title, period, org.id)
                 if obj_key not in processed_objectives:
-                    obj = session.query(OKRObjective).filter_by(title=o_title, period=period, org_id=org.org_id).first()
+                    obj = session.query(OKRObjective).filter_by(title=o_title, period=period, org_id=org.id).first()
                     if not obj:
                         obj = OKRObjective(
                             objective_id=f"OBJ-{period}-{hash(o_title) % 10000}",
@@ -80,7 +80,7 @@ def init_okrs():
                             description=o_desc,
                             period=period,
                             owner_id=owner_id,
-                            org_id=org.org_id,
+                            org_id=org.id,
                             status="ACTIVE",
                         )
                         session.add(obj)

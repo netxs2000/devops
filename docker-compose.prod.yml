@@ -106,11 +106,13 @@ services:
       - TZ=Asia/Shanghai
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      - RABBITMQ_VM_MEMORY_HIGH_WATERMARK_RELATIVE=0.7
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 5s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 60
+      start_period: 60s
     logging: *logging
 
   # 6. Decision Hub (Streamlit Dashboard)
@@ -132,9 +134,9 @@ services:
     healthcheck:
       test: [ "CMD", "nc", "-z", "localhost", "8501" ]
       interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
+      timeout: 10s
+      retries: 30
+      start_period: 120s
     command: streamlit run dashboard/Home.py
     logging: *logging
 

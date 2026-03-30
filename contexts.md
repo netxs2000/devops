@@ -1,17 +1,23 @@
 # DevOps Platform Project Contexts (Development Constitution)
 
 > **Document Positioning**: This file is the project-specific constitution for **DevOps Platform**.
-> General development philosophy, AI collaboration principles, and workflow rules are defined in [`gemini.md`](c:/users/netxs/.gemini/gemini.md) (global rules).
-> `gemini.md` = cross-project universal principles. `contexts.md` = project-specific rules. When conflicts arise, this file takes precedence.
+> - **全局原则 (Global Rules)**: 基础 AI 协作哲学定义在 `~/.gemini/gemini.md`。
+> - **AI 导航路由 (Meta-Prompt)**: 自动化代理的入场规则及核心文档衔接约束定义在库根目录 `AGENTS.md`。
+> - **项目宪法 (Project Contexts)**: 本文件（`contexts.md`）包含具体的架构、代码规范及运维红线。
+> 
+> *优先级：`contexts.md` (业务最高源) > `AGENTS.md` (调度层) > `gemini.md` (全局)。发生冲突时按此优先级执行。*
+
 
 ## 1. 项目概览 (Overview)
-**DevOps Data Application Platform** 是一套企业级研发效能数据底座。它通过插件化架构采集 GitLab, SonarQube, Jenkins, Zentao 等工具链数据，并利用 dbt 进行指标建模，最终通过 Apple Style 的原生前端界面提供看板与追溯能力。
+**DevOps Data Application Platform** 是一套企业级研发效能数据底座。它通过插件化架构采集 GitLab, SonarQube, Jenkins, Zentao, Nexus 等工具链数据，并利用 dbt 进行指标建模，最终通过 Apple Style 的原生前端界面提供看板与追溯能力。
+
 
 ## 2. 核心技术栈 (Technology Stack)
 - **后端 (Backend)**: Python 3.12, FastAPI (Router-Service 模式), SQLAlchemy 2.0 (Typed).
 - **数据层 (Data)**: PostgreSQL 15, dbt (数据转换层), RabbitMQ (任务分发控制).
 - **前端 (Frontend)**: Native JS/CSS (Apple Style Edition), Web Components, 全局变量约束通信.
 - **运维 (DevOps)**: Docker Compose, 多阶段镜像构建, 离线 Tar 包部署支持.
+
 
 ## 3. 开发环境与兼容性 (Environment)
 - **开发与测试环境 (Dev & Test Env)**: 
@@ -28,6 +34,7 @@
 - **配置一致性**: 所有敏感配置统一通过 `.env` 注入，严禁硬编码 API 地址。
     - **Pydantic 规范**: 使用双下划线 (`__`) 分隔嵌套配置（如 `GITLAB__URL` 映射到 `config.gitlab.url`）。
     - **脱敏**: Logger 必须屏蔽任何包含 `token`, `password`, `key` 的字段。
+
 
 ## 4. 核心架构与插件开发 (Architecture)
 - **Plugin Factory**: 插件位于 `devops_collector/plugins/`，结构必须遵循以下标准：
@@ -61,6 +68,7 @@
 - **事务安全 (Transaction Safety)**:
     - 批量方法执行后必须显式 `session.commit()`，失败时必须 `session.rollback()`，严禁吞噬异常。
     - 单条兼容接口（如 `_sync_issue`）必须内部委托给批量方法，传入 `[data]`，确保代码路径统一。
+
 
 ## 5. 数据库开发规范 (Database & SCD)
 
@@ -108,12 +116,14 @@
     - **层级 (Hierarchy)**: 公司(Root) -> 中心(Center) -> 部门(Dept)，不再使用 `SYS-` 体系节点。
     - **属性 (Attribute)**: 体系 (Business Line) 作为 `Organization` 的 `business_line` 字段存储，支持跨体系的部门归属。
 
+
 ## 6. 前端设计与组件化 (Frontend Design)
 > 🎨 **最高行动指令**：所有前端样式与组件开发，必须严格遵循 [`docs/frontend/CONVENTIONS.md`](docs/frontend/CONVENTIONS.md)。任何与该文档冲突的 UI 实现均视为 Bug。
 
 - **Apple Style 规范**: 强制使用预定义的 CSS 变量（如 `--glass-bg`, `--primary-color`），严禁硬编码 Hex 颜色值。
 - **组件工程**: 优先使用 Web Components (Shadow DOM) 实现高内聚组件（如搜索框、卡片）。
 - **通信机制**: 跨组件通信通过 `CustomEvent` 实现，严禁随意污染全局 `window` 命名空间。
+
 
 ## 7. 数据建模与 dbt (Data Transformation)
 > 📘 **开发指南**: 详细的模型开发手册及代码模式请参见 [`docs/guides/DBT_MODELING_GUIDE.md`](docs/guides/DBT_MODELING_GUIDE.md)。
@@ -148,7 +158,6 @@
 - **数据源接入**: 所有平台必须统一接入 `PostgreSQL` 的 Marts 层 (`rpt_*` 或 `fct_*` 模型)，严禁越过 dbt 直接查询 Staging 表。
 
 
-
 ## 8. 运维流程与生命周期 (DevOps Ops)
 
 - **部署模式**: 
@@ -177,6 +186,7 @@
     - **自动重连 (Reconnect with Backoff)**: MQ 连接断线时，Worker 必须实现指数退避重连，而非直接崩溃退出。最大重试间隔不超过 60 秒。
     - **容器重启策略**: Docker Compose 中所有长驻服务 (`worker`, `scheduler`) 必须配置 `restart: unless-stopped`，确保进程意外退出后自动恢复。
     - **优雅停机 (Graceful Shutdown)**: Worker 进程必须捕获 `SIGTERM` 信号，确保当前正在处理的任务完成后再退出，严禁在任务执行中途被强制终止导致数据不一致。
+
 
 ## 9. 测试与质量门禁 (Testing)
 - **覆盖率目标**: 核心模块 (`core/`, `models/`) >= 80%，插件模块 >= 60%。
@@ -221,6 +231,7 @@
 3.  **容器内验证 (Container-In Validation) [MANDATORY]**：所有测试执行**必须**在 Docker 容器内完成（使用 `make test` 或 `docker-compose exec api pytest`），**严禁**在宿主机环境（如 Windows）下进行单纯的 Python 逻辑验证，以确保在 Linux 环境下的完全兼容。
 4.  **DoD 增强 (DoD Enhancement)**：在向用户汇报“任务完成”或“验证通过”前，AI 代理必须提供容器内 pytest 运行成功的日志明细，作为交付成果的一部分。
 
+
 ## 10. 异常处理与日志规范 (Error Handling & Logging)
 - **统一异常体系**: 
     - **业务异常**: 所有业务逻辑错误必须抛出自定义异常（继承 `BusinessException`），严禁在 Service 层直接抛出 `HTTPException`。
@@ -248,6 +259,7 @@
         - **数据库指标**: 连接池使用率、慢查询数量。
     - **采集方式**: 优先通过结构化日志聚合（如 ELK / Loki），未来可扩展至 Prometheus 埋点。严禁为了采集指标而引入重量级依赖。
 - **命名空间关联**: 日志内容必须包含业务域前缀（如 `[SD]`, `[ADM]`），以便在日志系统中快速过滤。
+
 
 ## 11. 命名全链路对齐 (Naming Alignment)
 
@@ -281,6 +293,7 @@
 - **强制前缀**：所有新功能模块的开发必须先从上表中选取/注册前缀，确保全链路识别度。
 - **语义清晰**：前缀后应紧跟具体的资源名。例如，Service Desk 的聚合视图文件应命名为 `sd_support.py`，而具体的单一工单逻辑应为 `sd_ticket_service.py`。
 - **去内联化**：前端样式必须使用带前缀的 Class（如 `.sd-search-bar`），配合 CSS 变量（`var(--primary)`）实现风格统一。
+
 
 ## 12. AI 原生协作与共创 (AI-Native Collaboration & Co-Creation)
 
@@ -381,6 +394,7 @@
 
 - **合并策略**: 推荐使用 **Squash Merge**，保持主分支历史简洁。
 
+
 ## 14. 软件交付生命周期 (Software Delivery Lifecycle)
 
 ### 14.1 需求工程与追踪 (Requirements Engineering)
@@ -427,7 +441,6 @@
     - 偏差超过 50% 的任务，必须在 `docs/lessons-learned.log` 中分析原因（如：范围蔓延、未预见依赖等），用于持续改进估时精度。
 - **知识割取与复盘 (Knowledge Harvest) [MANDATORY]**: 凡是遇到需要 2 次以上尝试才解决的问题、或非标 API 陷阱，必须**主动总结**并更新至 `docs/lessons-learned.log`。每次完工汇报前，必须在回复中包含 `Harvest Items` 摘要，否则视为 DoD 未达成。
 - **环境卫生清理 (Cleanup on Exit) [MANDATORY]**: 每次完成功能验证或阶段性任务交付前，**必须强制**执行一次 `make clean`。严禁在根目录残留任何调试生成的脚本、临时日志 (.log, .txt, .csv, debug_*.py, traceback.txt)；确保 `git status` 洁净并更新 `progress.txt` 标记 `[Hygiene]: 已清理临时调试文件`。
-
 
 
 ## 15. 禅道集成规范与元数据对齐 (ZenTao Integration & Metadata)
@@ -483,6 +496,7 @@
 
 ### 16.2 状态存活性自查 (Liveness Probe)
 - **定期僵尸检查 (Zombies Check)**: 增量任务无法感知 GitLab 侧的物理删除。系统必须配置“周级巡检任务”，全量拉取 GitLab Project ID 列表并与本地数据库对比，若本地存在但在源端已缺失，必须将其标记为 `is_deleted=True`且 `sync_status='DELETED'`。
+
 
 ## 17. 全局身份与成本归因规范 (Global Identity & Attribution)
 
