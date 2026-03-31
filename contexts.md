@@ -550,3 +550,61 @@
     2.  `make test`: 容器内全量测试（单元+集成）100% 通过。
     3.  `make build`: Docker 镜像构建成功。
 - **复杂度与异常**: 如果因架构需求必须引入复杂逻辑导致复杂度超标（PLR 规则），必须报备并在 `ruff.toml` 或行内添加显式忽略原因。
+
+
+## 19. 防御性编程十大守则 (Defensive Programming Mandates) [MANDATORY]
+
+> **定位**：本章是跨越所有模块（Core、Plugins、Scripts、API）的**强制性编码红线**。任何新增代码在 Code Review 时必须逐条对照本章自检。
+
+### 19.1 永远不信任外部输入 (Never Trust Input)
+- 所有来自外部 API、用户表单、CSV 文件、MQ 消息的数据，在进入业务逻辑前**必须**经过类型校验、边界检查与脱敏清洗。
+- Worker 层从源系统 API 获取的字段（如 `dept_id`、`parent`），必须显式执行 `int()` / `str()` 转换，严禁直接透传给 ORM 外键字段。
+- Router 层强制使用 Pydantic Schema 校验请求体。
+
+### 19.2 快速失败 (Fail Fast)
+- 一旦检测到前置条件不满足（如必填参数为空、数据库连接断开），**立即抛出明确异常并终止**。
+- **严禁**使用 `except Exception: pass` 或 `except: pass` 吞掉错误继续执行。所有 `except` 块必须至少包含 `logger.warning` 或 `logger.error` 记录。
+- 配置缺失时（如 `WECOM__CORP_ID` 为空），插件初始化阶段必须抛出 `ValueError`，严禁在运行时才发现配置问题。
+
+### 19.3 原子性操作 (Atomicity)
+- 多步写操作必须包裹在数据库事务中。失败时整体回滚 (`rollback`)，严禁出现"部分写入"的中间态。
+- Service 层内部使用 `flush()` 而非 `commit()`，将最终事务控制权交给上层调用方（Worker / Router）。
+- 跨表操作强制使用 `with db.begin():` 包裹。
+
+### 19.4 幂等性设计 (Idempotency)
+- 同一个同步任务被重复执行多次，结果必须和执行一次完全一致。
+- 数据库写入必须使用 `ON CONFLICT DO UPDATE` (Upsert) 而非盲目 `INSERT`。
+- 使用 `correlation_id` 进行批次去重，防止 MQ 重复投递导致数据膨胀。
+
+### 19.5 超时与熔断 (Timeout & Circuit Breaker)
+- 所有外部 HTTP 调用**必须**设置 `timeout` 参数（推荐 10-30 秒），严禁无限等待。
+- 对于高频调用的外部 API（如企业微信通讯录），建议实现熔断器模式：连续失败 N 次后暂停调用一段时间，防止雪崩。
+- MQ 消费端必须配置 `heartbeat`，防止长耗时任务被 Broker 误判为死锁。
+
+### 19.6 资源泄漏防护 (Resource Leak Prevention)
+- 数据库连接、文件句柄、HTTP Session 必须使用 `with` 语句或 `try-finally` 确保释放。
+- **严禁**在循环或回调函数中反复调用 `create_engine()`。整个进程共享唯一的 Engine 实例。
+- 临时文件（如 CSV 导出）必须在使用完毕后通过 `os.remove()` 或 `with tempfile` 自动清理。
+
+### 19.7 边界值防护 (Boundary Protection)
+- 分页查询必须设置 `max_page_size` 上限（推荐 500），严禁一次性加载全量数据到内存。
+- 批量操作必须设置 `batch_size` 限制（推荐 500），每批处理完毕后执行一次 `flush()`。
+- 字符串字段必须在数据库层面定义 `max_length` 约束，防止异常数据撑爆存储。
+- 单文件 Diff 解析截断上限 1MB，超限仅记录文件路径。
+
+### 19.8 日志即证据 (Logging as Evidence)
+- 关键业务流转（同步开始/完成、身份对齐、部门创建）必须记录 `INFO` 级别日志。
+- 异常日志必须包含完整上下文：`correlation_id`、输入参数、异常堆栈。
+- **严禁**在日志中输出密码、Token、API Key 等敏感信息。Logger 必须配置脱敏过滤器。
+- 所有后台 Worker 必须使用 `LoggerAdapter` 包裹 `correlation_id`，确保日志可追溯。
+
+### 19.9 默认安全 (Secure by Default)
+- 权限默认 `Deny All`，按需授予最小权限。
+- 配置项缺失时，必须走**最保守的默认值**（如 `verify_ssl=True`、`sync_issues=False`）。
+- 新插件默认不启用，必须显式加入 `PLUGIN__ENABLED_PLUGINS` 白名单。
+- 环境变量中的敏感值（Token、Password）严禁有硬编码的 fallback 默认值。
+
+### 19.10 降级与兜底 (Graceful Degradation)
+- 当某个外部数据源不可用时（如企业微信 API 宕机），系统必须跳过该数据源的同步，但**不得影响**其他数据源（GitLab、ZenTao）的正常运转。
+- 当某条记录处理失败时（如单个部门详情拉取超时），跳过该记录并记录 Warning 日志，**不得中断**整个批次的同步任务。
+- 关键外部依赖（如 PostgreSQL、RabbitMQ）的健康检查必须配置充足的重试次数（`retries >= 60`），应对冷启动延迟。
