@@ -1,10 +1,14 @@
 services:
   # 1. 后端 API 服务 (FastAPI + Test Hub)
   api:
-    build: .
+    build:
+      context: .
+      args:
+        - PIP_INDEX_URL=http://192.168.5.64:8082/repository/pypi-all/simple
+        - PIP_TRUSTED_HOST=192.168.5.64
     image: devops-platform:latest
     container_name: devops-api
-    profiles: ["core"]
+    profiles: [ "core" ]
     ports:
       - "8000:8000"
     volumes:
@@ -32,7 +36,7 @@ services:
   # 2. 数据异步采集 Worker (多实例竞争消费)
   worker:
     image: devops-platform:latest
-    profiles: ["core"]
+    profiles: [ "core" ]
     volumes:
       - .:/app
       - ./persistence_data:/app/data
@@ -57,7 +61,7 @@ services:
   scheduler:
     image: devops-platform:latest
     container_name: devops-scheduler
-    profiles: ["core"]
+    profiles: [ "core" ]
     volumes:
       - .:/app
       - ./persistence_data:/app/data
@@ -79,7 +83,7 @@ services:
   db:
     image: postgres:15-alpine
     container_name: devops-db
-    profiles: ["core"]
+    profiles: [ "core" ]
     env_file:
       - .env
     ports:
@@ -96,7 +100,7 @@ services:
   mq:
     image: rabbitmq:3-management-alpine
     container_name: devops-mq
-    profiles: ["core"]
+    profiles: [ "core" ]
     environment:
       - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=admin123
@@ -133,7 +137,7 @@ services:
   dashboard:
     image: devops-platform:latest
     container_name: devops-dashboard
-    profiles: ["dataops"]
+    profiles: [ "dataops" ]
     ports:
       - "8501:8501"
     volumes:

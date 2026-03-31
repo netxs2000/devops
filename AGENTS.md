@@ -31,6 +31,10 @@
 - **环境隔离要求**：不允许以“Windows PowerShell 宿主机无报错”为由声称测试通过。
 - **验证生命线**：所有 API 逻辑变动、数据库 Migration，**必须在 Docker 容器内执行验证**（如 `make test` 或 `docker-compose exec api pytest`）。
 
+### 3.3 绝对禁止根目录污染与环境自愈 (Hygiene & Cleanup Enclosure)
+- **绝对重定向禁区**：严禁在根目录执行任何非版本控制的文件生成（如 `> report.txt`）。重定向导出必须强制前缀 `tmp/`。
+- **完工清扫钩子 (Cleanup Hook)**：在宣告任务完成、提交 `progress.txt` 更新前，必须自发通过 `Remove-Item` 或 `make clean` 清理所有残留的测试、统计相关的临时文件。
+
 ## 4. 意图锚准与沟通侧写 (Communication Guardrails)
 
 - **降维解说（小白友好）**：在讲解复杂数据流向、表结构依赖时，预设用户当前精力有限或为“技术小白视角”。大量使用通俗化类比（如：出厂标签、身份证），严禁僵硬堆砌专业术语。

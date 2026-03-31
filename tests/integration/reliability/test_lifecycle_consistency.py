@@ -83,21 +83,29 @@ class TestLifecycleConsistency(unittest.TestCase):
         }
         self.client.get_project_commits.return_value = []
         self.client.get_project_pipelines.return_value = []
+        self.client.get_group.return_value = {
+            "id": 10,
+            "name": "Lifecycle Group",
+            "path": "lifecycle-group",
+            "full_path": "lifecycle-group",
+        }
+        self.client.get_user.return_value = {
+            "id": 1,
+            "username": "dev",
+            "name": "Dev",
+            "email": "dev@example.com",
+            "state": "active",
+        }
         self.worker = GitLabWorker(self.session, self.client)
 
     def tearDown(self):
-        '''"""TODO: Add description.
-
-        Args:
-            self: TODO
-
-        Returns:
-            TODO
-
-        Raises:
-            TODO
-        """'''
+        """Cleanup database tables after each test."""
         self.session.close()
+        with self.engine.begin() as conn:
+            conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            Base.metadata.drop_all(bind=conn)
+            conn.exec_driver_sql("PRAGMA foreign_keys=ON")
+        self.engine.dispose()
 
     def test_merge_request_update_logic(self):
         """Verify MR status updates are persisted."""

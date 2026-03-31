@@ -78,12 +78,13 @@
     - `User` (mdm_identities): 使用 `UUID` (字段名为 `global_user_id` 并别名为 `id`)，以支持多源身份归一。
     - **其它表**: 统一使用 **BigInteger** 自增主键。
 - **关联解耦 (Relationship Decoupling)**: 所有的 `ForeignKey` 必须指向父表的物理 `id`。严禁跨表透传业务编码（如 `project_id`, `org_id`）作为关联手段，防止业务重命名时触发级联故障。
-- **业务标识 (Logical Keys)**: 原有的 `org_id`, `project_id`, `product_id` 等业务键降级为逻辑标识，重命名为 `org_code`, `project_code`, `product_code` 等，并设置 `UNIQUE INDEX`，仅用于数据导入时的匹配。
+- **业务标识 (Logical Keys)**: 原有的 `org_id`, `project_id`, `product_id` 等业务键已完全解耦，重命名为 `org_code`, `project_code`, `product_code` 等字符串字段。
+- **API 响应对齐 (API Alignment) [MANDATORY]**: 所有的接口响应（Router 层）在处理业务 ID 时，必须将外部可见的 `project_id` 键映射到模型中的 `project_code` 字段，将 `product_id` 键映射到 `product_code` 字段。严禁在 API 响应中透传自增的物理 `id`。
 - **命名公约 (Naming Convention)**:
     - 后缀 `_id`: 专指指向物理 PK 的外键（BigInt/UUID）。
     - 后缀 `_code`: 专指业务逻辑编码（String），如 `cost_center_code`。
 - **MDM 重构同步规程 (Schema Evolution Protocol) [MANDATORY]**:
-    - 任何涉及到 MDM 核心表（`mdm_*`）物理主键或逻辑主键（`code` vs `id`）的重构，**必须同步审计并更新**所有相关的初始化与导入脚本 (`scripts/init_*.py`, `scripts/import_*.py`)。
+    - 任何涉及到 MDM 核心表（`mdm_*`）物理主键或逻辑主键（`code` vs `id`）的重构，**必须同步审计并更新**所有相关的测试用例与导入脚本。
     - 脚本中严禁直接将业务编码（String）赋值给整数型外键字段。必须实现先查询（Resolve）业务码获取物理 ID（Integer），再执行赋值的闭环逻辑。
 
 ### 5.2 审计与安全性 (分层要求)
@@ -170,8 +171,11 @@
     - 针对低配环境，必须显式限制内存/磁盘水位（如 `RABBITMQ_VM_MEMORY_HIGH_WATERMARK_RELATIVE=0.7`），防止误报导致的重启风暴。
 - **内网/私服构建规范 (Private Registry Compatibility) [MANDATORY]**:
     - 为适配离线或受限网络，Dockerfile 严禁硬编码外部公共镜像地址。核心工具（如 `uv`）必须利用 `COPY --from` 与 Makefile 中的本地打标机制从 **NEXUS 镜像仓库**提取。
-    - 镜像构建阶段必须通过 `ARG` 支持 `UV_IMAGE` 和 `PIP_INDEX_URL` 的注入。
-    - 在 Docker 内部安装 Python 包时，必须配合 `--trusted-host` 解决内网 HTTP 私服的认证与安全提示问题，确保“一键内网构建”能力。
+    - **依赖拉取优先级 (Mirror Priority)**: 遵循 **内网 Nexus (192.168.5.64) > 互联网镜像 (Tsinghua) > 官方 PyPI** 的级联策略。
+    - 镜像构建阶段必须通过 `ARG` 支持 `UV_IMAGE` 和 `PIP_INDEX_URL` 的注入。默认 Nexus 仓库地址为：`http://192.168.5.64:8082/repository/pypi-all/simple`。
+    - 在 Docker 内部安装 Python 包时，必须配合 `--trusted-host 192.168.5.64` 解决内网 HTTP 私服的认证问题。
+- **构建加速配置 (Compose Build Args)**:
+    - `docker-compose.yml` 中的 `api` 服务必须显式声明 `args.PIP_INDEX_URL` 指向 Nexus 镜像，以确保容器化环境下的构建速度与内网一致性。
 - **异步任务 (RabbitMQ)**:
     - **队列分离 (Queue Isolation) [MANDATORY]**: 每个数据源 (Plugin) 必须拥有独立的 RabbitMQ 队列，命名公约为 `{source}_tasks`（如 `gitlab_tasks`, `zentao_tasks`, `sonarqube_tasks`）。**严禁**将多个数据源的任务混入同一队列，防止高频数据源（如 GitLab 1000+ 项目）的任务洪泛 (Flood) 饿死低频但高优先级的数据源（如 ZenTao）。
     - **动态路由与 SSOT**: `MessageQueue.publish_task()` 根据任务 payload 中的 `source` 字段自动路由到对应队列。队列名称列表应从 `PluginRegistry.list_sources()` 动态生成（格式 `{source}_tasks`），Registry 是队列名称的**唯一事实来源 (SSOT)**，严禁在 MQ 模块中硬编码队列列表。

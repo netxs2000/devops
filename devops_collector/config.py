@@ -255,6 +255,31 @@ class AuthSettings(BaseModel):
         return v
 
 
+class PluginSettings(BaseModel):
+    """Plugin system configuration.
+    
+    Attributes:
+        enabled_plugins (list[str]): List of plugin names to enable.
+    """
+
+    enabled_plugins: str | list[str] = ["gitlab", "sonarqube", "jenkins", "zentao"]
+
+    @field_validator("enabled_plugins", mode="before")
+    @classmethod
+    def split_str(cls, v):
+        """Splits comma-separated strings into lists.
+
+        Args:
+            v (Union[str, List[str]]): The input value.
+
+        Returns:
+            List[str]: The list of strings.
+        """
+        if isinstance(v, str):
+            return [i.strip() for i in v.split(",") if i.strip()]
+        return v
+
+
 class StorageSettings(BaseModel):
     """Local storage configuration.
 
@@ -313,6 +338,7 @@ class Settings(BaseSettings):
     zentao: ZenTaoSettings = ZenTaoSettings()
     ai: AISettings = AISettings()
     storage: StorageSettings = StorageSettings()
+    plugin: PluginSettings = PluginSettings()
     sla: SLASettings = SLASettings()
     auth: AuthSettings = AuthSettings()
     model_config = SettingsConfigDict(env_file=".env", env_nested_delimiter="__", extra="ignore")
@@ -361,6 +387,7 @@ class Config:
     AI_BASE_URL = settings.ai.base_url
     AI_MODEL = settings.ai.model
     DATA_DIR = settings.storage.data_dir
+    ENABLED_PLUGINS = settings.plugin.enabled_plugins
     SECRET_KEY = settings.auth.secret_key
     SLA_P0 = settings.sla.p0
     SLA_P1 = settings.sla.p1

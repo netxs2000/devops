@@ -150,6 +150,9 @@ class TestGitLabWorkerIdempotency(unittest.TestCase):
                 "short_id": "h111",
                 "title": "Initial commit",
                 "author_name": "Dev",
+                "author_email": "dev@example.com",
+                "authored_date": "2024-01-01T10:00:00Z",
+                "committed_date": "2024-01-01T10:00:00Z",
                 "created_at": "2024-01-01T10:00:00Z",
                 "message": "Initial commit",
             },
@@ -158,6 +161,9 @@ class TestGitLabWorkerIdempotency(unittest.TestCase):
                 "short_id": "h222",
                 "title": "Fix bug",
                 "author_name": "Dev",
+                "author_email": "dev@example.com",
+                "authored_date": "2024-01-01T12:00:00Z",
+                "committed_date": "2024-01-01T12:00:00Z",
                 "created_at": "2024-01-01T12:00:00Z",
                 "message": "Fix bug",
             },
@@ -168,15 +174,18 @@ class TestGitLabWorkerIdempotency(unittest.TestCase):
         self.client.get_project_merge_requests.return_value = []
         self.client.get_project_issues.return_value = []
         logger.info("--- Run 1: Initial Ingestion ---")
-        self.worker._sync_project(999)
+        project = self.worker._sync_project(999)
+        self.worker._sync_commits(project, None)
         self.session.commit()
         proj_count_1 = self.session.query(Project).count()
         commit_count_1 = self.session.query(Commit).count()
         self.assertEqual(proj_count_1, 1, "Should have 1 project after first run")
         self.assertEqual(commit_count_1, 2, "Should have 2 commits after first run")
         logger.info(f"Run 1 Stats: Projects={proj_count_1}, Commits={commit_count_1}")
+
         logger.info("--- Run 2: Re-ingestion (Same Data) ---")
-        self.worker._sync_project(999)
+        project = self.worker._sync_project(999)
+        self.worker._sync_commits(project, None)
         self.session.commit()
         proj_count_2 = self.session.query(Project).count()
         commit_count_2 = self.session.query(Commit).count()
@@ -202,11 +211,13 @@ class TestGitLabWorkerIdempotency(unittest.TestCase):
         self.client.get_project_pipelines.return_value = mock_pipelines
         self.client.get_project_commits.return_value = []
         self.client.get_project_merge_requests.return_value = []
-        self.worker._sync_project(999)
+        project = self.worker._sync_project(999)
+        self.worker._sync_pipelines(project, None)
         self.session.commit()
         count_1 = self.session.query(Pipeline).count()
         self.assertEqual(count_1, 1)
-        self.worker._sync_project(999)
+        project = self.worker._sync_project(999)
+        self.worker._sync_pipelines(project, None)
         self.session.commit()
         count_2 = self.session.query(Pipeline).count()
         self.assertEqual(count_2, count_1, "Pipeline rows duplicated!")

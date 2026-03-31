@@ -52,14 +52,16 @@ def run_integration_test():
     print("Database schema initialized.")
     try:
         print("Scenrio 1: Organization Hierarchy...")
-        root_org = Organization(org_id="ORG_ROOT", org_name="Global Group", org_level=1)
-        dept_org = Organization(org_id="ORG_DEPT_01", org_name="Cloud Infrastructure", parent_org_id="ORG_ROOT", org_level=3)
+        root_org = Organization(org_code="ORG_ROOT", org_name="Global Group", org_level=1)
+        dept_org = Organization(org_code="ORG_DEPT_01", org_name="Cloud Infrastructure", parent_id=None, org_level=3)
         session.add(root_org)
+        session.flush() # Populate root_org.id
+        dept_org.parent_id = root_org.id
         session.add(dept_org)
         session.commit()
-        saved_dept = session.query(Organization).filter_by(org_id="ORG_DEPT_01").one()
-        assert saved_dept.parent.org_id == "ORG_ROOT"
-        assert root_org.children[0].org_id == "ORG_DEPT_01"
+        saved_dept = session.query(Organization).filter_by(org_code="ORG_DEPT_01").one()
+        assert saved_dept.parent.org_code == "ORG_ROOT"
+        assert root_org.children[0].org_code == "ORG_DEPT_01"
         print("  - Organization hierarchy verified.")
         print("Scenario 2: User and OneID Mapping...")
         user_uuid = uuid.uuid4()
@@ -68,7 +70,7 @@ def run_integration_test():
             employee_id="EMP001",
             full_name="John Doe",
             primary_email="john.doe@example.com",
-            department_id="ORG_DEPT_01",
+            department_id=dept_org.id,
             is_active=True,
         )
         session.add(test_user)
@@ -88,7 +90,7 @@ def run_integration_test():
         assert any(i.source_system == "gitlab" for i in saved_user.identities)
         print("  - User and identity mapping verified (including bidirectional org membership).")
         print("Scenario 3: Cross-Plugin Relations & Test Management...")
-        gitlab_project = Project(id=50001, name="core-api", path_with_namespace="infra/core-api", organization_id="ORG_DEPT_01")
+        gitlab_project = Project(id=50001, name="core-api", path_with_namespace="infra/core-api", organization_id=dept_org.id)
         session.add(gitlab_project)
         test_commit = Commit(
             id="sha123456789",
@@ -107,7 +109,7 @@ def run_integration_test():
         session.add(sonar_project)
         session.commit()
         saved_project = session.get(Project, 50001)
-        assert saved_project.organization.org_id == "ORG_DEPT_01"
+        assert saved_project.organization.org_code == "ORG_DEPT_01"
         assert gitlab_project in saved_dept.gitlab_projects
         assert len(saved_project.commits) == 1
         assert len(saved_project.test_cases) == 1
@@ -118,11 +120,11 @@ def run_integration_test():
         print("  - Plugin, Test Management and Cross-model bidirectional relations verified.")
         print("Scenario 4: JSON Data Integrity & Product Relations...")
         test_product = Product(
-            product_id="PROD_01",
+            product_code="PROD_01",
             product_name="Cloud Platform",
             product_description="Desc",
             version_schema="1.0",
-            owner_team_id="ORG_ROOT",
+            owner_team_id=root_org.id,
             product_manager_id=user_uuid,
         )
         session.add(test_product)

@@ -1,132 +1,90 @@
-import os
+"""tests/unit/portal 共享 fixtures。
 
+提供基于唯一物理数据库文件的 portal 测试环境。
+"""
+
+import os
+import tempfile
+import uuid
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-
-# Mock environment variables BEFORE any other imports that might use them
-os.environ["DB_URI"] = "sqlite:///:memory:"
-os.environ["GITLAB_URL"] = "https://gitlab.example.com"
-os.environ["GITLAB_TOKEN"] = "testtoken"
-os.environ["JWT_SECRET_KEY"] = "testsecret"
-os.environ["JWT_ALGORITHM"] = "HS256"
-
-# Import after setting env vars
-import uuid
-
 from sqlalchemy.pool import StaticPool
-
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.models.base_models import Base, User
-
-# Import ServiceDeskTicket to register it with Base.metadata before create_all
 from devops_portal.main import app
 
-
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-
-_engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-
-_SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine, expire_on_commit=False)
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_database():
-    """Create all tables once per session, ensuring all models are registered."""
-    # Import all models to register them on the metadata
-    Base.metadata.create_all(bind=_engine)
-    return _engine
-
+@pytest.fixture(scope="function")
+def portal_db():
+    """每个 Portal 测试用例独立的物理数据库环境。"""
+    # 1. 唯一物理文件路径配置
+    db_fd, db_path = tempfile.mkstemp(suffix=".db", prefix="portal_test_")
+    os.close(db_fd)
+    db_uri = f"sqlite:///{db_path}"
+    
+    # 2. 同步环境变量 (关键)
+    os.environ["DB_URI"] = db_uri
+    os.environ["GITLAB_URL"] = "https://gitlab.example.com"
+    os.environ["GITLAB_TOKEN"] = "testtoken"
+    os.environ["JWT_SECRET_KEY"] = "testsecret"
+    os.environ["JWT_ALGORITHM"] = "HS256"
+    
+    # 3. 创建 Engine 与会话工厂
+    engine = create_engine(
+        db_uri,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    
+    Base.metadata.create_all(bind=engine)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
+    
+    db = SessionLocal()
+    
+    try:
+        yield db, engine, db_uri
+    finally:
+        db.close()
+        # 物理清理
+        with engine.begin() as conn:
+            conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            Base.metadata.drop_all(bind=conn)
+        engine.dispose()
+        
+        if os.path.exists(db_path):
+            try:
+                os.remove(db_path)
+            except:
+                pass
 
 @pytest.fixture(scope="function")
-def db_session(setup_database):
-    """Create a nested transaction session for each test to ensure isolation & speed."""
-    connection = setup_database.connect()
-    transaction = connection.begin()
-    session = _SessionLocal(bind=connection)
-
-    yield session
-
-    session.close()
-    transaction.rollback()
-    connection.close()
-
+def db_session(portal_db):
+    """
+    提供 db_session 夹具，兼容旧测试。
+    """
+    db, engine, db_uri = portal_db
+    return db
 
 @pytest.fixture(scope="function")
-def client(db_session):
-    """Create a TestClient with a database session."""
+def client(portal_db):
+    """
+    带独立 DB 实例的 TestClient，注入依赖重写。
+    """
+    db, engine, db_uri = portal_db
 
-    def override_get_auth_db():
+    def override_get_db():
         try:
-            yield db_session
+            # 这里必须确保使用与当前测试用例相同的物理库会话
+            yield db
         finally:
             pass
 
-    app.dependency_overrides[get_auth_db] = override_get_auth_db
-
+    # 依赖重写注入 (针对 devops_collector.auth.auth_database)
+    app.dependency_overrides[get_auth_db] = override_get_db
+    
     with TestClient(app) as c:
         yield c
-
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def mock_user():
-    """Create a mock user object with admin privileges."""
-
-    u = User(
-        global_user_id=uuid.uuid4(),
-        primary_email="test@example.com",
-        username="testuser",
-        full_name="Test User",
-        is_active=True,
-    )
-
-    from devops_collector.models.base_models import SysRole
-
-    u.roles = [SysRole(role_key="SYSTEM_ADMIN", role_name="System Admin")]
-    # Note: don't add to session here, authenticated_client will do it
-    return u
-
-
-@pytest.fixture
-def authenticated_client(client, db_session, mock_user, monkeypatch):
-    """Create a client with an authenticated user and mocked RBAC."""
-    from devops_collector.auth import auth_service
-    from devops_collector.core import security
-    from devops_portal import dependencies
-
-    # Ensure user exists in DB
-    db_session.add(mock_user)
-    db_session.commit()
-
-    token_payload = {
-        "sub": mock_user.primary_email,
-        "roles": [security.ADMIN_ROLE_KEY],
-        "permissions": [security.ADMIN_PERMISSION_WILDCARD],
-    }
-
-    # Mock auth service functions globally
-    monkeypatch.setattr(auth_service, "auth_decode_access_token", lambda t: token_payload if t == "mock-token" else None)
-
-    def mock_get_current_user(db, t):
-        if t == "mock-token":
-            # RE-FETCH the user using the session passed to the dependency to avoid DetachedInstanceError
-            return db.query(User).filter_by(primary_email=mock_user.primary_email).first()
-        return None
-
-    monkeypatch.setattr(auth_service, "auth_get_current_user", mock_get_current_user)
-
-    # Override get_current_user for endpoints that use it directly
-    app.dependency_overrides[dependencies.get_current_user] = lambda: db_session.query(User).filter_by(primary_email=mock_user.primary_email).first()
-
-    client.headers["Authorization"] = "Bearer mock-token"
-    yield client
-
+    
+    # 清理注入
     app.dependency_overrides.clear()

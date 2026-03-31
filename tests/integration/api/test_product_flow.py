@@ -37,8 +37,8 @@ def test_product_management_flow(client, db_session):
     )
     db_session.add(admin)
 
-    # 创建 Organization (必须有 org_id)
-    org = Organization(org_id="ORG-001", org_name="Test Organization", is_current=True)
+    # 创建 Organization (必须有 org_code)
+    org = Organization(org_code="ORG-001", org_name="Test Organization", is_current=True)
     db_session.add(org)
 
     db_session.commit()
@@ -60,7 +60,7 @@ def test_product_management_flow(client, db_session):
     assert response.json()["product_id"] == "P-BIZ-01"
 
     # 2. 准备项目 (关联Org)
-    project = ProjectMaster(project_id="MDM-PROJ-01", project_name="MDM Project 1", org_id="ORG-001", is_current=True)
+    project = ProjectMaster(project_code="MDM-PROJ-01", project_name="MDM Project 1", org_id=org.id, is_current=True)
     db_session.add(project)
     db_session.commit()
 

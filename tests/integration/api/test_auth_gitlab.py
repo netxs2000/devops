@@ -39,8 +39,7 @@ def fixture_db_session():
         # Disable foreign keys for cleanup to avoid IntegrityError with circular dependencies
         with engine.begin() as conn:
             conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
-        Base.metadata.drop_all(bind=engine)
-        with engine.begin() as conn:
+            Base.metadata.drop_all(bind=conn)
             conn.exec_driver_sql("PRAGMA foreign_keys=ON")
 
 

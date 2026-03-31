@@ -7,6 +7,7 @@ import uuid
 
 import pytest
 from fastapi.testclient import TestClient
+import sqlalchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -36,7 +37,11 @@ def fixture_db_session():
         yield db
     finally:
         db.close()
-        Base.metadata.drop_all(bind=engine)
+        # 禁用 SQLite 的外键检查以允许删除具有循环依赖关系的表
+        with engine.begin() as conn:
+            conn.execute(sqlalchemy.text("PRAGMA foreign_keys = OFF;"))
+            Base.metadata.drop_all(bind=conn)
+            conn.execute(sqlalchemy.text("PRAGMA foreign_keys = ON;"))
 
 
 @pytest.fixture(name="client")

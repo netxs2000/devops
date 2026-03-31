@@ -68,7 +68,11 @@ class GitLabWorker(BaseWorker, BaseMixin, TraceabilityMixin, CommitMixin, IssueM
             # 强制应用 2024-01-01 为最早的数据同步截断点
             cutoff_date = datetime(2024, 1, 1, tzinfo=UTC)
             if project.last_synced_at:
-                since_dt = max(project.last_synced_at, cutoff_date)
+                # Ensure comparison works even if DB date is offset-naive
+                last_synced = project.last_synced_at
+                if last_synced.tzinfo is None:
+                    last_synced = last_synced.replace(tzinfo=UTC)
+                since_dt = max(last_synced, cutoff_date)
             else:
                 since_dt = cutoff_date
 

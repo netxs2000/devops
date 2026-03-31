@@ -87,9 +87,9 @@ def setup_db():
     """每个测试用例前重置数据库。"""
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
-    org = db.query(Organization).filter_by(org_id="DEPT_TEST").first()
+    org = db.query(Organization).filter_by(org_code="DEPT_TEST").first()
     if not org:
-        org = Organization(org_id="DEPT_TEST", org_name="测试部门", is_current=True)
+        org = Organization(org_code="DEPT_TEST", org_name="测试部门", is_current=True)
         db.add(org)
     admin_role = db.query(Role).filter_by(code="SYSTEM_ADMIN").first()
     if not admin_role:
@@ -108,14 +108,18 @@ def setup_db():
         global_user_id=uuid.uuid4(),
         full_name="Normal User",
         primary_email="user@example.com",
-        department_id="DEPT_TEST",
+        department_id=org.id,
     )
     normal_user.roles.append(user_role)
     db.add_all([admin_user, normal_user])
     db.commit()
     db.close()
     yield
-    Base.metadata.drop_all(bind=engine)
+    # Disable foreign keys for cleanup to avoid IntegrityError with circular dependencies
+    with engine.begin() as conn:
+        conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
+        Base.metadata.drop_all(bind=conn)
+        conn.exec_driver_sql("PRAGMA foreign_keys=ON")
 
 
 def test_admin_create_project():
@@ -133,7 +137,7 @@ def test_admin_create_project():
     response = client.post("/admin/mdm-projects", json=payload)
     assert response.status_code == 200
     assert response.json()["status"] == "success"
-    pm = db.query(ProjectMaster).filter_by(project_id="PRJ_2026_NEW").first()
+    pm = db.query(ProjectMaster).filter_by(project_code="PRJ_2026_NEW").first()
     assert pm is not None
     assert pm.project_name == "New Integrated Project"
 
@@ -143,7 +147,8 @@ def test_admin_link_and_set_lead_repo():
     db = TestingSessionLocal()
     admin = db.query(User).filter(User.primary_email == "admin@example.com").first()
     mock_context.user = admin
-    pm = ProjectMaster(project_id="PM_LINK_001", project_name="Link Project", org_id="DEPT_TEST")
+    org = db.query(Organization).filter_by(org_code="DEPT_TEST").first()
+    pm = ProjectMaster(project_code="PM_LINK_001", project_name="Link Project", org_id=org.id)
     repo = Project(id=999, name="Tech Repo", path_with_namespace="tech/repo")
     db.add_all([pm, repo])
     db.commit()
@@ -153,14 +158,15 @@ def test_admin_link_and_set_lead_repo():
     db.refresh(pm)
     assert pm.lead_repo_id == 999
     db.refresh(repo)
-    assert repo.mdm_project_id == "PM_LINK_001"
+    assert repo.mdm_project_id == pm.id
 
 
 def test_service_desk_list_projects():
     """测试业务侧获取可选项目列表（组织隔离）。"""
     db = TestingSessionLocal()
-    pm1 = ProjectMaster(project_id="PM_SD_001", project_name="Visible Project", org_id="DEPT_TEST", lead_repo_id=101, is_current=True)
-    pm2 = ProjectMaster(project_id="PM_SD_002", project_name="Hidden Project", org_id="DEPT_OTHER", lead_repo_id=102, is_current=True)
+    org = db.query(Organization).filter_by(org_code="DEPT_TEST").first()
+    pm1 = ProjectMaster(project_code="PM_SD_001", project_name="Visible Project", org_id=org.id, lead_repo_id=101, is_current=True)
+    pm2 = ProjectMaster(project_code="PM_SD_002", project_name="Hidden Project", org_id=9999, lead_repo_id=102, is_current=True)
     db.add_all([pm1, pm2])
     db.commit()
     user = db.query(User).filter(User.primary_email == "user@example.com").first()
@@ -171,7 +177,7 @@ def test_service_desk_list_projects():
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
-        assert data[0]["id"] == "PM_SD_001"
+        assert data[0]["project_id"] == "PM_SD_001"
 
 
 @patch("devops_portal.routers.service_desk_router.ServiceDeskService")
@@ -180,7 +186,8 @@ def test_submit_bug_via_mdm_id(MockServiceDeskService):
     db = TestingSessionLocal()
     admin = db.query(User).filter(User.primary_email == "admin@example.com").first()
     mock_context.user = admin
-    pm = ProjectMaster(project_id="PM_RT_001", project_name="Router Project", org_id="DEPT_TEST", lead_repo_id=555, is_current=True)
+    org = db.query(Organization).filter_by(org_code="DEPT_TEST").first()
+    pm = ProjectMaster(project_code="PM_RT_001", project_name="Router Project", org_id=org.id, lead_repo_id=555, is_current=True)
     db.add(pm)
     db.commit()
     mock_service = MockServiceDeskService.return_value
@@ -223,7 +230,8 @@ def test_submit_bug_no_lead_repo():
     db = TestingSessionLocal()
     admin = db.query(User).filter(User.primary_email == "admin@example.com").first()
     mock_context.user = admin
-    pm = ProjectMaster(project_id="PM_NO_LEAD", project_name="No Lead Project", org_id="DEPT_TEST", lead_repo_id=None, is_current=True)
+    org = db.query(Organization).filter_by(org_code="DEPT_TEST").first()
+    pm = ProjectMaster(project_code="PM_NO_LEAD", project_name="No Lead Project", org_id=org.id, lead_repo_id=None, is_current=True)
     db.add(pm)
     db.commit()
     payload = {

@@ -338,7 +338,7 @@ async def list_mdm_projects(
             "lead_repo_id": p.lead_repo_id,
             "products": [
                 {
-                    "product_id": r.product.product_id,
+                    "product_id": r.product.product_code,
                     "product_name": r.product.product_name,
                     "relation_type": r.relation_type,
                 }

@@ -59,13 +59,13 @@ class CommitMixin:
             commit = GitLabCommit(
                 id=data["id"],
                 project_id=project.id,
-                short_id=data["short_id"],
-                title=data["title"],
-                author_name=data["author_name"],
-                author_email=data["author_email"],
-                message=data["message"],
-                authored_date=parse_iso8601(data["authored_date"]),
-                committed_date=parse_iso8601(data["committed_date"]),
+                short_id=data.get("short_id"),
+                title=data.get("title", ""),
+                author_name=data.get("author_name", "Unknown"),
+                author_email=data.get("author_email"),
+                message=data.get("message", ""),
+                authored_date=parse_iso8601(data.get("authored_date") or data.get("created_at")),
+                committed_date=parse_iso8601(data.get("committed_date") or data.get("created_at")),
             )
             stats = data.get("stats", {})
             commit.additions = stats.get("additions", 0)

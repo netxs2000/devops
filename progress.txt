@@ -11,7 +11,8 @@
 2. [P3] 优化 `uv` 与内部 HTTP 仓库的 User-Agent 兼容性。 (2026-03-26)
 
 📋 最近完成 (Recently Completed)
-1. [P0] 执行合并前置检查并操作 `/merge`，成功将功能分支合并到 `main` 且执行了代码线索保护扫描与清理。 (2026-03-24)
+1. [P0] 记录 PowerShell 环境下的重定向、语法及 UTF-16LE 编码陷阱（Lessons Learned #PS-Env）。 (2026-03-31)
+2. [P0] 执行合并前置检查并操作 `/merge`，成功将功能分支合并到 `main` 且执行了代码线索保护扫描与清理。 (2026-03-24)
 1. [P0] 解决高版本 SQLAlchemy 2.0.41 在 UUID(as_uuid=True) 上的严格类型绑定异常 (`StatementError`)。 (2026-03-24)
 2. [P0] 修复 SQLite 库销毁时 `FOREIGN KEY constraint failed` 异常 (强制前置关闭外键)。 (2026-03-24)
 3. [P0] 确立 "容器内执行" 作为测试与集成的绝对唯一真理来源 (SSOT)。 (2026-03-24)
