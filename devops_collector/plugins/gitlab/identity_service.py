@@ -132,7 +132,8 @@ class UserResolver:
                         org_level=3,
                         source="gitlab_identity"
                     )
-                    user.department_id = org.id
+                    if org and org.id:
+                        user.department_id = org.id
                 self.session.flush()
                 self.cache[gitlab_id] = user.global_user_id
                 return user.global_user_id

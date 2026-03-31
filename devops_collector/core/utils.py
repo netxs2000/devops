@@ -28,6 +28,39 @@ def safe_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def safe_id(value: Any) -> str | None:
+    """将外部 API 返回的 ID 安全转换为字符串，过滤零值和空值。
+
+    用于防御外部系统返回的 ID 类型不确定性 (int/str/dict 混合)。
+    遵循 contexts.md §19.1 "永远不信任外部输入" 守则。
+
+    Args:
+        value: 外部 API 返回的原始 ID (可能是 int, str, None, dict 等)。
+
+    Returns:
+        安全的字符串 ID，若为无效值则返回 None。
+
+    Examples:
+        >>> safe_id(123)       -> "123"
+        >>> safe_id("456")     -> "456"
+        >>> safe_id(0)         -> None  (禅道零值语义)
+        >>> safe_id("0")       -> None
+        >>> safe_id("")        -> None
+        >>> safe_id(None)      -> None
+    """
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        # 部分 API 返回 {"id": 123, "name": "xxx"} 而非裸值
+        value = value.get("id", value.get("account"))
+        if value is None:
+            return None
+    s = str(value).strip()
+    if s in ("", "0", "None", "null"):
+        return None
+    return s
+
+
 def safe_float(value: Any, default: float = 0.0) -> float:
     """安全地将值转换为浮点数。
 

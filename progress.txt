@@ -1,22 +1,41 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
-# 最后更新: 2026-03-24 | 操作者: Antigravity
+# 最后更新: 2026-03-31 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-[阶段：待命] `/merge` 工作流合并完毕！所有的 Stabilization 相关修复已通过 Squash 压缩提交正式合入 `main` 分支。
+[阶段：MDM 架构加固已完成] 所有插件的组织同步逻辑已统一迁移至 OrganizationService。
+企业微信 (WeCom) 插件骨架已构建完毕，等待填入 CORP_ID/SECRET 后激活。
+[Handover Memory] Worker 层存在部分字段类型安全缺口 (dept_id 等)，待分析修复。
 
 🏗️ 进行中 (In Progress)
+1. [P2] Worker 层字段类型安全防护加固 (Doing)
 
 📅 接下来 (Backlog)
-1. [P2] 生产环境一键部署演示 (`make deploy-prod`)。 (2026-03-25)
-2. [P3] 优化 `uv` 与内部 HTTP 仓库的 User-Agent 兼容性。 (2026-03-26)
+1. [P1] 运行 `alembic upgrade head` 应用血缘字段迁移 (68009a76ff76)。
+2. [P2] 生产环境一键部署演示 (`make deploy-prod`)。
+3. [P2] 配置 WeCom CORP_ID/SECRET 并测试首次企业微信全量同步。
+4. [P3] 优化 `uv` 与内部 HTTP 仓库的 User-Agent 兼容性。
 
-📋 最近完成 (Recently Completed)
-1. [P0] 记录 PowerShell 环境下的重定向、语法及 UTF-16LE 编码陷阱（Lessons Learned #PS-Env）。 (2026-03-31)
-2. [P0] 执行合并前置检查并操作 `/merge`，成功将功能分支合并到 `main` 且执行了代码线索保护扫描与清理。 (2026-03-24)
-1. [P0] 解决高版本 SQLAlchemy 2.0.41 在 UUID(as_uuid=True) 上的严格类型绑定异常 (`StatementError`)。 (2026-03-24)
-2. [P0] 修复 SQLite 库销毁时 `FOREIGN KEY constraint failed` 异常 (强制前置关闭外键)。 (2026-03-24)
-3. [P0] 确立 "容器内执行" 作为测试与集成的绝对唯一真理来源 (SSOT)。 (2026-03-24)
-4. [P0] 将 Stabilizing 经验固化至 `contexts.md` 和 `lessons-learned.log`。 (2026-03-24)
-5. [P0] 实现构建工具 (`uv`/`pip`) 针对 Nexus 私服的环境感知回退机制。 (2026-03-24)
+📋 最近完成 (Recently Completed) — 2026-03-31 会话
+1. [P0] 创建 OrganizationService (`core/organization_service.py`)，实现两阶段对齐协议。(Done)
+2. [P0] Organization 模型扩展 `manager_raw_id` 延迟关联字段。(Done)
+3. [P0] AdminService 重构，组织逻辑委托至 OrganizationService。(Done)
+4. [P0] ZenTao Worker 部门同步重构 → OrganizationService。(Done)
+5. [P0] GitLab UserResolver 部门创建重构 → OrganizationService。(Done)
+6. [P0] Jira Worker 用户组同步重构 → OrganizationService。(Done)
+7. [P1] 全插件审计 (Jenkins/SonarQube/Nexus/JFrog/DependencyCheck 均安全)。(Done)
+8. [P1] User + Organization 新增 `source_system` / `correlation_id` 血缘字段。(Done)
+9. [P1] Alembic 迁移脚本 68009a76ff76 编写完成。(Done)
+10. [P0] contexts.md §17.2: 企业级 MDM 六大金科玉律写入。(Done)
+11. [P0] contexts.md §19: 防御性编程十大守则写入。(Done)
+12. [P1] WeCom 插件骨架构建 (client.py + worker.py + __init__.py)。(Done)
+13. [P2] WeCom Spike 文档产出 (`docs/spikes/2026-03-31_wecom_integration.md`)。(Done)
 
-签名：Antigravity-AI (2026-03-24T11:45+08:00)
+📋 历史完成 (Previously Completed)
+1. [P0] 记录 PowerShell 环境下的重定向、语法及 UTF-16LE 编码陷阱。(2026-03-31)
+2. [P0] 执行 `/merge`，功能分支合入 `main`。(2026-03-24)
+3. [P0] 解决 SQLAlchemy 2.0.41 UUID 类型绑定异常。(2026-03-24)
+4. [P0] 修复 SQLite FOREIGN KEY constraint 异常。(2026-03-24)
+5. [P0] 确立 "容器内执行" 作为测试 SSOT。(2026-03-24)
+6. [P0] Stabilizing 经验固化至 contexts.md。(2026-03-24)
+
+签名：Antigravity-AI (2026-03-31T15:26+08:00)

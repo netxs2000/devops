@@ -12,6 +12,7 @@ from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.models import SyncLog
 from devops_collector.core.organization_service import OrganizationService
+from devops_collector.core.utils import safe_id
 
 from .models import (
     ZenTaoAction,
@@ -862,15 +863,19 @@ class ZenTaoWorker(BaseWorker):
         """同步禅道部门结构到公共 Organization 表（通过 OrganizationService）。"""
         depts = self.client.get_departments()
         for d in depts:
-            org_id = f"zentao_dept_{d['id']}"
-            parent_id = f"zentao_dept_{d['parent']}" if d.get("parent") and d["parent"] != "0" else None
+            dept_id = safe_id(d.get("id"))
+            if not dept_id:
+                continue
+            org_id = f"zentao_dept_{dept_id}"
+            parent_raw = safe_id(d.get("parent"))
+            parent_code = f"zentao_dept_{parent_raw}" if parent_raw else None
             
             # 使用专业服务进行 Upsert
             self.org_service.upsert_organization(
                 org_code=org_id,
-                org_name=d["name"],
+                org_name=d.get("name", ""),
                 org_level=3, # 禅道部门统一设为 Level 3 (团队/小组级)
-                parent_org_code=parent_id,
+                parent_org_code=parent_code,
                 source="zentao"
             )
         self.session.flush()
@@ -887,9 +892,9 @@ class ZenTaoWorker(BaseWorker):
                 name=u_data.get("realname"),
             )
             if user:
-                if u_data.get("dept"):
-                    org_id_val = f"zentao_dept_{u_data['dept']}"
-                    org = self.org_service.get_org_by_code(org_id_val)
+                dept_val = safe_id(u_data.get("dept"))
+                if dept_val:
+                    org = self.org_service.get_org_by_code(f"zentao_dept_{dept_val}")
                     if org:
                         user.department_id = org.id
                 user.raw_data = u_data

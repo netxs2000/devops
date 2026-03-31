@@ -17,6 +17,7 @@ from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.core.organization_service import OrganizationService
 from devops_collector.core.registry import PluginRegistry
+from devops_collector.core.utils import safe_id
 
 logger = logging.getLogger(__name__)
 
@@ -91,15 +92,17 @@ class WeComWorker(BaseWorker):
         count = 0
 
         for dept in departments:
-            dept_id = dept.get("id")
+            dept_id = safe_id(dept.get("id"))
+            if not dept_id:
+                continue
             dept_name = dept.get("name", "")
-            parent_id = dept.get("parentid")
+            parent_raw = safe_id(dept.get("parentid"))
 
             # Step 1: 原始数据落 Staging (数据血缘)
             self.save_to_staging(
                 source="wecom",
                 entity_type="department",
-                external_id=str(dept_id),
+                external_id=dept_id,
                 payload=dept,
                 schema_version=self.SCHEMA_VERSION,
             )
@@ -117,7 +120,7 @@ class WeComWorker(BaseWorker):
                 logger.debug(f"[WeCom] Could not fetch detail for dept {dept_id}: {e}")
 
             # Step 3: 通过统一服务 Upsert (携带血缘)
-            parent_code = f"wecom_dept_{parent_id}" if parent_id and parent_id != 0 else None
+            parent_code = f"wecom_dept_{parent_raw}" if parent_raw else None
             self.org_service.upsert_organization(
                 org_code=f"wecom_dept_{dept_id}",
                 org_name=dept_name,
@@ -191,10 +194,11 @@ class WeComWorker(BaseWorker):
                 # Step 3: 关联部门 (取主部门 = department 列表第一个)
                 departments = u_data.get("department", [])
                 if departments:
-                    primary_dept_id = departments[0]
-                    org = self.org_service.get_org_by_code(f"wecom_dept_{primary_dept_id}")
-                    if org:
-                        user.department_id = org.id
+                    primary_dept = safe_id(departments[0])
+                    if primary_dept:
+                        org = self.org_service.get_org_by_code(f"wecom_dept_{primary_dept}")
+                        if org:
+                            user.department_id = org.id
 
                 # Step 4: 更新血缘标记
                 user.source_system = "wecom"
