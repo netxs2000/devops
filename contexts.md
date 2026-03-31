@@ -509,6 +509,23 @@
 - **强制转换链**: 采集原始账号 -> 调用 `IdentityManager.get_global_id()` -> 映射为统一的 UUID `global_user_id` -> 存入业务表。
 - **成本归因**: 只有完成 `global_user_id` 转换的工时或提交记录，方可参与效能度量与成本中心分摊计算。对于无法对齐的“流浪账号”，系统必须通过 `sys_unknown_identities` 表进行挂起并在看板显著提醒。
 
+### 17.2 企业级主数据管理 (Enterprise MDM) 六大金科玉律 [MANDATORY]
+为确保跨系统（如 HR、WeCom、GitLab、ZenTao）的组织与人员数据一致性，所有涉及 `mdm_*` 核心表读写的采集器 (Collector) 必须严格遵守以下六大设计要求：
+
+1. **黄金记录与幸存者规则 (Golden Record & Survivorship)**：
+    - 多路数据对齐时，必须基于预设的**权威优先级配置**（如 HR > WeCom > GitLab）判定字段的合并写入权。严禁低优先级系统（如代码库的显示名称）盲目覆盖高优先级系统（如 HR 系统的真实姓名）。
+2. **全局身份解耦 (OneID Cross-Reference)**：
+    - 外部系统的账户标识（如 `wecom_userid`, `gitlab_id`）**严禁**直接存入 `mdm_identities` 核心表的主字段，必须统一存入 `mdm_identity_mappings` (Cross-Reference 表)。`User` 表主键仅保留平台生成的 `global_user_id` (UUID)。
+3. **隔离暂存区 (Staging Area & Promotion)**：
+    - 源系统的原始离散数据（Raw JSON）必须首先落入 `mdm_staging`。所有向 `User/Organization` 正式表的写入操作，必须由统一的 `PromotionService`（或对应逻辑）进行清洗与合并后执行，严禁在 Worker 中直写主数据表。
+4. **数据血缘 (Data Lineage)**：
+    - 在对 `User` 或 `Organization` 进行创建/更新时，必须强制记录 `source_system`（如 `wecom`, `zentao`）与 `correlation_id`（当批次的同步任务追踪 ID）。
+    - *价值*：支持在数据污染时，通过 `correlation_id` 进行基于任务批次的精准一键回滚 (Rollback)。
+5. **慢变维追踪 (SCD Type 2)**：
+    - 主数据实体的属性变更（如人员部门调动、职位晋升）严禁原行 `UPDATE` 覆盖。必须通过置位 `is_current=False` 封存历史行，并 `INSERT` 新行。这也是所有时间维度报表（如回顾去年的产能）准确性的根本保证。
+6. **异步对齐与自愈 (Async Auto-Alignment)**：
+    - **两阶段对齐协议**：同步部门（A）时，若其关联的负责人（B）尚未入库，禁止挂起、报错或触发递归查询。必须将 B 的标识临时留存在 `manager_raw_id` 备用字段。
+    - 在数据全量到达或批次任务结束时，通过全局运行的 `realign_org_managers` 脚本进行最终物理外键的合并闭环，实现“最终一致性”。
 
 ## 18. 代码质量与 Ruff 规范 (Code Quality & Ruff) [NEW]
 
