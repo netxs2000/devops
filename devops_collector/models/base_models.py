@@ -97,6 +97,8 @@ class Organization(Base, TimestampMixin, SCDMixin):
     is_active = Column(Boolean, default=True, comment="是否启用")
     cost_center = Column(String(100), nullable=True, comment="成本中心编码")
     business_line = Column(String(50), nullable=True, comment="所属业务线/体系 (如 研发体系/交付体系/营销体系)")
+    source_system = Column(String(50), nullable=True, comment="创建/更新来源系统 (如 wecom/zentao)")
+    correlation_id = Column(String(100), index=True, nullable=True, comment="关联的同步任务追踪 ID")
 
     # Relationships
     parent = relationship(
@@ -135,7 +137,10 @@ class User(Base, TimestampMixin, SCDMixin):
     position = Column(String(100), comment="职位/岗位名称")
     hr_relationship = Column(String(50), comment="人事关系 (如：正式/外协/实习)")
     location_id = Column(Integer, ForeignKey("mdm_locations.id"), nullable=True, index=True, comment="常驻办公地点ID")
+    source_system = Column(String(50), nullable=True, comment="创建/更新来源系统")
+    correlation_id = Column(String(100), index=True, nullable=True, comment="关联的同步任务追踪 ID")
     is_active = Column(Boolean, default=True, comment="是否在职")
+
 
     location = relationship("Location", foreign_keys=[location_id])
     is_survivor = Column(Boolean, default=False, comment="是否通过合并保留的账号")

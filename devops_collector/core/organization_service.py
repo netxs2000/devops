@@ -51,6 +51,7 @@ class OrganizationService:
                 org_name=org_name,
                 org_level=org_level,
                 manager_raw_id=manager_raw_id,
+                source_system=source, # 注入血缘来源
                 is_current=True,
                 sync_version=1
             )
@@ -59,6 +60,8 @@ class OrganizationService:
         else:
             org.org_name = org_name
             org.org_level = org_level
+            # 记录最新的数据源
+            org.source_system = source
             # 只有在提供了新值且原值为空时，才更新 raw_id
             if manager_raw_id and not org.manager_user_id:
                 org.manager_raw_id = manager_raw_id
