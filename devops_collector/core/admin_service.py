@@ -15,6 +15,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session, joinedload
 
+from devops_collector.core.organization_service import OrganizationService
 from devops_collector.models.base_models import (
     OKRObjective,
     Organization,
@@ -42,6 +43,7 @@ class AdminService:
             session (Session): 数据库会话。
         """
         self.session = session
+        self.org_service = OrganizationService(session)
 
     def get_user_full_profile(self, user_id: uuid.UUID) -> schemas.UserFullProfile:
         """获取用户全景画像。"""
@@ -203,21 +205,15 @@ class AdminService:
         return results
 
     def create_organization(self, data: schemas.OrganizationCreate) -> Organization:
-        """创建新的组织实体。"""
-        new_org = Organization(
+        """创建新的组织实体（代理至 OrganizationService）。"""
+        return self.org_service.upsert_organization(
             org_code=data.org_id,
             org_name=data.org_name,
-            org_level=data.org_level,
-            parent_org_id=data.parent_org_id,
-            manager_user_id=data.manager_user_id,
-            cost_center=data.cost_center,
-            is_active=data.is_active,
-            is_current=True,
+            org_level=data.org_level or 1,
+            parent_org_code=data.parent_org_id,
+            manager_raw_id=str(data.manager_user_id) if data.manager_user_id else None,
+            source="admin_ui"
         )
-        self.session.add(new_org)
-        self.session.commit()
-        self.session.refresh(new_org)
-        return new_org
 
     def import_users(self, csv_content: str) -> schemas.ImportSummary:
         """从 CSV 字符串导入用户。"""
@@ -271,7 +267,7 @@ class AdminService:
         return summary
 
     def import_organizations(self, csv_content: str) -> schemas.ImportSummary:
-        """从 CSV 字符串导入组织架构。"""
+        """从 CSV 字符串导入组织架构。利用 OrganizationService 实现防御性对齐。"""
         f = io.StringIO(csv_content)
         reader = csv.DictReader(f)
         summary = schemas.ImportSummary(total_processed=0, success_count=0, failure_count=0)
@@ -280,7 +276,6 @@ class AdminService:
             org_id = row.get("组织ID") or row.get("org_id")
             name = row.get("组织名称") or row.get("org_name")
 
-            # 跳过空行
             if not any(row.values()) or (not org_id and not name):
                 continue
 
@@ -288,52 +283,27 @@ class AdminService:
             try:
                 level = int(row.get("层级") or row.get("org_level") or 2)
                 parent_id = row.get("上级ID") or row.get("parent_org_id")
-                mgr_name = row.get("负责人") or row.get("manager_name")
+                mgr_name = row.get("负责人") or row.get("manager_name") # 这里可能填的是姓名或工号
 
                 if not org_id or not name:
                     raise ValueError("Missing mandatory fields: org_id or org_name")
 
-                # Lookup manager user ID by name with ambiguity check
-                mgr_uid = None
-                if mgr_name:
-                    mgr_users = self.session.query(User).filter(User.full_name == mgr_name).all()
-                    if not mgr_users:
-                        # Optional: logger.warning(f"No user found with name {mgr_name}")
-                        pass
-                    elif len(mgr_users) > 1:
-                        # Ambiguous match
-                        summary.errors.append(
-                            {
-                                "row": summary.total_processed,
-                                "error": f"负责人 '{mgr_name}' 不唯一 (存在多名同名员工)，已跳过自动关联",
-                            }
-                        )
-                    else:
-                        mgr_uid = mgr_users[0].global_user_id
-
-                org = self.session.query(Organization).filter(Organization.org_code == org_id).first()
-                if org:
-                    org.org_name = name
-                    org.org_level = level
-                    org.parent_org_id = parent_id
-                    org.manager_user_id = mgr_uid
-                    org.updated_at = datetime.now(UTC)
-                else:
-                    org = Organization(
-                        org_code=org_id,
-                        org_name=name,
-                        org_level=level,
-                        parent_org_id=parent_id,
-                        manager_user_id=mgr_uid,
-                        is_active=True,
-                        is_current=True,
-                    )
-                    self.session.add(org)
+                # 调用专业服务进行 Upsert (Phase 1: 存入 manager_raw_id)
+                self.org_service.upsert_organization(
+                    org_code=org_id,
+                    org_name=name,
+                    org_level=level,
+                    parent_org_code=parent_id,
+                    manager_raw_id=mgr_name, # 先暂存起来，不管此时有没有张三
+                    source="csv_import"
+                )
                 summary.success_count += 1
             except Exception as e:
                 summary.failure_count += 1
                 summary.errors.append({"row": summary.total_processed, "error": str(e)})
 
+        # Phase 2: 导入完成后，执行一次全局“负责人对齐修复”
+        self.org_service.realign_all_managers()
         self.session.commit()
         return summary
 

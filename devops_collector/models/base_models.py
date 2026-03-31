@@ -93,6 +93,7 @@ class Organization(Base, TimestampMixin, SCDMixin):
     manager_user_id = Column(
         UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id", use_alter=True, name="fk_org_manager"), index=True, comment="部门负责人"
     )
+    manager_raw_id = Column(String(100), nullable=True, comment="负责人原始标识(工号/WeCom ID/LDAP ID/邮箱)")
     is_active = Column(Boolean, default=True, comment="是否启用")
     cost_center = Column(String(100), nullable=True, comment="成本中心编码")
     business_line = Column(String(50), nullable=True, comment="所属业务线/体系 (如 研发体系/交付体系/营销体系)")
