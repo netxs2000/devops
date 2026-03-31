@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.core.services import close_current_and_insert_new
-from devops_collector.models.base_models import Organization, TraceabilityLink
+from devops_collector.models.base_models import TraceabilityLink
+from devops_collector.core.organization_service import OrganizationService
 
 # from .client import JiraClient
 from .models import JiraBoard, JiraIssue, JiraIssueHistory, JiraProject, JiraSprint
@@ -33,6 +34,7 @@ class JiraWorker(BaseWorker):
             **kwargs: 其他透传参数
         """
         super().__init__(session, client, correlation_id=correlation_id)
+        self.org_service = OrganizationService(session)
 
     def process_task(self, task: dict) -> None:
         """处理 Jira 同步任务。"""
@@ -286,29 +288,17 @@ class JiraWorker(BaseWorker):
         self.session.flush()
 
     def _sync_groups(self) -> None:
-        """同步 Jira 用户组到公共 Organization 表 (支持 SCD Type 2)。"""
+        """同步 Jira 用户组到公共 Organization 表 (通过 OrganizationService)。"""
         groups = self.client.get_groups()
         for g in groups:
             group_name = g["name"]
-            org = self.session.query(Organization).filter_by(org_code=group_name, is_current=True).first()
-            if not org:
-                org = Organization(
-                    org_code=group_name,
-                    org_name=group_name,
-                    org_level=1,
-                    sync_version=1,
-                    is_current=True,
-                    is_deleted=False,
-                )
-                self.session.add(org)
-                logger.info(f"Created new Organization from Jira Group: {group_name}")
-            elif org.org_name != group_name:
-                close_current_and_insert_new(
-                    self.session,
-                    Organization,
-                    {"org_code": group_name},
-                    {"org_name": group_name, "sync_version": org.sync_version},
-                )
+            # 使用统一服务进行 Upsert
+            self.org_service.upsert_organization(
+                org_code=group_name,
+                org_name=group_name,
+                org_level=3, # Jira 组作为团队级 (Level 3)
+                source="jira"
+            )
         self.session.flush()
 
     def _sync_all_users(self) -> None:
