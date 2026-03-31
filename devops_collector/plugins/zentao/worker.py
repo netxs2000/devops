@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.identity_manager import IdentityManager
-from devops_collector.models import Organization, SyncLog
+from devops_collector.models import SyncLog
+from devops_collector.core.organization_service import OrganizationService
 
 from .models import (
     ZenTaoAction,
@@ -130,6 +131,7 @@ class ZenTaoWorker(BaseWorker):
             **kwargs: 其他透传参数
         """
         super().__init__(session, client, correlation_id=correlation_id)
+        self.org_service = OrganizationService(session)
 
     def process_task(self, task: dict) -> None:
         """处理禅道同步任务。"""
@@ -857,32 +859,20 @@ class ZenTaoWorker(BaseWorker):
         return action
 
     def _sync_org_structure(self) -> None:
-        """同步禅道部门结构到公共 Organization 表。"""
+        """同步禅道部门结构到公共 Organization 表（通过 OrganizationService）。"""
         depts = self.client.get_departments()
-        dept_map = {}
         for d in depts:
             org_id = f"zentao_dept_{d['id']}"
-            org_name = d["name"]
-            # 即使 is_current=False 的历史数据也会触发唯一索引冲突，所以必须全局查询
-            org = self.session.query(Organization).filter_by(org_code=org_id).first()
-            if not org:
-                try:
-                    with self.session.begin_nested():
-                        org = Organization(org_code=org_id, org_name=org_name, org_level=3, is_current=True, sync_version=1)
-                        self.session.add(org)
-                        self.session.flush()
-                        logger.info(f"Created ZenTao Organization: {org_name}")
-                except Exception:
-                    self.session.rollback()
-                    org = self.session.query(Organization).filter_by(org_code=org_id).first()
-            elif org.org_name != org_name:
-                org.org_name = org_name
-                logger.info(f"Updated ZenTao Organization Name: {org_name}")
-            dept_map[d["id"]] = org
-        self.session.flush()
-        for d in depts:
-            if d.get("parent") and d["parent"] in dept_map:
-                dept_map[d["id"]].parent_id = dept_map[d["parent"]].id
+            parent_id = f"zentao_dept_{d['parent']}" if d.get("parent") and d["parent"] != "0" else None
+            
+            # 使用专业服务进行 Upsert
+            self.org_service.upsert_organization(
+                org_code=org_id,
+                org_name=d["name"],
+                org_level=3, # 禅道部门统一设为 Level 3 (团队/小组级)
+                parent_org_code=parent_id,
+                source="zentao"
+            )
         self.session.flush()
 
     def _sync_zentao_users(self) -> None:
@@ -899,7 +889,7 @@ class ZenTaoWorker(BaseWorker):
             if user:
                 if u_data.get("dept"):
                     org_id_val = f"zentao_dept_{u_data['dept']}"
-                    org = self.session.query(Organization).filter_by(org_code=org_id_val).first()
+                    org = self.org_service.get_org_by_code(org_id_val)
                     if org:
                         user.department_id = org.id
                 user.raw_data = u_data
