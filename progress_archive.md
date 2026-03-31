@@ -4,6 +4,45 @@
 
 ---
 
+## 归档批次：2026-03-31
+
+以下 11 条任务从 `progress.txt` 迁移至此归档。
+
+### 11. [Infrastructure] PowerShell 环境陷阱固化 (2026-03-31)
+- **文档**: 记录 PowerShell 下重定向、语法及 UTF-16LE 编码陷阱（Lessons Learned #PS-Env）。
+
+### 10. [Process] 分支合并：Stabilization 合入 main (2026-03-24)
+- **动作**: 执行 `/merge` 工作流，完成核心修复冷收缩提交。
+
+### 9. [Bug] SQLAlchemy 2.0.41 UUID 绑定异常修复 (2026-03-24)
+- **修复**: 解决高版本 SA 在 UUID(as_uuid=True) 上的严格类型绑定异常。
+
+### 8. [Bug] SQLite 外键约束销毁异常修复 (2026-03-24)
+- **修复**: 强制前置关闭外键连接，解决数据库销毁时的 `FOREIGN KEY constraint failed`。
+
+### 7. [Policy] 确立容器化测试 SSOT (2026-03-24)
+- **规范**: 物理机与容器环境不一致时，以容器内 `make test` 结果为准。
+
+### 6. [Process] 架构经验固化 (2026-03-24)
+- **文档**: 将 Stabilizing 期间的数据库、环境兼容性经验固化至 `contexts.md`。
+
+### 5. [MDM] Organization 模型扩展 (2026-03-31)
+- **模型**: 新增 `manager_raw_id` 字段以支持两阶段异步关联。
+
+### 4. [MDM] 插件重构：AdminService / ZenTao / GitLab / Jira (2026-03-31)
+- **重构**: 移除冗余的组织同步逻辑，全量委托至 `OrganizationService`。
+
+### 3. [Audit] 全采集插件安全性审计 (2026-03-31)
+- **范围**: 审计 Jenkins, SonarQube, Nexus, JFrog, DependencyCheck，确认不涉及组织同步风险。
+
+### 2. [Data] 血缘跟踪字段落地 (2026-03-31)
+- **模型**: 为 `User` 和 `Organization` 增加 `source_system` 和 `correlation_id`。
+
+### 1. [DB] 迁移脚本就绪 (2026-03-31)
+- **Alembic**: 创建并完善 `68009a76ff76` 迁移脚本，支持血缘字段物理落地。
+
+---
+
 ## 归档批次：2026-03-03
 
 以下项从 `progress.txt` 迁移至此归档。

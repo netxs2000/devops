@@ -3,39 +3,23 @@
 
 🎯 当前状态 (Current Focus)
 [阶段：MDM 架构加固已完成] 所有插件的组织同步逻辑已统一迁移至 OrganizationService。
-企业微信 (WeCom) 插件骨架已构建完毕，等待填入 CORP_ID/SECRET 后激活。
-[Handover Memory] Worker 层存在部分字段类型安全缺口 (dept_id 等)，待分析修复。
+企业微信 (WeCom) 插件骨架已构建完毕，且通过 safe_id 对全量插件执行了类型安全闭环。
+[Handover Memory] 系统已具备"最终一致性"自愈能力，后续新增插件需强制继承 BaseWorker。
 
 🏗️ 进行中 (In Progress)
-1. [P2] Worker 层字段类型安全防护加固 (Doing)
+1. [P2] 准备 WeCom 核心同步链路的集成测试环境。 (Doing)
 
 📅 接下来 (Backlog)
 1. [P1] 运行 `alembic upgrade head` 应用血缘字段迁移 (68009a76ff76)。
 2. [P2] 生产环境一键部署演示 (`make deploy-prod`)。
-3. [P2] 配置 WeCom CORP_ID/SECRET 并测试首次企业微信全量同步。
+3. [P2] 配置 WeCom CORP_ID/SECRET 并执行首次全量同步。
 4. [P3] 优化 `uv` 与内部 HTTP 仓库的 User-Agent 兼容性。
 
-📋 最近完成 (Recently Completed) — 2026-03-31 会话
-1. [P0] 创建 OrganizationService (`core/organization_service.py`)，实现两阶段对齐协议。(Done)
-2. [P0] Organization 模型扩展 `manager_raw_id` 延迟关联字段。(Done)
-3. [P0] AdminService 重构，组织逻辑委托至 OrganizationService。(Done)
-4. [P0] ZenTao Worker 部门同步重构 → OrganizationService。(Done)
-5. [P0] GitLab UserResolver 部门创建重构 → OrganizationService。(Done)
-6. [P0] Jira Worker 用户组同步重构 → OrganizationService。(Done)
-7. [P1] 全插件审计 (Jenkins/SonarQube/Nexus/JFrog/DependencyCheck 均安全)。(Done)
-8. [P1] User + Organization 新增 `source_system` / `correlation_id` 血缘字段。(Done)
-9. [P1] Alembic 迁移脚本 68009a76ff76 编写完成。(Done)
-10. [P0] contexts.md §17.2: 企业级 MDM 六大金科玉律写入。(Done)
-11. [P0] contexts.md §19: 防御性编程十大守则写入。(Done)
-12. [P1] WeCom 插件骨架构建 (client.py + worker.py + __init__.py)。(Done)
-13. [P2] WeCom Spike 文档产出 (`docs/spikes/2026-03-31_wecom_integration.md`)。(Done)
+📋 最近完成 (Recently Completed)
+1. [P0] contexts.md §19: 防御性编程十大守则写入——建立系统级防御红线。 (2026-03-31)
+2. [P0] contexts.md §17.2: 企业级 MDM 六大金科玉律写入——固化核心治理宪法。 (2026-03-31)
+3. [P0] 创建 OrganizationService 元架构与两阶段对齐协议——解决组织树递归死锁。 (2026-03-31)
+4. [P1] WeCom 插件骨架与 Spike 设计方案落地——支持通讯录全量采集。 (2026-03-31)
+5. [P2] 全量插件 Worker 层执行 ID 类型安全加固 (safe_id 路由防护)。 (2026-03-31)
 
-📋 历史完成 (Previously Completed)
-1. [P0] 记录 PowerShell 环境下的重定向、语法及 UTF-16LE 编码陷阱。(2026-03-31)
-2. [P0] 执行 `/merge`，功能分支合入 `main`。(2026-03-24)
-3. [P0] 解决 SQLAlchemy 2.0.41 UUID 类型绑定异常。(2026-03-24)
-4. [P0] 修复 SQLite FOREIGN KEY constraint 异常。(2026-03-24)
-5. [P0] 确立 "容器内执行" 作为测试 SSOT。(2026-03-24)
-6. [P0] Stabilizing 经验固化至 contexts.md。(2026-03-24)
-
-签名：Antigravity-AI (2026-03-31T15:26+08:00)
+签名：Antigravity-AI (2026-03-31T15:37+08:00)
