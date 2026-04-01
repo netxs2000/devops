@@ -37,6 +37,24 @@
 
 
 ## 4. 核心架构与插件开发 (Architecture)
+
+### 4.0 业务逻辑拓扑地图 (Logical Directory Topology) [NEW]
+为避免 AI 与开发者在庞大的代码库中迷失，以下是平台核心职责的语义导航地图（非全量物理树，仅标定关键业务锚点）：
+
+- **`devops_collector/` (采集引擎与领域内核)**：平台的后方心脏，掌握基础规则与数据拉取逻辑。
+  - `auth/` (认证网关层)：处理 JWT Token 发放、权限声明注入及 RBAC 混合校验，核心屏障是 `auth_service.py`。
+  - `core/` (底层基建层)：单例配置加载、多端安全防线、以及唯一的数据库引擎池 (Engine/Session) 驻留地。
+  - `models/` (MDM 实体定义层)：所有组织架构 (Organization)、人员 (User) 等跨域主数据 Schema 的最终拼图与 SSOT (单一事实来源)。
+  - `plugins/` (开放生态插件组)：按系统源（GitLab, ZenTao, WeCom 等）严格物理隔离。每个目录自给自足，包含 API 客户端 (`client.py`) 与消费处理器 (`worker.py`)。
+- **`devops_portal/` (交互管控前端 API)**：直接面向人类的大屏/系统报表拉取请求。
+  - 路由定义层坚守“薄逻辑”规则，所有对库的直接调用已被剥离。`dependencies.py` 是拦截非法 Mock 越权的核心守卫。
+- **`dbt_project/` (指标建模流水线)**：运行在此工程之外的 PostgreSQL 侧，所有的原生乱码清洗 (`stg_`) 到 DORA/财务效能聚合计算 (`fct_`) 全部依赖这里的 SQL 模型。
+- **`scripts/` (自动化与自愈急救箱)**：孤儿数据巡检、脏脏数据清理、以及类似 `realign_org_managers.py` 这种两阶段强一致性修补脚本的存放地。
+- **`tests/` (防线演兵场)**：
+  - `unit/`：强制要求 100% Mock 断开外部数据库与发版的雷霆战区。
+  - `integration/api/`：必须连接实测库（含容器化保障）的阵地，需要极其小心 `app.dependency_overrides` 的跨室感染污染。
+
+### 4.1 Plugin Factory
 - **Plugin Factory**: 插件位于 `devops_collector/plugins/`，结构必须遵循以下标准：
     ```
     plugins/{plugin_name}/
