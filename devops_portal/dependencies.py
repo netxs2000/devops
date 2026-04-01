@@ -57,7 +57,6 @@ async def get_current_user(
 def RoleRequired(allowed_roles: list[str]):
     """基于角色的 RBAC 校验卫兵。
 
-    直接从令牌载荷中提取角色信息，减少数据库查询。
     支持 SYSTEM_ADMIN 超级权限。
 
     Args:
@@ -68,29 +67,29 @@ def RoleRequired(allowed_roles: list[str]):
     """
 
     async def role_checker(
-        token: str | None = Query(None),
-        auth_header: str | None = Depends(optional_oauth2_scheme),
-        db: Session = Depends(get_auth_db),
+        current_user: User = Depends(get_current_user),
     ) -> User:
-        final_token = token or auth_header
-        if not final_token:
-            raise HTTPException(status_code=401, detail="Not authenticated")
+        # 提取角色：优先从 relationship 获取，支持从 legacy .role 属性回退（适配测试 Mock）
+        user_roles = [r.role_key for r in getattr(current_user, "roles", []) if hasattr(r, "role_key")]
+        if not user_roles and hasattr(current_user, "role") and isinstance(current_user.role, str):
+            user_roles = [current_user.role]
 
-        payload = auth_service.auth_decode_access_token(final_token)
-        if not payload:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        # 提取 Token 注入的角色：安全处理 MagicMock 场景
+        token_roles = getattr(current_user, "token_roles", [])
+        if not isinstance(token_roles, (list, set)):
+            token_roles = []
 
-        user_roles = payload.get("roles", [])
+        combined_roles = set(user_roles) | set(token_roles)
 
         # 超管直接放行
-        if security.ADMIN_ROLE_KEY in user_roles:
-            return auth_service.auth_get_current_user(db, final_token)
+        if security.ADMIN_ROLE_KEY in combined_roles:
+            return current_user
 
-        if not any(role in allowed_roles for role in user_roles):
-            logger.warning(f"Role Denied: User {payload.get('sub')} lacks required roles {allowed_roles}")
+        if not combined_roles.intersection(allowed_roles):
+            logger.warning(f"Role Denied: User {current_user.primary_email} lacks required roles {allowed_roles}")
             raise HTTPException(status_code=403, detail=f"Permission Denied: Required roles: {allowed_roles}")
 
-        return auth_service.auth_get_current_user(db, final_token)
+        return current_user
 
     return role_checker
 
@@ -98,7 +97,7 @@ def RoleRequired(allowed_roles: list[str]):
 def PermissionRequired(required_perms: list[str]):
     """基于权限标识的 RBAC 校验卫兵 (RBAC 2.0)。
 
-    校验用户是否拥有指定的权限点（权限点已在登录时注入 JWT 载荷）。
+    校验用户是否拥有指定的权限点。
 
     Args:
         required_perms: 要求的权限标识列表 (满足任一即可)
@@ -108,41 +107,37 @@ def PermissionRequired(required_perms: list[str]):
     """
 
     async def permission_checker(
-        token: str | None = Query(None),
-        auth_header: str | None = Depends(optional_oauth2_scheme),
+        current_user: User = Depends(get_current_user),
         db: Session = Depends(get_auth_db),
     ) -> User:
-        final_token = token or auth_header
-        if not final_token:
-            raise HTTPException(status_code=401, detail="Not authenticated")
+        # 提取角色：优先从 relationship 获取，支持从 legacy .role 属性回退（适配测试 Mock）
+        user_roles = [r.role_key for r in getattr(current_user, "roles", []) if hasattr(r, "role_key")]
+        if not user_roles and hasattr(current_user, "role") and isinstance(current_user.role, str):
+            user_roles = [current_user.role]
 
-        payload = auth_service.auth_decode_access_token(final_token)
-        if not payload:
-            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        # 提取 Token 注入的角色：安全处理 MagicMock 场景
+        token_roles = getattr(current_user, "token_roles", [])
+        if not isinstance(token_roles, (list, set)):
+            token_roles = []
 
-        user_roles = payload.get("roles", [])
-        user_perms = payload.get("permissions", [])
+        combined_roles = set(user_roles) | set(token_roles)
 
         # 超管通配符放行
-        if security.ADMIN_ROLE_KEY in user_roles:
-            return auth_service.auth_get_current_user(db, final_token)
+        if security.ADMIN_ROLE_KEY in combined_roles:
+            return current_user
+
+        # 实时从数据库/安全模块获取全量权限（含角色继承和 Token 注入）
+        user_perms = security.get_user_permissions(db, current_user)
 
         if security.ADMIN_PERMISSION_WILDCARD in user_perms:
-            return auth_service.auth_get_current_user(db, final_token)
+            return current_user
 
         # 检查是否满足任一权限
         if not any(perm in user_perms for perm in required_perms):
-            # --- [核心增强] 实时数据库校验 ---
-            # 如果 JWT 中没有，实时查库以处理刚发生的业务授权（如刚被任命为负责人）
-            real_perms = security.get_user_permissions(db, auth_service.auth_get_current_user(db, final_token))
-            if not any(perm in real_perms for perm in required_perms):
-                logger.warning(f"Permission Denied: User {payload.get('sub')} lacks permissions {required_perms}")
-                raise HTTPException(status_code=403, detail=f"Permission Denied: Missing permissions {required_perms}")
-            # ---------------------------
+            logger.warning(f"Permission Denied: User {current_user.primary_email} lacks permissions {required_perms}")
+            raise HTTPException(status_code=403, detail=f"Permission Denied: Missing permissions {required_perms}")
 
-        return auth_service.auth_get_current_user(db, final_token)
-
-        return auth_service.auth_get_current_user(db, final_token)
+        return current_user
 
     return permission_checker
 

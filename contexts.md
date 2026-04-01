@@ -433,12 +433,13 @@
     - 任何变更必须根据下表完成文档对齐（调用 `/doc-update`）：
         | 变更类型 | 必更新文档 |
         | :--- | :--- |
-        | **Bug 修复 / 故障排除** | `progress.txt`, `lessons-learned.log` |
-        | **架构调整 / 规范发布** | `contexts.md`, `ADR` (可选) |
-        | **模型 (Model/DB) 变更** | `DATA_DICTIONARY.md` (via `make docs`) |
-        | **新依赖引入** | `pyproject.toml`, `requirements.txt`, `.env.example` |
-        | **日常功能开发** | `progress.txt` |
-        | **Spike 探针完成** | `docs/spikes/YYYY-MM-DD_<topic>.md` |
+        | **Bug 修复 / 故障排除** | `progress.txt`, `lessons-learned.log`, `session-history.log` |
+        | **架构调整 / 规范发布** | `contexts.md`, `ADR` (可选), `session-history.log` |
+        | **模型 (Model/DB) 变更** | `DATA_DICTIONARY.md`, `session-history.log` |
+        | **新依赖引入**           | `pyproject.toml`, `requirements.txt`, `session-history.log` |
+        | **常规会话结束**         | `session-history.log` (Auto-Handover) |
+        | **日常功能开发**         | `progress.txt`, `session-history.log` |
+        | **Spike 探针完成**       | `docs/spikes/YYYY-MM-DD_<topic>.md`, `session-history.log` |
 - **任务分级与估时回溯 (Task Level & Estimation Tracking) [NEW]**:
     - 每条任务在 `progress.txt` 中必须标注任务级别（如 `[L2]`），参见 `/task-kickoff` 工作流。
     - L2 及以上任务完成后，在「最近完成」记录中须附带估时对比：`预估 Xh / 实际 Yh`。

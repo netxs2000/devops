@@ -129,7 +129,7 @@ class UserResolver:
                     org = self.org_service.upsert_organization(
                         org_code=f"gitlab_dept_{dept_name}",
                         org_name=dept_name,
-                        org_level=3,
+                        org_level=2,
                         source="gitlab_identity"
                     )
                     if org and org.id:

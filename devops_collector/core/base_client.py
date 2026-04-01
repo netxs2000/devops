@@ -78,6 +78,10 @@ def is_retryable_exception(exception: Exception) -> bool:
     if isinstance(exception, requests.exceptions.HTTPError):
         if exception.response.status_code in [401, 403]:
             return False
+    from devops_collector.core.exceptions import CircuitBreakerOpenError
+
+    if isinstance(exception, CircuitBreakerOpenError):
+        return False
     return isinstance(exception, requests.exceptions.RequestException)
 
 
@@ -116,23 +120,59 @@ class BaseClient(ABC):
         timeout: int = 30,
         max_retries: int = 5,
         verify: bool = True,
+        failure_threshold: int = 5,
+        recovery_timeout: int = 60,
     ):
-        """初始化客户端。
-
-        Args:
-            base_url: API 基础地址 (不含尾部斜杠)
-            auth_headers: 认证头信息
-            rate_limit: 每秒请求上限
-            timeout: 请求超时时间 (秒)
-            max_retries: 最大重试次数
-            verify: 是否验证 SSL 证书
-        """
+        """初始化客户端。"""
         self.base_url = base_url.rstrip("/")
         self.headers = auth_headers
         self.limiter = RateLimiter(rate_limit)
         self.timeout = timeout
         self.max_retries = max_retries
         self.verify = verify
+
+        # 熔断器状态
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self._failure_count = 0
+        self._last_failure_time = 0.0
+        self._state = "CLOSED"  # CLOSED, OPEN
+
+        # 19.6 资源池化：使用 Session 复用 TCP 连接
+        self._session = requests.Session()
+        self._session.headers.update(self.headers)
+        self._session.verify = self.verify
+
+    def _mask_headers(self, headers: dict) -> dict:
+        """19.8 日志脱敏：遮蔽请求头中的敏感令牌。"""
+        mask_keys = {"Authorization", "PRIVATE-TOKEN", "Token", "X-Auth-Token"}
+        return {k: ("******" if k in mask_keys else v) for k, v in headers.items()}
+
+    def _check_circuit(self) -> None:
+        """核心熔断判定。"""
+        if self._state == "OPEN":
+            if time.time() - self._last_failure_time > self.recovery_timeout:
+                logger.info(f"[{self.__class__.__name__}] Circuit [HALF_OPEN] - Probe attempt.")
+            else:
+                from devops_collector.core.exceptions import CircuitBreakerOpenError
+
+                raise CircuitBreakerOpenError(f"Circuit Breaker for {self.__class__.__name__} is OPEN.")
+
+    def _handle_failure(self, error: Exception) -> None:
+        """记录失败并触发熔断。"""
+        self._failure_count += 1
+        self._last_failure_time = time.time()
+        if self._failure_count >= self.failure_threshold:
+            if self._state != "OPEN":
+                logger.critical(f"[{self.__class__.__name__}] Circuit OPEN! Caused by: {error}")
+                self._state = "OPEN"
+
+    def _handle_success(self) -> None:
+        """重置熔断状态。"""
+        if self._state != "CLOSED":
+            logger.info(f"[{self.__class__.__name__}] Circuit recovered to CLOSED.")
+        self._failure_count = 0
+        self._state = "CLOSED"
 
     @retry(
         stop=stop_after_attempt(5),
@@ -141,33 +181,29 @@ class BaseClient(ABC):
         reraise=True,
     )
     def _get(self, endpoint: str, params: dict[str, Any] | None = None) -> requests.Response:
-        """发送 GET 请求。
-
-        Args:
-            endpoint: API 端点 (相对路径)
-            params: 查询参数
-
-        Returns:
-            Response 对象
-
-        Raises:
-            requests.exceptions.HTTPError: 4xx/5xx 错误
-            requests.exceptions.RequestException: 网络错误
-        """
+        """发送 GET 请求。"""
+        self._check_circuit()
         self.limiter.wait_for_token()
         url = f"{self.base_url}/{endpoint}"
         try:
-            response = requests.get(url, headers=self.headers, params=params, timeout=self.timeout, verify=self.verify)
+            response = self._session.get(url, params=params, timeout=self.timeout)
             if response.status_code == 429:
                 retry_after = int(response.headers.get("Retry-After", 60))
                 logger.warning(f"Rate limited. Sleeping for {retry_after}s")
                 time.sleep(retry_after)
                 raise requests.exceptions.RequestException("Rate Limited")
             response.raise_for_status()
+            self._handle_success()
             return response
+        except (requests.exceptions.RequestException, ConnectionError) as e:
+            masked_headers = self._mask_headers(self.headers)
+            logger.error(f"Network error on {endpoint} with headers {masked_headers}: {e}")
+            self._handle_failure(e)
+            raise
         except requests.exceptions.HTTPError as e:
             if e.response.status_code in [401, 403]:
-                logger.error(f"Auth error: {e}")
+                masked_headers = self._mask_headers(self.headers)
+                logger.error(f"Auth error (401/403) on {endpoint} with headers {masked_headers}")
                 raise
             raise
 
@@ -184,29 +220,22 @@ class BaseClient(ABC):
         json: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
     ) -> requests.Response:
-        """发送 POST 请求。
-
-        Args:
-            endpoint: API 端点
-            data: 请求体数据 (bytes 或 string)
-            json: 请求体数据 (JSON)
-            headers: 额外的请求头
-
-        Returns:
-            Response 对象
-        """
+        """发送 POST 请求。"""
+        self._check_circuit()
         self.limiter.wait_for_token()
         url = f"{self.base_url}/{endpoint}"
-        req_headers = self.headers.copy() if self.headers else {}
-        if headers:
-            req_headers.update(headers)
         try:
-            response = requests.post(url, headers=req_headers, data=data, json=json, timeout=self.timeout, verify=self.verify)
+            response = self._session.post(url, data=data, json=json, timeout=self.timeout, headers=headers)
             response.raise_for_status()
+            self._handle_success()
             return response
+        except (requests.exceptions.RequestException, ConnectionError) as e:
+            self._handle_failure(e)
+            raise
         except requests.exceptions.HTTPError as e:
             if e.response.status_code in [401, 403]:
-                logger.error(f"Auth error: {e}")
+                masked_headers = self._mask_headers(self.headers)
+                logger.error(f"Auth error on POST {endpoint} with headers {masked_headers}")
                 raise
             raise
 
@@ -217,15 +246,21 @@ class BaseClient(ABC):
     )
     def _put(self, endpoint: str, data: dict[str, Any] | None = None) -> requests.Response:
         """发送 PUT 请求。"""
+        self._check_circuit()
         self.limiter.wait_for_token()
         url = f"{self.base_url}/{endpoint}"
         try:
-            response = requests.put(url, headers=self.headers, json=data, timeout=self.timeout, verify=self.verify)
+            response = self._session.put(url, json=data, timeout=self.timeout)
             response.raise_for_status()
+            self._handle_success()
             return response
+        except (requests.exceptions.RequestException, ConnectionError) as e:
+            self._handle_failure(e)
+            raise
         except requests.exceptions.HTTPError as e:
             if e.response.status_code in [401, 403]:
-                logger.error(f"Auth error: {e}")
+                masked_headers = self._mask_headers(self.headers)
+                logger.error(f"Auth error on PUT {endpoint} with headers {masked_headers}")
                 raise
             raise
 

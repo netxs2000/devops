@@ -74,15 +74,14 @@ class SonarQubeClient(BaseClient):
         )
 
     def test_connection(self) -> bool:
-        """测试 SonarQube 连接 (快速探测，不进行重试)。"""
+        """测试 SonarQube 连接 (快速探测)。"""
         try:
             url = f"{self.base_url}/system/status"
-            import requests
-
-            response = requests.get(url, headers=self.headers, timeout=5)
-            # SonarQube response is handled correctly here
+            # 19.6 使用池化 Session，并设置 5s 快速超时
+            response = self._session.get(url, timeout=5)
             return response.status_code == 200 and response.json().get("status") == "UP"
-        except Exception:
+        except Exception as e:
+            logger.warning(f"SonarQube connection test failed: {e}")
             return False
 
     def get_projects(self, page: int = 1, page_size: int = 100, organization: str | None = None) -> list[dict]:

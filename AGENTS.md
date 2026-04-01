@@ -10,7 +10,7 @@
 ## 1. 入场必读 (Initialization Checklist)
 每次新会话开始，或遭遇上下文重置时，你必须按顺序读取以下文件，这是安全理解或修改代码的前置条件：
 
-1. **状态基线**：读取 `progress.txt`，掌握当前开发阶段、阻塞点及会话交接记忆（Handover Memory）。
+1. **状态基线与决断回溯**：读取 `progress.txt` 与 `docs/session-history.log`，掌握当前开发阶段、最近重大决策背景及会话交接记忆（Handover Memory）。
 2. **架构宪法**：读取 `contexts.md`，掌握后端组件架构、数据库关联禁忌及全栈开发红线。
 3. **技术白皮书**：如任务涉及系统级模块或底层重构，阅读 `docs/architecture/Technical_Architecture.md` 对齐系统边界。
 
@@ -19,8 +19,12 @@
 
 - **变更追踪** ➜ 每完成一个环节或面临重大阻塞，立即更新 `progress.txt` (`[Doing]` -> `[Done]`)。
 - **踩坑与知识收割** ➜ 经历 2 次以上 trial & error 或发现难以预料的非标行为时，必须总结并追加到 `docs/lessons-learned.log`。
-- **会话历史留痕** ➜ 将单次交流的重大决断、演进思维梳理并记录至 `docs/session-history.log`（配合 `/doc-update` 工作流操作）。
+- **会话审计与交接 (Auto-Handover) [MANDATORY]** ➜ 会适结束或任务完成前，**必须主动**补齐 `docs/session-history.log` 以确保记录单次交流的重大决断与思维演进。
 - **数据字典对齐** ➜ 任何涉及 SQLAlchemy 模型 (`models.py`) 的增删改查，必须通过 `make docs` 等手段刷新 `docs/api/DATA_DICTIONARY.md` 以确保 Schema 真实性。
+- **进度归档守则 (Archiving Rule) [MANDATORY]** ➜ 为保持 `progress.txt` 极致整洁与上下文可见性的平衡，执行**“宽 5 滚 5”**原则：
+    - **归档阈值**：各分类（最近完成、接下来）建议累计项不超过 **5** 项。
+    - **全量归档触发**：当 `Recently Completed` **达到 5 项并产生第 6 项**时，必须将原有 5 项全部迁移至 `progress_archive.md`，以此实现 `progress.txt` 的周期性清空。
+    - **原子步进**：单个任务拆解的 Checkbox (原子子任务) 不属于独立归档项。
 
 ## 3. 专项开发禁区 (Domain Restrictions)
 

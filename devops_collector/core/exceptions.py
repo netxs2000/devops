@@ -33,3 +33,10 @@ class PermissionException(BusinessException):
 
     def __init__(self, message: str):
         super().__init__(message, code="FORBIDDEN", status_code=403)
+
+
+class CircuitBreakerOpenError(BusinessException):
+    """当熔断器处于开启状态时抛出的异常。"""
+
+    def __init__(self, message: str):
+        super().__init__(message, code="CIRCUIT_BREAKER_OPEN", status_code=503)

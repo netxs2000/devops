@@ -94,7 +94,7 @@ integration-tests:
     DB_URI: "postgresql://test_user:test_password@postgres:5432/devops_test"
   script:
     - pytest tests/integration/ -v --maxfail=1
-  allow_failure: true
+  allow_failure: false
   only:
     - merge_requests
     - main

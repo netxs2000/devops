@@ -195,10 +195,21 @@ def get_user_permissions(db: Session, user: User) -> list[str]:
     Returns:
         List[str]: 权限标识列表
     """
-    if not hasattr(user, "roles") or not user.roles:
-        return []
-
     permissions: set[str] = set()
+
+    # 1. 注入 Token 中携带的 transient 权限 (支持 JWT 注入模式)
+    token_permissions = getattr(user, "token_permissions", [])
+    token_roles = getattr(user, "token_roles", [])
+
+    if token_permissions:
+        permissions.update(token_permissions)
+
+    if ADMIN_ROLE_KEY in token_roles:
+        return [ADMIN_PERMISSION_WILDCARD]
+
+    # 2. 注入数据库中的角色权限
+    if not hasattr(user, "roles") or not user.roles:
+        return list(permissions)
     for role in user.roles:
         # 超管直接返回通配符
         if role.role_key == ADMIN_ROLE_KEY:

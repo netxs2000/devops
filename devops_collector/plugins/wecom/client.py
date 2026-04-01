@@ -11,29 +11,39 @@ from typing import Any
 
 import requests
 
+from devops_collector.core.base_client import BaseClient
+from devops_collector.core.exceptions import CircuitBreakerOpenError
+
 logger = logging.getLogger(__name__)
 
 
-class WeComClient:
+class WeComClient(BaseClient):
     """企业微信通讯录 API 客户端。
 
     职责边界：仅负责 HTTP 通信与 Token 管理。
-    数据持久化由 WeComWorker 通过 OrganizationService / IdentityManager 完成。
+    继承自 BaseClient，自动获得熔断、限流与指数退避重试能力。
     """
 
-    BASE_URL = "https://qyapi.weixin.qq.com/cgi-bin"
-
-    def __init__(self, corp_id: str, secret: str, verify_ssl: bool = True):
-        """初始化企业微信客户端。
-
-        Args:
-            corp_id: 企业 ID (在企业微信管理后台获取)。
-            secret: 通讯录同步 Secret。
-            verify_ssl: 是否验证 SSL 证书 (内网环境可关闭)。
-        """
+    def __init__(
+        self,
+        corp_id: str,
+        secret: str,
+        verify_ssl: bool = True,
+        rate_limit: int = 10,
+        failure_threshold: int = 5,
+        recovery_timeout: int = 60,
+    ):
+        """初始化企业微信客户端。"""
+        super().__init__(
+            base_url="https://qyapi.weixin.qq.com/cgi-bin",
+            auth_headers={},  # WeCom 使用 URL 参数传递 Token，无需 Header 认证
+            rate_limit=rate_limit,
+            verify=verify_ssl,
+            failure_threshold=failure_threshold,
+            recovery_timeout=recovery_timeout,
+        )
         self.corp_id = corp_id
         self.secret = secret
-        self.verify_ssl = verify_ssl
         self._access_token: str | None = None
         self._token_expires_at: float = 0
 
@@ -43,15 +53,15 @@ class WeComClient:
 
     def _refresh_token(self) -> None:
         """获取或刷新 Access Token (带缓存，有效期 7200 秒)。"""
-        url = f"{self.BASE_URL}/gettoken"
+        url = f"{self.base_url}/gettoken"
         params = {"corpid": self.corp_id, "corpsecret": self.secret}
-        resp = requests.get(url, params=params, verify=self.verify_ssl, timeout=10)
+        # 19.6 使用池化 Session 替换原生 requests 调用，确保连接复用
+        resp = self._session.get(url, params=params, timeout=10)
         resp.raise_for_status()
         data = resp.json()
         if data.get("errcode") != 0:
             raise ConnectionError(f"WeChat Token Error: {data.get('errmsg')}")
         self._access_token = data["access_token"]
-        # 提前 5 分钟刷新，避免边界失效
         self._token_expires_at = time.time() + data.get("expires_in", 7200) - 300
         logger.info("WeChat Access Token refreshed successfully.")
 
@@ -63,24 +73,30 @@ class WeComClient:
         return self._access_token
 
     def _get(self, path: str, params: dict | None = None) -> dict:
-        """统一的 GET 请求封装 (自动注入 Token + 401 重试)。"""
+        """封装 GET 请求，支持 Token 自动重试。"""
         params = params or {}
         params["access_token"] = self.access_token
-        url = f"{self.BASE_URL}{path}"
-        resp = requests.get(url, params=params, verify=self.verify_ssl, timeout=30)
-        resp.raise_for_status()
-        data = resp.json()
+        endpoint = path.lstrip("/")
 
-        # 42001 = token 已过期，自动刷新重试一次
-        if data.get("errcode") == 42001:
-            self._refresh_token()
-            params["access_token"] = self.access_token
-            resp = requests.get(url, params=params, verify=self.verify_ssl, timeout=30)
+        try:
+            # 调用基类方法，自动获得熔断与重试保护
+            resp = super()._get(endpoint, params=params)
             data = resp.json()
 
-        if data.get("errcode") not in (0, None):
-            logger.warning(f"WeChat API Error on {path}: {data}")
-        return data
+            # 处理 Token 过期 (42001)
+            if data.get("errcode") == 42001:
+                logger.info("WeCom Token expired (42001), refreshing...")
+                self._refresh_token()
+                params["access_token"] = self.access_token
+                resp = super()._get(endpoint, params=params)
+                data = resp.json()
+
+            if data.get("errcode") not in (0, None):
+                logger.warning(f"WeChat API Business Error on {path}: {data}")
+            return data
+
+        except (CircuitBreakerOpenError, requests.RequestException):
+            raise
 
     # ─────────────────────────────────────
     #  通讯录 - 部门

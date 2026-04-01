@@ -1,10 +1,11 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
-# 最后更新: 2026-03-31 | 操作者: Antigravity
+# 最后更新: 2026-04-01 10:45 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-[阶段：MDM 架构加固已完成] 所有插件的组织同步逻辑已统一迁移至 OrganizationService。
-企业微信 (WeCom) 插件骨架已构建完毕，且通过 safe_id 对全量插件执行了类型安全闭环。
-[Handover Memory] 系统已具备"最终一致性"自愈能力，后续新增插件需强制继承 BaseWorker。
+[阶段：RBAC 混合模型回滚修复与测试隔离完成] 
+1. 权限系统：实现了 JWT 瞬态属性与数据库 Role/Permission 的混合聚合逻辑。
+2. 依赖注入：完成了集成测试中全局 dependency_overrides 的 fixture 式隔离重构。
+3. 稳定性：Project Management 与 QA 集成测试套件实现 100% 通过率 (42/42)。
 
 🏗️ 进行中 (In Progress)
 1. [P2] 准备 WeCom 核心同步链路的集成测试环境。 (Doing)
@@ -13,13 +14,11 @@
 1. [P1] 运行 `alembic upgrade head` 应用血缘字段迁移 (68009a76ff76)。
 2. [P2] 生产环境一键部署演示 (`make deploy-prod`)。
 3. [P2] 配置 WeCom CORP_ID/SECRET 并执行首次全量同步。
-4. [P3] 优化 `uv` 与内部 HTTP 仓库的 User-Agent 兼容性。
+4. [P3] 优化 `uv` 与内部 HTTP 仓库 de User-Agent 兼容性。
 
 📋 最近完成 (Recently Completed)
-1. [P0] contexts.md §19: 防御性编程十大守则写入——建立系统级防御红线。 (2026-03-31)
-2. [P0] contexts.md §17.2: 企业级 MDM 六大金科玉律写入——固化核心治理宪法。 (2026-03-31)
-3. [P0] 创建 OrganizationService 元架构与两阶段对齐协议——解决组织树递归死锁。 (2026-03-31)
-4. [P1] WeCom 插件骨架与 Spike 设计方案落地——支持通讯录全量采集。 (2026-03-31)
-5. [P2] 全量插件 Worker 层执行 ID 类型安全加固 (safe_id 路由防护)。 (2026-03-31)
+1. [RBAC] 修复集成测试中的权限回滚与依赖污染，全量集成测试恢复 100% 通过。 (2026-04-01)
+2. [Hardening] 完成 BaseClient 韧性工程加固（熔断/Session池/日志脱敏）及测试脚本修复。 (2026-03-31)
+3. [Hygiene] 执行全量归档并固化“宽 5 滚 5”规则到 AGENTS.md。 (2026-03-31)
 
-签名：Antigravity-AI (2026-03-31T15:37+08:00)
+签名：Antigravity-AI (2026-04-01T10:45+08:00)

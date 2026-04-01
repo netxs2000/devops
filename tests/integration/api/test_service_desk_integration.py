@@ -24,15 +24,16 @@ def session():
 
 @pytest.fixture
 def mock_user(session):
-    dept = Organization(org_id="DEPT001", org_name="IT Dept")
+    dept = Organization(org_code="DEPT001", org_name="IT Dept")
     session.add(dept)
+    session.flush()  # To get dept.id
 
     user = User(
         global_user_id=uuid.uuid4(),
         username="int_test_user",
         primary_email="int_test@example.com",
         full_name="Integration User",
-        department_id="DEPT001",
+        department_id=dept.id,
     )
     session.add(user)
     session.commit()

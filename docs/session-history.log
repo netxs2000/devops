@@ -8,7 +8,10 @@
 | 60ac0113... | 2026-03-19 | 18:20 | 40a8547 | ONGOING | 修复 Admin 模块测试 (9/9 通过)，定位 Service Desk FK 报错根因。下一步：修复 service_desk 测试中的 Org 预置。 |
 | 22fbd8d3... | 2026-03-20 | 22:20 | 04c87ee | SUCCESS | 实现 Option A 架构解耦，落地 Promotion Service 自动化转正；身份对齐 UUID 闭环。 |
 | bd608b61... | 2026-03-21 | 18:50 | 0a6d999 | SUCCESS | 修复 BaseWorker/CommitMixin SQLite 兼容性，对齐 GitLab 同步集成测试与单元测试。 |
-| c7e1a8f9... | 2026-03-22 | N/A | N/A | TODO | 准备启动禅道插件逻辑对齐 (ZenTao Issue/Task Staging 剥离)。 |
+| a0ce3113... | 2026-03-31 | 15:42 | f8a531e | SUCCESS | 实现 OrganizationService 元架构解耦与两阶段对齐协议；防御性编程守则入宪；修复 PS 陷阱。 |
+| 7c0b8b39... | 2026-03-31 | 16:05 | N/A (Local) | SUCCESS | 确立归档红线（宽 5 滚 5）；将会话审计由“被动触发”升级为“DoD 强制主动更新”规程。 |
+| 7c0b8b39... | 2026-03-31 | 17:45 | N/A (Local) | SUCCESS | 实现 BaseClient 韧性加固（熔断/Session池/日志脱敏）；解决 tenacity 重试导致的测试超时。 |
+| 7c0b8b39... | 2026-04-01 | 02:40 | N/A (Local) | SUCCESS | 修复 RBAC 混合模型回滚与集成测试隔离污染（42/42 通过）；实现 JWT 瞬态权限聚合逻辑。 |
 
 ---
 *End of Log*

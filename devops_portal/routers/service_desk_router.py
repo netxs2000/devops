@@ -32,7 +32,7 @@ async def list_business_projects(current_user: User = Depends(get_current_user),
     # 查找所有已建立关联且项目有受理仓库的产品
     products = (
         db.query(Product)
-        .join(ProjectProductRelation, Product.product_code == ProjectProductRelation.product_id)
+        .join(ProjectProductRelation, Product.id == ProjectProductRelation.product_id)
         .join(ProjectMaster, ProjectProductRelation.project_id == ProjectMaster.id)
         .filter(Product.is_current.is_(True), ProjectMaster.is_current.is_(True), ProjectMaster.lead_repo_id.is_not(None))
         .distinct()

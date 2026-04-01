@@ -35,23 +35,22 @@ class ZenTaoClient(BaseClient):
 
     def _refresh_token(self) -> bool:
         """使用账号密码刷新 Token。"""
-        print(f"DEBUG: _refresh_token called, account={getattr(self, 'account', None)}")
         if not self.account or not self.password:
             return False
         try:
             url = f"{self.base_url}/tokens"
             logger.info(f"Refreshing ZenTao token for {self.account}...")
-            # 注意：使用 requests 直接调用以避免重入
-            import requests
-
-            resp = requests.post(url, json={"account": self.account, "password": self.password}, verify=False, timeout=10)
+            # 19.6 使用池化 Session 替换原生 requests 调用
+            resp = self._session.post(url, json={"account": self.account, "password": self.password}, timeout=10)
             if resp.status_code in [200, 201]:
                 new_token = resp.json().get("token")
                 if new_token:
                     self.headers["Token"] = new_token
+                    # 同步更新 Session Headers
+                    self._session.headers.update(self.headers)
                     logger.info("Successfully refreshed ZenTao token.")
                     return True
-            logger.error(f"Failed to refresh ZenTao token: {resp.status_code} {resp.text}")
+            logger.error(f"Failed to refresh ZenTao token: {resp.status_code}")
         except Exception as e:
             logger.error(f"Error refreshing ZenTao token: {e}")
         return False
