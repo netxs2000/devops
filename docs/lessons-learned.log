@@ -1,6 +1,10 @@
 # DevOps 平台 Lessons Learned Log
 
 > **说明**：本文件由 AI 自动维护，按时间倒序记录实战中发现的隐蔽风险与排障结论。
+> **【强制更新规范】**
+> 1. **单一主表原则**：所有新增经验必须**倒序**统一追加到下方的 Markdown 主表格中。**绝对严禁**在主表格之外另起任何零散的 `列表`、`次级小表格` 或 `### 分割的小标题`。
+> 2. **记录门槛**：不记成功的流水账，只记录由于框架机制、脏数据或跨端约束导致的非直觉类障碍。
+> 3. **字段约定**：The Defense 栏必须使用粗体加粗一句话结论，随后跟上落地措施。
 
 | Timestamp | Domain | Phenomenon | Root Cause | Universal Rule (The Defense) |
 | :--- | :--- | :--- | :--- | :--- |
@@ -80,21 +84,9 @@
 | 2026-04-01 | Testing/Mocking | 鉴权守卫中的防御性 `getattr(user, "roles", None)` 未奏效，抛出非预期的子 Mock 报错 | Python 的 `MagicMock` 在被请求不存在的属性时，默认会凭空制造出一个巨大的子 Mock 对象返回！这意味着基于 `getattr(..., default)` 的 fallback 逻辑永远抢不到控制权（因为总能拿到一个 mock 对象而非 None），进而在后续运算时导致类型错误。 | **魔法对象反射陷阱与硬鉴权 (MagicMock Reflection Trap)**：在权限、路由等强安全性的分发层，针对多态入参进行检查时，必须优先用真正的类型检查器 `isinstance(user, Model)`；或者改用防篡改的推导判断（如显式的预检查或提前把 mock 降级）。若确实要查对象属性，测试框架必须在 mock 阶段显式赋予缺失的属性为 `None` 或用 `spec` 限定形态，杜绝 Mock 的“幽灵增殖”。 |
 | 2026-04-02 | Testing/Fixture | SQL 报错 `IntegrityError: UNIQUE constraint failed` 及 403 权限越权测试验证失效 | `conftest.py` 中全量启用了真实 DB 注入的 `authenticated_client`（不仅 mock，还把带 `SYSTEM_ADMIN` 角色的用户写入 DB）。局部文件却仍使用 `autouse` 夹具尝试插入同名角色，导致 SQLite 唯一键命中冲突。同时，由于依赖深度覆盖了 `get_current_user`，底层强拦截了 Token 解析逻辑，导致那些通过 Mock Token 测试 403 拦截的用例全部通过而报 FAIL（响应变成了 200）。 | **真实 DB 与 Mock 的隔离重构 (True DB vs True Mock)**：1. 全局 Fixture 一旦操作 DB 构建环境，局部组测试必须无条件清理自行干预此实体的 `autouse` 夹具。2. 当 API Token 入口被通过框架级的 Dependency Override 接管后，若需测试 403 拦截，应当以真实 DB 操作模拟：直接在测试函数内将 `mock_user.roles = []` 然后 `db.commit()`，以此在框架层级实现更真实贴近业务逻辑的 RBAC 拦截验证，而非去 mock 空的 jwt token 解析。 |
 
----
-
-- **Alembic 迁移空库报错 (2026-03-17)**: 
-    - **现象**: 在空数据库上执行 `alembic upgrade head` 时，若脚本包含 `drop_table` 但表不存在，会导致 `UndefinedTable` 错误中断流水线。
-    - **原因**: Autogenerate 脚本捕获了与当前模型无关但存在于旧 DB 中的表。
-    - **对策**: 在 `upgrade()` 中使用 `inspector.get_table_names()` 预检，或使用 `stamp head` 强行跳过已由 `Base.metadata.create_all` 构建的初始态。
-
-### 2026-04-01 — Mock/测试工具与 ORM 不兼容的坑
-
-| 2026-04-01 | Testing | Jira Client 测试 patch `requests.get` 但实际走 `requests.Session.get` | BaseClient 使用 `requests.Session()` 池化连接，`_get` 方法调用 `self._session.get()`，不再走全局 `requests.get` | 凡是继承 BaseClient 的客户端，测试 mock 路径必须是 `requests.Session.get`/`.post` 而非 `requests.get`。提交新 Client 测试前强制 grep 确认 patch 路径。 |
-
-### 2026-04-01 — 测试 Fixture 孤儿引用
-
-| 2026-04-01 | Testing | Portal 路由测试引用 `authenticated_client` fixture 但全仓库无定义 | 测试编写时假设 conftest 会提供该 fixture，但实际从未实现，一直处于 ERROR 状态 | 新增测试文件前，必须先确认所依赖的 fixture 已在对应 conftest.py 中定义。CI 应将 ERROR 视为 FAIL 阻断合并。 |
+| 2026-04-01 | Testing/Mock | Jira Client 测试 patch `requests.get` 但实际走 `requests.Session.get` 导致拦截失败 | BaseClient 使用 `requests.Session()` 池化连接，内部调用不再走全局 `requests.get`。 | **统一入口 Mock**：凡是继承 BaseClient 的客户端，测试 mock 路径必须为 `requests.Session.get`/`.post`。提交客户端改动前强制匹配 patch 命名。 |
+| 2026-04-01 | Testing/Fixture | Portal 测试引用 `authenticated_client` 夹具但全仓库无定义，一直处于 ERROR | 测试编写时理所当然地假设 conftest 后续会提供该夹具，但实际被遗忘，导致测试假死。 | **僵尸夹具排查**：依赖链必须闭环。任何新增夹具必须就地验证。CI 必须将 ERROR 状态等价于 FAIL 进行阻断。 |
+| 2026-03-17 | Migration/Alembic | Alembic 迁移空库时报错 `UndefinedTable` 中断 | Autogenerate 脚本自动生成了 `drop_table` 语句，但空建置的初始库中本不存在该旧表。 | **初始物理态对齐预检**：在 `upgrade()` 中必须使用 `inspector.get_table_names()` 预探物理表存活，或初始构建后用 `stamp head` 同步当前状态。 |
 
 ---
-
 *End of Log*
