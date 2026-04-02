@@ -6,7 +6,7 @@ description: [lint] 执行全项目代码质量审计，包含 Ruff 静态检查
 
 该工作流用于在合并或交付前，对项目进行全方位"宪法"合规性检查。
 
-> **工具链**：项目已统一使用 **Ruff** 作为唯一的 Lint + Format 工具（参见 `contexts.md` 第 18 章）。
+> **工具链**：项目已统一使用 **Ruff** 作为唯一的 Lint + Format 工具（参见 [`contexts.md#18`](contexts.md#L568)）。
 > 所有检查以根目录 `ruff.toml` 为准。
 
 ## 审计步骤 (Audit Steps)
@@ -34,9 +34,10 @@ description: [lint] 执行全项目代码质量审计，包含 Ruff 静态检查
    ```powershell
    python scripts/lint_frontend.py
    ```
+   - **红线**：若文件超限，**严禁**直接通过 `# noqa` 绕过，必须在报告中提出【核心逻辑拆分建议】。
 
-4. **全链路对齐审计 (Naming Alignment)**
-   检查新增文件是否包含正确的业务域前缀：
+4. **全链路对齐审计 (Naming Alignment Audit)**
+   强制核对 [`contexts.md#11.1`](contexts.md#L323) 定义的业务域前缀：
    - Service Desk: `sd_`
    - Administration: `adm_`
    - Project Management: `pm_`
