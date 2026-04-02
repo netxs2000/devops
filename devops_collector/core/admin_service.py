@@ -13,7 +13,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from devops_collector.core.organization_service import OrganizationService
 from devops_collector.models.base_models import (
@@ -28,6 +28,7 @@ from devops_collector.models.base_models import (
 )
 from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_portal import schemas
+from devops_collector.models.base_models import IdentityMapping
 
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,52 @@ class AdminService:
             teams=teams,
         )
 
+    def list_identity_mappings(self) -> list[schemas.IdentityMappingView]:
+        """获取所有外部身份映射。"""
+        mappings = self.session.query(IdentityMapping).options(joinedload(IdentityMapping.user)).all()
+        results = []
+        for m in mappings:
+            view = schemas.IdentityMappingView.model_validate(m)
+            view.user_name = m.user.full_name if m.user else "Unknown"
+            view.hr_relationship = m.user.hr_relationship if m.user else None
+            results.append(view)
+        return results
+
+    def create_identity_mapping(self, payload: schemas.IdentityMappingCreate) -> int:
+        """创建新的外部身份映射。"""
+        new_mapping = IdentityMapping(
+            global_user_id=payload.global_user_id,
+            source_system=payload.source_system,
+            external_user_id=payload.external_user_id,
+            external_username=payload.external_username,
+            external_email=payload.external_email,
+        )
+        self.session.add(new_mapping)
+        self.session.commit()
+        return new_mapping.id
+
+    def delete_identity_mapping(self, mapping_id: int) -> bool:
+        """删除指定的身份映射。"""
+        mapping = self.session.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
+        if not mapping:
+            return False
+        self.session.delete(mapping)
+        self.session.commit()
+        return True
+
+    def update_identity_mapping_status(self, mapping_id: int, status: str) -> str:
+        """更新身份映射的状态。"""
+        mapping = self.session.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
+        if not mapping:
+            return None
+        mapping.mapping_status = status
+        self.session.commit()
+        return mapping.mapping_status
+
+    def list_teams(self) -> list[Team]:
+        """列出所有虚拟业务团队。"""
+        return self.session.query(Team).options(selectinload(Team.members)).all()
+
     def create_team(self, data: schemas.TeamCreate) -> Team:
         """创建虚拟团队。"""
         new_team = Team(
@@ -123,6 +170,75 @@ class AdminService:
             mdm_p.lead_repo_id = repo.id
         self.session.commit()
         return True
+
+    def set_lead_repo(self, project_code: str, gitlab_project_id: int) -> bool:
+        """设置主项目的受理中心仓库。"""
+        mdm_p = self.session.query(ProjectMaster).filter(ProjectMaster.project_code == project_code).first()
+        if not mdm_p:
+            return False
+        mdm_p.lead_repo_id = gitlab_project_id
+        self.session.commit()
+        return True
+
+    def list_unlinked_repos(self) -> list[dict]:
+        """列出尚未关联主项目的 GitLab 仓库。"""
+        repos = self.session.query(GitLabProject).filter(GitLabProject.mdm_project_id.is_(None)).all()
+        return [{"id": r.id, "name": r.name, "path": r.path_with_namespace} for r in repos]
+
+    def list_mdm_projects(self, filter_obj, current_user) -> list[dict]:
+        """获取所有业务主项目。"""
+        from devops_portal.dependencies import DataScopeFilter
+        query = (
+            self.session.query(ProjectMaster)
+            .options(
+                joinedload(ProjectMaster.organization),
+                selectinload(ProjectMaster.gitlab_repos),
+                selectinload(ProjectMaster.product_relations).joinedload(ProjectProductRelation.product),
+            )
+            .filter(ProjectMaster.is_current)
+        )
+        query = filter_obj.apply(self.session, query, ProjectMaster, current_user, dept_field="org_id")
+        projects = query.all()
+        return [
+            {
+                "project_id": p.project_code,
+                "project_name": p.project_name,
+                "project_type": p.project_type,
+                "status": p.status,
+                "org_name": p.organization.org_name if p.organization else "未指派",
+                "repo_count": len(p.gitlab_repos),
+                "lead_repo_id": p.lead_repo_id,
+                "products": [
+                    {
+                        "product_id": r.product.product_code,
+                        "product_name": r.product.product_name,
+                        "relation_type": r.relation_type,
+                    }
+                    for r in p.product_relations
+                    if r.product
+                ],
+            }
+            for p in projects
+        ]
+
+    def create_mdm_project(self, payload: Any) -> str:
+        """创建新的业务主项目。"""
+        new_p = ProjectMaster(
+            project_code=payload.project_code,
+            project_name=payload.project_name,
+            org_id=payload.org_id,
+            project_type=payload.project_type,
+            status=payload.status,
+            pm_user_id=payload.pm_user_id,
+            plan_start_date=payload.plan_start_date,
+            plan_end_date=payload.plan_end_date,
+            budget_code=payload.budget_code,
+            budget_type=payload.budget_type,
+            description=payload.description,
+        )
+        self.session.add(new_p)
+        self.session.commit()
+        return new_p.project_code
 
     def list_products(self) -> list[Product]:
         """列出所有产品。"""
@@ -214,6 +330,17 @@ class AdminService:
             manager_raw_id=str(data.manager_user_id) if data.manager_user_id else None,
             source="admin_ui"
         )
+
+    def export_organizations(self) -> str:
+        """导出所有组织机构为 CSV。"""
+        orgs = self.session.query(Organization).options(joinedload(Organization.manager)).filter(Organization.is_current).all()
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["org_code", "org_name", "org_level", "parent_org_id", "负责人"])
+        for o in orgs:
+            writer.writerow([o.org_code, o.org_name, o.org_level, o.parent_org_id, o.manager.full_name if o.manager else ""])
+
+        return output.getvalue()
 
     def import_users(self, csv_content: str) -> schemas.ImportSummary:
         """从 CSV 字符串导入用户。"""
@@ -587,3 +714,20 @@ class AdminService:
                 }
             )
         return results
+
+    def export_users(self) -> str:
+        """导出所有用户为 CSV。"""
+        users = self.session.query(User).filter(User.is_current).all()
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["global_user_id", "employee_id", "full_name", "email", "department_id", "人事关系"])
+        for u in users:
+            writer.writerow([str(u.global_user_id), u.employee_id, u.full_name, u.primary_email, u.department_id, u.hr_relationship])
+        return output.getvalue()
+
+    def list_users(self, filter_obj, current_user) -> list[dict]:
+        """获取所有全局用户简要列表。"""
+        query = self.session.query(User).filter(User.is_current)
+        query = filter_obj.apply(self.session, query, User, current_user, dept_field="department_id")
+        users = query.all()
+        return [{"user_id": str(u.global_user_id), "full_name": u.full_name, "email": u.primary_email} for u in users]

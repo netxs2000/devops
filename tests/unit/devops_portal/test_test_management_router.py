@@ -84,14 +84,11 @@ async def test_get_test_summary(authenticated_client, mock_test_service):
 
 
 @pytest.mark.asyncio
-async def test_import_test_cases_forbidden(authenticated_client, mock_test_service, mock_user, monkeypatch):
-    # Trigger 403 by mocking the token payload to have NO roles
-    token_payload = {
-        "sub": mock_user.primary_email,
-        "roles": [],  # No roles
-        "permissions": [],
-    }
-    monkeypatch.setattr(auth_service, "auth_decode_access_token", lambda t: token_payload if t == "mock-token" else None)
+async def test_import_test_cases_forbidden(authenticated_client, mock_test_service, mock_user, db_session):
+    # Trigger 403 by removing all roles from the mock_user in the database
+    mock_user.roles = []
+    db_session.add(mock_user)
+    db_session.commit()
 
     files = {"file": ("test.csv", b"title,priority\nT1,P1", "text/csv")}
     response = authenticated_client.post("/test-management/projects/1/test-cases/import", files=files)

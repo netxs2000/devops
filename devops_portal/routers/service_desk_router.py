@@ -9,6 +9,10 @@ from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.auth.auth_dependency import get_user_gitlab_client
 from devops_collector.models.base_models import IdentityMapping, ProjectMaster, User
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+from devops_collector.core.service_desk_service import ServiceDeskCoreService
+
+def get_sd_core_service(db: Session = Depends(get_auth_db)) -> ServiceDeskCoreService:
+    return ServiceDeskCoreService(db)
 from devops_collector.plugins.gitlab.service_desk_service import ServiceDeskService
 from devops_collector.plugins.gitlab.test_management_service import (
     TestManagementService as TestingService,
@@ -22,50 +26,31 @@ logger = logging.getLogger(__name__)
 
 
 @router.get("/business-projects")
-async def list_business_projects(current_user: User = Depends(get_current_user), db: Session = Depends(get_auth_db)):
+async def list_business_projects(current_user: User = Depends(get_current_user), service: ServiceDeskCoreService = Depends(get_sd_core_service)):
     """获取用户可见业务系统列表。
-
-    逻辑：拉取所有生效产品，并确保该产品下至少关联了一个配置了受理仓库的项目。
     """
-    from devops_collector.models.base_models import Product, ProjectProductRelation
-
-    # 查找所有已建立关联且项目有受理仓库的产品
-    products = (
-        db.query(Product)
-        .join(ProjectProductRelation, Product.id == ProjectProductRelation.product_id)
-        .join(ProjectMaster, ProjectProductRelation.project_id == ProjectMaster.id)
-        .filter(Product.is_current.is_(True), ProjectMaster.is_current.is_(True), ProjectMaster.lead_repo_id.is_not(None))
-        .distinct()
-        .all()
-    )
-
-    # 如果没有配置了受理中心的产品，则降级返回所有产品（为了让下拉框不为空，方便后期配置）
-    if not products:
-        products = db.query(Product).filter(Product.is_current.is_(True)).all()
-        return [{"id": p.product_code, "name": p.product_name, "description": p.product_description, "status": "no_lead"} for p in products]
-
-    return [{"id": p.product_code, "name": p.product_name, "description": p.product_description} for p in products]
+    return service.list_business_projects()
 
 
 @router.post("/upload")
 async def upload_service_desk_attachment(
     mdm_id: str,
     file: UploadFile = File(...),
-    db: Session = Depends(get_auth_db),
+    service: ServiceDeskCoreService = Depends(get_sd_core_service),
     client: GitLabClient = Depends(get_user_gitlab_client),
 ):
     """基于 MDM 项目 ID 的附件上传路由。"""
     try:
-        mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_code == mdm_id).first()
-        if not mdm_p or not mdm_p.lead_repo_id:
+        lead_repo_id = service.get_lead_repo_for_project(mdm_id)
+        if not lead_repo_id:
             raise HTTPException(status_code=400, detail="该项目未配置受理仓库")
 
-        project = client.get_project(mdm_p.lead_repo_id)
+        project = client.get_project(lead_repo_id)
         if not project:
             raise HTTPException(status_code=404, detail="Lead project repo not found")
 
         content = await file.read()
-        uploaded_file = client._post(f"projects/{mdm_p.lead_repo_id}/uploads", files={"file": (file.filename, content)}).json()
+        uploaded_file = client._post(f"projects/{lead_repo_id}/uploads", files={"file": (file.filename, content)}).json()
         return {"markdown": uploaded_file.get("markdown"), "url": uploaded_file.get("url")}
     except HTTPException:
         raise
@@ -79,34 +64,19 @@ async def submit_bug_via_service_desk(
     mdm_id: str,
     data: schemas.ServiceDeskBugSubmit,
     current_user=Depends(get_current_user),
+    service: ServiceDeskCoreService = Depends(get_sd_core_service),
     db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client),
 ):
     """【三层映射】通过产品 ID 查找到归属项目，并通过其受理中心提交 Bug。"""
-    from devops_collector.models.base_models import Product, ProjectProductRelation
-
     try:
-        # 1. 尝试通过 product_code 找到关联项目且配置了受理仓库的项目
-        mdm_p = (
-            db.query(ProjectMaster)
-            .join(ProjectProductRelation, ProjectMaster.id == ProjectProductRelation.project_id)
-            .join(Product, ProjectProductRelation.product_id == Product.id)
-            .filter(
-                Product.product_code == mdm_id,
-                ProjectMaster.lead_repo_id.is_not(None),
-                ProjectMaster.is_current.is_(True),
-            )
-            .first()
-        )
-
-        # 2. 兜底策略：如果产品没有配置受理中心，则报错，要求管理员先配置
+        mdm_p = service.get_lead_repo_for_product(mdm_id)
         if not mdm_p or not mdm_p.lead_repo_id:
-            # 记录详细日志以便排查
             logger.error(f"Submission failed: Product {mdm_id} has no lead_repo configured.")
             raise HTTPException(status_code=400, detail="该业务系统当前未配置线上受理中心，请通过线下渠道联系 RD 负责人或联系管理员。")
 
-        service = ServiceDeskService(client)
-        ticket = await service.create_ticket(
+        sd_service = ServiceDeskService(client)
+        ticket = await sd_service.create_ticket(
             db=db,
             project_id=mdm_p.lead_repo_id,
             title=f"[{mdm_p.project_name}] {data.title}",
@@ -135,31 +105,18 @@ async def submit_requirement_via_service_desk(
     mdm_id: str,
     data: schemas.ServiceDeskRequirementSubmit,
     current_user=Depends(get_current_user),
+    service: ServiceDeskCoreService = Depends(get_sd_core_service),
     db: Session = Depends(get_auth_db),
     client: GitLabClient = Depends(get_user_gitlab_client),
 ):
     """【三层映射】通过产品 ID 查找到归属项目，并通过其受理中心提交需求。"""
-    from devops_collector.models.base_models import Product, ProjectProductRelation
-
     try:
-        # 相同逻辑查找归属项目
-        mdm_p = (
-            db.query(ProjectMaster)
-            .join(ProjectProductRelation, ProjectMaster.id == ProjectProductRelation.project_id)
-            .join(Product, ProjectProductRelation.product_id == Product.id)
-            .filter(
-                Product.product_code == mdm_id,
-                ProjectMaster.lead_repo_id.is_not(None),
-                ProjectMaster.is_current.is_(True),
-            )
-            .first()
-        )
-
+        mdm_p = service.get_lead_repo_for_product(mdm_id)
         if not mdm_p or not mdm_p.lead_repo_id:
             raise HTTPException(status_code=400, detail="该业务系统尚未开通线上需求提报流程（未配置受理中心）。")
 
-        service = ServiceDeskService(client)
-        ticket = await service.create_ticket(
+        sd_service = ServiceDeskService(client)
+        ticket = await sd_service.create_ticket(
             db=db,
             project_id=mdm_p.lead_repo_id,
             title=f"[{mdm_p.project_name}] {data.title}",
@@ -274,45 +231,11 @@ async def get_my_tickets(current_user=Depends(get_current_user), db: Session = D
 async def list_all_users_for_admin(
     status: str | None = None,
     admin_user: User = Depends(PermissionRequired(["USER:MANAGE"])),
-    db: Session = Depends(get_auth_db),
+    service: ServiceDeskCoreService = Depends(get_sd_core_service),
 ):
     """[管理后台] 获取所有用户申请记录及统计信息。"""
     # 已通过 PermissionRequired 校验权限
-
-    query = db.query(User).filter(User.is_current)
-    if status == "pending":
-        query = query.filter(User.is_active.is_(False), User.is_survivor.is_(True))  # survivor and inactive means pending
-    elif status == "approved":
-        query = query.filter(User.is_active.is_(True))
-    elif status == "rejected":
-        query = query.filter(User.is_active.is_(False), User.is_survivor.is_(False))  # not active and not survivor means rejected
-
-    users = query.all()
-
-    # 获取统计信息
-    total = db.query(User).filter(User.is_current).count()
-    pending = db.query(User).filter(User.is_current, User.is_active.is_(False), User.is_survivor.is_(True)).count()
-    approved = db.query(User).filter(User.is_current, User.is_active.is_(True)).count()
-    rejected = db.query(User).filter(User.is_current, User.is_active.is_(False), User.is_survivor.is_(False)).count()
-
-    results = []
-    for u in users:
-        u_status = "approved" if u.is_active else ("pending" if u.is_survivor else "rejected")
-        # 获取关联的 GitLab ID
-        gitlab_mapping = db.query(IdentityMapping).filter(IdentityMapping.global_user_id == u.global_user_id, IdentityMapping.source_system == "gitlab").first()
-
-        results.append(
-            {
-                "name": u.full_name,
-                "email": u.primary_email,
-                "company": u.department.org_name if u.department else "未知",
-                "created_at": u.created_at.isoformat(),
-                "status": u_status,
-                "gitlab_user_id": gitlab_mapping.external_user_id if gitlab_mapping else None,
-            }
-        )
-
-    return {"stats": {"total": total, "pending": pending, "approved": approved, "rejected": rejected}, "users": results}
+    return service.list_all_users_for_admin(status)
 
 
 @router.post("/admin/approve-user")
@@ -322,36 +245,11 @@ async def approve_user_application(
     admin_user: User = Depends(PermissionRequired(["USER:MANAGE"])),
     reject_reason: str | None = None,
     gitlab_user_id: str | None = None,
-    db: Session = Depends(get_auth_db),
+    service: ServiceDeskCoreService = Depends(get_sd_core_service),
 ):
     """[管理后台] 审批用户申请并绑定身份标识。"""
     # 已通过 PermissionRequired 校验权限
-
-    user = db.query(User).filter(User.primary_email == email, User.is_current).first()
-    if not user:
+    success = service.approve_user_application(email, approved, gitlab_user_id)
+    if not success:
         raise HTTPException(status_code=404, detail="User not found")
-
-    if approved:
-        user.is_active = True
-        user.is_survivor = True
-        # 如果提供了 GitLab ID，则创建或更新身份映射
-        if gitlab_user_id:
-            mapping = db.query(IdentityMapping).filter(IdentityMapping.global_user_id == user.global_user_id, IdentityMapping.source_system == "gitlab").first()
-            if mapping:
-                mapping.external_user_id = gitlab_user_id
-                mapping.mapping_status = "VERIFIED"
-            else:
-                mapping = IdentityMapping(
-                    global_user_id=user.global_user_id,
-                    source_system="gitlab",
-                    external_user_id=gitlab_user_id,
-                    mapping_status="VERIFIED",
-                )
-                db.add(mapping)
-    else:
-        user.is_active = False
-        user.is_survivor = False  # 记录为拒绝状态
-        # 实际可以在 User 模型记录 reject_reason，这里简单处理
-
-    db.commit()
     return {"status": "success"}

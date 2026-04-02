@@ -24,7 +24,7 @@ class TestJiraClient(unittest.TestCase):
         self.base_url = "https://jira.fake.com"
         self.client = JiraClient(self.base_url, "test@mail.com", "token")
 
-    @patch("requests.get")
+    @patch("requests.Session.get")
     def test_get_projects(self, mock_get):
         '''"""TODO: Add description.
 
@@ -44,7 +44,7 @@ class TestJiraClient(unittest.TestCase):
         self.assertEqual(len(projects), 1)
         self.assertEqual(projects[0]["key"], "PROJ1")
 
-    @patch("requests.get")
+    @patch("requests.Session.get")
     def test_get_issues_pagination(self, mock_get):
         '''"""TODO: Add description.
 

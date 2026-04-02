@@ -13,7 +13,10 @@ from devops_collector.core import security
 from devops_collector.models import User
 from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.plugins.gitlab.iteration_plan_service import IterationPlanService
-from devops_collector.plugins.gitlab.models import GitLabMilestone, GitLabProject
+from devops_collector.core.iteration_service import IterationCoreService
+
+def get_iteration_core_service(db: Session = Depends(get_auth_db)) -> IterationCoreService:
+    return IterationCoreService(db)
 from devops_portal.dependencies import get_current_user
 
 
@@ -66,21 +69,15 @@ def get_iteration_plan_service(db: Session = Depends(get_auth_db), client: GitLa
 
 
 @router.get("/projects")
-async def list_projects(db: Session = Depends(get_auth_db), current_user: User = Depends(get_current_user)):
+async def list_projects(service: IterationCoreService = Depends(get_iteration_core_service), current_user: User = Depends(get_current_user)):
     """获取所有可用项目列表。"""
-    query = db.query(GitLabProject)
-    query = security.apply_plugin_privacy_filter(db, query, GitLabProject, current_user)
-    projects = query.all()
-    return [{"id": p.id, "name": p.name, "path": p.path_with_namespace} for p in projects]
+    return service.list_projects(current_user)
 
 
 @router.get("/projects/{project_id}/milestones")
-async def list_milestones(project_id: int, db: Session = Depends(get_auth_db), current_user: User = Depends(get_current_user)):
+async def list_milestones(project_id: int, service: IterationCoreService = Depends(get_iteration_core_service), current_user: User = Depends(get_current_user)):
     """获取指定项目的里程碑列表。"""
-    milestones = (
-        db.query(GitLabMilestone).filter(GitLabMilestone.project_id == project_id, GitLabMilestone.state == "active").order_by(GitLabMilestone.due_date).all()
-    )
-    return [{"id": m.id, "title": m.title, "due_date": m.due_date} for m in milestones]
+    return service.list_milestones(project_id)
 
 
 @router.post("/projects/{project_id}/milestones")

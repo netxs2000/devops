@@ -1,24 +1,27 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
-# 最后更新: 2026-04-01 10:45 | 操作者: Antigravity
+# 最后更新: 2026-04-02 09:20 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-[阶段：RBAC 混合模型回滚修复与测试隔离完成] 
-1. 权限系统：实现了 JWT 瞬态属性与数据库 Role/Permission 的混合聚合逻辑。
-2. 依赖注入：完成了集成测试中全局 dependency_overrides 的 fixture 式隔离重构。
-3. 稳定性：Project Management 与 QA 集成测试套件实现 100% 通过率 (42/42)。
+[阶段：DB Migration 和核心业务联调]
+1. Router-Service 层解耦已全面完成，且所有单元测试/集成测试已通过（修复了大量历史遗留 fixture 缺失及冲突断言问题）。
+2. 下一步开始应用挂起的数据库 Migration（血缘字段提取迁移），并转向 WeCom 同步场景的实战演练。
+
+⚠️ 交接备忘 (Handover Notes for Next Session)
+- 历史技术债已一并清理完毕：为 Portal 路由测试彻底落实了合规的 `authenticated_client` 并铲除了由于冲突导致角色创建的 `IntegrityError`。
+- 本次 Service 层重构代码已准备好 Commit 并合并了相关文档修改，请进行 Git 提交。
 
 🏗️ 进行中 (In Progress)
-1. [P2] 准备 WeCom 核心同步链路的集成测试环境。 (Doing)
+1. [P2] 运行 `alembic upgrade head` 应用血缘字段迁移 (68009a76ff76)。 (Doing)
 
 📅 接下来 (Backlog)
-1. [P1] 运行 `alembic upgrade head` 应用血缘字段迁移 (68009a76ff76)。
-2. [P2] 生产环境一键部署演示 (`make deploy-prod`)。
-3. [P2] 配置 WeCom CORP_ID/SECRET 并执行首次全量同步。
-4. [P3] 优化 `uv` 与内部 HTTP 仓库 de User-Agent 兼容性。
+1. [P2] 准备 WeCom 核心同步链路的集成测试环境和验证点。
+2. [P3] （可选）对齐前端侧请求路径或参数变化（若涉及）。
 
 📋 最近完成 (Recently Completed)
-1. [RBAC] 修复集成测试中的权限回滚与依赖污染，全量集成测试恢复 100% 通过。 (2026-04-01)
-2. [Hardening] 完成 BaseClient 韧性工程加固（熔断/Session池/日志脱敏）及测试脚本修复。 (2026-03-31)
-3. [Hygiene] 执行全量归档并固化“宽 5 滚 5”规则到 AGENTS.md。 (2026-03-31)
+1. [Fix] 彻底解决 Portal 测试集历史技术债：补全 `authenticated_client` fixture，清理重复 `mock_user` 角色注入和权限拦截测试拦截逻辑。(2026-04-02)
+2. [Refactor] Router-Service 层 5 域解耦全面完成并通过 100% 测试，API 路由层目前为纯表现层。(2026-04-02)
+3. [Fix] Jira Client 测试 patch 路径修复（requests.get → requests.Session.get）。(2026-04-01)
+4. [RBAC] 修复集成测试中的权限回滚与依赖污染，全量集成测试恢复 100% 通过。(2026-04-01)
+5. [Hardening] 完成 BaseClient 韧性工程加固（熔断/Session池/日志脱敏）及测试脚本修复。(2026-03-31)
 
-签名：Antigravity-AI (2026-04-01T10:45+08:00)
+签名：Antigravity-AI (2026-04-02T09:20+08:00)

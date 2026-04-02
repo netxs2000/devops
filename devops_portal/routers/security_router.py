@@ -14,6 +14,10 @@ from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_portal import schemas
 from devops_portal.dependencies import get_current_user
 from devops_portal.schemas import DependencyScanResult
+from devops_collector.core.quality_service import QualityService
+
+def get_quality_service(db: Session = Depends(get_auth_db)) -> QualityService:
+    return QualityService(db)
 
 
 logger = logging.getLogger(__name__)
@@ -30,6 +34,7 @@ async def upload_dependency_report(
     scan_duration: float = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_auth_db),
+    service: QualityService = Depends(get_quality_service),
 ):
     """
     上传 Dependency-Check 扫描报告 (CI 集成)。
@@ -56,7 +61,7 @@ async def upload_dependency_report(
         scan_id = worker.process_task(task)
 
         # 查询结果
-        scan = db.query(DependencyScan).get(scan_id)
+        scan = service.get_scan(scan_id)
         if not scan:
             raise BusinessException("Scan record creation failed", code="CREATE_FAILED", status_code=500)
 
@@ -83,17 +88,6 @@ async def upload_dependency_report(
 
 
 @router.get("/dependency-scans", response_model=list[schemas.DependencyScanSummary])
-async def list_dependency_scans(current_user: User = Depends(get_current_user), db: Session = Depends(get_auth_db)):
+async def list_dependency_scans(current_user: User = Depends(get_current_user), service: QualityService = Depends(get_quality_service)):
     """[P5] 获取 Dependency Check 扫描结果（支持组织隔离）。"""
-
-    # 动态构建查询
-    query = db.query(DependencyScan).join(GitLabProject)
-
-    # 应用安全策略 (RLS)
-    if current_user.role != security.ADMIN_ROLE_KEY:
-        # 获取用户所属组织范围
-        scope_ids = security.get_user_org_scope_ids(db, current_user)
-        # 仅显示该组织下的项目扫描记录
-        query = query.filter(GitLabProject.organization_id.in_(scope_ids))
-
-    return query.all()
+    return service.list_dependency_scans(current_user)

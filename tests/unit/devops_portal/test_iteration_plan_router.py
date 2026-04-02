@@ -6,13 +6,6 @@ from devops_collector.plugins.gitlab.models import GitLabMilestone, GitLabProjec
 from devops_portal.main import app
 
 
-@pytest.fixture(autouse=True)
-def setup_admin(mock_user):
-    from devops_collector.models.base_models import SysRole
-
-    admin_role = SysRole(role_key="SYSTEM_ADMIN", role_name="Admin")
-    mock_user.roles = [admin_role]
-
 
 @pytest.fixture
 def mock_iteration_service():

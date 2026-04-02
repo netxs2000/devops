@@ -52,18 +52,11 @@ router = APIRouter(prefix="/admin", tags=["administration"])
 
 
 @router.get("/export/organizations")
-async def export_organizations(db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
+async def export_organizations(service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
     """导出所有组织机构为 CSV。"""
-    orgs = db.query(Organization).options(joinedload(Organization.manager)).filter(Organization.is_current).all()
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["org_code", "org_name", "org_level", "parent_org_id", "负责人"])
-    for o in orgs:
-        writer.writerow([o.org_code, o.org_name, o.org_level, o.parent_org_id, o.manager.full_name if o.manager else ""])
-
-    output.seek(0)
+    csv_data = service.export_organizations()
     return StreamingResponse(
-        io.BytesIO(output.getvalue().encode("utf-8-sig")),
+        io.BytesIO(csv_data.encode("utf-8-sig")),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=orgs_export.csv"},
     )
@@ -109,18 +102,11 @@ async def import_organizations(
 
 
 @router.get("/export/users")
-async def export_users(db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
+async def export_users(service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
     """导出所有用户为 CSV。"""
-    users = db.query(User).filter(User.is_current).all()
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["global_user_id", "employee_id", "full_name", "email", "department_id", "人事关系"])
-    for u in users:
-        writer.writerow([str(u.global_user_id), u.employee_id, u.full_name, u.primary_email, u.department_id, u.hr_relationship])
-
-    output.seek(0)
+    csv_data = service.export_users()
     return StreamingResponse(
-        io.BytesIO(output.getvalue().encode("utf-8-sig")),
+        io.BytesIO(csv_data.encode("utf-8-sig")),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=users_export.csv"},
     )
@@ -134,16 +120,11 @@ def get_admin_service(db: Session = Depends(get_auth_db)) -> AdminService:
 @router.get("/users", response_model=list[dict])
 async def list_users(
     filter: DataScopeFilter = Depends(),
-    db: Session = Depends(get_auth_db),
+    service: AdminService = Depends(get_admin_service),
     current_user: User = Depends(PermissionRequired(["system:user:list"])),
 ):
     """获取所有全局用户简要列表。"""
-    query = db.query(User).filter(User.is_current)
-    # User 表通常不需要 RLS 过滤（基础数据），或者仅过滤非本部门?
-    # 此处假设用户管理列表需要遵循 RLS，比如部门经理只能看本部门员工
-    query = filter.apply(db, query, User, current_user, dept_field="department_id")
-    users = query.all()
-    return [{"user_id": str(u.global_user_id), "full_name": u.full_name, "email": u.primary_email} for u in users]
+    return service.list_users(filter, current_user)
 
 
 @router.get("/users/{user_id}", response_model=UserFullProfile)
@@ -156,48 +137,31 @@ async def get_user_profile(user_id: uuid.UUID, service: AdminService = Depends(g
 
 
 @router.get("/identity-mappings", response_model=list[IdentityMappingView])
-async def list_identity_mappings(db: Session = Depends(get_auth_db)):
+async def list_identity_mappings(service: AdminService = Depends(get_admin_service)):
     """获取所有外部身份映射。"""
-    mappings = db.query(IdentityMapping).options(joinedload(IdentityMapping.user)).all()
-    results = []
-    for m in mappings:
-        view = IdentityMappingView.model_validate(m)
-        view.user_name = m.user.full_name if m.user else "Unknown"
-        view.hr_relationship = m.user.hr_relationship if m.user else None
-        results.append(view)
-    return results
+    return service.list_identity_mappings()
 
 
 @router.post("/identity-mappings")
 async def create_identity_mapping(
     payload: IdentityMappingCreate,
-    db: Session = Depends(get_auth_db),
+    service: AdminService = Depends(get_admin_service),
     admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """创建新的外部身份映射。"""
     # 已通过 RoleRequired 校验权限
-    new_mapping = IdentityMapping(
-        global_user_id=payload.global_user_id,
-        source_system=payload.source_system,
-        external_user_id=payload.external_user_id,
-        external_username=payload.external_username,
-        external_email=payload.external_email,
-    )
-    db.add(new_mapping)
-    db.commit()
-    return {"status": "success", "id": new_mapping.id}
+    mapping_id = service.create_identity_mapping(payload)
+    return {"status": "success", "id": mapping_id}
 
 
 @router.delete("/identity-mappings/{mapping_id}")
-async def delete_identity_mapping(mapping_id: int, db: Session = Depends(get_auth_db), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
+async def delete_identity_mapping(mapping_id: int, service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
     """删除指定的身份映射。"""
     # 已通过 RoleRequired 校验权限
-    mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
-    if not mapping:
+    success = service.delete_identity_mapping(mapping_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Mapping not found")
 
-    db.delete(mapping)
-    db.commit()
     return {"status": "success"}
 
 
@@ -205,52 +169,25 @@ async def delete_identity_mapping(mapping_id: int, db: Session = Depends(get_aut
 async def update_identity_mapping_status(
     mapping_id: int,
     payload: IdentityMappingUpdateStatus,
-    db: Session = Depends(get_auth_db),
+    service: AdminService = Depends(get_admin_service),
     admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """更新身份映射的状态（治理操作）。"""
     # 已通过 RoleRequired 校验权限
-    mapping = db.query(IdentityMapping).filter(IdentityMapping.id == mapping_id).first()
-    if not mapping:
+    status = service.update_identity_mapping_status(mapping_id, payload.mapping_status)
+    if not status:
         raise HTTPException(status_code=404, detail="Mapping not found")
 
-    mapping.mapping_status = payload.mapping_status
-    db.commit()
-    return {"status": "success", "mapping_status": mapping.mapping_status}
+    return {"status": "success", "mapping_status": status}
 
 
 # --- Virtual Team Management ---
 
 
 @router.get("/teams", response_model=list[TeamView])
-async def list_teams(db: Session = Depends(get_auth_db)):
+async def list_teams(service: AdminService = Depends(get_admin_service)):
     """列出所有虚拟业务团队。"""
-    teams = db.query(Team).options(selectinload(Team.members).joinedload(TeamMember.user), joinedload(Team.leader)).all()
-    results = []
-    for t in teams:
-        members = [
-            {
-                "user_id": str(m.user_id),
-                "full_name": m.user.full_name,
-                "role_code": m.role_code,
-                "allocation_ratio": m.allocation_ratio,
-            }
-            for m in t.members
-        ]
-        results.append(
-            TeamView(
-                id=t.id,
-                name=t.name,
-                team_code=t.team_code,
-                description=t.description,
-                parent_id=t.parent_id,
-                org_id=t.org_id,
-                leader_id=str(t.leader_id) if t.leader_id else None,
-                leader_name=t.leader.full_name if t.leader else None,
-                members=members,
-            )
-        )
-    return results
+    return service.list_teams()
 
 
 @router.post("/teams", response_model=TeamView)
@@ -306,81 +243,29 @@ class RepoLinkRequest(BaseModel):
 @router.get("/mdm-projects")
 async def list_mdm_projects(
     filter: DataScopeFilter = Depends(),
-    db: Session = Depends(get_auth_db),
+    service: AdminService = Depends(get_admin_service),
     current_user: User = Depends(PermissionRequired(["system:project:mapping"])),
 ):
     """获取所有业务主项目。"""
-    query = (
-        db.query(ProjectMaster)
-        .options(
-            joinedload(ProjectMaster.organization),
-            selectinload(ProjectMaster.gitlab_repos),
-            selectinload(ProjectMaster.product_relations).joinedload(ProjectProductRelation.product),
-        )
-        .filter(ProjectMaster.is_current)
-    )
-
-    # 应用 RLS:
-    # - 部门权限基于 org_id
-    # - 个人权限自动推断 (OwnableMixin.get_owner_column -> pm_user_id)
-    query = filter.apply(db, query, ProjectMaster, current_user, dept_field="org_id")
-
-    projects = query.all()
-
-    return [
-        {
-            "project_id": p.project_code,
-            "project_name": p.project_name,
-            "project_type": p.project_type,
-            "status": p.status,
-            "org_name": p.organization.org_name if p.organization else "未指派",
-            "repo_count": len(p.gitlab_repos),
-            "lead_repo_id": p.lead_repo_id,
-            "products": [
-                {
-                    "product_id": r.product.product_code,
-                    "product_name": r.product.product_name,
-                    "relation_type": r.relation_type,
-                }
-                for r in p.product_relations
-                if r.product
-            ],
-        }
-        for p in projects
-    ]
+    return service.list_mdm_projects(filter, current_user)
 
 
 @router.post("/mdm-projects")
 async def create_mdm_project(
     payload: MDMProjectCreate,
-    db: Session = Depends(get_auth_db),
+    service: AdminService = Depends(get_admin_service),
     admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """创建新的业务主项目。"""
     # 已通过 RoleRequired 校验权限
-    new_p = ProjectMaster(
-        project_code=payload.project_code,
-        project_name=payload.project_name,
-        org_id=payload.org_id,
-        project_type=payload.project_type,
-        status=payload.status,
-        pm_user_id=payload.pm_user_id,
-        plan_start_date=payload.plan_start_date,
-        plan_end_date=payload.plan_end_date,
-        budget_code=payload.budget_code,
-        budget_type=payload.budget_type,
-        description=payload.description,
-    )
-    db.add(new_p)
-    db.commit()
-    return {"status": "success", "project_id": new_p.project_code}
+    project_id = service.create_mdm_project(payload)
+    return {"status": "success", "project_id": project_id}
 
 
 @router.get("/unlinked-repos")
-async def list_unlinked_repos(db: Session = Depends(get_auth_db)):
+async def list_unlinked_repos(service: AdminService = Depends(get_admin_service)):
     """列出尚未关联主项目的 GitLab 仓库。"""
-    repos = db.query(GitLabProject).filter(GitLabProject.mdm_project_id.is_(None)).all()
-    return [{"id": r.id, "name": r.name, "path": r.path_with_namespace} for r in repos]
+    return service.list_unlinked_repos()
 
 
 @router.post("/link-repo")
@@ -401,16 +286,14 @@ async def link_repo_to_project(
 async def set_lead_repo(
     project_code: str,
     gitlab_project_id: int = Body(..., embed=True),
-    db: Session = Depends(get_auth_db),
+    service: AdminService = Depends(get_admin_service),
     admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"])),
 ):
     """设置主项目的受理中心仓库。"""
     # 已通过 RoleRequired 校验权限
-    mdm_p = db.query(ProjectMaster).filter(ProjectMaster.project_code == project_code).first()
-    if not mdm_p:
+    success = service.set_lead_repo(project_code, gitlab_project_id)
+    if not success:
         raise HTTPException(status_code=404, detail="MDM Project not found")
-    mdm_p.lead_repo_id = gitlab_project_id
-    db.commit()
     return {"status": "success"}
 
 

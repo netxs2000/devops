@@ -86,6 +86,14 @@
     - **原因**: Autogenerate 脚本捕获了与当前模型无关但存在于旧 DB 中的表。
     - **对策**: 在 `upgrade()` 中使用 `inspector.get_table_names()` 预检，或使用 `stamp head` 强行跳过已由 `Base.metadata.create_all` 构建的初始态。
 
+### 2026-04-01 — Mock/测试工具与 ORM 不兼容的坑
+
+| 2026-04-01 | Testing | Jira Client 测试 patch `requests.get` 但实际走 `requests.Session.get` | BaseClient 使用 `requests.Session()` 池化连接，`_get` 方法调用 `self._session.get()`，不再走全局 `requests.get` | 凡是继承 BaseClient 的客户端，测试 mock 路径必须是 `requests.Session.get`/`.post` 而非 `requests.get`。提交新 Client 测试前强制 grep 确认 patch 路径。 |
+
+### 2026-04-01 — 测试 Fixture 孤儿引用
+
+| 2026-04-01 | Testing | Portal 路由测试引用 `authenticated_client` fixture 但全仓库无定义 | 测试编写时假设 conftest 会提供该 fixture，但实际从未实现，一直处于 ERROR 状态 | 新增测试文件前，必须先确认所依赖的 fixture 已在对应 conftest.py 中定义。CI 应将 ERROR 视为 FAIL 阻断合并。 |
+
 ---
 
 *End of Log*
