@@ -13,7 +13,8 @@
 | 7c0b8b39... | 2026-03-31 | 17:45 | N/A (Local) | SUCCESS | 实现 BaseClient 韧性加固（熔断/Session池/日志脱敏）；解决 tenacity 重试导致的测试超时。 |
 | 7c0b8b39... | 2026-04-01 | 02:40 | N/A (Local) | SUCCESS | 修复 RBAC 混合模型回滚与集成测试隔离污染（42/42 通过）；实现 JWT 瞬态权限聚合逻辑。 |
 | 7c0b8b39... | 2026-04-01 | 17:38 | N/A (Local) | ONGOING | Router-Service 5域解耦完成（Admin/SD/Plugin/Iteration/Security）；新增 4 个 core Service 文件；修复 Jira 测试 patch 路径。待办：补全 authenticated_client fixture（预存在缺陷）后提交。 |
-| bf4f28cc... | 2026-04-02 | 09:25 | N/A (Local) | SUCCESS | 补全 Portal 测试集的 `authenticated_client` 修复技术债，解决并清理了 `test_iteration_plan` 冲突注入与 `test_test_management` 403拦截问题，全量 100% 通过。准备 Commit。 |
+| bf4f28cc... | 2026-04-02 | 09:25 | N/A (Local) | SUCCESS | 补全 Portal 测试集的 `authenticated_client` 修复技术债，全量 100% 通过。重点修复了 Iteration/Quality 域测试逻辑漏洞。 |
+| bf4f28cc... | 2026-04-02 | 11:00 | N/A (Local) | SUCCESS | 实现 WeCom 插件三阶段同步逻辑与部门递归过滤 (Excluded Depts)；完成级联排除算法冒烟测试并实现 100% 覆盖。WeCom 配置防呆加固。 |
 
 ---
 *End of Log*

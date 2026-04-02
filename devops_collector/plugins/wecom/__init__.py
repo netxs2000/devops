@@ -18,6 +18,7 @@ def get_config() -> dict:
         "corp_id": os.getenv("WECOM__CORP_ID", ""),
         "secret": os.getenv("WECOM__SECRET", ""),
         "verify_ssl": os.getenv("WECOM__VERIFY_SSL", "True").lower() in ("true", "1"),
+        "excluded_departments": [id.strip() for id in os.getenv("WECOM__EXCLUDED_DEPARTMENTS", "").split(",") if id.strip()],
     }
 
 

@@ -2,26 +2,26 @@
 # 最后更新: 2026-04-02 09:20 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-[阶段：DB Migration 和核心业务联调]
-1. Router-Service 层解耦已全面完成，且所有单元测试/集成测试已通过（修复了大量历史遗留 fixture 缺失及冲突断言问题）。
-2. 下一步开始应用挂起的数据库 Migration（血缘字段提取迁移），并转向 WeCom 同步场景的实战演练。
+[阶段：WeCom 集成与 MDM 稳定化]
+1. 完成 WeCom 插件的全量三阶段同步逻辑，集成并 100% 通过测试。
+2. 实现 WeCom 部门白名单/黑名单过滤 (WECOM__EXCLUDED_DEPARTMENTS)，支持递归子树排除并完成冒烟测试。
 
 ⚠️ 交接备忘 (Handover Notes for Next Session)
-- 历史技术债已一并清理完毕：为 Portal 路由测试彻底落实了合规的 `authenticated_client` 并铲除了由于冲突导致角色创建的 `IntegrityError`。
-- 本次 Service 层重构代码已准备好 Commit 并合并了相关文档修改，请进行 Git 提交。
+- **MDM 黄金法则**：所有新接入的受信任源（如 WeCom）已实现 `IdentityManager` 的 OneID 自动对齐。
+- **部门过滤**：通过 ID 设置排除项。若排除父级，子级将由于拓扑溯源失败自动被拦截。详见 `worker._filter_departments`。
+- **集成测试**：`tests/integration/plugins/` 包含全量集成验证及部门排除场景验证。
 
 🏗️ 进行中 (In Progress)
-1. [P2] 运行 `alembic upgrade head` 应用血缘字段迁移 (68009a76ff76)。 (Doing)
+1. [P1] 最终验证全量插件同步逻辑（GitLab/ZenTao/SonarQube）在 68009a76ff76 迁移后的稳定性。(Doing)
 
 📅 接下来 (Backlog)
-1. [P2] 准备 WeCom 核心同步链路的集成测试环境和验证点。
-2. [P3] （可选）对齐前端侧请求路径或参数变化（若涉及）。
+1. [P2] 生产环境凭据接入并执行第一次全量真实同步。
 
 📋 最近完成 (Recently Completed)
-1. [Fix] 彻底解决 Portal 测试集历史技术债：补全 `authenticated_client` fixture，清理重复 `mock_user` 角色注入和权限拦截测试拦截逻辑。(2026-04-02)
-2. [Refactor] Router-Service 层 5 域解耦全面完成并通过 100% 测试，API 路由层目前为纯表现层。(2026-04-02)
-3. [Fix] Jira Client 测试 patch 路径修复（requests.get → requests.Session.get）。(2026-04-01)
-4. [RBAC] 修复集成测试中的权限回滚与依赖污染，全量集成测试恢复 100% 通过。(2026-04-01)
-5. [Hardening] 完成 BaseClient 韧性工程加固（熔断/Session池/日志脱敏）及测试脚本修复。(2026-03-31)
+1. [Feature] WeCom 增加 `EXCLUDED_DEPARTMENTS` 过滤功能，支持级联排除子部门逻辑。(2026-04-02)
+2. [Feature] 完成 WeCom 通讯录同步插件三阶段逻辑开发，集成测试 100% 通过。(2026-04-02)
+3. [Fix] 增强 IdentityManager 方言兼容性，支持 SQLite 环境下的身份映射幂等操作。(2026-04-02)
+4. [Fix] 彻底解决 Portal 测试集历史技术债：补全 `authenticated_client` fixture。(2026-04-02)
+5. [Refactor] Router-Service 层 5 域解耦全面完成。(2026-04-02)
 
-签名：Antigravity-AI (2026-04-02T09:20+08:00)
+签名：Antigravity-AI (2026-04-02T10:55+08:00)

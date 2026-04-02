@@ -5,6 +5,7 @@
 """
 
 import logging
+import uuid
 from typing import Any
 
 from sqlalchemy.dialects.postgresql import insert
@@ -35,6 +36,7 @@ class IdentityManager:
         name: str | None = None,
         employee_id: str | None = None,
         username: str | None = None,
+        create_if_not_found: bool = False,
     ) -> User | None:
         """根据外部账号解析并获取全局用户实体。
 
@@ -47,6 +49,8 @@ class IdentityManager:
             employee_id: 员工工号 (可选)。
             username: 外部系统用户名 (可选)。
 
+            create_if_not_found: 是否在找不到时自动创建 User 实体 (仅限主数据源)。
+            
         Returns:
             Resolved User 实体，若未命中任何规则且无法新建则返回 None。
         """
@@ -83,33 +87,68 @@ class IdentityManager:
         if not user and username:
             user = session.query(User).filter_by(username=username, is_current=True).first()
 
-        # 5. 如果彻底找不到，记录调试信息
+        # 5. 如果彻底找不到，记录调试信息并按需创建
         if not user:
-            logger.debug(f"未找到匹配的全局用户，记录身份映射供后续人工或 dbt 治理: {source}:{ext_id_str}")
+            if create_if_not_found and email_lower:
+                user = User(
+                    global_user_id=uuid.uuid4(),
+                    full_name=name or username or email_lower.split("@")[0],
+                    primary_email=email_lower,
+                    employee_id=employee_id,
+                    username=username or email_lower.split("@")[0],
+                    source_system=source,
+                    is_current=True,
+                    is_survivor=True  # 标记为由受信任源同步生成
+                )
+                session.add(user)
+                session.flush()
+            else:
+                logger.debug(f"未找到匹配的全局用户，记录身份映射供后续人工或 dbt 治理: {source}:{ext_id_str}")
 
         # 6. 建立或更新映射关系
         if not mapping:
-            try:
-                # 使用子事务保护，防止冲突导致主事务中止
-                with session.begin_nested():
-                    stmt = (
-                        insert(IdentityMapping)
-                        .values(
-                            global_user_id=user.global_user_id if user else None,
-                            source_system=source,
-                            external_user_id=ext_id_str,
-                            external_username=name or username or ext_id_str,
-                            external_email=email_lower,
-                            mapping_status="AUTO" if user and user.is_survivor else "PENDING",
-                            confidence_score=1.0 if user and user.is_survivor else 0.5,
+            # 检测数据库方言（SQLite 不支持 PostgreSQL 的 ON CONFLICT 语法）
+            is_postgres = session.bind.dialect.name == "postgresql" if session.bind else True
+
+            if is_postgres:
+                try:
+                    with session.begin_nested():
+                        stmt = (
+                            insert(IdentityMapping)
+                            .values(
+                                global_user_id=user.global_user_id if user else None,
+                                source_system=source,
+                                external_user_id=ext_id_str,
+                                external_username=name or username or ext_id_str,
+                                external_email=email_lower,
+                                mapping_status="AUTO" if user and user.is_survivor else "PENDING",
+                                confidence_score=1.0 if user and user.is_survivor else 0.5,
+                            )
+                            .on_conflict_do_nothing(index_elements=["source_system", "external_user_id"])
                         )
-                        .on_conflict_do_nothing(index_elements=["source_system", "external_user_id"])
+                        session.execute(stmt)
+                    session.flush()
+                except Exception as e:
+                    logger.debug(f"Recovered from concurrent identity insertion: {e}")
+                    session.rollback()
+            else:
+                # 兼容性退化逻辑 (用于 SQLite/测试环境): 先查后增
+                mapping = session.query(IdentityMapping).filter_by(
+                    source_system=source, 
+                    external_user_id=ext_id_str
+                ).first()
+                if not mapping:
+                    mapping = IdentityMapping(
+                        global_user_id=user.global_user_id if user else None,
+                        source_system=source,
+                        external_user_id=ext_id_str,
+                        external_username=name or username or ext_id_str,
+                        external_email=email_lower,
+                        mapping_status="AUTO" if user and user.is_survivor else "PENDING",
+                        confidence_score=1.0 if user and user.is_survivor else 0.5,
                     )
-                    session.execute(stmt)
-                session.flush()
-            except Exception as e:
-                logger.debug(f"Recovered from concurrent identity insertion: {e}")
-                session.rollback()
+                    session.add(mapping)
+                    session.flush()
 
             mapping = session.query(IdentityMapping).filter_by(source_system=source, external_user_id=ext_id_str).first()
 

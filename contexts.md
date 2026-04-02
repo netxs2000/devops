@@ -135,6 +135,20 @@
     - **层级 (Hierarchy)**: 公司(Root) -> 中心(Center) -> 部门(Dept)，不再使用 `SYS-` 体系节点。
     - **属性 (Attribute)**: 体系 (Business Line) 作为 `Organization` 的 `business_line` 字段存储，支持跨体系的部门归属。
 
+### 5.3 外键循环与测试隔离规范 (Foreign Key Cycles & Testing Isolation) [NEW/MANDATORY]
+> **背景**: MDM 核心实体间存在天然的业务循环。例如：用户归属于地点 (`User.location_id`), 而地点负责人又是该用户 (`Location.manager_user_id`)。这种“鸡生蛋，蛋生鸡”的逻辑在数据库物理层面会引发删表顺序死锁。
+
+- **1. ORM 层面声明 (ORM-Level Declaration)**:
+    - 针对所有已知的循环外键（如：User <-> Organization, User <-> Location），**必须**在 `ForeignKey` 定义中显式指定 `use_alter=True` 并通过 `name` 参数给出全局唯一的约束名称。
+    - 示例：`ForeignKey("mdm_identities.global_user_id", use_alter=True, name="fk_location_manager")`。
+- **2. 同步逻辑的两阶段协议 (Two-Phase Alignment Protocol)** [MANDATORY]:
+    - **第一阶段 (Ingestion)**: Worker 在同步带外键循环的实体时，仅入库基础非空字段。如果关联的目标对象（如负责人）尚未入库，**严禁**触发递归查询或报错。
+    - **暂存标识**: 将外部源提供的原始标识（如 LDAP ID）存入专门的 `manager_raw_id` 字符串字段。
+    - **第二阶段 (Self-Healing)**: 在全量同步任务结束时，由应用级 Service 触发 `realign_all_managers()`。该方法统一将 `manager_raw_id` 解析为真正的 `manager_user_id` (UUID) 物理外键，实现最终一致性。
+- **3. 测试环境隔离 (Testing Isolation)**:
+    - 在 SQLite 内存数据库环境下，`Base.metadata.drop_all` 会因为无法静态计算删表顺序而失败。
+    - **DoD 标准**: 集成测试夹具必须实现环境感知，在测试结束时采取「连接自动关闭销毁」或显式执行 `PRAGMA foreign_keys=OFF`，确保清理过程不因外键循环而报错。
+
 
 ## 6. 前端设计与组件化 (Frontend Design)
 > 🎨 **最高行动指令**：所有前端样式与组件开发，必须严格遵循 [`docs/frontend/CONVENTIONS.md`](docs/frontend/CONVENTIONS.md)。任何与该文档冲突的 UI 实现均视为 Bug。
@@ -624,6 +638,11 @@
 - 环境变量中的敏感值（Token、Password）严禁有硬编码的 fallback 默认值。
 
 ### 19.10 降级与兜底 (Graceful Degradation)
-- 当某个外部数据源不可用时（如企业微信 API 宕机），系统必须跳过该数据源的同步，但**不得影响**其他数据源（GitLab、ZenTao）的正常运转。
+- 当某个外部数据源不可用时（如企业微信 API 宕机），系统必须跳过该数据源的同步，但**不得影响**其他数据源（GitLab、ZenTao）的 normal 运转。
 - 当某条记录处理失败时（如单个部门详情拉取超时），跳过该记录并记录 Warning 日志，**不得中断**整个批次的同步任务。
 - 关键外部依赖（如 PostgreSQL、RabbitMQ）的健康检查必须配置充足的重试次数（`retries >= 60`），应对冷启动延迟。
+
+### 19.11 循环依赖处理规范 (Circular Dependency Handling) [MANDATORY]
+- 严禁在初始化阶段（如 `__init__` 或全局变量定义）引入模块间的交叉引用。
+- 在数据库层存在业务循环引用时，必须遵循 [5.3 章节](#53-外键循环与测试隔离规范-foreign-key-cycles--testing-isolation-newmandatory) 定义的“两阶段对齐协议”。
+- 所有的“负责人/所有者”对齐操作必须具备防御性：允许在第一阶段为空，由第二阶段异步填充。
