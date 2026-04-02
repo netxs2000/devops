@@ -38,10 +38,21 @@ make verify
 - **通过条件**：
     - [ ] `make lint` 0 错误。
     - [ ] `make check-imports` 0 冲突。
-    - [ ] 全量 `pytest` PASSED。
-    - [ ] **硬性指标**：代码覆盖率 (Coverage) >= **80%**。
-- **取证要求**：在此步骤完成时，必须在工作记录中粘贴 `make verify` 的关键输出文本，以证明物理通过。
-- **降级条件**：禁止降级。若环境不支，必须在修复环境后重新执行。
+    - [ ] 全量 `pytest` PASSED (Coverage >= 80%)。
+
+// turbo
+## Step 2.1: 自动化安全审计 (Automated Security Audit) 🔴 BLOCK
+
+针对涉及 `core/mdm` 或新增外部镜像/依赖的变更，必须强制执行：
+
+```bash
+make security-audit
+```
+
+- **通过条件**：
+    - [ ] **TruffleHog (机密扫描)**：Exit Code = 0 (无密钥泄露)。
+    - [ ] **Trivy (镜像扫描)**：Exit Code = 0 (无 HIGH/CRITICAL 漏洞)。
+- **操作要求**：必须在交付报告中包含安全审计摘要。
 
 ## Step 5: 容器部署验证 🔴 BLOCK (可降级)
 

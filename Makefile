@@ -254,7 +254,7 @@ sync-all: ## 手动触发全量数据同步
 pull-images: ## [工具] 尝试从 Nexus 预拉取基础镜像并打标 (Fallback 机制)
 	@echo "$(GREEN)Checking base images (Local First Strategy)...$(RESET)"
 	@powershell -Command " \
-		$$images = @('python:3.11-slim-bookworm', 'postgres:15-alpine', 'rabbitmq:3-management-alpine', 'astral-sh/uv:latest'); \
+		$$images = @('python:3.11-slim-bookworm', 'postgres:15-alpine', 'rabbitmq:3-management-alpine', 'astral-sh/uv:latest', 'trufflesecurity/trufflehog:latest', 'aquasec/trivy:latest'); \
 		foreach ($$img in $$images) { \
 			if (docker images -q $$img) { \
 				Write-Host \"Image $$img already exists locally, skipping pull.\" -ForegroundColor Cyan; \
@@ -267,7 +267,7 @@ pull-images: ## [工具] 尝试从 Nexus 预拉取基础镜像并打标 (Fallbac
 				Write-Host \"Tagging $$nexusImg as $$img ...\" -ForegroundColor Green; \
 				docker tag $$nexusImg $$img; \
 			} else { \
-				Write-Host \"Nexus pull failed and $$img not found locally, will use default registry during build.\" -ForegroundColor Yellow; \
+				Write-Host \"Nexus pull failed and $$img not found locally, will use default registry during build or run.\" -ForegroundColor Yellow; \
 			} \
 		} \
 	"
@@ -318,6 +318,23 @@ verify: ## [MANDATORY] 100% 验证防御：包含覆盖率审计的全量校验 
 	$(MAKE) check-imports
 	@echo "$(GREEN)Running tests with coverage audit (Target: 80%)...$(RESET)"
 	$(EXEC_CMD) pytest tests/unit/ tests/integration/ --cov=devops_collector --cov=devops_portal --cov-report=term-missing --cov-fail-under=80
+	@echo "$(CYAN)Recommendation: Run 'make security-audit' for L3/L4 tasks.$(RESET)"
+
+# =============================================================================
+# 安全审计工具 (无需本地安装，直接使用 Docker 官方镜像)
+# =============================================================================
+
+scan-secrets: ## [SECURITY] 源码机密审计 (TruffleHog)
+	@echo "$(CYAN)Scanning for hardcoded secrets using TruffleHog container...$(RESET)"
+	docker run --rm -v "$${PWD}:/pwd" trufflesecurity/trufflehog:latest filesystem /pwd --fail
+
+scan-image: ## [SECURITY] 镜像漏洞审计 (Trivy)
+	@echo "$(GREEN)Scanning devops-platform image for CVEs using Trivy...$(RESET)"
+	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+		-v "$${PWD}/.trivy-cache:/root/.cache" \
+		aquasec/trivy:latest image devops-platform:latest --severity HIGH,CRITICAL --exit-code 1
+
+security-audit: scan-secrets scan-image ## [SECURITY] 全量安全卡点：源码 + 镜像
 
 fast-gate: ## [L2/CI] 快速卡点：跳过容器构建阶段
 	python scripts/gatekeeper.py --mode fast
