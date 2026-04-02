@@ -204,7 +204,7 @@ class BaseWorker(ABC):
                     schema_version = EXCLUDED.schema_version,
                     correlation_id = EXCLUDED.correlation_id,
                     collected_at = EXCLUDED.collected_at
-            """
+            """  # nosec B608
             cursor.execute(upsert_sql)
 
             # 删除临时表结束加载

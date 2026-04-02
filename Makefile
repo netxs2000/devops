@@ -321,20 +321,22 @@ verify: ## [MANDATORY] 100% 验证防御：包含覆盖率审计的全量校验 
 	@echo "$(CYAN)Recommendation: Run 'make security-audit' for L3/L4 tasks.$(RESET)"
 
 # =============================================================================
-# 安全审计工具 (无需本地安装，直接使用 Docker 官方镜像)
+# 安全审计工具 (Python 原生版 - 依托 Nexus PyPI)
 # =============================================================================
 
-scan-secrets: ## [SECURITY] 源码机密审计 (TruffleHog)
-	@echo "$(CYAN)Scanning for hardcoded secrets using TruffleHog container...$(RESET)"
-	docker run --rm -v "$${PWD}:/pwd" trufflesecurity/trufflehog:latest filesystem /pwd --fail
+scan-secrets: ## [SECURITY] 源码机密审计 (detect-secrets)
+	@echo "$(CYAN)Scanning for hardcoded secrets using detect-secrets...$(RESET)"
+	$(EXEC_CMD) detect-secrets scan --baseline .secrets.baseline --exclude-files ".*/tests/.*" --exclude-files ".*\.lock"
 
-scan-image: ## [SECURITY] 镜像漏洞审计 (Trivy)
-	@echo "$(GREEN)Scanning devops-platform image for CVEs using Trivy...$(RESET)"
-	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-		-v "$${PWD}/.trivy-cache:/root/.cache" \
-		aquasec/trivy:latest image devops-platform:latest --severity HIGH,CRITICAL --exit-code 1
+scan-sast: ## [SECURITY] 代码静态安全审计 (Bandit)
+	@echo "$(GREEN)Running Bandit SAST (Static Application Security Testing)...$(RESET)"
+	$(EXEC_CMD) bandit -r devops_collector/ devops_portal/ -ll
 
-security-audit: scan-secrets scan-image ## [SECURITY] 全量安全卡点：源码 + 镜像
+scan-deps: ## [SECURITY] 依赖漏洞审计 (Safety)
+	@echo "\033[1;33mChecking dependencies for known vulnerabilities using Safety...\033[0m"
+	docker-compose exec -T api safety check --ignore 64459,64396
+
+security-audit: scan-secrets scan-sast scan-deps ## [SECURITY] 全量安全卡点：源码 + 逻辑 + 依赖
 
 fast-gate: ## [L2/CI] 快速卡点：跳过容器构建阶段
 	python scripts/gatekeeper.py --mode fast

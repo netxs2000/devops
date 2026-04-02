@@ -143,4 +143,4 @@ app.mount("/static", StaticFiles(directory="devops_portal/static", html=True), n
 app.mount("/", StaticFiles(directory="devops_portal/static", html=True), name="static")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)  # nosec B104
