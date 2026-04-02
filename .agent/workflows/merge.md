@@ -27,33 +27,21 @@ git rebase origin/main
 - 验证：`git log --oneline -5` 确认历史线性，无 merge commit
 
 // turbo
-## Step 2: 代码质量检查 (Lint) 🔴 BLOCK
+## Step 2: 终极验证防御 (Total Verification Defense) 🔴 BLOCK
+
+按照 `AGENTS.md` 的“终极验证律”，在合入前必须执行全量校验：
 
 ```bash
-make lint
+make verify
 ```
 
-- **通过条件**：Exit Code = 0，无格式问题或死代码警告
-- 若失败：根据 Lint 输出修复代码，重新 commit 后重试
-
-// turbo
-## Step 3: 本地单元测试 🔴 BLOCK
-
-```bash
-make test-local
-```
-
-- **通过条件**：所有测试 PASSED，0 failed，0 errors
-- 若失败：修复测试或代码，重新 commit 后重试
-
-## Step 4: 容器内测试 🔴 BLOCK (可降级)
-
-```bash
-make test
-```
-
-- **通过条件**：Docker 容器内测试全部通过
-- **降级条件**：若 Docker 环境不可用（网络问题、镜像拉取失败），记录原因到 `progress.txt`，跳转到 Step 6
+- **通过条件**：
+    - [ ] `make lint` 0 错误。
+    - [ ] `make check-imports` 0 冲突。
+    - [ ] 全量 `pytest` PASSED。
+    - [ ] **硬性指标**：代码覆盖率 (Coverage) >= **80%**。
+- **取证要求**：在此步骤完成时，必须在工作记录中粘贴 `make verify` 的关键输出文本，以证明物理通过。
+- **降级条件**：禁止降级。若环境不支，必须在修复环境后重新执行。
 
 ## Step 5: 容器部署验证 🔴 BLOCK (可降级)
 

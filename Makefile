@@ -312,6 +312,13 @@ full-gate: ## [MANDATORY] 核心卡点：代码合并前全量校验 (Lint -> Te
 	@echo "$(CYAN)Launching Project Full Gate (Grader 3)...$(RESET)"
 	python scripts/gatekeeper.py --mode full
 
+verify: ## [MANDATORY] 100% 验证防御：包含覆盖率审计的全量校验 (Lint -> Imports -> Test + Cov)
+	@echo "$(CYAN)Launching Total Verification Defense (AGENTS.md SOP)...$(RESET)"
+	$(MAKE) lint
+	$(MAKE) check-imports
+	@echo "$(GREEN)Running tests with coverage audit (Target: 80%)...$(RESET)"
+	$(EXEC_CMD) pytest tests/unit/ tests/integration/ --cov=devops_collector --cov=devops_portal --cov-report=term-missing --cov-fail-under=80
+
 fast-gate: ## [L2/CI] 快速卡点：跳过容器构建阶段
 	python scripts/gatekeeper.py --mode fast
 
