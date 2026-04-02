@@ -32,8 +32,8 @@
 > 🎨 **最高行动指令**：无论需求看似多么简单，所有前端样式、组件抽象开发，必须严格遵守 [`docs/frontend/CONVENTIONS.md`](docs/frontend/CONVENTIONS.md)。**严禁**随意内联硬编码 Hex 色值或引入脱离体系的临时库。
 
 ### 3.2 容器化强制验证 (The Container Mandate)
-- **环境隔离要求**：不允许以“Windows PowerShell 宿主机无报错”为由声称测试通过。
-- **验证生命线**：所有 API 逻辑变动、数据库 Migration，**必须在 Docker 容器内执行验证**（如 `make test` 或 `docker-compose exec api pytest`）。
+- **环境隔离要求**：AI 代理**必须且只能**以容器环境作为验证标准。严禁以“本地宿主机通过”为由主张任务完成。
+- **验证红线与行动**：具体关于 `make test` (DoD 准入) 与 `make test-local` (辅助调试) 的行为规范、分工矩阵及物理真实性原则，**必须严格遵守** [`contexts.md`](contexts.md) **第 3 章节及第 9.5 章节**。
 
 ### 3.3 绝对禁止根目录污染与环境自愈 (Hygiene & Cleanup Enclosure)
 - **绝对重定向禁区**：严禁在根目录执行任何非版本控制的文件生成（如 `> report.txt`）。重定向导出必须强制前缀 `tmp/`。
