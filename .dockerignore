@@ -1,28 +1,36 @@
+# --- VERSION CONTROL ---
 .git
+.gitignore
+.dockerignore
+
+# --- VIRTUAL ENVIRONMENT ---
 .venv
 venv
+env/
+.Python
+lib/
+lib64/
+share/python-wheels/
+
+# --- PYTHON CACHING & BUILD ---
 __pycache__
 *.pyc
 *.pyo
 *.pyd
-.Python
-env/
 build/
-develop-eggs/
 dist/
 downloads/
 eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
 wheels/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
+
+# --- TESTING & CI ---
 .pytest_cache
 .ruff_cache
 .coverage
@@ -31,9 +39,24 @@ htmlcov/
 .nox/
 .cache
 .hypothesis/
+nosetests.xml
+coverage.xml
+
+# --- SECURITY REPORTS (V-GATE) ---
+reports/
+.secrets.baseline
+.safety_report*.json
+.safety_final_debug*.json
+
+# --- IDE & TOOLS ---
 .idea
 .vscode
-.env
+.claude/
+.cursor/
+.traerc
+trae.lock
+
+# --- DATA & PERSISTENCE ---
 persistence_data/
 data/
 tmp/
@@ -41,8 +64,18 @@ tmp/
 *.tmp
 *.csv
 *.dump
+postgres-data/
+rabbitmq_data/
+
+# --- FRONTEND (IF EXISTS) ---
 node_modules/
-dbt_packages/
+
+# --- DBT SPECIFIC ---
 dbt_project/target/
 dbt_project/dbt_packages/
 dbt_project/logs/
+
+# --- DEPLOYMENT SCRIPTS ---
+Dockerfile
+docker-compose.yml
+Makefile
