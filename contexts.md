@@ -267,6 +267,29 @@
 3.  **容器内验证 (Container-In Validation) [MANDATORY]**：所有测试执行**必须**在 Docker 容器内完成（使用 `make test` 或 `docker-compose exec api pytest`），**严禁**在宿主机环境（如 Windows）下进行单纯的 Python 逻辑验证，以确保在 Linux 环境下的完全兼容。
 4.  **DoD 增强 (DoD Enhancement)**：在向用户汇报“任务完成”或“验证通过”前，AI 代理必须提供容器内 pytest 运行成功的日志明细，作为交付成果的一部分。
 
+### 9.5 本地与容器化测试分工规范 (Local vs. Containerized Testing Guidelines) [NEW/MANDATORY]
+> **核心哲学**：本地测试是为了“开发者敏捷”，容器测试是为了“生产级真实”。
+
+#### 9.5.1 分工矩阵
+| 测试类型 | 运行环境 | 验证重点 | 触发时机 |
+| :--- | :--- | :--- | :--- |
+| **单元测试 (Unit)** | **本地 (PowerShell)** | 纯代码算法、工具函数、Mock逻辑。 | **随写随练**：每改一个函数执行一次。 |
+| **轻量集成 (Lite)** | **本地 (PowerShell)** | Router -> Service 链路，使用 **SQLite** 内存库。 | **功能初成**：提交 PR 前的初步自检。 |
+| **全量集成 (Full)** | **容器 (Docker)** | **PostgreSQL** 语法兼容、方言差异、跨服务通信。 | **DoD 准入**：宣告任务完成前的强制审计项。 |
+| **环境迁移 (Ops)** | **容器 (Docker)** | Alembic 数据库迁移脚本、环境变量解析、卷挂载。 | **架构变更**：修改核心配置或表结构后。 |
+
+#### 9.5.2 强制容器化验证红线 (The Container Redlines)
+遇到以下场景，**绝对严禁**仅凭“本地 SQLite 通过”作为交付证据：
+1.  **复杂 SQL 语法**：涉及 `ON CONFLICT` (Upsert)、`JSONB` 提取、特定窗口函数或递归查询。
+2.  **多源身份对齐**：涉及 `IdentityManager` 的 OneID 逻辑，这与 Postgres 的唯一约束处理机制紧密相关。
+3.  **插件 Worker 逻辑**：涉及从外部 Mock API 拉取数据并批量入库（`bulk_save`），容器能验证真实的文件路径处理与网络超时表现。
+
+#### 9.5.3 降维类比 (小白专区)
+*   **本地测试 (Local)** 就像是 **“在家试装”**：你可以在镜子前快速尝试各种衣服（代码）搭配，看看扣子（语法）对不对，颜色（逻辑）顺不顺眼。这很快，但不能保证你出门后在强光（高并发）下或不平的路（复杂的 DB 索引）上表现得体。
+*   **容器测试 (Container)** 则是 **“全量彩排”**：你必须穿上正式演出服，走上真实的舞台（Docker Container），在真实的灯光和背景音乐（PostgreSQL/RabbitMQ）中走一遍完整流程。**只有彩排过了，才算真正的 DoD (Done of Done)。**
+
+---
+
 
 ## 10. 异常处理与日志规范 (Error Handling & Logging)
 - **统一异常体系**: 
