@@ -2,22 +2,19 @@
 
 > **Document Positioning**: This file is the project-specific constitution for **DevOps Platform**.
 > - **全局原则 (Global Rules)**: 基础 AI 协作哲学定义在 `~/.gemini/gemini.md`。
-> - **AI 导航路由 (Meta-Prompt)**: 自动化代理的入场规则及核心文档衔接约束定义在库根目录 `AGENTS.md`。
+> - **AI 导航路由 (Meta-Prompt)**: 自动化代理的入场规则、行为守则及文档同步矩阵定义在库根目录 [`AGENTS.md`](AGENTS.md)。
 > - **项目宪法 (Project Contexts)**: 本文件（`contexts.md`）包含具体的架构、代码规范及运维红线。
 > 
-> *优先级：`contexts.md` (业务最高源) > `AGENTS.md` (调度层) > `gemini.md` (全局)。发生冲突时按此优先级执行。*
-
+> *优先级：`contexts.md` (业务/技术真相) > `AGENTS.md` (AI 调度指令) > `gemini.md` (全局)。发生冲突时按此优先级执行。*
 
 ## 1. 项目概览 (Overview)
 **DevOps Data Application Platform** 是一套企业级研发效能数据底座。它通过插件化架构采集 GitLab, SonarQube, Jenkins, Zentao, Nexus 等工具链数据，并利用 dbt 进行指标建模，最终通过 Apple Style 的原生前端界面提供看板与追溯能力。
-
 
 ## 2. 核心技术栈 (Technology Stack)
 - **后端 (Backend)**: Python 3.12, FastAPI (Router-Service 模式), SQLAlchemy 2.0 (Typed).
 - **数据层 (Data)**: PostgreSQL 15, dbt (数据转换层), RabbitMQ (任务分发控制).
 - **前端 (Frontend)**: Native JS/CSS (Apple Style Edition), Web Components, 全局变量约束通信.
 - **运维 (DevOps)**: Docker Compose, 多阶段镜像构建, 离线 Tar 包部署支持.
-
 
 ## 3. 开发环境与兼容性 (Environment)
 - **开发与测试环境 (Dev & Test Env)**: 
@@ -34,7 +31,6 @@
 - **配置一致性**: 所有敏感配置统一通过 `.env` 注入，严禁硬编码 API 地址。
     - **Pydantic 规范**: 使用双下划线 (`__`) 分隔嵌套配置（如 `GITLAB__URL` 映射到 `config.gitlab.url`）。
     - **脱敏**: Logger 必须屏蔽任何包含 `token`, `password`, `key` 的字段。
-
 
 ## 4. 核心架构与插件开发 (Architecture)
 
@@ -86,7 +82,6 @@
 - **事务安全 (Transaction Safety)**:
     - 批量方法执行后必须显式 `session.commit()`，失败时必须 `session.rollback()`，严禁吞噬异常。
     - 单条兼容接口（如 `_sync_issue`）必须内部委托给批量方法，传入 `[data]`，确保代码路径统一。
-
 
 ## 5. 数据库开发规范 (Database & SCD)
 
@@ -149,14 +144,12 @@
     - 在 SQLite 内存数据库环境下，`Base.metadata.drop_all` 会因为无法静态计算删表顺序而失败。
     - **DoD 标准**: 集成测试夹具必须实现环境感知，在测试结束时采取「连接自动关闭销毁」或显式执行 `PRAGMA foreign_keys=OFF`，确保清理过程不因外键循环而报错。
 
-
 ## 6. 前端设计与组件化 (Frontend Design)
 > 🎨 **最高行动指令**：所有前端样式与组件开发，必须严格遵循 [`docs/frontend/CONVENTIONS.md`](docs/frontend/CONVENTIONS.md)。任何与该文档冲突的 UI 实现均视为 Bug。
 
 - **Apple Style 规范**: 强制使用预定义的 CSS 变量（如 `--glass-bg`, `--primary-color`），严禁硬编码 Hex 颜色值。
 - **组件工程**: 优先使用 Web Components (Shadow DOM) 实现高内聚组件（如搜索框、卡片）。
 - **通信机制**: 跨组件通信通过 `CustomEvent` 实现，严禁随意污染全局 `window` 命名空间。
-
 
 ## 7. 数据建模与 dbt (Data Transformation)
 > 📘 **开发指南**: 详细的模型开发手册及代码模式请参见 [`docs/guides/DBT_MODELING_GUIDE.md`](docs/guides/DBT_MODELING_GUIDE.md)。
@@ -190,7 +183,6 @@
     - **Metabase**: 用于业务侧自服务查询 (Self-service BI) 与快速简单看板搭建。
 - **数据源接入**: 所有平台必须统一接入 `PostgreSQL` 的 Marts 层 (`rpt_*` 或 `fct_*` 模型)，严禁越过 dbt 直接查询 Staging 表。
 
-
 ## 8. 运维流程与生命周期 (DevOps Ops)
 
 - **部署模式**: 
@@ -222,7 +214,6 @@
     - **自动重连 (Reconnect with Backoff)**: MQ 连接断线时，Worker 必须实现指数退避重连，而非直接崩溃退出。最大重试间隔不超过 60 秒。
     - **容器重启策略**: Docker Compose 中所有长驻服务 (`worker`, `scheduler`) 必须配置 `restart: unless-stopped`，确保进程意外退出后自动恢复。
     - **优雅停机 (Graceful Shutdown)**: Worker 进程必须捕获 `SIGTERM` 信号，确保当前正在处理的任务完成后再退出，严禁在任务执行中途被强制终止导致数据不一致。
-
 
 ## 9. 测试与质量门禁 (Testing)
 - **覆盖率目标**: 核心模块 (`core/`, `models/`) >= 80%，插件模块 >= 60%。
@@ -288,9 +279,6 @@
 *   **本地测试 (Local)** 就像是 **“在家试装”**：你可以在镜子前快速尝试各种衣服（代码）搭配，看看扣子（语法）对不对，颜色（逻辑）顺不顺眼。这很快，但不能保证你出门后在强光（高并发）下或不平的路（复杂的 DB 索引）上表现得体。
 *   **容器测试 (Container)** 则是 **“全量彩排”**：你必须穿上正式演出服，走上真实的舞台（Docker Container），在真实的灯光和背景音乐（PostgreSQL/RabbitMQ）中走一遍完整流程。**只有彩排过了，才算真正的 DoD (Done of Done)。**
 
----
-
-
 ## 10. 异常处理与日志规范 (Error Handling & Logging)
 - **统一异常体系**: 
     - **业务异常**: 所有业务逻辑错误必须抛出自定义异常（继承 `BusinessException`），严禁在 Service 层直接抛出 `HTTPException`。
@@ -318,7 +306,6 @@
         - **数据库指标**: 连接池使用率、慢查询数量。
     - **采集方式**: 优先通过结构化日志聚合（如 ELK / Loki），未来可扩展至 Prometheus 埋点。严禁为了采集指标而引入重量级依赖。
 - **命名空间关联**: 日志内容必须包含业务域前缀（如 `[SD]`, `[ADM]`），以便在日志系统中快速过滤。
-
 
 ## 11. 命名全链路对齐 (Naming Alignment)
 
@@ -353,74 +340,19 @@
 - **语义清晰**：前缀后应紧跟具体的资源名。例如，Service Desk 的聚合视图文件应命名为 `sd_support.py`，而具体的单一工单逻辑应为 `sd_ticket_service.py`。
 - **去内联化**：前端样式必须使用带前缀的 Class（如 `.sd-search-bar`），配合 CSS 变量（`var(--primary)`）实现风格统一。
 
+## 12. 协作与验证原则 (Collaboration & Verification)
 
-## 12. AI 原生协作与共创 (AI-Native Collaboration & Co-Creation)
+> **注意**：原“AI 原生协作”详细规程（取证原则、文档更新矩阵、会话交接等）已统一迁移至库根目录的 **[`AGENTS.md`](AGENTS.md)**。AI 助手执行任务时必须严格遵守该手册。
 
-> **通用原则**：AI 原生协作的 10 大哲学原理（意图驱动、显性上下文、确定性边界、认知局部性、可验证性、反馈环密度、反向对齐、组合式架构、信任但验证、演进式设计）定义在 [`gemini.md` 第十二章](c:/users/netxs/.gemini/gemini.md)。此处仅记录 **本项目特有的** 补充规则。
-
-### 12.0 用户画像与沟通原则 (User Profile & Communication) [NEW]
-- **用户定位**: 本项目的主导者（USER）自定义为 **“技术小白” (Technical Beginner)**。
-- **沟通要求**: 
-    - **降维解析**: 在编写技术方案、实施步骤或解释代码逻辑时，必须使用通俗易懂的类比（如：出厂标签、合格证、身份证等），严禁堆砌纯晦涩的技术术语。
-    - **详尽引导**: 每一项操作指令必须包含“为什么这么做”和“小白视角下的预期结果”。
-    - **文档化友好**: 所有交付的文档（如 Spike）必须包含 `[小白专区]` 或类似的解说章节。
-    - **主动补位**: 遇到底层技术选择时，AI 应提供明确的推荐建议（Recommended），而不是抛出多个复杂选项让用户自行猜测。
-
-### 12.1 本项目验证规范 (Project-Specific Verification)
 - **验证前置 (Validation First)**: 任何开发计划必须包含 `[Verification]` 环节。严禁只有开发逻辑而无测试方案的计划汇报。
-- **证据驱动状态 (Evidence-Based Status) [NEW]**: 
-    - 在更新 `progress.txt` 或回复“当前项目状态/分支”前，**强制**调用 `git branch`、`ls` 或 `docker ps` 等工具进行实时取证。
-    - **严禁**基于逻辑推测（如“按规范本应在某分支”）来填写分支名、文件名或服务状态。
-    - **Physical Truth Over Logical Consistency**: 物理事实（工具输出）优先级高于逻辑一致性（规范推论）。
-- **取证溯源 (Traceability of Status) [NEW]**: 告知进度时，必须在回复或 Commit Message 中隐含/显式对应到本次对话中的工具输出 ID。
-- **伴生测试 (Companion Tests)**: 修改代码必须同步产出测试，且测试必须持久化到 `tests/` 目录，严禁在验证后删除。
-- **证据交付 (Evidence-Based Delivery)**: 告知任务完成时，必须包含 `Evidence of Testing` 模块，清晰列出执行的验证脚本、命令及结果日志。
-- **验证驱动测试**: Agent 在修改核心 `core/` 或 `models/` 代码后，必须主动执行相关模块的集成测试。
-- **问答与实现解耦**: 对于“如何实现”或“原理为何”的咨询，严禁在此轮对话中修改代码。必须等待用户依据解释做出进一步指令。
-
-### 12.2 本项目决策卡点扩展 (Project-Specific Decision Checkpoints)
-> 通用决策卡点参见 `gemini.md` 四.3「反向交互与澄清」。以下为本项目特有的额外触发条件：
-
-- **硬编码迁移**：将既有代码中的硬编码逻辑（如白名单、阈值）迁移至配置中心。
-- **配置项变更**：新增、修改或删除 `settings` 配置，必须对齐“缺省行为策略”与“异常回退逻辑”。
-- **抢跑风险 (Premature Action Check)**：涉及配置选择（如 Nexus 是否需要鉴权）时，即便存在“通用做法”，也必须核对是否已获得用户对特定 Option 的明确决策。
-
-### 12.4 AI 自动文档触发规程 (Autonomous Documentation Protocol) [MANDATORY]
-为了实现“零提醒”文档治理，AI 代理在侦测到以下**红线时刻 (Trigger Constraints)** 时，必须**主动且无条件**地执行 `/doc-update` 工作流，严禁等待用户指令：
-
-1.  **任务准完工时刻 (The DoD Moment)**：当一个 P0/P1 或 P2 任务完成验证（Verify），准备回复用户“已完成”前。
-2.  **知识突变时刻 (The Harvest Moment)**：凡是遇到以下情况，必须立即更新 `lessons-learned.log`：
-    - 针对同一个 Bug 进行了 **2 次以上**的尝试（Retry/Debug）。
-    - 发现数据源（GitLab/ZenTao）存在**非标 API 行为**或文档描述之外的陷阱。
-3.  **架构偏离修复时刻 (The Drift Moment)**：当发现物理文件（如表名、字段名）与规范或预期不符并完成修正后。
-4.  **配置/路由定义时刻 (The Setup Moment)**：新增 API Router、修改 `.env.example` 或 `requirements.txt` 后。
-
-**执行准则**：AI 应先执行文档同步，最后在回复中通过 `[Status]: Documentation Synced` 闭环。
-
-### 12.5 会话交接与上下文连续性 (Session Handover & Continuity) [NEW/MANDATORY]
-为了解决 IDE 重启或会话切换导致的“记忆断层”，所有 Agent 必须严格执行以下交接协议：
-
-1.  **新会话首条红线 (Cold Start Redline)**：
-    - 任何新会话的**第一条回复**，必须首先执行 `/session-handover` 工作流。
-    - **严禁**在未确认当前 Git 分支、脏代码状态及 `progress.txt` 进展前直接修改代码。
-    - 回复首部必须包含 **📍 会话恢复摘要**，列出：`Branch`, `Status`, `Focus`, `Backlog`。
-
-2.  **原子任务快照 (Atomic Steps in progress.txt)**：
-    - `🏗️ 进行中` 的任务必须拆解为 3-5 个原子化的可勾选子任务（Checkbox）。
-    - 正在执行的子任务末尾应标注 `(Doing)`，已完成的标注 `(Done)`。
-
-3.  **接力留言 (Handover Memory)**：
-    - 每次任务中断或会话结束前，必须在 `progress.txt` 的 `🎯 当前状态` 后追加 `[Handover Memory]`。
-    - 内容包括：当前的逻辑死胡同、已尝试失败的方案、下一步建议尝试的 API/函数。
-
-4.  **物理真实高于逻辑推理**：
-    - 严禁回答“我记得做完了”。必须通过 `git log`, `git status`, `ls` 的输出作为进度的唯一判定标准。
+- **证据交付 (Evidence-Based Delivery)**: 告知任务完成时，必须包含 `Evidence of Testing` 模块。
+- **伴生测试 (Companion Tests)**: 修改代码必须同步产出测试且必须持久化到 `tests/` 目录。
+- **问答与实现解耦**: 对于“如何实现”或“原理为何”的咨询，严禁在此轮对话中修改代码。
 
 ### 12.3 项目操作速查 (Project Operational Commands)
 - **Schema 同步**: 修改模型后必须执行 `make docs` 更新数据字典 `DATA_DICTIONARY.md`。
 - **代码自查 (Self-Review Routine)**: 交付前必须运行 `/code-review` 和 `/lint` 流水线。
 - **主数据重置**: 需要定向刷新产品、项目或组织架构时，执行 `python scripts/refresh_master_data.py --scope all --force`。
-
 
 ## 13. 分支开发与版本控制规范 (Branching & Versioning)
 > 基础 Git 规范（原子提交、Commit Message、Conventional Commits）参见 [`gemini.md` 第四.5 章](c:/users/netxs/.gemini/gemini.md)。以下为本项目的补充规定。
@@ -453,7 +385,6 @@
 
 - **合并策略**: 推荐使用 **Squash Merge**，保持主分支历史简洁。
 
-
 ## 14. 软件交付生命周期 (Software Delivery Lifecycle)
 
 ### 14.1 需求工程与追踪 (Requirements Engineering)
@@ -484,24 +415,9 @@
 - **验证自动化闭环 (Mandatory Automation)**: 
     - **后端任务**: 必须通过所有对应的 `pytest` 单元测试与集成测试，确保逻辑覆盖率。
     - **前端/UI 任务**: 涉及到 UI 重构或交互逻辑变更，**强制开展 E2E 测试** (Playwright)，确保护核心业务链路正常。
-- **文档层面 (Document Sync Matrix) [MANDATORY]**:
-    - 任何变更必须根据下表完成文档对齐（调用 `/doc-update`）：
-        | 变更类型 | 必更新文档 |
-        | :--- | :--- |
-        | **Bug 修复 / 故障排除** | `progress.txt`, `lessons-learned.log`, `session-history.log` |
-        | **架构调整 / 规范发布** | `contexts.md`, `ADR` (可选), `session-history.log` |
-        | **模型 (Model/DB) 变更** | `DATA_DICTIONARY.md`, `session-history.log` |
-        | **新依赖引入**           | `pyproject.toml`, `requirements.txt`, `session-history.log` |
-        | **常规会话结束**         | `session-history.log` (Auto-Handover) |
-        | **日常功能开发**         | `progress.txt`, `session-history.log` |
-        | **Spike 探针完成**       | `docs/spikes/YYYY-MM-DD_<topic>.md`, `session-history.log` |
-- **任务分级与估时回溯 (Task Level & Estimation Tracking) [NEW]**:
-    - 每条任务在 `progress.txt` 中必须标注任务级别（如 `[L2]`），参见 `/task-kickoff` 工作流。
-    - L2 及以上任务完成后，在「最近完成」记录中须附带估时对比：`预估 Xh / 实际 Yh`。
-    - 偏差超过 50% 的任务，必须在 `docs/lessons-learned.log` 中分析原因（如：范围蔓延、未预见依赖等），用于持续改进估时精度。
-- **知识割取与复盘 (Knowledge Harvest) [MANDATORY]**: 凡是遇到需要 2 次以上尝试才解决的问题、或非标 API 陷阱，必须**主动总结**并更新至 `docs/lessons-learned.log`。每次完工汇报前，必须在回复中包含 `Harvest Items` 摘要，否则视为 DoD 未达成。
-- **环境卫生清理 (Cleanup on Exit) [MANDATORY]**: 每次完成功能验证或阶段性任务交付前，**必须强制**执行一次 `make clean`。严禁在根目录残留任何调试生成的脚本、临时日志 (.log, .txt, .csv, debug_*.py, traceback.txt)；确保 `git status` 洁净并更新 `progress.txt` 标记 `[Hygiene]: 已清理临时调试文件`。
-
+- **文档层面对齐 (Document Sync Matrix)**: 任何关键变更必须根据 [`AGENTS.md`](AGENTS.md) 第 2.1 节定义的“任务文档对齐矩阵”完成文档同步。
+- **完工标准回溯 (Estimation Tracking)**: 每条 [L2] 及以上任务完成后，在「最近完成」记录中须附带估时对比：`预估 Xh / 实际 Yh`。偏差超过 50% 须分析原因。
+- **环境卫生清理 (Cleanup on Exit) [MANDATORY]**: 每次完成阶段性交付前，**必须执行** `make clean`。确保根目录洁净无调试脚本，并更新 `progress.txt` 标记已清理。具体清单见 `AGENTS.md`。
 
 ## 15. 禅道集成规范与元数据对齐 (ZenTao Integration & Metadata)
 
@@ -528,7 +444,6 @@
 
 ### 15.4 接口特异性与防护规范 (API Quirks & Guardrails) [MANDATORY]
 为了应对禅道非标 API 带来的稳定性挑战，所有相关插件开发必须遵循以下防护规则：
-
 - **1. 认证防御 (Auth Resilience)**:
     - **自动刷新与防死循环**: 必须实现 `401` 异常拦截器。检测到会话过期时，自动调用 `client.refresh_token()` 并重试。为了防止配置错误导致的认证无限死循环，重试逻辑必须包含 `is_retry` 状态位，单次请求仅允许触发一次自动刷新重试。
     - **心跳机制**: MQ 连接必须配置 `heartbeat=600`。由于禅道部分复杂查询（如审计日志）耗时较长，需防止 RabbitMQ 误判消费者死锁。
@@ -547,7 +462,6 @@
     - 严禁基于禅道原始字符串直接进行业务统计。必须通过 `ZenTaoTransformer` 将 `Story/Bug/Task` 的差异状态映射为平台标准 5 状态（Backlog, InProgress, Testing, Completed, Cancelled）。
     - 插件内部必须维护一个 SSOT 的状态映射配置，并在抓取层完成转换。
 
-
 ## 16. GitLab 集成规范与性能守卫 (GitLab Integration & Guardrails)
 
 ### 16.1 性能与“黑洞”防御 (Performance & Limit)
@@ -556,7 +470,6 @@
 
 ### 16.2 状态存活性自查 (Liveness Probe)
 - **定期僵尸检查 (Zombies Check)**: 增量任务无法感知 GitLab 侧的物理删除。系统必须配置“周级巡检任务”，全量拉取 GitLab Project ID 列表并与本地数据库对比，若本地存在但在源端已缺失，必须将其标记为 `is_deleted=True`且 `sync_status='DELETED'`。
-
 
 ## 17. 全局身份与成本归因规范 (Global Identity & Attribution)
 
@@ -606,7 +519,6 @@
     2.  `make test`: 容器内全量测试（单元+集成）100% 通过。
     3.  `make build`: Docker 镜像构建成功。
 - **复杂度与异常**: 如果因架构需求必须引入复杂逻辑导致复杂度超标（PLR 规则），必须报备并在 `ruff.toml` 或行内添加显式忽略原因。
-
 
 ## 19. 防御性编程十大守则 (Defensive Programming Mandates) [MANDATORY]
 
