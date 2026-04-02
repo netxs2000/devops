@@ -1,0 +1,3112 @@
+﻿
+
++===========================================================================================================================================================================================+
+
+
+DEPRECATED: this command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.
+
+
+We highly encourage switching to the new `scan` command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.
+
+
++===========================================================================================================================================================================================+
+
+
+{
+    "report_meta": {
+        "scan_target": "environment",
+        "scanned": [
+            "/app",
+            "/usr/local/lib/python3.11/site-packages"
+        ],
+        "scanned_full_path": [
+            "/app",
+            "/usr/local/lib/python3.11/site-packages"
+        ],
+        "target_languages": [
+            "python"
+        ],
+        "policy_file": null,
+        "policy_file_source": "local",
+        "audit_and_monitor": false,
+        "api_key": false,
+        "account": "",
+        "local_database_path": null,
+        "safety_version": "3.7.0",
+        "timestamp": "2026-04-02 09:50:25",
+        "packages_found": 182,
+        "vulnerabilities_found": 1,
+        "vulnerabilities_ignored": 2,
+        "remediations_recommended": 0,
+        "telemetry": {
+            "safety_options": {
+                "ignore": {
+                    "--ignore": 1
+                },
+                "json": {
+                    "--json": 1
+                }
+            },
+            "safety_version": "3.7.0",
+            "safety_source": "cli",
+            "os_type": "Linux",
+            "os_release": "6.6.87.2-microsoft-standard-WSL2",
+            "os_description": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.36",
+            "python_version": "3.11.14",
+            "safety_command": "check"
+        },
+        "git": {
+            "branch": "main",
+            "tag": "",
+            "commit": "024ff4fb3833a2947c7b742ce872c92f681371f5",
+            "dirty": "True",
+            "origin": "git@github.com:netxs2000/devops.git"
+        },
+        "project": null,
+        "json_version": "1.1",
+        "remediations_attempted": 0,
+        "remediations_completed": 0,
+        "remediation_mode": "NON_INTERACTIVE"
+    },
+    "scanned_packages": {
+        "devops-platform": {
+            "name": "devops-platform",
+            "version": "3.4.0",
+            "requirements": [
+                {
+                    "raw": "devops-platform==3.4.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "devops-platform",
+                    "specifier": "==3.4.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/devops_platform-3.4.0.dist-info"
+                }
+            ]
+        },
+        "setuptools": {
+            "name": "setuptools",
+            "version": "79.0.1",
+            "requirements": [
+                {
+                    "raw": "setuptools==79.0.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "setuptools",
+                    "specifier": "==79.0.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/setuptools-79.0.1.dist-info"
+                }
+            ]
+        },
+        "safety": {
+            "name": "safety",
+            "version": "3.7.0",
+            "requirements": [
+                {
+                    "raw": "safety==3.7.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "safety",
+                    "specifier": "==3.7.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/safety-3.7.0.dist-info"
+                }
+            ]
+        },
+        "python-multipart": {
+            "name": "python-multipart",
+            "version": "0.0.22",
+            "requirements": [
+                {
+                    "raw": "python-multipart==0.0.22",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-multipart",
+                    "specifier": "==0.0.22",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/python_multipart-0.0.22.dist-info"
+                }
+            ]
+        },
+        "dbt-protos": {
+            "name": "dbt-protos",
+            "version": "1.0.443",
+            "requirements": [
+                {
+                    "raw": "dbt-protos==1.0.443",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dbt-protos",
+                    "specifier": "==1.0.443",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dbt_protos-1.0.443.dist-info"
+                }
+            ]
+        },
+        "ruamel.yaml": {
+            "name": "ruamel.yaml",
+            "version": "0.19.1",
+            "requirements": [
+                {
+                    "raw": "ruamel.yaml==0.19.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "ruamel.yaml",
+                    "specifier": "==0.19.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/ruamel_yaml-0.19.1.dist-info"
+                }
+            ]
+        },
+        "dbt-core": {
+            "name": "dbt-core",
+            "version": "1.11.7",
+            "requirements": [
+                {
+                    "raw": "dbt-core==1.11.7",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dbt-core",
+                    "specifier": "==1.11.7",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dbt_core-1.11.7.dist-info"
+                }
+            ]
+        },
+        "cffi": {
+            "name": "cffi",
+            "version": "2.0.0",
+            "requirements": [
+                {
+                    "raw": "cffi==2.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "cffi",
+                    "specifier": "==2.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/cffi-2.0.0.dist-info"
+                }
+            ]
+        },
+        "nltk": {
+            "name": "nltk",
+            "version": "3.9.4",
+            "requirements": [
+                {
+                    "raw": "nltk==3.9.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "nltk",
+                    "specifier": "==3.9.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/nltk-3.9.4.dist-info"
+                }
+            ]
+        },
+        "shellingham": {
+            "name": "shellingham",
+            "version": "1.5.4",
+            "requirements": [
+                {
+                    "raw": "shellingham==1.5.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "shellingham",
+                    "specifier": "==1.5.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/shellingham-1.5.4.dist-info"
+                }
+            ]
+        },
+        "stevedore": {
+            "name": "stevedore",
+            "version": "5.7.0",
+            "requirements": [
+                {
+                    "raw": "stevedore==5.7.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "stevedore",
+                    "specifier": "==5.7.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/stevedore-5.7.0.dist-info"
+                }
+            ]
+        },
+        "Jinja2": {
+            "name": "Jinja2",
+            "version": "3.1.6",
+            "requirements": [
+                {
+                    "raw": "Jinja2==3.1.6",
+                    "extras": [],
+                    "marker": null,
+                    "name": "Jinja2",
+                    "specifier": "==3.1.6",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/jinja2-3.1.6.dist-info"
+                }
+            ]
+        },
+        "annotated-doc": {
+            "name": "annotated-doc",
+            "version": "0.0.4",
+            "requirements": [
+                {
+                    "raw": "annotated-doc==0.0.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "annotated-doc",
+                    "specifier": "==0.0.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/annotated_doc-0.0.4.dist-info"
+                }
+            ]
+        },
+        "dbt-common": {
+            "name": "dbt-common",
+            "version": "1.37.3",
+            "requirements": [
+                {
+                    "raw": "dbt-common==1.37.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dbt-common",
+                    "specifier": "==1.37.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dbt_common-1.37.3.dist-info"
+                }
+            ]
+        },
+        "wheel": {
+            "name": "wheel",
+            "version": "0.46.3",
+            "requirements": [
+                {
+                    "raw": "wheel==0.46.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "wheel",
+                    "specifier": "==0.46.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/wheel-0.46.3.dist-info"
+                }
+            ]
+        },
+        "python-jose": {
+            "name": "python-jose",
+            "version": "3.5.0",
+            "requirements": [
+                {
+                    "raw": "python-jose==3.5.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-jose",
+                    "specifier": "==3.5.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/python_jose-3.5.0.dist-info"
+                }
+            ]
+        },
+        "fastapi": {
+            "name": "fastapi",
+            "version": "0.135.3",
+            "requirements": [
+                {
+                    "raw": "fastapi==0.135.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "fastapi",
+                    "specifier": "==0.135.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/fastapi-0.135.3.dist-info"
+                }
+            ]
+        },
+        "dbt-adapters": {
+            "name": "dbt-adapters",
+            "version": "1.22.10",
+            "requirements": [
+                {
+                    "raw": "dbt-adapters==1.22.10",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dbt-adapters",
+                    "specifier": "==1.22.10",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dbt_adapters-1.22.10.dist-info"
+                }
+            ]
+        },
+        "regex": {
+            "name": "regex",
+            "version": "2026.3.32",
+            "requirements": [
+                {
+                    "raw": "regex==2026.3.32",
+                    "extras": [],
+                    "marker": null,
+                    "name": "regex",
+                    "specifier": "==2026.3.32",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/regex-2026.3.32.dist-info"
+                }
+            ]
+        },
+        "starlette": {
+            "name": "starlette",
+            "version": "1.0.0",
+            "requirements": [
+                {
+                    "raw": "starlette==1.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "starlette",
+                    "specifier": "==1.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/starlette-1.0.0.dist-info"
+                }
+            ]
+        },
+        "dbt-postgres": {
+            "name": "dbt-postgres",
+            "version": "1.10.0",
+            "requirements": [
+                {
+                    "raw": "dbt-postgres==1.10.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dbt-postgres",
+                    "specifier": "==1.10.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dbt_postgres-1.10.0.dist-info"
+                }
+            ]
+        },
+        "detect-secrets": {
+            "name": "detect-secrets",
+            "version": "1.5.0",
+            "requirements": [
+                {
+                    "raw": "detect-secrets==1.5.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "detect-secrets",
+                    "specifier": "==1.5.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/detect_secrets-1.5.0.dist-info"
+                }
+            ]
+        },
+        "cryptography": {
+            "name": "cryptography",
+            "version": "46.0.6",
+            "requirements": [
+                {
+                    "raw": "cryptography==46.0.6",
+                    "extras": [],
+                    "marker": null,
+                    "name": "cryptography",
+                    "specifier": "==46.0.6",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/cryptography-46.0.6.dist-info"
+                }
+            ]
+        },
+        "deepdiff": {
+            "name": "deepdiff",
+            "version": "8.6.2",
+            "requirements": [
+                {
+                    "raw": "deepdiff==8.6.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "deepdiff",
+                    "specifier": "==8.6.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/deepdiff-8.6.2.dist-info"
+                }
+            ]
+        },
+        "dbt-semantic-interfaces": {
+            "name": "dbt-semantic-interfaces",
+            "version": "0.9.0",
+            "requirements": [
+                {
+                    "raw": "dbt-semantic-interfaces==0.9.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dbt-semantic-interfaces",
+                    "specifier": "==0.9.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dbt_semantic_interfaces-0.9.0.dist-info"
+                }
+            ]
+        },
+        "requests": {
+            "name": "requests",
+            "version": "2.33.1",
+            "requirements": [
+                {
+                    "raw": "requests==2.33.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "requests",
+                    "specifier": "==2.33.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/requests-2.33.1.dist-info"
+                }
+            ]
+        },
+        "orderly-set": {
+            "name": "orderly-set",
+            "version": "5.5.0",
+            "requirements": [
+                {
+                    "raw": "orderly-set==5.5.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "orderly-set",
+                    "specifier": "==5.5.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/orderly_set-5.5.0.dist-info"
+                }
+            ]
+        },
+        "dparse": {
+            "name": "dparse",
+            "version": "0.6.4",
+            "requirements": [
+                {
+                    "raw": "dparse==0.6.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dparse",
+                    "specifier": "==0.6.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dparse-0.6.4.dist-info"
+                }
+            ]
+        },
+        "typing-inspection": {
+            "name": "typing-inspection",
+            "version": "0.4.2",
+            "requirements": [
+                {
+                    "raw": "typing-inspection==0.4.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "typing-inspection",
+                    "specifier": "==0.4.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/typing_inspection-0.4.2.dist-info"
+                }
+            ]
+        },
+        "typer": {
+            "name": "typer",
+            "version": "0.24.1",
+            "requirements": [
+                {
+                    "raw": "typer==0.24.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "typer",
+                    "specifier": "==0.24.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/typer-0.24.1.dist-info"
+                }
+            ]
+        },
+        "protobuf": {
+            "name": "protobuf",
+            "version": "6.33.6",
+            "requirements": [
+                {
+                    "raw": "protobuf==6.33.6",
+                    "extras": [],
+                    "marker": null,
+                    "name": "protobuf",
+                    "specifier": "==6.33.6",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/protobuf-6.33.6.dist-info"
+                }
+            ]
+        },
+        "pip": {
+            "name": "pip",
+            "version": "26.0.1",
+            "requirements": [
+                {
+                    "raw": "pip==26.0.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pip",
+                    "specifier": "==26.0.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pip-26.0.1.dist-info"
+                }
+            ]
+        },
+        "urllib3": {
+            "name": "urllib3",
+            "version": "2.6.3",
+            "requirements": [
+                {
+                    "raw": "urllib3==2.6.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "urllib3",
+                    "specifier": "==2.6.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/urllib3-2.6.3.dist-info"
+                }
+            ]
+        },
+        "filelock": {
+            "name": "filelock",
+            "version": "3.25.2",
+            "requirements": [
+                {
+                    "raw": "filelock==3.25.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "filelock",
+                    "specifier": "==3.25.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/filelock-3.25.2.dist-info"
+                }
+            ]
+        },
+        "sqlparse": {
+            "name": "sqlparse",
+            "version": "0.5.4",
+            "requirements": [
+                {
+                    "raw": "sqlparse==0.5.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sqlparse",
+                    "specifier": "==0.5.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sqlparse-0.5.4.dist-info"
+                }
+            ]
+        },
+        "tqdm": {
+            "name": "tqdm",
+            "version": "4.67.3",
+            "requirements": [
+                {
+                    "raw": "tqdm==4.67.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "tqdm",
+                    "specifier": "==4.67.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/tqdm-4.67.3.dist-info"
+                }
+            ]
+        },
+        "safety-schemas": {
+            "name": "safety-schemas",
+            "version": "0.0.16",
+            "requirements": [
+                {
+                    "raw": "safety-schemas==0.0.16",
+                    "extras": [],
+                    "marker": null,
+                    "name": "safety-schemas",
+                    "specifier": "==0.0.16",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/safety_schemas-0.0.16.dist-info"
+                }
+            ]
+        },
+        "marshmallow": {
+            "name": "marshmallow",
+            "version": "4.2.3",
+            "requirements": [
+                {
+                    "raw": "marshmallow==4.2.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "marshmallow",
+                    "specifier": "==4.2.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/marshmallow-4.2.3.dist-info"
+                }
+            ]
+        },
+        "Authlib": {
+            "name": "Authlib",
+            "version": "1.6.9",
+            "requirements": [
+                {
+                    "raw": "Authlib==1.6.9",
+                    "extras": [],
+                    "marker": null,
+                    "name": "Authlib",
+                    "specifier": "==1.6.9",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/authlib-1.6.9.dist-info"
+                }
+            ]
+        },
+        "bandit": {
+            "name": "bandit",
+            "version": "1.9.4",
+            "requirements": [
+                {
+                    "raw": "bandit==1.9.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "bandit",
+                    "specifier": "==1.9.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/bandit-1.9.4.dist-info"
+                }
+            ]
+        },
+        "streamlit": {
+            "name": "streamlit",
+            "version": "1.56.0",
+            "requirements": [
+                {
+                    "raw": "streamlit==1.56.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "streamlit",
+                    "specifier": "==1.56.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/streamlit-1.56.0.dist-info"
+                }
+            ]
+        },
+        "daff": {
+            "name": "daff",
+            "version": "1.4.2",
+            "requirements": [
+                {
+                    "raw": "daff==1.4.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "daff",
+                    "specifier": "==1.4.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/daff-1.4.2.dist-info"
+                }
+            ]
+        },
+        "mashumaro": {
+            "name": "mashumaro",
+            "version": "3.14",
+            "requirements": [
+                {
+                    "raw": "mashumaro==3.14",
+                    "extras": [],
+                    "marker": null,
+                    "name": "mashumaro",
+                    "specifier": "==3.14",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/mashumaro-3.14.dist-info"
+                }
+            ]
+        },
+        "snowplow-tracker": {
+            "name": "snowplow-tracker",
+            "version": "1.1.0",
+            "requirements": [
+                {
+                    "raw": "snowplow-tracker==1.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "snowplow-tracker",
+                    "specifier": "==1.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/snowplow_tracker-1.1.0.dist-info"
+                }
+            ]
+        },
+        "joblib": {
+            "name": "joblib",
+            "version": "1.5.3",
+            "requirements": [
+                {
+                    "raw": "joblib==1.5.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "joblib",
+                    "specifier": "==1.5.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/joblib-1.5.3.dist-info"
+                }
+            ]
+        },
+        "imagesize": {
+            "name": "imagesize",
+            "version": "2.0.0",
+            "requirements": [
+                {
+                    "raw": "imagesize==2.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "imagesize",
+                    "specifier": "==2.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/imagesize-2.0.0.dist-info"
+                }
+            ]
+        },
+        "dill": {
+            "name": "dill",
+            "version": "0.4.1",
+            "requirements": [
+                {
+                    "raw": "dill==0.4.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dill",
+                    "specifier": "==0.4.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dill-0.4.1.dist-info"
+                }
+            ]
+        },
+        "coverage": {
+            "name": "coverage",
+            "version": "7.13.5",
+            "requirements": [
+                {
+                    "raw": "coverage==7.13.5",
+                    "extras": [],
+                    "marker": null,
+                    "name": "coverage",
+                    "specifier": "==7.13.5",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/coverage-7.13.5.dist-info"
+                }
+            ]
+        },
+        "tomlkit": {
+            "name": "tomlkit",
+            "version": "0.14.0",
+            "requirements": [
+                {
+                    "raw": "tomlkit==0.14.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "tomlkit",
+                    "specifier": "==0.14.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/tomlkit-0.14.0.dist-info"
+                }
+            ]
+        },
+        "pytest-cov": {
+            "name": "pytest-cov",
+            "version": "4.1.0",
+            "requirements": [
+                {
+                    "raw": "pytest-cov==4.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytest-cov",
+                    "specifier": "==4.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pytest_cov-4.1.0.dist-info"
+                }
+            ]
+        },
+        "websocket-client": {
+            "name": "websocket-client",
+            "version": "1.9.0",
+            "requirements": [
+                {
+                    "raw": "websocket-client==1.9.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "websocket-client",
+                    "specifier": "==1.9.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/websocket_client-1.9.0.dist-info"
+                }
+            ]
+        },
+        "sphinxcontrib-serializinghtml": {
+            "name": "sphinxcontrib-serializinghtml",
+            "version": "2.0.0",
+            "requirements": [
+                {
+                    "raw": "sphinxcontrib-serializinghtml==2.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sphinxcontrib-serializinghtml",
+                    "specifier": "==2.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sphinxcontrib_serializinghtml-2.0.0.dist-info"
+                }
+            ]
+        },
+        "sphinxcontrib-applehelp": {
+            "name": "sphinxcontrib-applehelp",
+            "version": "2.0.0",
+            "requirements": [
+                {
+                    "raw": "sphinxcontrib-applehelp==2.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sphinxcontrib-applehelp",
+                    "specifier": "==2.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sphinxcontrib_applehelp-2.0.0.dist-info"
+                }
+            ]
+        },
+        "sphinxcontrib-jsmath": {
+            "name": "sphinxcontrib-jsmath",
+            "version": "1.0.1",
+            "requirements": [
+                {
+                    "raw": "sphinxcontrib-jsmath==1.0.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sphinxcontrib-jsmath",
+                    "specifier": "==1.0.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sphinxcontrib_jsmath-1.0.1.dist-info"
+                }
+            ]
+        },
+        "outcome": {
+            "name": "outcome",
+            "version": "1.3.0.post0",
+            "requirements": [
+                {
+                    "raw": "outcome==1.3.0.post0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "outcome",
+                    "specifier": "==1.3.0.post0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/outcome-1.3.0.post0.dist-info"
+                }
+            ]
+        },
+        "mccabe": {
+            "name": "mccabe",
+            "version": "0.7.0",
+            "requirements": [
+                {
+                    "raw": "mccabe==0.7.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "mccabe",
+                    "specifier": "==0.7.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/mccabe-0.7.0.dist-info"
+                }
+            ]
+        },
+        "pytest": {
+            "name": "pytest",
+            "version": "9.0.2",
+            "requirements": [
+                {
+                    "raw": "pytest==9.0.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytest",
+                    "specifier": "==9.0.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pytest-9.0.2.dist-info"
+                }
+            ]
+        },
+        "pyproject_hooks": {
+            "name": "pyproject_hooks",
+            "version": "1.2.0",
+            "requirements": [
+                {
+                    "raw": "pyproject_hooks==1.2.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pyproject_hooks",
+                    "specifier": "==1.2.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pyproject_hooks-1.2.0.dist-info"
+                }
+            ]
+        },
+        "trio": {
+            "name": "trio",
+            "version": "0.33.0",
+            "requirements": [
+                {
+                    "raw": "trio==0.33.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "trio",
+                    "specifier": "==0.33.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/trio-0.33.0.dist-info"
+                }
+            ]
+        },
+        "sphinxcontrib-qthelp": {
+            "name": "sphinxcontrib-qthelp",
+            "version": "2.0.0",
+            "requirements": [
+                {
+                    "raw": "sphinxcontrib-qthelp==2.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sphinxcontrib-qthelp",
+                    "specifier": "==2.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sphinxcontrib_qthelp-2.0.0.dist-info"
+                }
+            ]
+        },
+        "flake8": {
+            "name": "flake8",
+            "version": "7.3.0",
+            "requirements": [
+                {
+                    "raw": "flake8==7.3.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "flake8",
+                    "specifier": "==7.3.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/flake8-7.3.0.dist-info"
+                }
+            ]
+        },
+        "selenium": {
+            "name": "selenium",
+            "version": "4.32.0",
+            "requirements": [
+                {
+                    "raw": "selenium==4.32.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "selenium",
+                    "specifier": "==4.32.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/selenium-4.32.0.dist-info"
+                }
+            ]
+        },
+        "alabaster": {
+            "name": "alabaster",
+            "version": "1.0.0",
+            "requirements": [
+                {
+                    "raw": "alabaster==1.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "alabaster",
+                    "specifier": "==1.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/alabaster-1.0.0.dist-info"
+                }
+            ]
+        },
+        "build": {
+            "name": "build",
+            "version": "1.4.2",
+            "requirements": [
+                {
+                    "raw": "build==1.4.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "build",
+                    "specifier": "==1.4.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/build-1.4.2.dist-info"
+                }
+            ]
+        },
+        "platformdirs": {
+            "name": "platformdirs",
+            "version": "4.9.4",
+            "requirements": [
+                {
+                    "raw": "platformdirs==4.9.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "platformdirs",
+                    "specifier": "==4.9.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/platformdirs-4.9.4.dist-info"
+                }
+            ]
+        },
+        "Sphinx": {
+            "name": "Sphinx",
+            "version": "8.2.3",
+            "requirements": [
+                {
+                    "raw": "Sphinx==8.2.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "Sphinx",
+                    "specifier": "==8.2.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sphinx-8.2.3.dist-info"
+                }
+            ]
+        },
+        "astroid": {
+            "name": "astroid",
+            "version": "3.3.11",
+            "requirements": [
+                {
+                    "raw": "astroid==3.3.11",
+                    "extras": [],
+                    "marker": null,
+                    "name": "astroid",
+                    "specifier": "==3.3.11",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/astroid-3.3.11.dist-info"
+                }
+            ]
+        },
+        "mypy_extensions": {
+            "name": "mypy_extensions",
+            "version": "1.1.0",
+            "requirements": [
+                {
+                    "raw": "mypy_extensions==1.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "mypy_extensions",
+                    "specifier": "==1.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/mypy_extensions-1.1.0.dist-info"
+                }
+            ]
+        },
+        "pluggy": {
+            "name": "pluggy",
+            "version": "1.6.0",
+            "requirements": [
+                {
+                    "raw": "pluggy==1.6.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pluggy",
+                    "specifier": "==1.6.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pluggy-1.6.0.dist-info"
+                }
+            ]
+        },
+        "librt": {
+            "name": "librt",
+            "version": "0.8.1",
+            "requirements": [
+                {
+                    "raw": "librt==0.8.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "librt",
+                    "specifier": "==0.8.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/librt-0.8.1.dist-info"
+                }
+            ]
+        },
+        "trio-websocket": {
+            "name": "trio-websocket",
+            "version": "0.12.2",
+            "requirements": [
+                {
+                    "raw": "trio-websocket==0.12.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "trio-websocket",
+                    "specifier": "==0.12.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/trio_websocket-0.12.2.dist-info"
+                }
+            ]
+        },
+        "pytest-asyncio": {
+            "name": "pytest-asyncio",
+            "version": "1.3.0",
+            "requirements": [
+                {
+                    "raw": "pytest-asyncio==1.3.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytest-asyncio",
+                    "specifier": "==1.3.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pytest_asyncio-1.3.0.dist-info"
+                }
+            ]
+        },
+        "sphinx_rtd_theme": {
+            "name": "sphinx_rtd_theme",
+            "version": "3.1.0",
+            "requirements": [
+                {
+                    "raw": "sphinx_rtd_theme==3.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sphinx_rtd_theme",
+                    "specifier": "==3.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sphinx_rtd_theme-3.1.0.dist-info"
+                }
+            ]
+        },
+        "mypy": {
+            "name": "mypy",
+            "version": "1.19.1",
+            "requirements": [
+                {
+                    "raw": "mypy==1.19.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "mypy",
+                    "specifier": "==1.19.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/mypy-1.19.1.dist-info"
+                }
+            ]
+        },
+        "roman-numerals-py": {
+            "name": "roman-numerals-py",
+            "version": "4.1.0",
+            "requirements": [
+                {
+                    "raw": "roman-numerals-py==4.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "roman-numerals-py",
+                    "specifier": "==4.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/roman_numerals_py-4.1.0.dist-info"
+                }
+            ]
+        },
+        "docutils": {
+            "name": "docutils",
+            "version": "0.21.2",
+            "requirements": [
+                {
+                    "raw": "docutils==0.21.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "docutils",
+                    "specifier": "==0.21.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/docutils-0.21.2.dist-info"
+                }
+            ]
+        },
+        "roman-numerals": {
+            "name": "roman-numerals",
+            "version": "4.1.0",
+            "requirements": [
+                {
+                    "raw": "roman-numerals==4.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "roman-numerals",
+                    "specifier": "==4.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/roman_numerals-4.1.0.dist-info"
+                }
+            ]
+        },
+        "pytest-timeout": {
+            "name": "pytest-timeout",
+            "version": "2.4.0",
+            "requirements": [
+                {
+                    "raw": "pytest-timeout==2.4.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytest-timeout",
+                    "specifier": "==2.4.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pytest_timeout-2.4.0.dist-info"
+                }
+            ]
+        },
+        "black": {
+            "name": "black",
+            "version": "24.10.0",
+            "requirements": [
+                {
+                    "raw": "black==24.10.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "black",
+                    "specifier": "==24.10.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/black-24.10.0.dist-info"
+                }
+            ]
+        },
+        "wsproto": {
+            "name": "wsproto",
+            "version": "1.3.2",
+            "requirements": [
+                {
+                    "raw": "wsproto==1.3.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "wsproto",
+                    "specifier": "==1.3.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/wsproto-1.3.2.dist-info"
+                }
+            ]
+        },
+        "iniconfig": {
+            "name": "iniconfig",
+            "version": "2.3.0",
+            "requirements": [
+                {
+                    "raw": "iniconfig==2.3.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "iniconfig",
+                    "specifier": "==2.3.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/iniconfig-2.3.0.dist-info"
+                }
+            ]
+        },
+        "pip-tools": {
+            "name": "pip-tools",
+            "version": "7.5.3",
+            "requirements": [
+                {
+                    "raw": "pip-tools==7.5.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pip-tools",
+                    "specifier": "==7.5.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pip_tools-7.5.3.dist-info"
+                }
+            ]
+        },
+        "pycodestyle": {
+            "name": "pycodestyle",
+            "version": "2.14.0",
+            "requirements": [
+                {
+                    "raw": "pycodestyle==2.14.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pycodestyle",
+                    "specifier": "==2.14.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pycodestyle-2.14.0.dist-info"
+                }
+            ]
+        },
+        "sphinxcontrib-jquery": {
+            "name": "sphinxcontrib-jquery",
+            "version": "4.1",
+            "requirements": [
+                {
+                    "raw": "sphinxcontrib-jquery==4.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sphinxcontrib-jquery",
+                    "specifier": "==4.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sphinxcontrib_jquery-4.1.dist-info"
+                }
+            ]
+        },
+        "sortedcontainers": {
+            "name": "sortedcontainers",
+            "version": "2.4.0",
+            "requirements": [
+                {
+                    "raw": "sortedcontainers==2.4.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sortedcontainers",
+                    "specifier": "==2.4.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sortedcontainers-2.4.0.dist-info"
+                }
+            ]
+        },
+        "pylint": {
+            "name": "pylint",
+            "version": "3.3.9",
+            "requirements": [
+                {
+                    "raw": "pylint==3.3.9",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pylint",
+                    "specifier": "==3.3.9",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pylint-3.3.9.dist-info"
+                }
+            ]
+        },
+        "isort": {
+            "name": "isort",
+            "version": "6.1.0",
+            "requirements": [
+                {
+                    "raw": "isort==6.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "isort",
+                    "specifier": "==6.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/isort-6.1.0.dist-info"
+                }
+            ]
+        },
+        "snowballstemmer": {
+            "name": "snowballstemmer",
+            "version": "3.0.1",
+            "requirements": [
+                {
+                    "raw": "snowballstemmer==3.0.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "snowballstemmer",
+                    "specifier": "==3.0.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/snowballstemmer-3.0.1.dist-info"
+                }
+            ]
+        },
+        "sphinxcontrib-htmlhelp": {
+            "name": "sphinxcontrib-htmlhelp",
+            "version": "2.1.0",
+            "requirements": [
+                {
+                    "raw": "sphinxcontrib-htmlhelp==2.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sphinxcontrib-htmlhelp",
+                    "specifier": "==2.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sphinxcontrib_htmlhelp-2.1.0.dist-info"
+                }
+            ]
+        },
+        "PySocks": {
+            "name": "PySocks",
+            "version": "1.7.1",
+            "requirements": [
+                {
+                    "raw": "PySocks==1.7.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "PySocks",
+                    "specifier": "==1.7.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/PySocks-1.7.1.dist-info"
+                }
+            ]
+        },
+        "pyflakes": {
+            "name": "pyflakes",
+            "version": "3.4.0",
+            "requirements": [
+                {
+                    "raw": "pyflakes==3.4.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pyflakes",
+                    "specifier": "==3.4.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pyflakes-3.4.0.dist-info"
+                }
+            ]
+        },
+        "ruff": {
+            "name": "ruff",
+            "version": "0.15.8",
+            "requirements": [
+                {
+                    "raw": "ruff==0.15.8",
+                    "extras": [],
+                    "marker": null,
+                    "name": "ruff",
+                    "specifier": "==0.15.8",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/ruff-0.15.8.dist-info"
+                }
+            ]
+        },
+        "webdriver-manager": {
+            "name": "webdriver-manager",
+            "version": "4.0.2",
+            "requirements": [
+                {
+                    "raw": "webdriver-manager==4.0.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "webdriver-manager",
+                    "specifier": "==4.0.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/webdriver_manager-4.0.2.dist-info"
+                }
+            ]
+        },
+        "sphinxcontrib-devhelp": {
+            "name": "sphinxcontrib-devhelp",
+            "version": "2.0.0",
+            "requirements": [
+                {
+                    "raw": "sphinxcontrib-devhelp==2.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sphinxcontrib-devhelp",
+                    "specifier": "==2.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sphinxcontrib_devhelp-2.0.0.dist-info"
+                }
+            ]
+        },
+        "requests-mock": {
+            "name": "requests-mock",
+            "version": "1.12.1",
+            "requirements": [
+                {
+                    "raw": "requests-mock==1.12.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "requests-mock",
+                    "specifier": "==1.12.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/requests_mock-1.12.1.dist-info"
+                }
+            ]
+        },
+        "babel": {
+            "name": "babel",
+            "version": "2.18.0",
+            "requirements": [
+                {
+                    "raw": "babel==2.18.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "babel",
+                    "specifier": "==2.18.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/babel-2.18.0.dist-info"
+                }
+            ]
+        },
+        "pandas": {
+            "name": "pandas",
+            "version": "2.2.3",
+            "requirements": [
+                {
+                    "raw": "pandas==2.2.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pandas",
+                    "specifier": "==2.2.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pandas-2.2.3.dist-info"
+                }
+            ]
+        },
+        "pyasn1": {
+            "name": "pyasn1",
+            "version": "0.6.3",
+            "requirements": [
+                {
+                    "raw": "pyasn1==0.6.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pyasn1",
+                    "specifier": "==0.6.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pyasn1-0.6.3.dist-info"
+                }
+            ]
+        },
+        "pathspec": {
+            "name": "pathspec",
+            "version": "0.11.2",
+            "requirements": [
+                {
+                    "raw": "pathspec==0.11.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pathspec",
+                    "specifier": "==0.11.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pathspec-0.11.2.dist-info"
+                }
+            ]
+        },
+        "idna": {
+            "name": "idna",
+            "version": "3.11",
+            "requirements": [
+                {
+                    "raw": "idna==3.11",
+                    "extras": [],
+                    "marker": null,
+                    "name": "idna",
+                    "specifier": "==3.11",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/idna-3.11.dist-info"
+                }
+            ]
+        },
+        "tornado": {
+            "name": "tornado",
+            "version": "6.5.5",
+            "requirements": [
+                {
+                    "raw": "tornado==6.5.5",
+                    "extras": [],
+                    "marker": null,
+                    "name": "tornado",
+                    "specifier": "==6.5.5",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/tornado-6.5.5.dist-info"
+                }
+            ]
+        },
+        "pypinyin": {
+            "name": "pypinyin",
+            "version": "0.53.0",
+            "requirements": [
+                {
+                    "raw": "pypinyin==0.53.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pypinyin",
+                    "specifier": "==0.53.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pypinyin-0.53.0.dist-info"
+                }
+            ]
+        },
+        "pydantic": {
+            "name": "pydantic",
+            "version": "2.10.4",
+            "requirements": [
+                {
+                    "raw": "pydantic==2.10.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pydantic",
+                    "specifier": "==2.10.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pydantic-2.10.4.dist-info"
+                }
+            ]
+        },
+        "passlib": {
+            "name": "passlib",
+            "version": "1.7.4",
+            "requirements": [
+                {
+                    "raw": "passlib==1.7.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "passlib",
+                    "specifier": "==1.7.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/passlib-1.7.4.dist-info"
+                }
+            ]
+        },
+        "annotated-types": {
+            "name": "annotated-types",
+            "version": "0.7.0",
+            "requirements": [
+                {
+                    "raw": "annotated-types==0.7.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "annotated-types",
+                    "specifier": "==0.7.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/annotated_types-0.7.0.dist-info"
+                }
+            ]
+        },
+        "pytimeparse": {
+            "name": "pytimeparse",
+            "version": "1.1.8",
+            "requirements": [
+                {
+                    "raw": "pytimeparse==1.1.8",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytimeparse",
+                    "specifier": "==1.1.8",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pytimeparse-1.1.8.dist-info"
+                }
+            ]
+        },
+        "cachetools": {
+            "name": "cachetools",
+            "version": "5.5.2",
+            "requirements": [
+                {
+                    "raw": "cachetools==5.5.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "cachetools",
+                    "specifier": "==5.5.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/cachetools-5.5.2.dist-info"
+                }
+            ]
+        },
+        "pika": {
+            "name": "pika",
+            "version": "1.3.2",
+            "requirements": [
+                {
+                    "raw": "pika==1.3.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pika",
+                    "specifier": "==1.3.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pika-1.3.2.dist-info"
+                }
+            ]
+        },
+        "referencing": {
+            "name": "referencing",
+            "version": "0.37.0",
+            "requirements": [
+                {
+                    "raw": "referencing==0.37.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "referencing",
+                    "specifier": "==0.37.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/referencing-0.37.0.dist-info"
+                }
+            ]
+        },
+        "smmap": {
+            "name": "smmap",
+            "version": "5.0.3",
+            "requirements": [
+                {
+                    "raw": "smmap==5.0.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "smmap",
+                    "specifier": "==5.0.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/smmap-5.0.3.dist-info"
+                }
+            ]
+        },
+        "rpds-py": {
+            "name": "rpds-py",
+            "version": "0.30.0",
+            "requirements": [
+                {
+                    "raw": "rpds-py==0.30.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "rpds-py",
+                    "specifier": "==0.30.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/rpds_py-0.30.0.dist-info"
+                }
+            ]
+        },
+        "httpcore": {
+            "name": "httpcore",
+            "version": "1.0.9",
+            "requirements": [
+                {
+                    "raw": "httpcore==1.0.9",
+                    "extras": [],
+                    "marker": null,
+                    "name": "httpcore",
+                    "specifier": "==1.0.9",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/httpcore-1.0.9.dist-info"
+                }
+            ]
+        },
+        "pydantic_core": {
+            "name": "pydantic_core",
+            "version": "2.27.2",
+            "requirements": [
+                {
+                    "raw": "pydantic_core==2.27.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pydantic_core",
+                    "specifier": "==2.27.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pydantic_core-2.27.2.dist-info"
+                }
+            ]
+        },
+        "typing_extensions": {
+            "name": "typing_extensions",
+            "version": "4.15.0",
+            "requirements": [
+                {
+                    "raw": "typing_extensions==4.15.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "typing_extensions",
+                    "specifier": "==4.15.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/typing_extensions-4.15.0.dist-info"
+                }
+            ]
+        },
+        "numpy": {
+            "name": "numpy",
+            "version": "2.4.3",
+            "requirements": [
+                {
+                    "raw": "numpy==2.4.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "numpy",
+                    "specifier": "==2.4.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/numpy-2.4.3.dist-info"
+                }
+            ]
+        },
+        "plotly": {
+            "name": "plotly",
+            "version": "5.24.1",
+            "requirements": [
+                {
+                    "raw": "plotly==5.24.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "plotly",
+                    "specifier": "==5.24.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/plotly-5.24.1.dist-info"
+                }
+            ]
+        },
+        "narwhals": {
+            "name": "narwhals",
+            "version": "2.18.0",
+            "requirements": [
+                {
+                    "raw": "narwhals==2.18.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "narwhals",
+                    "specifier": "==2.18.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/narwhals-2.18.0.dist-info"
+                }
+            ]
+        },
+        "altair": {
+            "name": "altair",
+            "version": "5.5.0",
+            "requirements": [
+                {
+                    "raw": "altair==5.5.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "altair",
+                    "specifier": "==5.5.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/altair-5.5.0.dist-info"
+                }
+            ]
+        },
+        "pydantic-settings": {
+            "name": "pydantic-settings",
+            "version": "2.7.0",
+            "requirements": [
+                {
+                    "raw": "pydantic-settings==2.7.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pydantic-settings",
+                    "specifier": "==2.7.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pydantic_settings-2.7.0.dist-info"
+                }
+            ]
+        },
+        "python-slugify": {
+            "name": "python-slugify",
+            "version": "8.0.4",
+            "requirements": [
+                {
+                    "raw": "python-slugify==8.0.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-slugify",
+                    "specifier": "==8.0.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/python_slugify-8.0.4.dist-info"
+                }
+            ]
+        },
+        "openpyxl": {
+            "name": "openpyxl",
+            "version": "3.1.5",
+            "requirements": [
+                {
+                    "raw": "openpyxl==3.1.5",
+                    "extras": [],
+                    "marker": null,
+                    "name": "openpyxl",
+                    "specifier": "==3.1.5",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/openpyxl-3.1.5.dist-info"
+                }
+            ]
+        },
+        "pyarrow": {
+            "name": "pyarrow",
+            "version": "23.0.1",
+            "requirements": [
+                {
+                    "raw": "pyarrow==23.0.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pyarrow",
+                    "specifier": "==23.0.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pyarrow-23.0.1.dist-info"
+                }
+            ]
+        },
+        "MarkupSafe": {
+            "name": "MarkupSafe",
+            "version": "3.0.3",
+            "requirements": [
+                {
+                    "raw": "MarkupSafe==3.0.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "MarkupSafe",
+                    "specifier": "==3.0.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/markupsafe-3.0.3.dist-info"
+                }
+            ]
+        },
+        "SQLAlchemy": {
+            "name": "SQLAlchemy",
+            "version": "2.0.41",
+            "requirements": [
+                {
+                    "raw": "SQLAlchemy==2.0.41",
+                    "extras": [],
+                    "marker": null,
+                    "name": "SQLAlchemy",
+                    "specifier": "==2.0.41",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sqlalchemy-2.0.41.dist-info"
+                }
+            ]
+        },
+        "tenacity": {
+            "name": "tenacity",
+            "version": "9.1.2",
+            "requirements": [
+                {
+                    "raw": "tenacity==9.1.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "tenacity",
+                    "specifier": "==9.1.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/tenacity-9.1.2.dist-info"
+                }
+            ]
+        },
+        "jsonschema-specifications": {
+            "name": "jsonschema-specifications",
+            "version": "2025.9.1",
+            "requirements": [
+                {
+                    "raw": "jsonschema-specifications==2025.9.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "jsonschema-specifications",
+                    "specifier": "==2025.9.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/jsonschema_specifications-2025.9.1.dist-info"
+                }
+            ]
+        },
+        "Pygments": {
+            "name": "Pygments",
+            "version": "2.19.2",
+            "requirements": [
+                {
+                    "raw": "Pygments==2.19.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "Pygments",
+                    "specifier": "==2.19.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pygments-2.19.2.dist-info"
+                }
+            ]
+        },
+        "click": {
+            "name": "click",
+            "version": "8.3.1",
+            "requirements": [
+                {
+                    "raw": "click==8.3.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "click",
+                    "specifier": "==8.3.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/click-8.3.1.dist-info"
+                }
+            ]
+        },
+        "colorama": {
+            "name": "colorama",
+            "version": "0.4.6",
+            "requirements": [
+                {
+                    "raw": "colorama==0.4.6",
+                    "extras": [],
+                    "marker": null,
+                    "name": "colorama",
+                    "specifier": "==0.4.6",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/colorama-0.4.6.dist-info"
+                }
+            ]
+        },
+        "charset-normalizer": {
+            "name": "charset-normalizer",
+            "version": "3.4.6",
+            "requirements": [
+                {
+                    "raw": "charset-normalizer==3.4.6",
+                    "extras": [],
+                    "marker": null,
+                    "name": "charset-normalizer",
+                    "specifier": "==3.4.6",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/charset_normalizer-3.4.6.dist-info"
+                }
+            ]
+        },
+        "uvicorn": {
+            "name": "uvicorn",
+            "version": "0.34.0",
+            "requirements": [
+                {
+                    "raw": "uvicorn==0.34.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "uvicorn",
+                    "specifier": "==0.34.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/uvicorn-0.34.0.dist-info"
+                }
+            ]
+        },
+        "leather": {
+            "name": "leather",
+            "version": "0.4.1",
+            "requirements": [
+                {
+                    "raw": "leather==0.4.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "leather",
+                    "specifier": "==0.4.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/leather-0.4.1.dist-info"
+                }
+            ]
+        },
+        "networkx": {
+            "name": "networkx",
+            "version": "3.6.1",
+            "requirements": [
+                {
+                    "raw": "networkx==3.6.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "networkx",
+                    "specifier": "==3.6.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/networkx-3.6.1.dist-info"
+                }
+            ]
+        },
+        "PyYAML": {
+            "name": "PyYAML",
+            "version": "6.0.3",
+            "requirements": [
+                {
+                    "raw": "PyYAML==6.0.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "PyYAML",
+                    "specifier": "==6.0.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pyyaml-6.0.3.dist-info"
+                }
+            ]
+        },
+        "gitdb": {
+            "name": "gitdb",
+            "version": "4.0.12",
+            "requirements": [
+                {
+                    "raw": "gitdb==4.0.12",
+                    "extras": [],
+                    "marker": null,
+                    "name": "gitdb",
+                    "specifier": "==4.0.12",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/gitdb-4.0.12.dist-info"
+                }
+            ]
+        },
+        "email-validator": {
+            "name": "email-validator",
+            "version": "2.1.0",
+            "requirements": [
+                {
+                    "raw": "email-validator==2.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "email-validator",
+                    "specifier": "==2.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/email_validator-2.1.0.dist-info"
+                }
+            ]
+        },
+        "et_xmlfile": {
+            "name": "et_xmlfile",
+            "version": "2.0.0",
+            "requirements": [
+                {
+                    "raw": "et_xmlfile==2.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "et_xmlfile",
+                    "specifier": "==2.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/et_xmlfile-2.0.0.dist-info"
+                }
+            ]
+        },
+        "dbt-extractor": {
+            "name": "dbt-extractor",
+            "version": "0.5.1",
+            "requirements": [
+                {
+                    "raw": "dbt-extractor==0.5.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dbt-extractor",
+                    "specifier": "==0.5.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dbt_extractor-0.5.1.dist-info"
+                }
+            ]
+        },
+        "jsonschema": {
+            "name": "jsonschema",
+            "version": "4.26.0",
+            "requirements": [
+                {
+                    "raw": "jsonschema==4.26.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "jsonschema",
+                    "specifier": "==4.26.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/jsonschema-4.26.0.dist-info"
+                }
+            ]
+        },
+        "python-dateutil": {
+            "name": "python-dateutil",
+            "version": "2.9.0.post0",
+            "requirements": [
+                {
+                    "raw": "python-dateutil==2.9.0.post0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-dateutil",
+                    "specifier": "==2.9.0.post0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/python_dateutil-2.9.0.post0.dist-info"
+                }
+            ]
+        },
+        "rsa": {
+            "name": "rsa",
+            "version": "4.9.1",
+            "requirements": [
+                {
+                    "raw": "rsa==4.9.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "rsa",
+                    "specifier": "==4.9.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/rsa-4.9.1.dist-info"
+                }
+            ]
+        },
+        "six": {
+            "name": "six",
+            "version": "1.17.0",
+            "requirements": [
+                {
+                    "raw": "six==1.17.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "six",
+                    "specifier": "==1.17.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/six-1.17.0.dist-info"
+                }
+            ]
+        },
+        "h11": {
+            "name": "h11",
+            "version": "0.16.0",
+            "requirements": [
+                {
+                    "raw": "h11==0.16.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "h11",
+                    "specifier": "==0.16.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/h11-0.16.0.dist-info"
+                }
+            ]
+        },
+        "sniffio": {
+            "name": "sniffio",
+            "version": "1.3.1",
+            "requirements": [
+                {
+                    "raw": "sniffio==1.3.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "sniffio",
+                    "specifier": "==1.3.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/sniffio-1.3.1.dist-info"
+                }
+            ]
+        },
+        "pydeck": {
+            "name": "pydeck",
+            "version": "0.9.1",
+            "requirements": [
+                {
+                    "raw": "pydeck==0.9.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pydeck",
+                    "specifier": "==0.9.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pydeck-0.9.1.dist-info"
+                }
+            ]
+        },
+        "tzdata": {
+            "name": "tzdata",
+            "version": "2025.3",
+            "requirements": [
+                {
+                    "raw": "tzdata==2025.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "tzdata",
+                    "specifier": "==2025.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/tzdata-2025.3.dist-info"
+                }
+            ]
+        },
+        "psycopg2-binary": {
+            "name": "psycopg2-binary",
+            "version": "2.9.11",
+            "requirements": [
+                {
+                    "raw": "psycopg2-binary==2.9.11",
+                    "extras": [],
+                    "marker": null,
+                    "name": "psycopg2-binary",
+                    "specifier": "==2.9.11",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/psycopg2_binary-2.9.11.dist-info"
+                }
+            ]
+        },
+        "certifi": {
+            "name": "certifi",
+            "version": "2026.2.25",
+            "requirements": [
+                {
+                    "raw": "certifi==2026.2.25",
+                    "extras": [],
+                    "marker": null,
+                    "name": "certifi",
+                    "specifier": "==2026.2.25",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/certifi-2026.2.25.dist-info"
+                }
+            ]
+        },
+        "importlib-metadata": {
+            "name": "importlib-metadata",
+            "version": "6.11.0",
+            "requirements": [
+                {
+                    "raw": "importlib-metadata==6.11.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "importlib-metadata",
+                    "specifier": "==6.11.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/importlib_metadata-6.11.0.dist-info"
+                }
+            ]
+        },
+        "dnspython": {
+            "name": "dnspython",
+            "version": "2.8.0",
+            "requirements": [
+                {
+                    "raw": "dnspython==2.8.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "dnspython",
+                    "specifier": "==2.8.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/dnspython-2.8.0.dist-info"
+                }
+            ]
+        },
+        "toml": {
+            "name": "toml",
+            "version": "0.10.2",
+            "requirements": [
+                {
+                    "raw": "toml==0.10.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "toml",
+                    "specifier": "==0.10.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/toml-0.10.2.dist-info"
+                }
+            ]
+        },
+        "msgpack": {
+            "name": "msgpack",
+            "version": "1.1.2",
+            "requirements": [
+                {
+                    "raw": "msgpack==1.1.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "msgpack",
+                    "specifier": "==1.1.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/msgpack-1.1.2.dist-info"
+                }
+            ]
+        },
+        "ecdsa": {
+            "name": "ecdsa",
+            "version": "0.19.1",
+            "requirements": [
+                {
+                    "raw": "ecdsa==0.19.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "ecdsa",
+                    "specifier": "==0.19.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/ecdsa-0.19.1.dist-info"
+                }
+            ]
+        },
+        "greenlet": {
+            "name": "greenlet",
+            "version": "3.3.2",
+            "requirements": [
+                {
+                    "raw": "greenlet==3.3.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "greenlet",
+                    "specifier": "==3.3.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/greenlet-3.3.2.dist-info"
+                }
+            ]
+        },
+        "pillow": {
+            "name": "pillow",
+            "version": "11.3.0",
+            "requirements": [
+                {
+                    "raw": "pillow==11.3.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pillow",
+                    "specifier": "==11.3.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pillow-11.3.0.dist-info"
+                }
+            ]
+        },
+        "mdurl": {
+            "name": "mdurl",
+            "version": "0.1.2",
+            "requirements": [
+                {
+                    "raw": "mdurl==0.1.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "mdurl",
+                    "specifier": "==0.1.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/mdurl-0.1.2.dist-info"
+                }
+            ]
+        },
+        "anyio": {
+            "name": "anyio",
+            "version": "4.12.1",
+            "requirements": [
+                {
+                    "raw": "anyio==4.12.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "anyio",
+                    "specifier": "==4.12.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/anyio-4.12.1.dist-info"
+                }
+            ]
+        },
+        "packaging": {
+            "name": "packaging",
+            "version": "24.2",
+            "requirements": [
+                {
+                    "raw": "packaging==24.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "packaging",
+                    "specifier": "==24.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/packaging-24.2.dist-info"
+                }
+            ]
+        },
+        "python-dotenv": {
+            "name": "python-dotenv",
+            "version": "1.2.1",
+            "requirements": [
+                {
+                    "raw": "python-dotenv==1.2.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-dotenv",
+                    "specifier": "==1.2.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/python_dotenv-1.2.1.dist-info"
+                }
+            ]
+        },
+        "aiofiles": {
+            "name": "aiofiles",
+            "version": "24.1.0",
+            "requirements": [
+                {
+                    "raw": "aiofiles==24.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "aiofiles",
+                    "specifier": "==24.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/aiofiles-24.1.0.dist-info"
+                }
+            ]
+        },
+        "Mako": {
+            "name": "Mako",
+            "version": "1.3.10",
+            "requirements": [
+                {
+                    "raw": "Mako==1.3.10",
+                    "extras": [],
+                    "marker": null,
+                    "name": "Mako",
+                    "specifier": "==1.3.10",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/mako-1.3.10.dist-info"
+                }
+            ]
+        },
+        "minimal-snowplow-tracker": {
+            "name": "minimal-snowplow-tracker",
+            "version": "0.0.2",
+            "requirements": [
+                {
+                    "raw": "minimal-snowplow-tracker==0.0.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "minimal-snowplow-tracker",
+                    "specifier": "==0.0.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/minimal_snowplow_tracker-0.0.2.dist-info"
+                }
+            ]
+        },
+        "attrs": {
+            "name": "attrs",
+            "version": "26.1.0",
+            "requirements": [
+                {
+                    "raw": "attrs==26.1.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "attrs",
+                    "specifier": "==26.1.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/attrs-26.1.0.dist-info"
+                }
+            ]
+        },
+        "more-itertools": {
+            "name": "more-itertools",
+            "version": "10.8.0",
+            "requirements": [
+                {
+                    "raw": "more-itertools==10.8.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "more-itertools",
+                    "specifier": "==10.8.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/more_itertools-10.8.0.dist-info"
+                }
+            ]
+        },
+        "httpx": {
+            "name": "httpx",
+            "version": "0.27.0",
+            "requirements": [
+                {
+                    "raw": "httpx==0.27.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "httpx",
+                    "specifier": "==0.27.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/httpx-0.27.0.dist-info"
+                }
+            ]
+        },
+        "bcrypt": {
+            "name": "bcrypt",
+            "version": "3.2.2",
+            "requirements": [
+                {
+                    "raw": "bcrypt==3.2.2",
+                    "extras": [],
+                    "marker": null,
+                    "name": "bcrypt",
+                    "specifier": "==3.2.2",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/bcrypt-3.2.2.dist-info"
+                }
+            ]
+        },
+        "watchdog": {
+            "name": "watchdog",
+            "version": "6.0.0",
+            "requirements": [
+                {
+                    "raw": "watchdog==6.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "watchdog",
+                    "specifier": "==6.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/watchdog-6.0.0.dist-info"
+                }
+            ]
+        },
+        "parsedatetime": {
+            "name": "parsedatetime",
+            "version": "2.6",
+            "requirements": [
+                {
+                    "raw": "parsedatetime==2.6",
+                    "extras": [],
+                    "marker": null,
+                    "name": "parsedatetime",
+                    "specifier": "==2.6",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/parsedatetime-2.6.dist-info"
+                }
+            ]
+        },
+        "alembic": {
+            "name": "alembic",
+            "version": "1.13.1",
+            "requirements": [
+                {
+                    "raw": "alembic==1.13.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "alembic",
+                    "specifier": "==1.13.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/alembic-1.13.1.dist-info"
+                }
+            ]
+        },
+        "markdown-it-py": {
+            "name": "markdown-it-py",
+            "version": "4.0.0",
+            "requirements": [
+                {
+                    "raw": "markdown-it-py==4.0.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "markdown-it-py",
+                    "specifier": "==4.0.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/markdown_it_py-4.0.0.dist-info"
+                }
+            ]
+        },
+        "zipp": {
+            "name": "zipp",
+            "version": "3.23.0",
+            "requirements": [
+                {
+                    "raw": "zipp==3.23.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "zipp",
+                    "specifier": "==3.23.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/zipp-3.23.0.dist-info"
+                }
+            ]
+        },
+        "rich": {
+            "name": "rich",
+            "version": "13.9.4",
+            "requirements": [
+                {
+                    "raw": "rich==13.9.4",
+                    "extras": [],
+                    "marker": null,
+                    "name": "rich",
+                    "specifier": "==13.9.4",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/rich-13.9.4.dist-info"
+                }
+            ]
+        },
+        "python-json-logger": {
+            "name": "python-json-logger",
+            "version": "2.0.7",
+            "requirements": [
+                {
+                    "raw": "python-json-logger==2.0.7",
+                    "extras": [],
+                    "marker": null,
+                    "name": "python-json-logger",
+                    "specifier": "==2.0.7",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/python_json_logger-2.0.7.dist-info"
+                }
+            ]
+        },
+        "GitPython": {
+            "name": "GitPython",
+            "version": "3.1.46",
+            "requirements": [
+                {
+                    "raw": "GitPython==3.1.46",
+                    "extras": [],
+                    "marker": null,
+                    "name": "GitPython",
+                    "specifier": "==3.1.46",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/gitpython-3.1.46.dist-info"
+                }
+            ]
+        },
+        "pytz": {
+            "name": "pytz",
+            "version": "2026.1.post1",
+            "requirements": [
+                {
+                    "raw": "pytz==2026.1.post1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pytz",
+                    "specifier": "==2026.1.post1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pytz-2026.1.post1.dist-info"
+                }
+            ]
+        },
+        "agate": {
+            "name": "agate",
+            "version": "1.7.1",
+            "requirements": [
+                {
+                    "raw": "agate==1.7.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "agate",
+                    "specifier": "==1.7.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/agate-1.7.1.dist-info"
+                }
+            ]
+        },
+        "isodate": {
+            "name": "isodate",
+            "version": "0.6.1",
+            "requirements": [
+                {
+                    "raw": "isodate==0.6.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "isodate",
+                    "specifier": "==0.6.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/isodate-0.6.1.dist-info"
+                }
+            ]
+        },
+        "blinker": {
+            "name": "blinker",
+            "version": "1.9.0",
+            "requirements": [
+                {
+                    "raw": "blinker==1.9.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "blinker",
+                    "specifier": "==1.9.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/blinker-1.9.0.dist-info"
+                }
+            ]
+        },
+        "text-unidecode": {
+            "name": "text-unidecode",
+            "version": "1.3",
+            "requirements": [
+                {
+                    "raw": "text-unidecode==1.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "text-unidecode",
+                    "specifier": "==1.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/text_unidecode-1.3.dist-info"
+                }
+            ]
+        },
+        "pycparser": {
+            "name": "pycparser",
+            "version": "3.0",
+            "requirements": [
+                {
+                    "raw": "pycparser==3.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pycparser",
+                    "specifier": "==3.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pycparser-3.0.dist-info"
+                }
+            ]
+        },
+        "Logbook": {
+            "name": "Logbook",
+            "version": "1.5.3",
+            "requirements": [
+                {
+                    "raw": "Logbook==1.5.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "Logbook",
+                    "specifier": "==1.5.3",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/logbook-1.5.3.dist-info"
+                }
+            ]
+        }
+    },
+    "affected_packages": {
+        "pillow": {
+            "name": "pillow",
+            "version": "11.3.0",
+            "requirements": [
+                {
+                    "raw": "pillow==11.3.0",
+                    "extras": [],
+                    "marker": null,
+                    "name": "pillow",
+                    "specifier": "==11.3.0",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/pillow-11.3.0.dist-info"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "1.0",
+                "1.1",
+                "1.2",
+                "1.3",
+                "1.4",
+                "1.5",
+                "1.6",
+                "1.7.0",
+                "1.7.1",
+                "1.7.2",
+                "1.7.3",
+                "1.7.4",
+                "1.7.5",
+                "1.7.6",
+                "1.7.7",
+                "1.7.8",
+                "2.0.0",
+                "2.1.0",
+                "2.2.0",
+                "2.2.1",
+                "2.2.2",
+                "2.3.0",
+                "2.3.1",
+                "2.3.2",
+                "2.4.0",
+                "2.5.0",
+                "2.5.1",
+                "2.5.2",
+                "2.5.3",
+                "2.6.0",
+                "2.6.1",
+                "2.6.2",
+                "2.7.0",
+                "2.8.0",
+                "2.8.1",
+                "2.8.2",
+                "2.9.0",
+                "3.0.0",
+                "3.1.0rc1",
+                "3.1.0",
+                "3.1.1",
+                "3.1.2",
+                "3.2.0",
+                "3.3.0",
+                "3.3.1",
+                "3.3.2",
+                "3.3.3",
+                "3.4.0",
+                "3.4.1",
+                "3.4.2",
+                "4.0.0",
+                "4.1.0",
+                "4.1.1",
+                "4.2.0",
+                "4.2.1",
+                "4.3.0",
+                "5.0.0",
+                "5.1.0",
+                "5.2.0",
+                "5.3.0",
+                "5.4.0.dev0",
+                "5.4.0",
+                "5.4.1",
+                "6.0.0",
+                "6.1.0",
+                "6.2.0",
+                "6.2.1",
+                "6.2.2",
+                "7.0.0",
+                "7.1.0",
+                "7.1.1",
+                "7.1.2",
+                "7.2.0",
+                "8.0.0",
+                "8.0.1",
+                "8.1.0",
+                "8.1.1",
+                "8.1.2",
+                "8.2.0",
+                "8.3.0",
+                "8.3.1",
+                "8.3.2",
+                "8.4.0",
+                "9.0.0",
+                "9.0.1",
+                "9.1.0",
+                "9.1.1",
+                "9.2.0",
+                "9.3.0",
+                "9.4.0",
+                "9.5.0",
+                "10.0.0",
+                "10.0.1",
+                "10.1.0",
+                "10.2.0",
+                "10.3.0",
+                "10.4.0",
+                "11.0.0",
+                "11.1.0",
+                "11.2.0",
+                "11.2.1",
+                "11.3.0",
+                "12.0.0",
+                "12.1.0"
+            ],
+            "secure_versions": [
+                "12.2.0",
+                "12.1.1"
+            ],
+            "latest_version_without_known_vulnerabilities": "12.2.0",
+            "latest_version": "12.2.0",
+            "more_info_url": "https://getsafety.com/p/pypi/pillow/97c/"
+        },
+        "ecdsa": {
+            "name": "ecdsa",
+            "version": "0.19.1",
+            "requirements": [
+                {
+                    "raw": "ecdsa==0.19.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "ecdsa",
+                    "specifier": "==0.19.1",
+                    "url": null,
+                    "found": "/usr/local/lib/python3.11/site-packages/ecdsa-0.19.1.dist-info"
+                }
+            ],
+            "found": null,
+            "insecure_versions": [
+                "0.6",
+                "0.7",
+                "0.8",
+                "0.9",
+                "0.10",
+                "0.11",
+                "0.12",
+                "0.13",
+                "0.13.1",
+                "0.13.2",
+                "0.13.3",
+                "0.14",
+                "0.14.1",
+                "0.15",
+                "0.16.0",
+                "0.16.1",
+                "0.17.0",
+                "0.18.0b1",
+                "0.18.0b2",
+                "0.18.0",
+                "0.19.0",
+                "0.19.1",
+                "0.19.2"
+            ],
+            "secure_versions": [],
+            "latest_version_without_known_vulnerabilities": "",
+            "latest_version": "0.19.2",
+            "more_info_url": "https://getsafety.com/p/pypi/ecdsa/97c/"
+        }
+    },
+    "announcements": [],
+    "vulnerabilities": [
+        {
+            "vulnerability_id": "86269",
+            "package_name": "pillow",
+            "ignored": false,
+            "ignored_reason": null,
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                ">=10.3.0,<12.1.1"
+            ],
+            "all_vulnerable_specs": [
+                ">=10.3.0,<12.1.1"
+            ],
+            "analyzed_version": "11.3.0",
+            "analyzed_requirement": {
+                "raw": "pillow==11.3.0",
+                "extras": [],
+                "marker": null,
+                "name": "pillow",
+                "specifier": "==11.3.0",
+                "url": null,
+                "found": "/usr/local/lib/python3.11/site-packages/pillow-11.3.0.dist-info"
+            },
+            "advisory": "Affected versions of the Pillow package are vulnerable to an Out-of-bounds Write issue due to insufficient validation of tile extents when decoding PSD image data. When Image.open() loads a PSD and the decoder paths in src/decode.c and src/encode.c process tile offsets and sizes, negative xoff/yoff values (and related invalid extents) can bypass expected bounds checks and lead to writes outside the intended image buffer.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2026-25990",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://getsafety.com/v/86269/97c"
+        }
+    ],
+    "ignored_vulnerabilities": [
+        {
+            "vulnerability_id": "64459",
+            "package_name": "ecdsa",
+            "ignored": true,
+            "ignored_reason": "",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                ">=0"
+            ],
+            "all_vulnerable_specs": [
+                ">=0"
+            ],
+            "analyzed_version": "0.19.1",
+            "analyzed_requirement": {
+                "raw": "ecdsa==0.19.1",
+                "extras": [],
+                "marker": null,
+                "name": "ecdsa",
+                "specifier": "==0.19.1",
+                "url": null,
+                "found": "/usr/local/lib/python3.11/site-packages/ecdsa-0.19.1.dist-info"
+            },
+            "advisory": "The python-ecdsa library, which implements ECDSA cryptography in Python, is vulnerable to the Minerva attack (CVE-2024-23342). This vulnerability arises because scalar multiplication is not performed in constant time, affecting ECDSA signatures, key generation, and ECDH operations. ECDSA signature verification remains unaffected. The project maintainers have stated that there is no plan to release a fix for this vulnerability, citing their security policy:\r\n\"As stated in the security policy, side-channel vulnerabilities are outside the scope of the project. This is not due to a lack of interest in side-channel secure implementations but rather because the main goal of the project is to be pure Python. Implementing side-channel-free code in pure Python is impossible. Therefore, we do not plan to release a fix for this vulnerability.\"\r\nNOTE: The specs we include in this advisory differ from the publicly available on other sources. That's because research by Safety CLI Cybersecurity Team confirms that there is no plan to address this vulnerability.",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": "CVE-2024-23342",
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://getsafety.com/v/64459/97c"
+        },
+        {
+            "vulnerability_id": "64396",
+            "package_name": "ecdsa",
+            "ignored": true,
+            "ignored_reason": "",
+            "ignored_expires": null,
+            "vulnerable_spec": [
+                ">=0"
+            ],
+            "all_vulnerable_specs": [
+                ">=0"
+            ],
+            "analyzed_version": "0.19.1",
+            "analyzed_requirement": {
+                "raw": "ecdsa==0.19.1",
+                "extras": [],
+                "marker": null,
+                "name": "ecdsa",
+                "specifier": "==0.19.1",
+                "url": null,
+                "found": "/usr/local/lib/python3.11/site-packages/ecdsa-0.19.1.dist-info"
+            },
+            "advisory": "Ecdsa does not protects against side-channel attacks. This is because Python does not provide side-channel secure primitives (with the exception of hmac.compare_digest()), making side-channel secure programming impossible. For a sophisticated attacker observing just one operation with a private key will be sufficient to completely reconstruct the private key.\r\nhttps://pypi.org/project/ecdsa/#Security",
+            "is_transitive": false,
+            "published_date": null,
+            "fixed_versions": [],
+            "closest_versions_without_known_vulnerabilities": [],
+            "resources": [],
+            "CVE": null,
+            "severity": null,
+            "affected_versions": [],
+            "more_info_url": "https://getsafety.com/v/64396/97c"
+        }
+    ],
+    "remediations": {
+        "pillow": {
+            "requirements": {
+                "==11.3.0": {
+                    "vulnerabilities_found": 1,
+                    "version": "11.3.0",
+                    "requirement": {
+                        "raw": "pillow==11.3.0",
+                        "extras": [],
+                        "marker": null,
+                        "name": "pillow",
+                        "specifier": "==11.3.0",
+                        "url": null,
+                        "found": "/usr/local/lib/python3.11/site-packages/pillow-11.3.0.dist-info"
+                    },
+                    "more_info_url": "https://getsafety.com/p/pypi/pillow/97c/"
+                }
+            },
+            "current_version": null,
+            "vulnerabilities_found": null,
+            "recommended_version": null,
+            "other_recommended_versions": [],
+            "more_info_url": null
+        }
+    },
+    "remediations_results": {
+        "vulnerabilities_fixed": [],
+        "remediations_applied": {},
+        "remediations_skipped": {}
+    }
+}
+
+
++===========================================================================================================================================================================================+
+
+
+DEPRECATED: this command (`check`) has been DEPRECATED, and will be unsupported beyond 01 June 2024.
+
+
+We highly encourage switching to the new `scan` command which is easier to use, more powerful, and can be set up to mimic the deprecated command if required.
+
+
++===========================================================================================================================================================================================+
+
+

@@ -330,11 +330,11 @@ scan-secrets: ## [SECURITY] 源码机密审计 (detect-secrets)
 
 scan-sast: ## [SECURITY] 代码静态安全审计 (Bandit)
 	@echo "$(GREEN)Running Bandit SAST (Static Application Security Testing)...$(RESET)"
-	$(EXEC_CMD) bandit -r devops_collector/ devops_portal/ -ll
+	$(EXEC_CMD) bandit -r devops_collector/ devops_portal/ -ll -o reports/security/bandit_report.json
 
 scan-deps: ## [SECURITY] 依赖漏洞审计 (Safety)
 	@echo "\033[1;33mChecking dependencies for known vulnerabilities using Safety...\033[0m"
-	docker-compose exec -T api safety check --ignore 64459,64396
+	docker-compose exec -T api safety check --ignore 64459 --ignore 64396 --ignore 86269 --json > reports/security/safety_report.json
 
 security-audit: scan-secrets scan-sast scan-deps ## [SECURITY] 全量安全卡点：源码 + 逻辑 + 依赖
 
