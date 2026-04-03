@@ -57,6 +57,7 @@ from .base_models import (
     UserRole,
     Vendor,
 )
+from .audit import AuditLog
 from .dependency import Dependency, DependencyCVE, DependencyScan, LicenseRiskRule
 from .service_desk import ServiceDeskTicket
 from .test_management import (

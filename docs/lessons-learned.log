@@ -7,11 +7,11 @@
 > 3. **字段约定**：The Defense 栏必须使用粗体加粗一句话结论，随后跟上落地措施。
 
 | Timestamp | Domain | Phenomenon | Root Cause | Universal Rule (The Defense) |
-| :--- | :--- | :--- | :--- | :--- |
-| 2026-04-02 | Database/Schema | MDM 核心表之间存在外键循环依赖 (User <-> Location/Organization) | 业务模型中存在“鸡生蛋，蛋生鸡”的所有权逻辑：用户属于某个地点 (`location_id`)，而该地点的负责人又是该用户 (`manager_user_id`)。在 SQLite 等不支持延迟约束检查的环境下，这会导致 `Base.metadata.drop_all` 因无法计算删表顺序而报 `IntegrityError`。 | **外键循环治理规则 (Circular FK Governance)**：1. **模型定义**：必须在 SQLAlchemy 的 `ForeignKey` 中显式指定 `name` 并设置 `use_alter=True`。2. **测试隔离**：在 SQLite 内存数据库的 `teardown` 环节，必须显式调用 `PRAGMA foreign_keys=OFF` 或利用连接断开自动释放内存库的特性，避开物理删表顺序报错。3. **同步策略**：采用两阶段对齐协议（先入库元数据存 raw_id，后异步自愈填充外键）。 |
+| :--- | :--- | :--- | :--- | :--- 
 | 2026-04-03 | Migration/Alembic | autogenerate 迁移包含大量无关 drop_table，执行时因视图依赖报错 | Autogenerate 将代码中不存在但 DB 中存在的历史表标记为 DROP。 | **Autogenerate 审计红线**：严禁盲执行 autogenerate 产出。单表新增场景优先手写纯净迁移。执行前用 --sql 预览。 |
 | 2026-04-03 | Migration/Alembic | Alembic 警告 Revision present more than once，exit 0 但 DDL 未执行 | Windows 卷挂载 + Docker 共享 versions/ 目录时路径重复检测导致静默跳过。 | **容器内迁移物理验证**：迁移后必须通过 psql 验证表是否存在。遇 duplicate 警告可直接 psql 执行 DDL。 |
 | 2026-04-03 | Audit/Architecture | 对 Collector 批量导入表启用审计监听后审计日志与业务数据 1:1 膨胀 | SQLAlchemy after_insert 对每行 flush 触发回调。 | **审计分级策略**：仅对管理表启用字段级追踪。采集表通过 sys_sync_logs 粗粒度记录。生产环境审计写入建议异步队列。 |
+| 2026-04-02 | Database/Schema | MDM 核心表之间存在外键循环依赖 (User <-> Location/Organization) | 业务模型中存在“鸡生蛋，蛋生鸡”的所有权逻辑：用户属于某个地点 (`location_id`)，而该地点的负责人又是该用户 (`manager_user_id`)。在 SQLite 等不支持延迟约束检查的环境下，这会导致 `Base.metadata.drop_all` 因无法计算删表顺序而报 `IntegrityError`。 | **外键循环治理规则 (Circular FK Governance)**：1. **模型定义**：必须在 SQLAlchemy 的 `ForeignKey` 中显式指定 `name` 并设置 `use_alter=True`。2. **测试隔离**：在 SQLite 内存数据库的 `teardown` 环节，必须显式调用 `PRAGMA foreign_keys=OFF` 或利用连接断开自动释放内存库的特性，避开物理删表顺序报错。3. **同步策略**：采用两阶段对齐协议（先入库元数据存 raw_id，后异步自愈填充外键）。 |
 | 2026-04-02 | Infra/Encoding | PowerShell echo >> file 将 UTF-16LE 追加到 UTF-8 文件导致编码浆糊 | PS 5.1 的 >> 默认输出 UTF-16LE。 | **PS 编码铁律**：严禁 echo >> file。必须使用 Add-Content -Encoding UTF8。已损坏文件通过编辑器全量覆写修复。 |
 | 2026-04-02 | Security/Safety | safety check --ignore 逗号分隔多 ID 无效 | Safety CLI 要求每个 ID 单独一个 --ignore 标志。 | **CLI 参数语法验证**：使用前先 --help 确认格式。多 ID 正确语法为 --ignore ID1 --ignore ID2。 |
 | 2026-04-02 | Testing/Mock | WeCom 同步负责人对齐统计为 0 (`AssertionError: 0 == 3`) | `OrganizationService.realign_all_managers` 返回的是 `{"success": X}`，而 `WeComWorker` 尝试读取 `stats.get("resolved", 0)`。由于 Key 不一致，统计结果永远为 0。 | **服务-Worker 契约一致性 (Service-Worker Contract)**：跨层调用的统计返回必须定义明确的 Schema 或统一使用特定的 Key（如 `success`）。向 Worker 层消费 Service 时必须严格校验 Key 名。 |

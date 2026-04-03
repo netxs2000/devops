@@ -14,7 +14,11 @@ from sqlalchemy import event, inspect
 from devops_collector.models.audit import AuditLog
 from devops_collector.utils.audit_context import get_snapshot
 
+import os
 logger = logging.getLogger(__name__)
+
+# 为测试环境提供“熔断”开关
+SKIP_AUDIT = os.getenv("DEVOPS_SKIP_AUDIT", "false").lower() == "true"
 
 # 对敏感字段执行固定掩码脱敏 (L3 合规要求)
 SENSITIVE_FIELDS_SET = {"password", "secret", "token", "access_key", "checksum", "credential_key"}
@@ -24,6 +28,16 @@ def resolve_diffs(target) -> Dict[str, Any]:
     diffs = {}
     ins = inspect(target)
     for attr in ins.attrs:
+        # 0. 仅审计列属性 (Column Property)，跳过关系 (Relationship Property)
+        # 否则会触发 JSON 序列化失败 (TypeError)
+        if not hasattr(attr, "history") or not hasattr(attr, "prop"):
+            continue
+            
+        # 检查是否为列属性，排除关系
+        from sqlalchemy.orm import ColumnProperty
+        if not isinstance(attr.prop, ColumnProperty):
+            continue
+
         hist = attr.history
         if not hist.has_changes():
             continue
@@ -42,6 +56,9 @@ def resolve_diffs(target) -> Dict[str, Any]:
 
 def capture_audit_event(connection, target, action: str):
     """通用的变更捕获逻辑执行器。"""
+    if SKIP_AUDIT:
+        return
+        
     # [安全阻断] 自审计拦截：审计日志本身的变化不开启二次审计，防止无限循环
     if isinstance(target, AuditLog):
         return
@@ -71,9 +88,11 @@ def capture_audit_event(connection, target, action: str):
     }
 
     try:
+        # LL #28: Use defensive execution to prevent test/migration failures if audit table is missing
         connection.execute(AuditLog.__table__.insert().values(**audit_payload))
     except Exception as e:
-        logger.error(f"[AUDIT-ENGINE] Failed to record audit log for {action} on {resource_id}: {str(e)}")
+        # Just log it, don't crash the main transaction
+        logger.error(f"[AUDIT-ENGINE] Audit record failed (might be missing table in tests): {str(e)}")
 
 def bind_audit_listeners(target_classes: List[Any]):
     """将全生命周期审计追踪器注册到特定的核心资产类。"""

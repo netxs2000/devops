@@ -20,6 +20,7 @@ from devops_collector.models import (
     ProjectMaster,
     ProjectProductRelation,
     User,
+    AuditLog,
 )
 from devops_collector.models import SysRole as Role
 from devops_collector.plugins.gitlab.models import GitLabProject as Project

@@ -23,12 +23,20 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, backref, relationship
+from sqlalchemy import MetaData
 
+
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s"
+}
 
 class Base(DeclarativeBase):
     """SQLAlchemy 声明式模型基类。"""
-
-    pass
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
 class TimestampMixin:
@@ -89,7 +97,7 @@ class Organization(Base, TimestampMixin, SCDMixin):
     org_code = Column(String(100), nullable=False, unique=True, index=True, comment="组织唯一标识 (HR系统同步)")
     org_name = Column(String(200), nullable=False, comment="组织名称")
     org_level = Column(Integer, default=1, comment="组织层级 (1=公司, 2=部门, 3=团队)")
-    parent_id = Column(Integer, ForeignKey("mdm_organizations.id"), nullable=True, index=True, comment="上级组织ID")
+    parent_id = Column(Integer, ForeignKey("mdm_organizations.id", use_alter=True, name="fk_org_parent_id"), nullable=True, index=True, comment="上级组织ID")
     manager_user_id = Column(
         UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id", use_alter=True, name="fk_org_manager"), index=True, comment="部门负责人"
     )
@@ -271,7 +279,7 @@ class SysMenu(Base, TimestampMixin):
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="菜单ID")
     menu_name = Column(String(50), nullable=False, comment="菜单名称")
-    parent_id = Column(Integer, ForeignKey("sys_menu.id"), nullable=True, comment="父菜单ID (0或NULL表示顶级)")
+    parent_id = Column(Integer, ForeignKey("sys_menu.id", use_alter=True, name="fk_menu_parent_id"), nullable=True, comment="父菜单ID (0或NULL表示顶级)")
     order_num = Column(Integer, default=0, comment="显示顺序")
     path = Column(String(200), default="", comment="路由地址")
     component = Column(String(255), comment="组件路径")
@@ -377,7 +385,7 @@ class Team(Base, TimestampMixin, SCDMixin):
     name = Column(String(100), nullable=False, comment="团队名称")
     team_code = Column(String(50), unique=True, index=True, comment="团队代码")
     description = Column(Text, comment="团队描述")
-    parent_id = Column(Integer, ForeignKey("sys_teams.id"), nullable=True, comment="上级团队ID")
+    parent_id = Column(Integer, ForeignKey("sys_teams.id", use_alter=True, name="fk_team_parent_id"), nullable=True, comment="上级团队ID")
     org_id = Column(Integer, ForeignKey("mdm_organizations.id"), nullable=True, comment="所属组织ID")
     leader_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True, comment="团队负责人")
     parent = relationship("Team", remote_side="Team.id", foreign_keys=[parent_id], backref=backref("children", cascade="all, delete-orphan"))
@@ -403,6 +411,11 @@ class TeamMember(Base, TimestampMixin):
 
     team = relationship("Team", back_populates="members")
     user = relationship("User", back_populates="team_memberships", foreign_keys=[user_id])
+    
+    @property
+    def full_name(self) -> str:
+        """返回关联用户的姓名快照 (用于 Pydantic 视图序列化)。"""
+        return self.user.full_name if self.user else "Unknown"
 
     def __repr__(self) -> str:
         """返回成员关联的字符串表示。"""
@@ -439,7 +452,7 @@ class Product(Base, TimestampMixin, SCDMixin):
     matching_patterns = Column(JSON, comment="自动识别匹配模式列表 (JSON)")
 
     # [新增] 产品线层级支持 (Scheme A)
-    parent_product_id = Column(Integer, ForeignKey("mdm_products.id"), nullable=True, index=True, comment="上级产品ID")
+    parent_product_id = Column(Integer, ForeignKey("mdm_products.id", use_alter=True, name="fk_product_parent_id"), nullable=True, index=True, comment="上级产品ID")
     node_type = Column(String(20), default="APP", comment="节点类型 (LINE=产品线 / APP=应用)")
 
     parent = relationship("Product", remote_side="Product.id", foreign_keys=[parent_product_id], backref=backref("children", cascade="all"))
@@ -733,7 +746,7 @@ class Location(Base, TimestampMixin):
     location_name = Column(String(200), nullable=False, comment="位置名称 (如 广东省)")
     short_name = Column(String(50), comment="简称 (如 广东)")
     location_type = Column(String(50), comment="位置类型 (country/province/city/site/datacenter)")
-    parent_id = Column(Integer, ForeignKey("mdm_locations.id"), nullable=True, comment="上级位置物理ID")
+    parent_id = Column(Integer, ForeignKey("mdm_locations.id", use_alter=True, name="fk_location_parent_id"), nullable=True, comment="上级位置物理ID")
     region = Column(String(50), comment="区域 (华北/华东/华南)")
     is_active = Column(Boolean, default=True, comment="是否启用")
     manager_user_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), nullable=True, comment="负责人")
@@ -784,7 +797,7 @@ class OKRObjective(Base, TimestampMixin, SCDMixin):
     period = Column(String(20), index=True, comment="周期 (2024-Q1/2024-H1)")
     owner_id = Column(UUID(as_uuid=True), ForeignKey("mdm_identities.global_user_id"), index=True, comment="负责人")
     org_id = Column(Integer, ForeignKey("mdm_organizations.id"), index=True, comment="所属组织ID")
-    parent_id = Column(Integer, ForeignKey("mdm_okr_objectives.id"), index=True, comment="上级目标ID")
+    parent_id = Column(Integer, ForeignKey("mdm_okr_objectives.id", use_alter=True, name="fk_okr_parent_id"), index=True, comment="上级目标ID")
     product_id = Column(Integer, ForeignKey("mdm_products.id"), index=True, comment="关联产品ID")
     status = Column(String(20), default="ACTIVE", comment="状态 (ACTIVE/COMPLETED/ABANDONED)")
     progress = Column(Float, default=0.0, comment="进度 (0.0-1.0)")
