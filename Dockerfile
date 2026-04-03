@@ -23,20 +23,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # Install uv for fast package management (Allowing override from Nexus)
 COPY --from=uv_bin /uv /uvx /bin/
 
-# Install python dependencies (Falling back to Tsinghua if Nexus fails)
+# Install python dependencies using uv (Frozen mode via uv.lock)
 ARG PIP_INDEX_URL
-COPY requirements.txt ./
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -i ${PIP_INDEX_URL} --trusted-host 192.168.5.64 -r requirements.txt || \
-    pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev --index-url ${PIP_INDEX_URL} --trusted-host 192.168.5.64 || \
+    uv sync --frozen --no-install-project --no-dev --index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 # Copy project code
 COPY . .
 
-# Install extras and the package itself
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -i ${PIP_INDEX_URL} --trusted-host 192.168.5.64 .[dev,test] || \
-    pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple .[dev,test]
+# Final sync to install the project itself and dev/test extras if needed 
+# (Standardizing on --no-dev for production, use --all-groups if tests are run in-container)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --all-groups
 
 # Set PYTHONPATH
 ENV PYTHONPATH=/app

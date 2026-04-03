@@ -4,7 +4,7 @@ services:
     build:
       context: .
       args:
-        - PIP_INDEX_URL=http://192.168.5.64:8082/repository/pypi-all/simple
+        - PIP_INDEX_URL=http://192.168.5.64:8081/repository/group-pypi/simple
         - PIP_TRUSTED_HOST=192.168.5.64
     image: devops-platform:latest
     container_name: devops-api
