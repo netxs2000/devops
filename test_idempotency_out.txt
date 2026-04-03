@@ -1,0 +1,50 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.0.2, pluggy-1.6.0
+rootdir: /app
+configfile: pyproject.toml
+plugins: cov-4.1.0, asyncio-1.3.0, timeout-2.4.0, requests-mock-1.12.1, anyio-4.12.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 2 items
+
+tests/integration/reliability/test_idempotency.py F.                     [100%]
+
+=================================== FAILURES ===================================
+____________ TestGitLabWorkerIdempotency.test_pipeline_idempotency _____________
+
+self = <test_idempotency.TestGitLabWorkerIdempotency testMethod=test_pipeline_idempotency>
+
+    def test_pipeline_idempotency(self):
+        """Verify Pipeline sync idempotency."""
+        logger.info(">>> Starting Idempotency Test: Pipelines")
+        mock_pipelines = [
+            {
+                "id": 500,
+                "project_id": 999,
+                "status": "success",
+                "ref": "main",
+                "sha": "hash222",
+                "created_at": "2024-01-01T12:05:00Z",
+                "updated_at": "2024-01-01T12:10:00Z",
+            }
+        ]
+        self.client.get_project.return_value = {"id": 999, "name": "P", "last_activity_at": "2024-01-01"}
+        self.client.get_project_pipelines.return_value = mock_pipelines
+        self.client.get_project_commits.return_value = []
+        self.client.get_project_merge_requests.return_value = []
+        project = self.worker._sync_project(999)
+>       self.worker._sync_pipelines(project, None)
+E       TypeError: PipelineMixin._sync_pipelines() takes 2 positional arguments but 3 were given
+
+tests/integration/reliability/test_idempotency.py:215: TypeError
+=============================== warnings summary ===============================
+../usr/local/lib/python3.11/site-packages/passlib/utils/__init__.py:854
+  /usr/local/lib/python3.11/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/integration/reliability/test_idempotency.py::TestGitLabWorkerIdempotency::test_pipeline_idempotency
+==================== 1 failed, 1 passed, 1 warning in 5.92s ====================

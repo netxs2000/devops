@@ -80,6 +80,7 @@ def mock_wecom_client():
                 all_users.append(u)
                 seen.add(u["userid"])
     client.get_all_users.return_value = all_users
+    client.get_department_users.side_effect = lambda d_id: MOCK_USERS.get(d_id, [])
     return client
 
 

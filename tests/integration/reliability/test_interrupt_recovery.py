@@ -78,6 +78,7 @@ class TestInterruptRecovery(unittest.TestCase):
             "namespace": {"id": 10, "name": "Group", "path": "group", "full_path": "group"},
             "created_at": "2024-01-01T00:00:00Z",
         }
+        self.client.get_group.return_value = {"id": 10, "name": "Group", "path": "group", "full_path": "group"}
         self.client.get_project_issues.return_value = []
         self.client.get_project_merge_requests.return_value = []
         self.client.get_project_pipelines.return_value = []

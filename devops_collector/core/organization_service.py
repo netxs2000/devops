@@ -80,7 +80,7 @@ class OrganizationService:
         # 查找所有设置了原始标识但尚未绑定全局 ID 的组织
         pending_orgs = (
             self.session.query(Organization)
-            .filter(Organization.manager_user_id is None, Organization.manager_raw_id is not None, Organization.is_current)
+            .filter(Organization.manager_user_id.is_(None), Organization.manager_raw_id.isnot(None), Organization.is_current == True)  # noqa: E712
             .all()
         )
 

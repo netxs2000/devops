@@ -212,12 +212,12 @@ class TestGitLabWorkerIdempotency(unittest.TestCase):
         self.client.get_project_commits.return_value = []
         self.client.get_project_merge_requests.return_value = []
         project = self.worker._sync_project(999)
-        self.worker._sync_pipelines(project, None)
+        self.worker._sync_pipelines(project)
         self.session.commit()
         count_1 = self.session.query(Pipeline).count()
         self.assertEqual(count_1, 1)
         project = self.worker._sync_project(999)
-        self.worker._sync_pipelines(project, None)
+        self.worker._sync_pipelines(project)
         self.session.commit()
         count_2 = self.session.query(Pipeline).count()
         self.assertEqual(count_2, count_1, "Pipeline rows duplicated!")
