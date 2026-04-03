@@ -13,7 +13,7 @@ CYAN := \033[1;36m
 RESET := \033[0m
 
 # 统一执行前缀：在 api 容器中执行 (使用 -T 避免 TTY 问题)
-EXEC_CMD := docker-compose exec -T api
+EXEC_CMD := docker-compose exec -T api uv run
 NEXUS_DOCKER_REGISTRY ?= 192.168.5.64:8082
 
 help: ## 显示帮助信息

@@ -36,7 +36,7 @@ COPY . .
 # Final sync to install the project itself and dev/test extras if needed 
 # (Standardizing on --no-dev for production, use --all-groups if tests are run in-container)
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --all-groups
+    uv sync --frozen --all-extras
 
 # Set PYTHONPATH
 ENV PYTHONPATH=/app

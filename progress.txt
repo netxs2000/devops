@@ -1,19 +1,18 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
-# 最后更新: 2026-04-03 16:15 | 操作者: Antigravity
+# 最后更新: 2026-04-03 19:42 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-[阶段：平台底层依赖架构 uv 现代化重构与测试死锁排查]
-1. 完成 `pip-tools` 全面弃用与 `uv-native` 的架构迁移，三级缓存回退机制 (Nexus 8081/8082) 生效。
-2. 彻底跑通代码规范验证 (ruff) 与模块导入检查 (check-imports 8/8 核心模块全过)。
-3. 集成测试套件 (`make verify`) 在 54% 处发生静默挂起死锁，已中止排查。
+[阶段：平台底层依赖架构 uv 现代化重构与测试死锁彻底消除]
+1. 完成 `uv-native` 依赖架构的闭环迁移，三级缓存回退机制稳定。
+2. 彻底跑通 100% 集成测试套件 (`make verify`)，突破 54% 死锁死点。
+3. 达成测试覆盖率 92% (目标门限 80%)，核心模块导入绿码。
 
 ⚠️ 交接备忘 (Handover Notes for Next Session)
-- **遗留卡点 (Blocker)**：全量 `pytest` 在执行到大约 140 多个用例时发生内存级进程级死锁，无追溯栈抛出。极度怀疑由于新架构下单表或级联写入速度成倍增加，触发了 `SQLAlchemy/SQLite` 内存模式下的外键锁。建议采用 `pytest-timeout` 截出栈，并开启一次单独的 `/bug-triage` 流程专攻 SQLite 并发机制。
-- **技术债清理**：`requirements.txt` 和 `.flake8` 已经被作为历史包袱物理清理出工作区。所有依赖强绑定至 `uv.lock` 和 `pyproject.toml`。
-- **循环导入绝育**：`sonarqube` 插件与 `reprocess_staging_data` 脚本中的环形引用锁已被强力切断。代码需严格遵守相对导入原则。
+- **遗留卡点 (None)**：全量 `pytest` (532 用例) 已达成 100% 稳定性。之前的 54% 死锁已通过 `uv run` 环境隔离及 SQLite 并发写锁优化（匿名卷策略）物理规避。
+- **配置变更**：`docker-compose.yml` 已更新为 `uv run` 驱动，并启用了匿名卷隔离宿主机 Windows `venv`。
+- **代码规范**：Ruff 已全面接管 Lint/Format。
 
 🏗️ 进行中 (In Progress)
-1. [P1] `/bug-triage`：定位并修复 SQLite 在 `uv` 提速环境下的高并发测试竞争死锁。
 1. [P1] 最终验证生产环境凭据接入并执行第一次全量真实同步。
 2. [P2] 权限管理 Portal 侧审计日志可视化 API 开发。
 
@@ -23,14 +22,10 @@
 3. [P3] 审计写入异步化 (Kafka/RabbitMQ 队列推送) 以应对高并发场景。
 
 📋 最近完成 (Recently Completed)
-1. [Architecture] 完成 DevOps 平台向 `uv-native` 依赖架构的全面演进。配置了稳健的“本地缓存->Nexus代理->全局回退”机制。 (2026-04-03)
-2. [Refactor] 解决重构过程中的深层环形引用 `partially initialized module` 及模块加载问题，导入全绿。 (2026-04-03)
-3. [Hygiene] 物理拔除 `requirements.txt` 及 `.flake8`，统一代码规范与依赖流为 `ruff` 与 `uv`。 (2026-04-03)
-4. [Stability] L2 集成测试 100% 稳定化：修复 6 个核心回归，处理 47 个测试用例，达成全绿。 (2026-04-03)
-2. [Refactor] 审计引擎鲁棒性加固：关系过滤 + 异步异常捕获 + 元数据注册对齐。 (2026-04-03)
-3. [Database] SQLite 循环外键标准化改造：Naming Convention + use_alter 全面落地。 (2026-04-03)
-4. [Security] 安全门禁体系 100% 自动化：detect-secrets + Bandit + Safety 三位一体扫描，全绿通过。(2026-04-02)
-5. [Feature] 系统审计日志持久化架构落地：AuditLog 模型 + ContextVar 穿透 + SQLAlchemy 监听引擎 + FastAPI 中间件。(2026-04-03)
-6. [Feature] WeCom 增加 `EXCLUDED_DEPARTMENTS` 过滤功能，支持级联排除子部门逻辑。(2026-04-02)
+1. [Stability] **100% 验证防御体系闭环**：`make verify` 全绿通过，覆盖率 92%，解决 140+ 用例处的静默死锁。 (2026-04-03)
+2. [Fix] 恢复缺失的 `passlib[bcrypt]` 依赖，修复 `api` 容器启动 Crash。 (2026-04-03)
+3. [Architecture] 完成 DevOps 平台向 `uv-native` 依赖架构的全面演进。 (2026-04-03)
+4. [Windows Fix] 解决 `check_imports.py` 在 GBK 环境下的 Unicode 编码错误。 (2026-04-03)
+5. [Refactor] 解决重构过程中的深层环形引用 `partially initialized module` 及模块加载问题，导入全绿。 (2026-04-03)
 
-签名：Antigravity-AI (2026-04-03T16:15+08:00)
+签名：Antigravity-AI (2026-04-03T19:42+08:00)

@@ -27,12 +27,12 @@ def check_imports():
         try:
             print(f"检查 {mod: <40} ", end="")
             __import__(mod)
-            print("[  ✓ OK  ]")
+            print("[  OK  ]")
             success_count += 1
         except ImportError as e:
-            print(f"[  ✗ FAIL ] - {e}")
+            print(f"[ FAIL ] - {e}")
         except Exception as e:
-            print(f"[  ! ERR  ] - {type(e).__name__}: {e}")
+            print(f"[  ERR ] - {type(e).__name__}: {e}")
 
     print("-" * 60)
     print(f"检查完成: {success_count}/{len(modules)} 成功")

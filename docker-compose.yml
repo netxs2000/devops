@@ -13,6 +13,7 @@ services:
       - "8000:8000"
     volumes:
       - .:/app
+      - /app/.venv
       - ./persistence_data:/app/data
     env_file:
       - .env
@@ -31,7 +32,7 @@ services:
       timeout: 5s
       retries: 20
       start_period: 60s
-    command: uvicorn devops_portal.main:app --host 0.0.0.0 --port 8000
+    command: uv run uvicorn devops_portal.main:app --host 0.0.0.0 --port 8000
 
   # 2. 数据异步采集 Worker (多实例竞争消费)
   worker:
@@ -39,8 +40,9 @@ services:
     profiles: [ "core" ]
     volumes:
       - .:/app
+      - /app/.venv
       - ./persistence_data:/app/data
-    entrypoint: [ "python", "-m", "devops_collector.worker" ]
+    entrypoint: [ "uv", "run", "python", "-m", "devops_collector.worker" ]
     env_file:
       - .env
     depends_on:
@@ -64,8 +66,9 @@ services:
     profiles: [ "core" ]
     volumes:
       - .:/app
+      - /app/.venv
       - ./persistence_data:/app/data
-    entrypoint: [ "python", "-m", "devops_collector.scheduler" ]
+    entrypoint: [ "uv", "run", "python", "-m", "devops_collector.scheduler" ]
     env_file:
       - .env
     depends_on:
@@ -109,7 +112,7 @@ services:
       - "5672:5672"
       - "15672:15672" # 管理后台
     volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - /var/lib/rabbitmq
     healthcheck:
       test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
