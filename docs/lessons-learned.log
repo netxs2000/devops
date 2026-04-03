@@ -8,6 +8,10 @@
 
 | Timestamp | Domain | Phenomenon | Root Cause | Universal Rule (The Defense) |
 | :--- | :--- | :--- | :--- | :--- 
+| 2026-04-03 | Audit/Stable | 集成测试报错 `no such table: sys_audit_logs` | 测试环境使用私有内存 Engine 且未通过 `models` 包加载触发 `AuditLog` 的表注册，导致 `create_all` 漏创建审计表。 | **审计写入韧性 (Audit Ingestion Resilience)**：审计引擎的 `INSERT` 必须包裹在 `try-except` 中。若表缺失则仅记录 Error 日志而非中断业务事务，确保测试与迁移场景的鲁棒性。同时集测 Fixture 必须强制导入 `models` 总包。 |
+| 2026-04-03 | Audit/Logic | 审计监听器触发 `TypeError: Object is not JSON serializable` 或 `AttributeError` | 监听器未过滤 `RelationshipProperty`，尝试对未加载或复杂的关联对象执行 JSON 序列化；或访问了不具备 `.prop` 的动态属性。 | **审计属性防御检查 (Defensive Attribute Auditing)**：1. **类型过滤**：必须通过 `isinstance(attr.prop, ColumnProperty)` 严格限定仅审计物理列。 2. **属性探针**：访问 `attr.prop` 前必须 `hasattr(attr, 'prop')`，杜绝因 SQLAlchemy 内部描述符导致的崩溃。 |
+| 2026-04-03 | Database/SQLite | SQLite 执行 `drop_all` 报 `Can't sort tables for DROP` 循环外键冲突 | 虽然设置了 `use_alter=True`，但若未配置全局命名规范，SQLAlchemy 无法在 DDL 层面标记受影响的约束，导致删表顺序计算失败。 | **全局命名规范硬化 (Table Naming Convention)**：必须在 `Base.metadata` 中显式配置 `NAMING_CONVENTION`（含 ix/uq/ck/fk/pk 模板）。这是 SQLite 处理复杂循环依赖下 `create_all` / `drop_all` 的前置物理要求。 |
+| 2026-04-03 | MDM/RBAC | 权限管理集成测试报 `KeyError: 'full_name'` 或字段缺失 | `TeamMemberService` 返回的实体投影未包含 `full_name`，但 Portal API 契约要求展示此字段，导致前端/集测解包失败。 | **实体-服务契约对齐 (Model-Service Alignment)**：Service 层在处理“扁平化”视图或投影查询时，必须显式映射所有在 API Schema 中定义的必填字段，尤其是 `full_name` 等涉及 UI 展示的级联计算属性。 |
 | 2026-04-03 | Migration/Alembic | autogenerate 迁移包含大量无关 drop_table，执行时因视图依赖报错 | Autogenerate 将代码中不存在但 DB 中存在的历史表标记为 DROP。 | **Autogenerate 审计红线**：严禁盲执行 autogenerate 产出。单表新增场景优先手写纯净迁移。执行前用 --sql 预览。 |
 | 2026-04-03 | Migration/Alembic | Alembic 警告 Revision present more than once，exit 0 但 DDL 未执行 | Windows 卷挂载 + Docker 共享 versions/ 目录时路径重复检测导致静默跳过。 | **容器内迁移物理验证**：迁移后必须通过 psql 验证表是否存在。遇 duplicate 警告可直接 psql 执行 DDL。 |
 | 2026-04-03 | Audit/Architecture | 对 Collector 批量导入表启用审计监听后审计日志与业务数据 1:1 膨胀 | SQLAlchemy after_insert 对每行 flush 触发回调。 | **审计分级策略**：仅对管理表启用字段级追踪。采集表通过 sys_sync_logs 粗粒度记录。生产环境审计写入建议异步队列。 |

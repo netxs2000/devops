@@ -1,35 +1,33 @@
 # DevOps 平台项目进展跟踪 (Project Progress Tracker)
-# 最后更新: 2026-04-03 11:05 | 操作者: Antigravity
+# 最后更新: 2026-04-03 16:15 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-[阶段：安全治理加固 + 审计合规持久化]
-1. 完成 `make security-audit` 三位一体安全门禁 (detect-secrets + Bandit + Safety)，100% 全绿通过。
-2. 完成 `sys_audit_logs` 审计持久化架构，6 张核心管理表已启用全生命周期变更追踪。
+[阶段：全量集成测试 100% 稳定化 + 审计引擎鲁棒性加固]
+1. 完成 `make test` 容器内集成测试全量通过 (47/47)，无审计引起的副作用。
+2. 完成 `SQLAlchemy/SQLite` 循环外键约束冲突的标准化治理 (Naming Convention)。
+3. 完成审计引擎在测试/迁移环境下的防御性执行机制。
 
 ⚠️ 交接备忘 (Handover Notes for Next Session)
-- **安全门禁**：`make security-audit` 已集成为合入 main 分支的强制物理卡点。3 个无法修复的 CVE 已通过 `--ignore` 豁免 (64459, 64396, 86269)。
-- **审计架构**：审计引擎通过 SQLAlchemy `event.listen` + `ContextVar` 穿透实现，零业务代码改动。
-- **监听范围**：仅对 User, Organization, SysRole, SysMenu, Product, ProjectMaster 启用字段级 Diff，Collector 采集表不启用以避免审计风暴。
-- **Alembic 注意**：迁移脚本 `a1b2c3d4e5f6` 已手动建表并同步版本指针。容器内执行 autogenerate 时须警惕 "present more than once" 警告。
-- **.gitignore/.dockerignore**：已完成去重、编码归一 (UTF-8)、安全报告隔离 (`reports/`)。
+- **稳定化成果**：集成测试套件中的 6 个 regression 已全部闭环。
+- **命名规范**：`Base.metadata` 已强制开启 `NAMING_CONVENTION`。新增模型必须遵循此物理红线以维持 SQLite/PG 兼容性。
+- **审计防御**：`Audit Engine` 已实现 `Relationship` 自动过滤及表缺失 `try-except` 捕获。若 `sys_audit_logs` 表不存在，系统将仅记录 Warn 级别日志，不再中断业务流程。
+- **注册强制**：所有集成测试 fixture 必须通过 `from devops_collector import models` 确保 `AuditLog` 表被 `create_all` 发现。
 
 🏗️ 进行中 (In Progress)
-1. [P1] `make test` 容器内全量测试验证审计子系统兼容性。(Doing)
+1. [P1] 最终验证生产环境凭据接入并执行第一次全量真实同步。
+2. [P2] 权限管理 Portal 侧审计日志可视化 API 开发。
 
 📅 接下来 (Backlog)
-1. [P1] 最终验证全量插件同步逻辑（GitLab/ZenTao/SonarQube）在审计引擎启用后的稳定性。
+1. [P1] 审计日志查询 API 开发 (Portal 侧审计日志可视化)。
 2. [P2] 生产环境凭据接入并执行第一次全量真实同步。
-3. [P2] 审计日志查询 API 开发 (Portal 侧审计日志可视化)。
-4. [P3] 审计写入异步化 (Kafka/RabbitMQ 队列推送) 以应对高并发场景。
+3. [P3] 审计写入异步化 (Kafka/RabbitMQ 队列推送) 以应对高并发场景。
 
 📋 最近完成 (Recently Completed)
-1. [Feature] 系统审计日志持久化架构落地：AuditLog 模型 + ContextVar 穿透 + SQLAlchemy 监听引擎 + FastAPI 中间件。(2026-04-03)
-2. [Feature] Spike 探针验证审计方案可行性，产出结论报告存入 docs/spikes/。(2026-04-03)
-3. [Security] 安全门禁体系 100% 自动化：detect-secrets + Bandit + Safety 三位一体扫描，全绿通过。(2026-04-02)
-4. [Security] 依赖加固：13+ 核心库 CVE 补丁 (Jinja2, Starlette, Requests, Urllib3, Wheel, Pip)。(2026-04-02)
-5. [Hygiene] .gitignore/.dockerignore 全量去重、编码修复、安全报告隔离至 reports/security/。(2026-04-02)
+1. [Stability] L2 集成测试 100% 稳定化：修复 6 个核心回归，处理 47 个测试用例，达成全绿。 (2026-04-03)
+2. [Refactor] 审计引擎鲁棒性加固：关系过滤 + 异步异常捕获 + 元数据注册对齐。 (2026-04-03)
+3. [Database] SQLite 循环外键标准化改造：Naming Convention + use_alter 全面落地。 (2026-04-03)
+4. [Security] 安全门禁体系 100% 自动化：detect-secrets + Bandit + Safety 三位一体扫描，全绿通过。(2026-04-02)
+5. [Feature] 系统审计日志持久化架构落地：AuditLog 模型 + ContextVar 穿透 + SQLAlchemy 监听引擎 + FastAPI 中间件。(2026-04-03)
 6. [Feature] WeCom 增加 `EXCLUDED_DEPARTMENTS` 过滤功能，支持级联排除子部门逻辑。(2026-04-02)
-7. [Feature] 完成 WeCom 通讯录同步插件三阶段逻辑开发，集成测试 100% 通过。(2026-04-02)
-8. [Refactor] Router-Service 层 5 域解耦全面完成。(2026-04-02)
 
-签名：Antigravity-AI (2026-04-03T11:05+08:00)
+签名：Antigravity-AI (2026-04-03T16:15+08:00)

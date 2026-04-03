@@ -574,8 +574,12 @@
 
 ### 19.10 降级与兜底 (Graceful Degradation)
 - 当某个外部数据源不可用时（如企业微信 API 宕机），系统必须跳过该数据源的同步，但**不得影响**其他数据源（GitLab、ZenTao）的 normal 运转。
-- 当某条记录处理失败时（如单个部门详情拉取超时），跳过该记录并记录 Warning 日志，**不得中断**整个批次的同步任务。
 - 关键外部依赖（如 PostgreSQL、RabbitMQ）的健康检查必须配置充足的重试次数（`retries >= 60`），应对冷启动延迟。
+
+### 19.11 审计引擎韧性规范 (Audit Engine Resilience) [NEW/MANDATORY]
+- **异步解耦与错误捕获**: 审计引擎的 `capture_audit_event` 必须包裹在独立的 `try-except` 块中。严禁因审计日志写入失败（如数据库表 `sys_audit_logs` 缺失或权限不足）而导致主业务流程（如用户注册、组织创建）回滚。
+- **关系属性穿透屏蔽**: 审计监听器在计算 Diff 时，**必须**过滤掉所有 `RelationshipProperty`。仅记录物理列（`ColumnProperty`）的变更，防止触发循环加载或非预期的 N+1 查询。
+- **注册强制对齐**: 所有依赖数据库操作的测试环境，必须通过 `models` 总包导入触发 `AuditLog` 的元数据注册。审计表必须作为基础物理设施与核心 MDM 表同步创建。
 
 ### 19.11 循环依赖处理规范 (Circular Dependency Handling) [MANDATORY]
 - 严禁在初始化阶段（如 `__init__` 或全局变量定义）引入模块间的交叉引用。
