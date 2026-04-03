@@ -157,6 +157,20 @@ __all__ = [
     "GTMRequirement",
     "GTMTestExecutionRecord",
     "ServiceDeskTicket",
+    "AuditLog",
 ]
 
 from . import events
+from .audit import AuditLog
+from .audit_events import bind_audit_listeners
+
+# 核心资产审计绑定 (等保三级合规要求)
+# 仅对高敏感管理表启用字段级变更追踪，避免批量采集表产生审计风暴
+bind_audit_listeners([
+    User,
+    Organization,
+    SysRole,
+    SysMenu,
+    Product,
+    ProjectMaster,
+])
