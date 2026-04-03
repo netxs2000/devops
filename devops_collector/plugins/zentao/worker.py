@@ -10,9 +10,9 @@ from sqlalchemy.orm import Session
 
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.identity_manager import IdentityManager
-from devops_collector.models import SyncLog
 from devops_collector.core.organization_service import OrganizationService
 from devops_collector.core.utils import safe_id
+from devops_collector.models import SyncLog
 
 from .models import (
     ZenTaoAction,
@@ -869,14 +869,14 @@ class ZenTaoWorker(BaseWorker):
             org_id = f"zentao_dept_{dept_id}"
             parent_raw = safe_id(d.get("parent"))
             parent_code = f"zentao_dept_{parent_raw}" if parent_raw else None
-            
+
             # 使用专业服务进行 Upsert
             self.org_service.upsert_organization(
                 org_code=org_id,
                 org_name=d.get("name", ""),
-                org_level=3, # 禅道部门统一设为 Level 3 (团队/小组级)
+                org_level=3,  # 禅道部门统一设为 Level 3 (团队/小组级)
                 parent_org_code=parent_code,
-                source="zentao"
+                source="zentao",
             )
         self.session.flush()
 

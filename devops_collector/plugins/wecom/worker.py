@@ -19,6 +19,7 @@ from devops_collector.core.organization_service import OrganizationService
 from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.utils import safe_id
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -132,14 +133,16 @@ class WeComWorker(BaseWorker):
             return all_depts
 
         dept_map = {str(d["id"]): d for d in all_depts}
-        
+
         def is_id_excluded(d_id: str) -> bool:
             if d_id in self.excluded_ids:
                 return True
             curr = dept_map.get(d_id)
-            if not curr: return False
+            if not curr:
+                return False
             p_id = str(curr.get("parentid", "0"))
-            if p_id == "0": return d_id in self.excluded_ids
+            if p_id == "0":
+                return d_id in self.excluded_ids
             return is_id_excluded(p_id)
 
         filtered = [d for d in all_depts if not is_id_excluded(str(d["id"]))]
@@ -158,7 +161,7 @@ class WeComWorker(BaseWorker):
         """主逻辑：仅同步非排除部门的人员。"""
         all_depts = self.client.get_departments()
         filtered_depts = self._filter_departments(all_depts)
-        
+
         seen_ids: set[str] = set()
         count = 0
 
@@ -170,7 +173,7 @@ class WeComWorker(BaseWorker):
                 if not userid or userid in seen_ids:
                     continue
                 seen_ids.add(userid)
-                
+
                 name = u_data.get("name", "")
                 email = u_data.get("email", "") or u_data.get("biz_mail", "")
 
@@ -206,7 +209,7 @@ class WeComWorker(BaseWorker):
 
                     user.source_system = "wecom"
                     user.correlation_id = self.correlation_id
-                    
+
                     if not user.position:
                         user.position = u_data.get("position", "")
 
@@ -225,7 +228,7 @@ class WeComWorker(BaseWorker):
 
     def _realign_managers(self) -> int:
         """执行全局负责人自愈对齐。
-        
+
         在 Phase 1 & 2 完成后，所有 User 和 Organization 数据已入库。
         此时运行 realign 可以将 manager_raw_id 解析为实际的 manager_user_id。
         """

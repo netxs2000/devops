@@ -1,4 +1,3 @@
-import csv
 import io
 import uuid
 from datetime import date
@@ -6,20 +5,13 @@ from datetime import date
 from fastapi import APIRouter, Body, Depends, File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy.orm import Session, joinedload, selectinload
+from sqlalchemy.orm import Session
 
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.core.admin_service import AdminService
 from devops_collector.models.base_models import (
-    IdentityMapping,
-    Organization,
-    ProjectMaster,
-    ProjectProductRelation,
-    Team,
-    TeamMember,
     User,
 )
-from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_portal.dependencies import (
     DataScopeFilter,
     PermissionRequired,
@@ -155,7 +147,9 @@ async def create_identity_mapping(
 
 
 @router.delete("/identity-mappings/{mapping_id}")
-async def delete_identity_mapping(mapping_id: int, service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))):
+async def delete_identity_mapping(
+    mapping_id: int, service: AdminService = Depends(get_admin_service), admin_user: User = Depends(RoleRequired(["SYSTEM_ADMIN"]))
+):
     """删除指定的身份映射。"""
     # 已通过 RoleRequired 校验权限
     success = service.delete_identity_mapping(mapping_id)

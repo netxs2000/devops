@@ -55,7 +55,7 @@ def run_integration_test():
         root_org = Organization(org_code="ORG_ROOT", org_name="Global Group", org_level=1)
         dept_org = Organization(org_code="ORG_DEPT_01", org_name="Cloud Infrastructure", parent_id=None, org_level=3)
         session.add(root_org)
-        session.flush() # Populate root_org.id
+        session.flush()  # Populate root_org.id
         dept_org.parent_id = root_org.id
         session.add(dept_org)
         session.commit()

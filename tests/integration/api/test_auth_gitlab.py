@@ -14,8 +14,6 @@ from sqlalchemy.pool import StaticPool
 from devops_collector.auth.auth_database import AuthSessionLocal, get_auth_db
 from devops_collector.config import settings
 from devops_collector.models.base_models import Base, User
-from devops_collector import models
-from devops_collector.models.audit import AuditLog
 from devops_portal.main import app
 
 

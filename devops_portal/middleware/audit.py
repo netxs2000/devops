@@ -16,6 +16,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from devops_collector.utils.audit_context import clear_context, set_audit_metadata, set_audit_user
 
+
 logger = logging.getLogger(__name__)
 
 

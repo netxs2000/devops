@@ -58,6 +58,8 @@ app.add_middleware(
 
 # 审计追踪中间件 (等保三级合规要求)
 from devops_portal.middleware.audit import AuditMiddleware
+
+
 app.add_middleware(AuditMiddleware)
 app.include_router(auth_router.auth_router)
 app.include_router(quality_router.router)

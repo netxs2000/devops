@@ -9,8 +9,9 @@ from datetime import UTC, datetime
 
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.core.utils import parse_iso8601, safe_float, safe_int
-from devops_collector.plugins.sonarqube.client import SonarQubeClient
-from devops_collector.plugins.sonarqube.models import SonarIssue, SonarMeasure, SonarProject
+
+from .client import SonarQubeClient
+from .models import SonarIssue, SonarMeasure, SonarProject
 
 
 logger = logging.getLogger(__name__)

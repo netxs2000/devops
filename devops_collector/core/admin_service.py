@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session, joinedload, selectinload
 
 from devops_collector.core.organization_service import OrganizationService
 from devops_collector.models.base_models import (
+    IdentityMapping,
     OKRObjective,
     Organization,
     Product,
@@ -28,7 +29,6 @@ from devops_collector.models.base_models import (
 )
 from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_portal import schemas
-from devops_collector.models.base_models import IdentityMapping
 
 
 logger = logging.getLogger(__name__)
@@ -187,7 +187,6 @@ class AdminService:
 
     def list_mdm_projects(self, filter_obj, current_user) -> list[dict]:
         """获取所有业务主项目。"""
-        from devops_portal.dependencies import DataScopeFilter
         query = (
             self.session.query(ProjectMaster)
             .options(
@@ -328,7 +327,7 @@ class AdminService:
             org_level=data.org_level or 1,
             parent_org_code=data.parent_org_id,
             manager_raw_id=str(data.manager_user_id) if data.manager_user_id else None,
-            source="admin_ui"
+            source="admin_ui",
         )
 
     def export_organizations(self) -> str:
@@ -410,7 +409,7 @@ class AdminService:
             try:
                 level = int(row.get("层级") or row.get("org_level") or 2)
                 parent_id = row.get("上级ID") or row.get("parent_org_id")
-                mgr_name = row.get("负责人") or row.get("manager_name") # 这里可能填的是姓名或工号
+                mgr_name = row.get("负责人") or row.get("manager_name")  # 这里可能填的是姓名或工号
 
                 if not org_id or not name:
                     raise ValueError("Missing mandatory fields: org_id or org_name")
@@ -421,8 +420,8 @@ class AdminService:
                     org_name=name,
                     org_level=level,
                     parent_org_code=parent_id,
-                    manager_raw_id=mgr_name, # 先暂存起来，不管此时有没有张三
-                    source="csv_import"
+                    manager_raw_id=mgr_name,  # 先暂存起来，不管此时有没有张三
+                    source="csv_import",
                 )
                 summary.success_count += 1
             except Exception as e:

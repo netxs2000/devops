@@ -50,7 +50,7 @@ class IdentityManager:
             username: 外部系统用户名 (可选)。
 
             create_if_not_found: 是否在找不到时自动创建 User 实体 (仅限主数据源)。
-            
+
         Returns:
             Resolved User 实体，若未命中任何规则且无法新建则返回 None。
         """
@@ -98,7 +98,7 @@ class IdentityManager:
                     username=username or email_lower.split("@")[0],
                     source_system=source,
                     is_current=True,
-                    is_survivor=True  # 标记为由受信任源同步生成
+                    is_survivor=True,  # 标记为由受信任源同步生成
                 )
                 session.add(user)
                 session.flush()
@@ -133,10 +133,7 @@ class IdentityManager:
                     session.rollback()
             else:
                 # 兼容性退化逻辑 (用于 SQLite/测试环境): 先查后增
-                mapping = session.query(IdentityMapping).filter_by(
-                    source_system=source, 
-                    external_user_id=ext_id_str
-                ).first()
+                mapping = session.query(IdentityMapping).filter_by(source_system=source, external_user_id=ext_id_str).first()
                 if not mapping:
                     mapping = IdentityMapping(
                         global_user_id=user.global_user_id if user else None,

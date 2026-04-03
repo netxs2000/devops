@@ -7,12 +7,15 @@ from sqlalchemy.orm import Session
 
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.auth.auth_dependency import get_user_gitlab_client
-from devops_collector.models.base_models import IdentityMapping, ProjectMaster, User
-from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
 from devops_collector.core.service_desk_service import ServiceDeskCoreService
+from devops_collector.models.base_models import User
+from devops_collector.plugins.gitlab.gitlab_client import GitLabClient
+
 
 def get_sd_core_service(db: Session = Depends(get_auth_db)) -> ServiceDeskCoreService:
     return ServiceDeskCoreService(db)
+
+
 from devops_collector.plugins.gitlab.service_desk_service import ServiceDeskService
 from devops_collector.plugins.gitlab.test_management_service import (
     TestManagementService as TestingService,
@@ -27,8 +30,7 @@ logger = logging.getLogger(__name__)
 
 @router.get("/business-projects")
 async def list_business_projects(current_user: User = Depends(get_current_user), service: ServiceDeskCoreService = Depends(get_sd_core_service)):
-    """获取用户可见业务系统列表。
-    """
+    """获取用户可见业务系统列表。"""
     return service.list_business_projects()
 
 

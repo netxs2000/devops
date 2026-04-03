@@ -30,7 +30,7 @@ class TestZenTaoClient(unittest.TestCase):
         mock_response.status_code = 200
         mock_response.json.return_value = {"products": [{"id": 1, "name": "Prod 1"}]}
         mock_request.return_value = mock_response
-        
+
         products = self.client.get_products()
         self.assertEqual(len(products), 1)
         self.assertEqual(products[0]["name"], "Prod 1")

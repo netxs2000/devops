@@ -7,12 +7,12 @@ Client 仅负责 API 通信，不执行任何数据库操作。
 
 import logging
 import time
-from typing import Any
 
 import requests
 
 from devops_collector.core.base_client import BaseClient
 from devops_collector.core.exceptions import CircuitBreakerOpenError
+
 
 logger = logging.getLogger(__name__)
 

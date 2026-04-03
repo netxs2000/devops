@@ -8,6 +8,7 @@ import base64
 from typing import Any
 
 from devops_collector.core.base_client import BaseClient
+from devops_collector.utils.logger import logger
 
 
 class SonarQubeClient(BaseClient):
@@ -287,6 +288,6 @@ class SonarQubeClient(BaseClient):
                 if page * 500 >= total:
                     break
                 page += 1
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to get hotspot distribution for {project_key}: {e}")
         return distribution

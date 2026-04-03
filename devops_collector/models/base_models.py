@@ -18,12 +18,12 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    MetaData,
     String,
     Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, backref, relationship
-from sqlalchemy import MetaData
 
 
 NAMING_CONVENTION = {
@@ -31,11 +31,13 @@ NAMING_CONVENTION = {
     "uq": "uq_%(table_name)s_%(column_0_name)s",
     "ck": "ck_%(table_name)s_%(constraint_name)s",
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
-    "pk": "pk_%(table_name)s"
+    "pk": "pk_%(table_name)s",
 }
+
 
 class Base(DeclarativeBase):
     """SQLAlchemy 声明式模型基类。"""
+
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
@@ -148,7 +150,6 @@ class User(Base, TimestampMixin, SCDMixin):
     source_system = Column(String(50), nullable=True, comment="创建/更新来源系统")
     correlation_id = Column(String(100), index=True, nullable=True, comment="关联的同步任务追踪 ID")
     is_active = Column(Boolean, default=True, comment="是否在职")
-
 
     location = relationship("Location", foreign_keys=[location_id])
     is_survivor = Column(Boolean, default=False, comment="是否通过合并保留的账号")
@@ -411,7 +412,7 @@ class TeamMember(Base, TimestampMixin):
 
     team = relationship("Team", back_populates="members")
     user = relationship("User", back_populates="team_memberships", foreign_keys=[user_id])
-    
+
     @property
     def full_name(self) -> str:
         """返回关联用户的姓名快照 (用于 Pydantic 视图序列化)。"""
@@ -452,7 +453,9 @@ class Product(Base, TimestampMixin, SCDMixin):
     matching_patterns = Column(JSON, comment="自动识别匹配模式列表 (JSON)")
 
     # [新增] 产品线层级支持 (Scheme A)
-    parent_product_id = Column(Integer, ForeignKey("mdm_products.id", use_alter=True, name="fk_product_parent_id"), nullable=True, index=True, comment="上级产品ID")
+    parent_product_id = Column(
+        Integer, ForeignKey("mdm_products.id", use_alter=True, name="fk_product_parent_id"), nullable=True, index=True, comment="上级产品ID"
+    )
     node_type = Column(String(20), default="APP", comment="节点类型 (LINE=产品线 / APP=应用)")
 
     parent = relationship("Product", remote_side="Product.id", foreign_keys=[parent_product_id], backref=backref("children", cascade="all"))

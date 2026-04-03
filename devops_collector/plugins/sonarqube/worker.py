@@ -6,7 +6,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from devops_collector.core.base_worker import BaseWorker
-from devops_collector.core.registry import PluginRegistry
 from devops_collector.core.utils import parse_iso8601
 
 from .models import SonarProject
@@ -105,6 +104,3 @@ class SonarQubeWorker(BaseWorker):
             if count % 200 == 0:
                 self.session.flush()
         return count
-
-
-PluginRegistry.register_worker("sonarqube", SonarQubeWorker)

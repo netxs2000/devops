@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from devops_collector.core.identity_manager import IdentityManager
 from devops_collector.core.organization_service import OrganizationService
-from devops_collector.models import IdentityMapping, Organization
+from devops_collector.models import IdentityMapping
 
 
 logger = logging.getLogger(__name__)
@@ -126,12 +126,7 @@ class UserResolver:
                 dept_name = user_data.get("skype")
                 if dept_name:
                     # 使用统一服务进行 Upsert (GitLab 场景通常使用部门名作为唯一标识)
-                    org = self.org_service.upsert_organization(
-                        org_code=f"gitlab_dept_{dept_name}",
-                        org_name=dept_name,
-                        org_level=2,
-                        source="gitlab_identity"
-                    )
+                    org = self.org_service.upsert_organization(org_code=f"gitlab_dept_{dept_name}", org_name=dept_name, org_level=2, source="gitlab_identity")
                     if org and org.id:
                         user.department_id = org.id
                 self.session.flush()

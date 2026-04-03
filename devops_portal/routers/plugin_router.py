@@ -2,15 +2,15 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from devops_collector.auth.auth_database import get_auth_db
-from devops_collector.core import security
+from devops_collector.core.plugin_service import PluginService
 from devops_collector.models import User
 from devops_portal import schemas
 from devops_portal.dependencies import get_current_user
-from devops_collector.core.plugin_service import PluginService
+
 
 def get_plugin_service(db: Session = Depends(get_auth_db)) -> PluginService:
     return PluginService(db)

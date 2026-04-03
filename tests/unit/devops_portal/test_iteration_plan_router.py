@@ -6,7 +6,6 @@ from devops_collector.plugins.gitlab.models import GitLabMilestone, GitLabProjec
 from devops_portal.main import app
 
 
-
 @pytest.fixture
 def mock_iteration_service():
     from devops_portal.routers.iteration_plan_router import get_iteration_plan_service

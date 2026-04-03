@@ -2,7 +2,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from devops_collector.auth import auth_service
 from devops_portal.main import app
 from devops_portal.routers.test_management_router import (
     get_test_management_service,

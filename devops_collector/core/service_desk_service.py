@@ -4,7 +4,7 @@
 """
 
 import logging
-from fastapi import HTTPException
+
 from sqlalchemy.orm import Session
 
 from devops_collector.models.base_models import (
@@ -85,7 +85,11 @@ class ServiceDeskCoreService:
         results = []
         for u in users:
             u_status = "approved" if u.is_active else ("pending" if u.is_survivor else "rejected")
-            gitlab_mapping = self.session.query(IdentityMapping).filter(IdentityMapping.global_user_id == u.global_user_id, IdentityMapping.source_system == "gitlab").first()
+            gitlab_mapping = (
+                self.session.query(IdentityMapping)
+                .filter(IdentityMapping.global_user_id == u.global_user_id, IdentityMapping.source_system == "gitlab")
+                .first()
+            )
 
             results.append(
                 {
@@ -110,7 +114,11 @@ class ServiceDeskCoreService:
             user.is_active = True
             user.is_survivor = True
             if gitlab_user_id:
-                mapping = self.session.query(IdentityMapping).filter(IdentityMapping.global_user_id == user.global_user_id, IdentityMapping.source_system == "gitlab").first()
+                mapping = (
+                    self.session.query(IdentityMapping)
+                    .filter(IdentityMapping.global_user_id == user.global_user_id, IdentityMapping.source_system == "gitlab")
+                    .first()
+                )
                 if mapping:
                     mapping.external_user_id = gitlab_user_id
                     mapping.mapping_status = "VERIFIED"

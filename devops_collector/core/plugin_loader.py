@@ -77,9 +77,10 @@ class PluginLoader:
             # 动态导入插件模块
             try:
                 plugin_name = item.name
-                
+
                 # 白名单拦截机制 (Feature Toggle)
                 from devops_collector.config import settings
+
                 if plugin_name not in settings.plugin.enabled_plugins:
                     logger.debug(f"Plugin '{plugin_name}' is discovered physically but NOT enabled in allowlist. Skipping import.")
                     continue

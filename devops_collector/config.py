@@ -257,7 +257,7 @@ class AuthSettings(BaseModel):
 
 class PluginSettings(BaseModel):
     """Plugin system configuration.
-    
+
     Attributes:
         enabled_plugins (list[str]): List of plugin names to enable.
     """

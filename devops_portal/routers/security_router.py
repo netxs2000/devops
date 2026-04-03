@@ -5,16 +5,14 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.orm import Session
 
 from devops_collector.auth.auth_database import get_auth_db
-from devops_collector.core import security
 from devops_collector.core.exceptions import BusinessException, ValidationException
+from devops_collector.core.quality_service import QualityService
 from devops_collector.models import User
-from devops_collector.models.dependency import DependencyScan
 from devops_collector.plugins.dependency_check.worker import DependencyCheckWorker
-from devops_collector.plugins.gitlab.models import GitLabProject
 from devops_portal import schemas
 from devops_portal.dependencies import get_current_user
 from devops_portal.schemas import DependencyScanResult
-from devops_collector.core.quality_service import QualityService
+
 
 def get_quality_service(db: Session = Depends(get_auth_db)) -> QualityService:
     return QualityService(db)

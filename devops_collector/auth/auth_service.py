@@ -257,11 +257,11 @@ def auth_get_current_user(db: Session, token: str) -> User:
     user = auth_get_user_by_email(db, email=email)
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
-    
+
     # 挂载 Token 中的 transient 权限和角色以支持 JWT 模式的 RBAC 校验
     user.token_permissions = payload.get("permissions", [])
     user.token_roles = payload.get("roles", [])
-    
+
     return user
 
 

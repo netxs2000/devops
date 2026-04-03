@@ -8,9 +8,8 @@ from sqlalchemy.orm import Session
 
 from devops_collector.core.base_worker import BaseWorker
 from devops_collector.core.identity_manager import IdentityManager
-from devops_collector.core.services import close_current_and_insert_new
-from devops_collector.models.base_models import TraceabilityLink
 from devops_collector.core.organization_service import OrganizationService
+from devops_collector.models.base_models import TraceabilityLink
 
 # from .client import JiraClient
 from .models import JiraBoard, JiraIssue, JiraIssueHistory, JiraProject, JiraSprint
@@ -296,8 +295,8 @@ class JiraWorker(BaseWorker):
             self.org_service.upsert_organization(
                 org_code=group_name,
                 org_name=group_name,
-                org_level=3, # Jira 组作为团队级 (Level 3)
-                source="jira"
+                org_level=3,  # Jira 组作为团队级 (Level 3)
+                source="jira",
             )
         self.session.flush()
 

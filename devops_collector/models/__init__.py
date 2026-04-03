@@ -8,6 +8,7 @@
     - 第2层: 核心功能模块 (dependency, test_management)
 """
 
+from .audit import AuditLog
 from .base_models import (
     SLO,
     Base,
@@ -57,7 +58,6 @@ from .base_models import (
     UserRole,
     Vendor,
 )
-from .audit import AuditLog
 from .dependency import Dependency, DependencyCVE, DependencyScan, LicenseRiskRule
 from .service_desk import ServiceDeskTicket
 from .test_management import (
@@ -162,16 +162,18 @@ __all__ = [
 ]
 
 from . import events
-from .audit import AuditLog
 from .audit_events import bind_audit_listeners
+
 
 # 核心资产审计绑定 (等保三级合规要求)
 # 仅对高敏感管理表启用字段级变更追踪，避免批量采集表产生审计风暴
-bind_audit_listeners([
-    User,
-    Organization,
-    SysRole,
-    SysMenu,
-    Product,
-    ProjectMaster,
-])
+bind_audit_listeners(
+    [
+        User,
+        Organization,
+        SysRole,
+        SysMenu,
+        Product,
+        ProjectMaster,
+    ]
+)

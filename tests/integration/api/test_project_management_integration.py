@@ -1,9 +1,10 @@
 """TODO: Add module description."""
 
 import uuid
+import warnings
 from unittest.mock import MagicMock, patch
 
-import warnings
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import pytest
@@ -12,7 +13,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from devops_collector.auth import auth_service
 from devops_collector.auth.auth_database import get_auth_db as get_db
+from devops_collector.auth.auth_dependency import get_user_gitlab_client
 from devops_collector.models import (
     Base,
     Organization,
@@ -20,13 +23,10 @@ from devops_collector.models import (
     ProjectMaster,
     ProjectProductRelation,
     User,
-    AuditLog,
 )
 from devops_collector.models import SysRole as Role
 from devops_collector.plugins.gitlab.models import GitLabProject as Project
 from devops_portal.dependencies import get_current_user
-from devops_collector.auth import auth_service
-from devops_collector.auth.auth_dependency import get_user_gitlab_client
 from devops_portal.main import app
 
 
@@ -69,10 +69,10 @@ def client():
     app.dependency_overrides[get_current_user] = override_get_current_user
     app.dependency_overrides[auth_service.get_current_user_obj] = override_get_current_user
     app.dependency_overrides[get_user_gitlab_client] = override_get_gitlab_client
-    
+
     with TestClient(app) as c:
         yield c
-    
+
     app.dependency_overrides.clear()
 
 

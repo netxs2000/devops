@@ -25,10 +25,9 @@ from sqlalchemy.engine import Engine
 # --- REFACTORED FOR PERFORMANCE (Session-scoped Engine) ---
 from sqlalchemy.pool import StaticPool
 
+# LL #27: Ensure all models (including AuditLog and Plugins) are registered for create_all
 from devops_collector.auth.auth_database import get_auth_db
 from devops_collector.models.base_models import Base
-# LL #27: Ensure all models (including AuditLog and Plugins) are registered for create_all
-from devops_collector import models 
 from devops_portal.main import app
 
 
