@@ -2,18 +2,18 @@
 # 最后更新: 2026-04-03 16:15 | 操作者: Antigravity
 
 🎯 当前状态 (Current Focus)
-[阶段：全量集成测试 100% 稳定化 + 审计引擎鲁棒性加固]
-1. 完成 `make test` 容器内集成测试全量通过 (47/47)，无审计引起的副作用。
-2. 完成 `SQLAlchemy/SQLite` 循环外键约束冲突的标准化治理 (Naming Convention)。
-3. 完成审计引擎在测试/迁移环境下的防御性执行机制。
+[阶段：平台底层依赖架构 uv 现代化重构与测试死锁排查]
+1. 完成 `pip-tools` 全面弃用与 `uv-native` 的架构迁移，三级缓存回退机制 (Nexus 8081/8082) 生效。
+2. 彻底跑通代码规范验证 (ruff) 与模块导入检查 (check-imports 8/8 核心模块全过)。
+3. 集成测试套件 (`make verify`) 在 54% 处发生静默挂起死锁，已中止排查。
 
 ⚠️ 交接备忘 (Handover Notes for Next Session)
-- **稳定化成果**：集成测试套件中的 6 个 regression 已全部闭环。
-- **命名规范**：`Base.metadata` 已强制开启 `NAMING_CONVENTION`。新增模型必须遵循此物理红线以维持 SQLite/PG 兼容性。
-- **审计防御**：`Audit Engine` 已实现 `Relationship` 自动过滤及表缺失 `try-except` 捕获。若 `sys_audit_logs` 表不存在，系统将仅记录 Warn 级别日志，不再中断业务流程。
-- **注册强制**：所有集成测试 fixture 必须通过 `from devops_collector import models` 确保 `AuditLog` 表被 `create_all` 发现。
+- **遗留卡点 (Blocker)**：全量 `pytest` 在执行到大约 140 多个用例时发生内存级进程级死锁，无追溯栈抛出。极度怀疑由于新架构下单表或级联写入速度成倍增加，触发了 `SQLAlchemy/SQLite` 内存模式下的外键锁。建议采用 `pytest-timeout` 截出栈，并开启一次单独的 `/bug-triage` 流程专攻 SQLite 并发机制。
+- **技术债清理**：`requirements.txt` 和 `.flake8` 已经被作为历史包袱物理清理出工作区。所有依赖强绑定至 `uv.lock` 和 `pyproject.toml`。
+- **循环导入绝育**：`sonarqube` 插件与 `reprocess_staging_data` 脚本中的环形引用锁已被强力切断。代码需严格遵守相对导入原则。
 
 🏗️ 进行中 (In Progress)
+1. [P1] `/bug-triage`：定位并修复 SQLite 在 `uv` 提速环境下的高并发测试竞争死锁。
 1. [P1] 最终验证生产环境凭据接入并执行第一次全量真实同步。
 2. [P2] 权限管理 Portal 侧审计日志可视化 API 开发。
 
@@ -23,7 +23,10 @@
 3. [P3] 审计写入异步化 (Kafka/RabbitMQ 队列推送) 以应对高并发场景。
 
 📋 最近完成 (Recently Completed)
-1. [Stability] L2 集成测试 100% 稳定化：修复 6 个核心回归，处理 47 个测试用例，达成全绿。 (2026-04-03)
+1. [Architecture] 完成 DevOps 平台向 `uv-native` 依赖架构的全面演进。配置了稳健的“本地缓存->Nexus代理->全局回退”机制。 (2026-04-03)
+2. [Refactor] 解决重构过程中的深层环形引用 `partially initialized module` 及模块加载问题，导入全绿。 (2026-04-03)
+3. [Hygiene] 物理拔除 `requirements.txt` 及 `.flake8`，统一代码规范与依赖流为 `ruff` 与 `uv`。 (2026-04-03)
+4. [Stability] L2 集成测试 100% 稳定化：修复 6 个核心回归，处理 47 个测试用例，达成全绿。 (2026-04-03)
 2. [Refactor] 审计引擎鲁棒性加固：关系过滤 + 异步异常捕获 + 元数据注册对齐。 (2026-04-03)
 3. [Database] SQLite 循环外键标准化改造：Naming Convention + use_alter 全面落地。 (2026-04-03)
 4. [Security] 安全门禁体系 100% 自动化：detect-secrets + Bandit + Safety 三位一体扫描，全绿通过。(2026-04-02)

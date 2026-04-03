@@ -5,10 +5,13 @@ API 文档: https://docs.sonarqube.org/latest/extension-guide/web-api/
 """
 
 import base64
+import logging
 from typing import Any
 
 from devops_collector.core.base_client import BaseClient
-from devops_collector.utils.logger import logger
+
+
+logger = logging.getLogger(__name__)
 
 
 class SonarQubeClient(BaseClient):

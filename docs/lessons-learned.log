@@ -7,7 +7,9 @@
 > 3. **字段约定**：The Defense 栏必须使用粗体加粗一句话结论，随后跟上落地措施。
 
 | Timestamp | Domain | Phenomenon | Root Cause | Universal Rule (The Defense) |
-| :--- | :--- | :--- | :--- | :--- 
+| :--- | :--- | :--- | :--- | :--- |
+| 2026-04-03 | Arch/Refactor | 集成测试 Collection 阶段报 `partially initialized module (most likely due to a circular import)` 及 `ModuleNotFoundError` | 在模块迁移和依赖规范化（uv）期间，`worker/transformer/client` 间的绝对路径引用与双重自注册引发环形锁死，且由于导入了错误模块路径的 `logger` 引发血案。 | **消除环形导入的解耦规范 (Circular Import Evasion)**：1. 同一包内的横向子模块间（如 Client/Worker/Transformer）必须使用相对导入 (`from .client import ...`)，在入口文件再统一暴露给外部，切忌滥用完整绝对路径互相引用。2. 插件级的 `register` 动作必须统一收拢在 `__init__.py` 等包级别入口，严禁各子模块在其底部“抢跑”级别的多头注册。 |
+| 2026-04-03 | QA/Testing | 以 `us-native` 提速后，长期的 `make verify` 集成测试在半途静默死锁 (长达几分钟毫无输出) | 集成测试采用的是原生内存 SQLite，当测试执行速度呈指数级加快时，数据库连接释放未及时完成便触发新一张表的建立或级联写入，触发外键冲突造成的资源永久死锁无抛错。 | **挂起探测防呆 (Hanging Deadlock Breaker)**：面对无错误直接静默挂起的测试，首先考虑 SQLite/MemoryDB 资源隔离或竞态锁问题，这在提速的新技术栈下为高发风险。测试框架必须配置如 `pytest-timeout` 在 60s 内不吐出新用例则强制转态输出挂起栈。 |
 | 2026-04-03 | Audit/Stable | 集成测试报错 `no such table: sys_audit_logs` | 测试环境使用私有内存 Engine 且未通过 `models` 包加载触发 `AuditLog` 的表注册，导致 `create_all` 漏创建审计表。 | **审计写入韧性 (Audit Ingestion Resilience)**：审计引擎的 `INSERT` 必须包裹在 `try-except` 中。若表缺失则仅记录 Error 日志而非中断业务事务，确保测试与迁移场景的鲁棒性。同时集测 Fixture 必须强制导入 `models` 总包。 |
 | 2026-04-03 | Audit/Logic | 审计监听器触发 `TypeError: Object is not JSON serializable` 或 `AttributeError` | 监听器未过滤 `RelationshipProperty`，尝试对未加载或复杂的关联对象执行 JSON 序列化；或访问了不具备 `.prop` 的动态属性。 | **审计属性防御检查 (Defensive Attribute Auditing)**：1. **类型过滤**：必须通过 `isinstance(attr.prop, ColumnProperty)` 严格限定仅审计物理列。 2. **属性探针**：访问 `attr.prop` 前必须 `hasattr(attr, 'prop')`，杜绝因 SQLAlchemy 内部描述符导致的崩溃。 |
 | 2026-04-03 | Database/SQLite | SQLite 执行 `drop_all` 报 `Can't sort tables for DROP` 循环外键冲突 | 虽然设置了 `use_alter=True`，但若未配置全局命名规范，SQLAlchemy 无法在 DDL 层面标记受影响的约束，导致删表顺序计算失败。 | **全局命名规范硬化 (Table Naming Convention)**：必须在 `Base.metadata` 中显式配置 `NAMING_CONVENTION`（含 ix/uq/ck/fk/pk 模板）。这是 SQLite 处理复杂循环依赖下 `create_all` / `drop_all` 的前置物理要求。 |

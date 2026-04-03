@@ -145,9 +145,9 @@ def reprocess_by_source(source_name: str, entity_type: str = None):
                 entity_type, pid = key.split(":")
                 method_name = source_handlers.get(entity_type)
                 handler = getattr(worker, method_name)
-                from devops_collector.plugins.gitlab.models import Project
+                from devops_collector.plugins.gitlab.models import GitLabProject
 
-                proj = session.query(Project).get(int(pid))
+                proj = session.query(GitLabProject).get(int(pid))
                 if proj:
                     handler(proj, payloads)
         session.commit()
@@ -161,12 +161,12 @@ def reprocess_by_source(source_name: str, entity_type: str = None):
 def _resolve_context(session, source, payload):
     """根据 Payload 恢复上下文对象 (Project/Product)。"""
     if source == "gitlab":
-        from devops_collector.plugins.gitlab.models import Project
+        from devops_collector.plugins.gitlab.models import GitLabProject
 
         pid = payload.get("project_id")
         if not pid:
             return None
-        return session.query(Project).get(pid)
+        return session.query(GitLabProject).get(pid)
     elif source == "sonarqube":
         from devops_collector.plugins.sonarqube.models import SonarProject
 
